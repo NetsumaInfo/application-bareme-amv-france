@@ -1,0 +1,33 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dir:*)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:docs.rs)",
+      "WebFetch(domain:connorcode.com)",
+      "Bash(test:*)",
+      "Bash(node --version:*)",
+      "Bash(npm --version:*)",
+      "Bash(rustc:*)",
+      "Bash(where:*)",
+      "Bash(curl:*)",
+      "Bash(sh:*)",
+      "Bash(export PATH=\"$USERPROFILE/.cargo/bin:$PATH\")",
+      "Bash(cargo --version:*)",
+      "Bash(export PATH=\"/c/Users/haimf/.cargo/bin:$PATH\")",
+      "Bash(npm create:*)",
+      "Bash(npm install:*)",
+      "Bash(npx tailwindcss:*)",
+      "Bash(npx @tauri-apps/cli@1 init:*)",
+      "Bash(npx vite build:*)",
+      "Bash(npx tsc:*)",
+      "WebFetch(domain:crates.io)",
+      "Bash(cargo check:*)",
+      "Bash(\"$HOME/.cargo/bin/cargo\" check)",
+      "Bash(7z:*)",
+      "Bash(powershell -Command \"Expand-Archive -Path ''mpv-x86_64-v3-20260201-git-40d2947.7z'' -DestinationPath ''temp_mpv'' -Force\")",
+      "Bash(ls:*)",
+      "Bash(git init:*)"
+    ]
+  }
+}

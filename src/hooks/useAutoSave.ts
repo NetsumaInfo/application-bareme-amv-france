@@ -1,0 +1,45 @@
+import { useEffect, useRef } from 'react'
+import { useProjectStore } from '@/store/useProjectStore'
+import { useNotationStore } from '@/store/useNotationStore'
+import * as tauri from '@/services/tauri'
+
+export function useAutoSave() {
+  const { currentProject, isDirty, markClean, getProjectData } = useProjectStore()
+  const { getNotesData } = useNotationStore()
+  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const doSave = async () => {
+    if (!currentProject?.filePath || !isDirty) return
+
+    try {
+      const notesData = getNotesData()
+      const projectData = getProjectData(notesData)
+      if (!projectData) return
+
+      await tauri.saveProjectFile(projectData, currentProject.filePath)
+      markClean()
+    } catch (e) {
+      console.error('Auto-save failed:', e)
+    }
+  }
+
+  useEffect(() => {
+    if (!currentProject?.settings.autoSave || !isDirty) return
+
+    const interval = (currentProject.settings.autoSaveInterval || 30) * 1000
+
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current)
+    }
+
+    saveTimeoutRef.current = setTimeout(doSave, interval)
+
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current)
+      }
+    }
+  }, [isDirty, currentProject?.settings.autoSave, currentProject?.settings.autoSaveInterval])
+
+  return { doSave }
+}
