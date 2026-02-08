@@ -24,6 +24,7 @@ export const clipSchema = z.object({
 export const projectSchema = z.object({
   id: z.string().min(1),
   name: z.string().min(1, 'Nom du projet requis'),
+  judgeName: z.string().default(''),
   createdAt: z.string(),
   updatedAt: z.string(),
   baremeId: z.string(),
@@ -34,6 +35,7 @@ export const projectSchema = z.object({
 
 export const createProjectSchema = z.object({
   name: z.string().min(1, 'Nom du projet requis').max(100, 'Nom trop long'),
+  judgeName: z.string().min(1, 'Nom du juge requis').max(100, 'Nom trop long'),
   baremeId: z.string().min(1, 'Sélectionnez un barème'),
 })
 

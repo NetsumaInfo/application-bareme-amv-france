@@ -15,7 +15,7 @@ tauri-build = { version = "1.5.5", features = [] }
 [dependencies]
 serde_json = "1.0"
 serde = { version = "1.0", features = ["derive"] }
-tauri = { version = "1.8.1", features = ["dialog-all", "fs-all", "path-all", "shell-open"] }
+tauri = { version = "1.8.1", features = ["dialog-all", "fs-all", "path-all", "shell-open", "protocol-asset"] }
 uuid = { version = "1.0", features = ["v4"] }
 chrono = { version = "0.4", features = ["serde"] }
 walkdir = "2.5"

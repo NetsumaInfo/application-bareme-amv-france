@@ -61,47 +61,68 @@ impl MpvLib {
         ];
 
         let mut last_error = String::new();
+        let mut search_dirs: Vec<std::path::PathBuf> = Vec::new();
 
-        for name in &lib_names {
-            match unsafe { Library::new(name) } {
-                Ok(lib) => {
-                    return Self::load_from_library(lib);
-                }
-                Err(e) => {
-                    last_error = format!("Failed to load {}: {}", name, e);
-                }
+        // 1. Current working directory
+        if let Ok(cwd) = std::env::current_dir() {
+            search_dirs.push(cwd.clone());
+            // Also parent of CWD (if CWD is src-tauri, parent is project root)
+            if let Some(parent) = cwd.parent() {
+                search_dirs.push(parent.to_path_buf());
             }
         }
 
-        // Try from resources directory
+        // 2. Exe directory and ancestors (handles target/debug layout)
         if let Ok(exe_path) = std::env::current_exe() {
             if let Some(exe_dir) = exe_path.parent() {
-                for name in &lib_names {
-                    let full_path = exe_dir.join("resources").join("windows").join(name);
-                    if full_path.exists() {
-                        match unsafe { Library::new(full_path) } {
-                            Ok(lib) => return Self::load_from_library(lib),
-                            Err(e) => {
-                                last_error = format!("Failed to load from resources: {}", e);
-                            }
-                        }
+                search_dirs.push(exe_dir.to_path_buf());
+                search_dirs.push(exe_dir.join("resources").join("windows"));
+                // Walk up from exe dir to find project root
+                // In dev: exe is at src-tauri/target/debug/ -> go up 3 levels
+                let mut ancestor = exe_dir.to_path_buf();
+                for _ in 0..5 {
+                    if let Some(parent) = ancestor.parent() {
+                        ancestor = parent.to_path_buf();
+                        search_dirs.push(ancestor.clone());
                     }
-                    // Also try directly in exe dir
-                    let full_path = exe_dir.join(name);
-                    if full_path.exists() {
-                        match unsafe { Library::new(full_path) } {
-                            Ok(lib) => return Self::load_from_library(lib),
-                            Err(e) => {
-                                last_error = format!("Failed to load from exe dir: {}", e);
-                            }
+                }
+            }
+        }
+
+        // Try system search first (PATH, system dirs)
+        for name in &lib_names {
+            match unsafe { Library::new(name) } {
+                Ok(lib) => return Self::load_from_library(lib),
+                Err(e) => {
+                    last_error = format!("System: {}", e);
+                }
+            }
+        }
+
+        // Try each search directory with each library name
+        for dir in &search_dirs {
+            for name in &lib_names {
+                let full_path = dir.join(name);
+                if full_path.exists() {
+                    eprintln!("[mpv] Trying: {}", full_path.display());
+                    match unsafe { Library::new(&full_path) } {
+                        Ok(lib) => {
+                            eprintln!("[mpv] Loaded from: {}", full_path.display());
+                            return Self::load_from_library(lib);
+                        }
+                        Err(e) => {
+                            last_error = format!("{}: {}", full_path.display(), e);
                         }
                     }
                 }
             }
         }
 
+        // Log all searched paths for debugging
+        let searched: Vec<String> = search_dirs.iter().map(|d| d.display().to_string()).collect();
         Err(format!(
-            "mpv library not found. Please install mpv or place mpv-2.dll in the application directory. Last error: {}",
+            "mpv library not found. Place libmpv-2.dll in the project root. Searched: [{}]. Last error: {}",
+            searched.join(", "),
             last_error
         ))
     }

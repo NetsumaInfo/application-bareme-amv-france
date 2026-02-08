@@ -27,7 +27,9 @@
       "Bash(7z:*)",
       "Bash(powershell -Command \"Expand-Archive -Path ''mpv-x86_64-v3-20260201-git-40d2947.7z'' -DestinationPath ''temp_mpv'' -Force\")",
       "Bash(ls:*)",
-      "Bash(git init:*)"
+      "Bash(git init:*)",
+      "Bash(PATH=\"/c/Users/haimf/.cargo/bin:$PATH\" cargo check:*)",
+      "Bash(npm run build:*)"
     ]
   }
 }

@@ -1,20 +1,54 @@
-import { FolderOpen, Save, FilePlus, FileDown, SaveAll } from 'lucide-react'
+import { useState, useRef, useEffect } from 'react'
+import {
+  FolderOpen,
+  Save,
+  FilePlus,
+  FileDown,
+  FolderPlus,
+  ChevronDown,
+  Menu,
+} from 'lucide-react'
 import { useProjectStore } from '@/store/useProjectStore'
 import { useNotationStore } from '@/store/useNotationStore'
 import { useUIStore } from '@/store/useUIStore'
+import { addRecentProject } from '@/utils/recentProjects'
+import { generateId, parseClipName } from '@/utils/formatters'
+import type { Clip } from '@/types/project'
 import * as tauri from '@/services/tauri'
 
 export default function ProjectManager() {
-  const { currentProject, setProjectFromData, setFilePath, markClean, getProjectData } =
-    useProjectStore()
+  const {
+    currentProject,
+    clips,
+    setProjectFromData,
+    setFilePath,
+    setClips,
+    markClean,
+    getProjectData,
+    updateProject,
+  } = useProjectStore()
   const { getNotesData, loadNotes } = useNotationStore()
   const { setShowProjectModal } = useUIStore()
+  const [open, setOpen] = useState(false)
+  const menuRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setOpen(false)
+      }
+    }
+    if (open) document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [open])
 
   const handleNewProject = () => {
+    setOpen(false)
     setShowProjectModal(true)
   }
 
   const handleOpenProject = async () => {
+    setOpen(false)
     try {
       const filePath = await tauri.openProjectDialog()
       if (!filePath) return
@@ -37,6 +71,12 @@ export default function ProjectManager() {
       if (data.notes) {
         loadNotes(data.notes)
       }
+
+      addRecentProject(
+        data.project.name,
+        data.project.judgeName || '',
+        filePath,
+      )
     } catch (e) {
       console.error('Failed to open project:', e)
       alert(`Erreur lors de l'ouverture: ${e}`)
@@ -44,12 +84,13 @@ export default function ProjectManager() {
   }
 
   const handleSave = async () => {
+    setOpen(false)
     if (!currentProject) return
 
     try {
       let filePath = currentProject.filePath
       if (!filePath) {
-        filePath = await tauri.saveProjectDialog(currentProject.name) ?? undefined
+        filePath = (await tauri.saveProjectDialog(currentProject.name)) ?? undefined
         if (!filePath) return
         setFilePath(filePath)
       }
@@ -60,6 +101,7 @@ export default function ProjectManager() {
 
       await tauri.saveProjectFile(projectData, filePath)
       markClean()
+      addRecentProject(currentProject.name, currentProject.judgeName, filePath)
     } catch (e) {
       console.error('Failed to save:', e)
       alert(`Erreur lors de la sauvegarde: ${e}`)
@@ -67,6 +109,7 @@ export default function ProjectManager() {
   }
 
   const handleSaveAs = async () => {
+    setOpen(false)
     if (!currentProject) return
 
     try {
@@ -80,17 +123,55 @@ export default function ProjectManager() {
 
       await tauri.saveProjectFile(projectData, filePath)
       markClean()
+      addRecentProject(currentProject.name, currentProject.judgeName, filePath)
     } catch (e) {
       console.error('Failed to save as:', e)
       alert(`Erreur lors de la sauvegarde: ${e}`)
     }
   }
 
-  const handleExport = async () => {
+  const handleImportFolder = async () => {
+    setOpen(false)
     if (!currentProject) return
 
     try {
-      const filePath = await tauri.saveJsonDialog(`${currentProject.name}_resultats.json`)
+      const folderPath = await tauri.openFolderDialog()
+      if (!folderPath) return
+
+      const videos = await tauri.scanVideoFolder(folderPath)
+
+      const newClips: Clip[] = videos.map((v, i) => {
+        const parsed = parseClipName(v.file_name)
+        return {
+          id: generateId(),
+          fileName: v.file_name,
+          filePath: v.file_path,
+          displayName: parsed.displayName,
+          author: parsed.author,
+          duration: 0,
+          hasInternalSubtitles: false,
+          audioTrackCount: 1,
+          scored: false,
+          order: clips.length + i,
+        }
+      })
+
+      setClips([...clips, ...newClips])
+      updateProject({ clipsFolderPath: folderPath })
+    } catch (e) {
+      console.error('Failed to import folder:', e)
+      alert(`Erreur lors de l'import: ${e}`)
+    }
+  }
+
+  const handleExport = async () => {
+    setOpen(false)
+    if (!currentProject) return
+
+    try {
+      const filePath = await tauri.saveJsonDialog(
+        `${currentProject.name}_resultats.json`,
+      )
       if (!filePath) return
 
       const notesData = getNotesData()
@@ -103,50 +184,90 @@ export default function ProjectManager() {
   }
 
   return (
-    <div className="flex items-center gap-1">
+    <div className="relative" ref={menuRef}>
       <button
-        onClick={handleNewProject}
-        className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs rounded hover:bg-surface-light text-gray-300 hover:text-white transition-colors"
-        title="Nouveau projet (Ctrl+N)"
+        onClick={() => setOpen(!open)}
+        className="flex items-center gap-1 px-2 py-1.5 text-xs rounded hover:bg-surface-light text-gray-300 hover:text-white transition-colors"
+        title="Menu fichier"
       >
-        <FilePlus size={14} />
-        <span className="hidden sm:inline">Nouveau</span>
+        <Menu size={14} />
+        <span className="hidden sm:inline">Fichier</span>
+        <ChevronDown
+          size={10}
+          className={`transition-transform ${open ? 'rotate-180' : ''}`}
+        />
       </button>
-      <button
-        onClick={handleOpenProject}
-        className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs rounded hover:bg-surface-light text-gray-300 hover:text-white transition-colors"
-        title="Ouvrir un projet JSON (Ctrl+O)"
-      >
-        <FolderOpen size={14} />
-        <span className="hidden sm:inline">Ouvrir</span>
-      </button>
-      {currentProject && (
-        <>
-          <button
-            onClick={handleSave}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs rounded hover:bg-surface-light text-gray-300 hover:text-white transition-colors"
-            title="Sauvegarder (Ctrl+S)"
-          >
-            <Save size={14} />
-            <span className="hidden sm:inline">Sauver</span>
-          </button>
-          <button
-            onClick={handleSaveAs}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs rounded hover:bg-surface-light text-gray-300 hover:text-white transition-colors"
-            title="Sauvegarder sous..."
-          >
-            <SaveAll size={14} />
-          </button>
-          <button
-            onClick={handleExport}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs rounded hover:bg-surface-light text-gray-300 hover:text-white transition-colors"
-            title="Exporter les résultats en JSON"
-          >
-            <FileDown size={14} />
-            <span className="hidden sm:inline">Export</span>
-          </button>
-        </>
+
+      {open && (
+        <div className="absolute top-full right-0 mt-1 w-52 bg-surface border border-gray-700 rounded-lg shadow-xl z-50 py-1">
+          <MenuItem
+            icon={<FilePlus size={13} />}
+            label="Nouveau projet"
+            shortcut="Ctrl+N"
+            onClick={handleNewProject}
+          />
+          <MenuItem
+            icon={<FolderOpen size={13} />}
+            label="Ouvrir..."
+            shortcut="Ctrl+O"
+            onClick={handleOpenProject}
+          />
+
+          {currentProject && (
+            <>
+              <div className="border-t border-gray-700 my-1" />
+              <MenuItem
+                icon={<FolderPlus size={13} />}
+                label="Importer des vidéos..."
+                onClick={handleImportFolder}
+              />
+              <div className="border-t border-gray-700 my-1" />
+              <MenuItem
+                icon={<Save size={13} />}
+                label="Sauvegarder"
+                shortcut="Ctrl+S"
+                onClick={handleSave}
+              />
+              <MenuItem
+                icon={<Save size={13} />}
+                label="Sauvegarder sous..."
+                onClick={handleSaveAs}
+              />
+              <div className="border-t border-gray-700 my-1" />
+              <MenuItem
+                icon={<FileDown size={13} />}
+                label="Exporter JSON"
+                onClick={handleExport}
+              />
+            </>
+          )}
+        </div>
       )}
     </div>
+  )
+}
+
+function MenuItem({
+  icon,
+  label,
+  shortcut,
+  onClick,
+}: {
+  icon: React.ReactNode
+  label: string
+  shortcut?: string
+  onClick: () => void
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className="w-full text-left px-3 py-1.5 text-xs text-gray-300 hover:text-white hover:bg-surface-light transition-colors flex items-center gap-2"
+    >
+      <span className="text-gray-500">{icon}</span>
+      <span className="flex-1">{label}</span>
+      {shortcut && (
+        <span className="text-[10px] text-gray-600">{shortcut}</span>
+      )}
+    </button>
   )
 }

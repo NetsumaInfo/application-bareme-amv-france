@@ -9,7 +9,7 @@ interface ProjectStore {
   currentClipIndex: number
   isDirty: boolean
 
-  createProject: (name: string, baremeId: string) => void
+  createProject: (name: string, judgeName: string, baremeId: string) => void
   setProjectFromData: (data: ProjectData) => void
   updateProject: (updates: Partial<Project>) => void
   updateSettings: (settings: Partial<ProjectSettings>) => void
@@ -31,11 +31,12 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
   currentClipIndex: 0,
   isDirty: false,
 
-  createProject: (name: string, baremeId: string) => {
+  createProject: (name: string, judgeName: string, baremeId: string) => {
     const now = new Date().toISOString()
     const project: Project = {
       id: generateId(),
       name,
+      judgeName,
       createdAt: now,
       updatedAt: now,
       baremeId,
@@ -58,7 +59,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
       return { ...c, displayName: parsed.displayName, author: parsed.author }
     })
     set({
-      currentProject: data.project,
+      currentProject: { ...data.project, judgeName: data.project.judgeName || '' },
       clips,
       currentClipIndex: 0,
       isDirty: false,

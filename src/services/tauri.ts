@@ -76,6 +76,18 @@ export async function playerIsAvailable(): Promise<boolean> {
   return await invoke('player_is_available')
 }
 
+export async function playerSetGeometry(x: number, y: number, width: number, height: number): Promise<void> {
+  await invoke('player_set_geometry', { x, y, width, height })
+}
+
+export async function playerShow(): Promise<void> {
+  await invoke('player_show')
+}
+
+export async function playerHide(): Promise<void> {
+  await invoke('player_hide')
+}
+
 // --- Project Commands ---
 
 export async function saveProjectFile(data: unknown, filePath: string): Promise<void> {

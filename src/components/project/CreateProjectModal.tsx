@@ -20,6 +20,7 @@ export default function CreateProjectModal() {
     resolver: zodResolver(createProjectSchema),
     defaultValues: {
       name: '',
+      judgeName: '',
       baremeId: availableBaremes[0]?.id || '',
     },
   })
@@ -27,7 +28,7 @@ export default function CreateProjectModal() {
   if (!showProjectModal) return null
 
   const onSubmit = (data: CreateProjectFormData) => {
-    createProject(data.name, data.baremeId)
+    createProject(data.name, data.judgeName, data.baremeId)
     const bareme = availableBaremes.find((b) => b.id === data.baremeId)
     if (bareme) setBareme(bareme)
     reset()
@@ -66,6 +67,21 @@ export default function CreateProjectModal() {
             />
             {errors.name && (
               <p className="text-xs text-accent mt-1">{errors.name.message}</p>
+            )}
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-1.5">
+              Nom du juge
+            </label>
+            <input
+              {...register('judgeName')}
+              type="text"
+              placeholder="ex: Redrum"
+              className="w-full px-3 py-2 bg-surface-dark border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:border-primary-500 focus:outline-none text-sm"
+            />
+            {errors.judgeName && (
+              <p className="text-xs text-accent mt-1">{errors.judgeName.message}</p>
             )}
           </div>
 

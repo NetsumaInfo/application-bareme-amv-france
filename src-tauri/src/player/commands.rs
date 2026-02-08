@@ -182,3 +182,39 @@ pub fn player_is_available(state: State<'_, AppState>) -> bool {
     let player = state.player.lock().unwrap_or_else(|e| e.into_inner());
     player.is_some()
 }
+
+#[tauri::command]
+pub fn player_set_geometry(state: State<'_, AppState>, x: i32, y: i32, width: i32, height: i32) -> Result<(), String> {
+    let child = state.child_window.lock().map_err(|e| e.to_string())?;
+    match &*child {
+        Some(cw) => {
+            cw.set_geometry(x, y, width, height);
+            Ok(())
+        }
+        None => Err("Child window not available".to_string()),
+    }
+}
+
+#[tauri::command]
+pub fn player_show(state: State<'_, AppState>) -> Result<(), String> {
+    let child = state.child_window.lock().map_err(|e| e.to_string())?;
+    match &*child {
+        Some(cw) => {
+            cw.show();
+            Ok(())
+        }
+        None => Err("Child window not available".to_string()),
+    }
+}
+
+#[tauri::command]
+pub fn player_hide(state: State<'_, AppState>) -> Result<(), String> {
+    let child = state.child_window.lock().map_err(|e| e.to_string())?;
+    match &*child {
+        Some(cw) => {
+            cw.hide();
+            Ok(())
+        }
+        None => Err("Child window not available".to_string()),
+    }
+}

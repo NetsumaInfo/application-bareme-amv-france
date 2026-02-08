@@ -25,7 +25,7 @@ unsafe impl Send for MpvPlayer {}
 unsafe impl Sync for MpvPlayer {}
 
 impl MpvPlayer {
-    pub fn new() -> Result<Self, String> {
+    pub fn new(wid: Option<i64>) -> Result<Self, String> {
         let lib = Arc::new(MpvLib::load()?);
 
         let handle = unsafe { (lib.create)() };
@@ -47,6 +47,22 @@ impl MpvPlayer {
         for (key, value) in &options {
             let key_c = to_cstring(key);
             let value_c = to_cstring(value);
+            unsafe {
+                (lib.set_option_string)(handle, key_c.as_ptr(), value_c.as_ptr());
+            }
+        }
+
+        // Set wid for embedded rendering, or force-window=no for headless
+        if let Some(w) = wid {
+            let key_c = to_cstring("wid");
+            let value_c = to_cstring(&w.to_string());
+            unsafe {
+                (lib.set_option_string)(handle, key_c.as_ptr(), value_c.as_ptr());
+            }
+            eprintln!("[mpv] Embedding into window: wid={}", w);
+        } else {
+            let key_c = to_cstring("force-window");
+            let value_c = to_cstring("no");
             unsafe {
                 (lib.set_option_string)(handle, key_c.as_ptr(), value_c.as_ptr());
             }

@@ -2,30 +2,57 @@ import { Play, Pause, SkipBack, SkipForward, Volume2, VolumeX } from 'lucide-rea
 import { usePlayer } from '@/hooks/usePlayer'
 import { formatTime } from '@/utils/formatters'
 
-const SPEED_OPTIONS = [0.5, 0.75, 1, 1.25, 1.5, 2]
+interface PlayerControlsProps {
+  compact?: boolean
+}
 
-export default function PlayerControls() {
+export default function PlayerControls({ compact }: PlayerControlsProps) {
   const {
     isPlaying,
     currentTime,
     duration,
     volume,
     muted,
-    playbackSpeed,
     isLoaded,
     togglePause,
     seek,
     seekRelative,
     setVolume,
-    setSpeed,
     setMuted,
   } = usePlayer()
 
+  if (compact) {
+    return (
+      <div className="flex items-center gap-1.5 px-1">
+        <button
+          onClick={togglePause}
+          className="p-1 rounded-full bg-primary-600 hover:bg-primary-500 text-white transition-colors"
+          disabled={!isLoaded}
+        >
+          {isPlaying ? <Pause size={10} /> : <Play size={10} />}
+        </button>
+        <input
+          type="range"
+          min={0}
+          max={duration || 100}
+          step={0.1}
+          value={currentTime}
+          onChange={(e) => seek(Number(e.target.value))}
+          className="flex-1 h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-primary-500"
+          disabled={!isLoaded}
+        />
+        <span className="text-[8px] text-gray-500 font-mono w-7 text-right shrink-0">
+          {formatTime(currentTime)}
+        </span>
+      </div>
+    )
+  }
+
   return (
-    <div className="flex flex-col gap-2 px-3 py-2 bg-surface rounded-lg">
+    <div className="flex flex-col gap-1.5 px-2 py-1.5 bg-surface rounded-lg">
       {/* Seek bar */}
       <div className="flex items-center gap-2">
-        <span className="text-xs text-gray-400 w-12 text-right font-mono">
+        <span className="text-[10px] text-gray-400 w-10 text-right font-mono">
           {formatTime(currentTime)}
         </span>
         <input
@@ -35,82 +62,61 @@ export default function PlayerControls() {
           step={0.1}
           value={currentTime}
           onChange={(e) => seek(Number(e.target.value))}
-          className="flex-1 h-1.5 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-primary-500"
+          className="flex-1 h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-primary-500"
           disabled={!isLoaded}
         />
-        <span className="text-xs text-gray-400 w-12 font-mono">
+        <span className="text-[10px] text-gray-400 w-10 font-mono">
           {formatTime(duration)}
         </span>
       </div>
 
       {/* Controls row */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          {/* Skip back 5s */}
+        <div className="flex items-center gap-1">
           <button
             onClick={() => seekRelative(-5)}
-            className="p-1.5 rounded hover:bg-surface-light text-gray-300 hover:text-white transition-colors"
+            className="p-1 rounded hover:bg-surface-light text-gray-400 hover:text-white transition-colors"
             disabled={!isLoaded}
-            title="Reculer 5s"
+            title="- 5s"
           >
-            <SkipBack size={16} />
+            <SkipBack size={14} />
           </button>
-
-          {/* Play/Pause */}
           <button
             onClick={togglePause}
-            className="p-2 rounded-full bg-primary-600 hover:bg-primary-500 text-white transition-colors"
+            className="p-1.5 rounded-full bg-primary-600 hover:bg-primary-500 text-white transition-colors"
             disabled={!isLoaded}
           >
-            {isPlaying ? <Pause size={18} /> : <Play size={18} />}
+            {isPlaying ? <Pause size={14} /> : <Play size={14} />}
           </button>
-
-          {/* Skip forward 5s */}
           <button
             onClick={() => seekRelative(5)}
-            className="p-1.5 rounded hover:bg-surface-light text-gray-300 hover:text-white transition-colors"
+            className="p-1 rounded hover:bg-surface-light text-gray-400 hover:text-white transition-colors"
             disabled={!isLoaded}
-            title="Avancer 5s"
+            title="+ 5s"
           >
-            <SkipForward size={16} />
+            <SkipForward size={14} />
           </button>
         </div>
 
-        <div className="flex items-center gap-3">
-          {/* Speed control */}
-          <select
-            value={playbackSpeed}
-            onChange={(e) => setSpeed(Number(e.target.value))}
-            className="bg-surface-light text-gray-300 text-xs rounded px-2 py-1 border border-gray-700 focus:border-primary-500 outline-none"
-            disabled={!isLoaded}
+        {/* Volume */}
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => setMuted(!muted)}
+            className="p-1 rounded hover:bg-surface-light text-gray-400 hover:text-white transition-colors"
           >
-            {SPEED_OPTIONS.map((s) => (
-              <option key={s} value={s}>
-                {s}x
-              </option>
-            ))}
-          </select>
-
-          {/* Volume */}
-          <div className="flex items-center gap-1">
-            <button
-              onClick={() => setMuted(!muted)}
-              className="p-1 rounded hover:bg-surface-light text-gray-300 hover:text-white transition-colors"
-            >
-              {muted || volume === 0 ? <VolumeX size={16} /> : <Volume2 size={16} />}
-            </button>
-            <input
-              type="range"
-              min={0}
-              max={100}
-              value={muted ? 0 : volume}
-              onChange={(e) => {
-                setVolume(Number(e.target.value))
-                if (muted) setMuted(false)
-              }}
-              className="w-20 h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-primary-500"
-            />
-          </div>
+            {muted || volume === 0 ? <VolumeX size={14} /> : <Volume2 size={14} />}
+          </button>
+          <input
+            type="range"
+            min={0}
+            max={100}
+            value={muted ? 0 : volume}
+            onChange={(e) => {
+              setVolume(Number(e.target.value))
+              if (muted) setMuted(false)
+            }}
+            className="w-16 h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-primary-500"
+          />
         </div>
       </div>
     </div>

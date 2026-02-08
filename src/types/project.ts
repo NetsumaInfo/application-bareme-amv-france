@@ -1,6 +1,7 @@
 export interface Project {
   id: string
   name: string
+  judgeName: string
   createdAt: string
   updatedAt: string
   baremeId: string

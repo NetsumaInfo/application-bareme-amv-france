@@ -1,133 +1,312 @@
+import { useState } from 'react'
 import { X } from 'lucide-react'
 import { useProjectStore } from '@/store/useProjectStore'
+import { useNotationStore } from '@/store/useNotationStore'
 import { useUIStore } from '@/store/useUIStore'
 
+function Toggle({
+  checked,
+  onChange,
+}: {
+  checked: boolean
+  onChange: () => void
+}) {
+  return (
+    <button
+      onClick={onChange}
+      className={`relative w-9 h-5 rounded-full transition-colors flex-shrink-0 ${
+        checked ? 'bg-primary-600' : 'bg-gray-700'
+      }`}
+    >
+      <span
+        className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform ${
+          checked ? 'translate-x-4' : ''
+        }`}
+      />
+    </button>
+  )
+}
+
+type Tab = 'general' | 'notation' | 'player'
+
 export default function SettingsPanel({ onClose }: { onClose: () => void }) {
-  const { currentProject, updateSettings } = useProjectStore()
-  const { hideFinalScore, toggleFinalScore } = useUIStore()
+  const { currentProject, updateSettings, updateProject } = useProjectStore()
+  const { currentBareme } = useNotationStore()
+  const { hideFinalScore, toggleFinalScore, setShowBaremeEditor } = useUIStore()
+  const [activeTab, setActiveTab] = useState<Tab>('general')
 
   const settings = currentProject?.settings
 
+  const tabs: { id: Tab; label: string }[] = [
+    { id: 'general', label: 'Général' },
+    { id: 'notation', label: 'Notation' },
+    { id: 'player', label: 'Lecteur' },
+  ]
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
-      <div className="bg-surface rounded-xl shadow-2xl w-full max-w-md p-6 border border-gray-700">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-lg font-semibold text-white">Parametres</h2>
+      <div className="bg-surface rounded-xl shadow-2xl w-full max-w-lg border border-gray-700">
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-3 border-b border-gray-700">
+          <h2 className="text-sm font-semibold text-white">Paramètres</h2>
           <button
             onClick={onClose}
             className="p-1 rounded hover:bg-surface-light text-gray-400 hover:text-white"
           >
-            <X size={18} />
+            <X size={16} />
           </button>
         </div>
 
-        <div className="space-y-5">
-          {/* Auto-save */}
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="text-sm text-white">Sauvegarde automatique</div>
-              <div className="text-xs text-gray-500">Sauvegarder periodiquement</div>
-            </div>
+        {/* Tabs */}
+        <div className="flex border-b border-gray-700">
+          {tabs.map((tab) => (
             <button
-              onClick={() => updateSettings({ autoSave: !settings?.autoSave })}
-              className={`relative w-10 h-5 rounded-full transition-colors ${
-                settings?.autoSave ? 'bg-primary-600' : 'bg-gray-700'
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`flex-1 px-4 py-2 text-xs font-medium transition-colors ${
+                activeTab === tab.id
+                  ? 'text-primary-400 border-b-2 border-primary-400'
+                  : 'text-gray-500 hover:text-gray-300'
               }`}
             >
-              <span
-                className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform ${
-                  settings?.autoSave ? 'translate-x-5' : ''
-                }`}
-              />
+              {tab.label}
             </button>
-          </div>
-
-          {/* Auto-save interval */}
-          {settings?.autoSave && (
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-sm text-white">Intervalle (secondes)</div>
-              </div>
-              <select
-                value={settings.autoSaveInterval}
-                onChange={(e) => updateSettings({ autoSaveInterval: Number(e.target.value) })}
-                className="bg-surface-dark text-gray-300 text-sm rounded px-3 py-1 border border-gray-700 focus:border-primary-500 outline-none"
-              >
-                <option value={10}>10s</option>
-                <option value={30}>30s</option>
-                <option value={60}>60s</option>
-                <option value={120}>120s</option>
-              </select>
-            </div>
-          )}
-
-          {/* Default volume */}
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="text-sm text-white">Volume par defaut</div>
-            </div>
-            <div className="flex items-center gap-2">
-              <input
-                type="range"
-                min={0}
-                max={100}
-                value={settings?.defaultVolume ?? 80}
-                onChange={(e) => updateSettings({ defaultVolume: Number(e.target.value) })}
-                className="w-24 h-1.5 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-primary-500"
-              />
-              <span className="text-xs text-gray-400 w-8 text-right">{settings?.defaultVolume ?? 80}%</span>
-            </div>
-          </div>
-
-          {/* Default speed */}
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="text-sm text-white">Vitesse par defaut</div>
-            </div>
-            <select
-              value={settings?.defaultPlaybackSpeed ?? 1}
-              onChange={(e) => updateSettings({ defaultPlaybackSpeed: Number(e.target.value) })}
-              className="bg-surface-dark text-gray-300 text-sm rounded px-3 py-1 border border-gray-700 focus:border-primary-500 outline-none"
-            >
-              <option value={0.5}>0.5x</option>
-              <option value={0.75}>0.75x</option>
-              <option value={1}>1x</option>
-              <option value={1.25}>1.25x</option>
-              <option value={1.5}>1.5x</option>
-              <option value={2}>2x</option>
-            </select>
-          </div>
-
-          {/* Hide final score */}
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="text-sm text-white">Masquer le score final</div>
-              <div className="text-xs text-gray-500">Cache le score pendant la notation</div>
-            </div>
-            <button
-              onClick={toggleFinalScore}
-              className={`relative w-10 h-5 rounded-full transition-colors ${
-                hideFinalScore ? 'bg-primary-600' : 'bg-gray-700'
-              }`}
-            >
-              <span
-                className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform ${
-                  hideFinalScore ? 'translate-x-5' : ''
-                }`}
-              />
-            </button>
-          </div>
+          ))}
         </div>
 
-        <div className="flex justify-end mt-6">
+        {/* Content */}
+        <div className="p-5 space-y-4 min-h-[240px]">
+          {activeTab === 'general' && (
+            <>
+              {/* Judge name */}
+              <div>
+                <label className="text-xs font-medium text-gray-400 mb-1 block">
+                  Nom du juge
+                </label>
+                <input
+                  value={currentProject?.judgeName ?? ''}
+                  onChange={(e) => updateProject({ judgeName: e.target.value })}
+                  placeholder="ex: Redrum"
+                  className="w-full px-3 py-2 bg-surface-dark border border-gray-700 rounded-lg text-sm text-white placeholder-gray-500 focus:border-primary-500 focus:outline-none"
+                />
+              </div>
+
+              {/* Project name */}
+              <div>
+                <label className="text-xs font-medium text-gray-400 mb-1 block">
+                  Nom du projet
+                </label>
+                <input
+                  value={currentProject?.name ?? ''}
+                  onChange={(e) => updateProject({ name: e.target.value })}
+                  placeholder="ex: Concours AMV 2026"
+                  className="w-full px-3 py-2 bg-surface-dark border border-gray-700 rounded-lg text-sm text-white placeholder-gray-500 focus:border-primary-500 focus:outline-none"
+                />
+              </div>
+
+              {/* Auto-save */}
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className="text-sm text-gray-300 block">
+                    Sauvegarde automatique
+                  </span>
+                  <span className="text-[10px] text-gray-500">
+                    Sauvegarde le projet à intervalle régulier
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  {settings?.autoSave && (
+                    <select
+                      value={settings.autoSaveInterval}
+                      onChange={(e) =>
+                        updateSettings({
+                          autoSaveInterval: Number(e.target.value),
+                        })
+                      }
+                      className="bg-surface-dark text-gray-400 text-xs rounded px-2 py-1 border border-gray-700 focus:border-primary-500 outline-none"
+                    >
+                      <option value={10}>10s</option>
+                      <option value={30}>30s</option>
+                      <option value={60}>1min</option>
+                      <option value={120}>2min</option>
+                    </select>
+                  )}
+                  <Toggle
+                    checked={settings?.autoSave ?? true}
+                    onChange={() =>
+                      updateSettings({ autoSave: !settings?.autoSave })
+                    }
+                  />
+                </div>
+              </div>
+            </>
+          )}
+
+          {activeTab === 'notation' && (
+            <>
+              {/* Current barème info */}
+              <div className="p-3 rounded-lg bg-surface-dark border border-gray-700">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-medium text-gray-300">
+                    Barème actif
+                  </span>
+                  <button
+                    onClick={() => {
+                      onClose()
+                      setShowBaremeEditor(true)
+                    }}
+                    className="text-[10px] text-primary-400 hover:text-primary-300"
+                  >
+                    Modifier
+                  </button>
+                </div>
+                <div className="text-sm text-white font-medium">
+                  {currentBareme?.name ?? 'Aucun'}
+                </div>
+                {currentBareme && (
+                  <div className="text-[10px] text-gray-500 mt-0.5">
+                    {currentBareme.criteria.length} critères —{' '}
+                    {currentBareme.totalPoints} points
+                    {currentBareme.isOfficial && ' — Officiel'}
+                  </div>
+                )}
+              </div>
+
+              {/* Criteria summary */}
+              {currentBareme && (
+                <div>
+                  <label className="text-xs font-medium text-gray-400 mb-2 block">
+                    Catégories
+                  </label>
+                  <div className="space-y-1">
+                    {(() => {
+                      const cats = new Map<
+                        string,
+                        { count: number; total: number }
+                      >()
+                      for (const c of currentBareme.criteria) {
+                        const cat = c.category || 'Général'
+                        const existing = cats.get(cat) || {
+                          count: 0,
+                          total: 0,
+                        }
+                        cats.set(cat, {
+                          count: existing.count + 1,
+                          total: existing.total + (c.max ?? 10) * c.weight,
+                        })
+                      }
+                      return Array.from(cats.entries()).map(
+                        ([name, { count, total }]) => (
+                          <div
+                            key={name}
+                            className="flex items-center justify-between px-3 py-1.5 rounded bg-surface-dark/50 text-xs"
+                          >
+                            <span className="text-gray-300">{name}</span>
+                            <span className="text-gray-500">
+                              {count} critère{count > 1 ? 's' : ''} — /{total}
+                            </span>
+                          </div>
+                        ),
+                      )
+                    })()}
+                  </div>
+                </div>
+              )}
+
+              {/* Hide score */}
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className="text-sm text-gray-300 block">
+                    Masquer les scores
+                  </span>
+                  <span className="text-[10px] text-gray-500">
+                    Cache le score total pendant la notation
+                  </span>
+                </div>
+                <Toggle checked={hideFinalScore} onChange={toggleFinalScore} />
+              </div>
+            </>
+          )}
+
+          {activeTab === 'player' && (
+            <>
+              {/* Volume */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm text-gray-300">Volume par défaut</span>
+                  <span className="text-xs text-gray-500">
+                    {settings?.defaultVolume ?? 80}%
+                  </span>
+                </div>
+                <input
+                  type="range"
+                  min={0}
+                  max={100}
+                  value={settings?.defaultVolume ?? 80}
+                  onChange={(e) =>
+                    updateSettings({ defaultVolume: Number(e.target.value) })
+                  }
+                  className="w-full h-1.5 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-primary-500"
+                />
+              </div>
+
+              {/* Video info */}
+              <div className="p-3 rounded-lg bg-surface-dark border border-gray-700">
+                <span className="text-xs font-medium text-gray-400 block mb-1">
+                  Lecteur vidéo
+                </span>
+                <p className="text-[11px] text-gray-500">
+                  Le lecteur utilise le moteur WebView intégré. Formats supportés :
+                  MP4 (H.264), WebM (VP9). Pour les formats non supportés,
+                  convertissez vos vidéos en MP4.
+                </p>
+              </div>
+
+              {/* Keyboard shortcuts reference */}
+              <div>
+                <label className="text-xs font-medium text-gray-400 mb-2 block">
+                  Raccourcis clavier
+                </label>
+                <div className="space-y-1 text-[11px]">
+                  <ShortcutRow keys="Espace" action="Lecture / Pause" />
+                  <ShortcutRow keys="← / →" action="Reculer / Avancer 5s" />
+                  <ShortcutRow
+                    keys="Shift + ← / →"
+                    action="Reculer / Avancer 30s"
+                  />
+                  <ShortcutRow keys="N / P" action="Clip suivant / précédent" />
+                  <ShortcutRow
+                    keys="Ctrl + 1/2/3"
+                    action="Changer d'interface"
+                  />
+                  <ShortcutRow keys="Double-clic" action="Plein écran" />
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="flex justify-end px-5 py-3 border-t border-gray-700">
           <button
             onClick={onClose}
-            className="px-4 py-2 text-sm rounded-lg bg-primary-600 hover:bg-primary-500 text-white font-medium transition-colors"
+            className="px-4 py-1.5 text-xs rounded-lg bg-surface-light text-gray-300 hover:text-white transition-colors"
           >
             Fermer
           </button>
         </div>
       </div>
+    </div>
+  )
+}
+
+function ShortcutRow({ keys, action }: { keys: string; action: string }) {
+  return (
+    <div className="flex items-center justify-between px-2 py-1 rounded bg-surface-dark/50">
+      <kbd className="px-1.5 py-0.5 bg-surface rounded text-gray-400 text-[10px] font-mono">
+        {keys}
+      </kbd>
+      <span className="text-gray-500">{action}</span>
     </div>
   )
 }
