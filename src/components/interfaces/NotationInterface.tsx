@@ -106,7 +106,7 @@ export default function NotationInterface() {
   if (!currentBareme || !currentClip) {
     return (
       <div className="flex items-center justify-center h-full text-gray-500 text-sm">
-        Selectionnez une video
+        Sélectionnez une vidéo
       </div>
     )
   }
@@ -182,7 +182,7 @@ export default function NotationInterface() {
                 markDirty()
               }
             }}
-            className="w-full px-2 py-1 text-[11px] bg-surface-dark border border-gray-700 rounded text-gray-300 placeholder-gray-600 focus:border-primary-500 focus:outline-none resize-none"
+            className="w-full px-2 py-1 text-[11px] bg-surface-dark border border-gray-700 rounded text-gray-300 placeholder-gray-600 focus:border-primary-500 focus:outline-none resize-y min-h-[40px]"
             rows={2}
           />
         </div>

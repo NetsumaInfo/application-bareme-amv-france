@@ -70,10 +70,15 @@ fn main() {
             player::commands::player_set_geometry,
             player::commands::player_show,
             player::commands::player_hide,
+            player::commands::player_set_fullscreen,
+            player::commands::player_is_fullscreen,
             // Project commands
             project::manager::save_project,
             project::manager::load_project,
             project::manager::export_json,
+            project::manager::get_default_projects_folder,
+            project::manager::list_projects_in_folder,
+            project::manager::ensure_directory_exists,
             // Video commands
             video::import::scan_video_folder,
         ])

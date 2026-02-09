@@ -5,6 +5,7 @@ import { createProjectSchema, type CreateProjectFormData } from '@/schemas/proje
 import { useProjectStore } from '@/store/useProjectStore'
 import { useNotationStore } from '@/store/useNotationStore'
 import { useUIStore } from '@/store/useUIStore'
+import * as tauri from '@/services/tauri'
 
 export default function CreateProjectModal() {
   const { showProjectModal, setShowProjectModal, setShowBaremeEditor } = useUIStore()
@@ -27,12 +28,33 @@ export default function CreateProjectModal() {
 
   if (!showProjectModal) return null
 
-  const onSubmit = (data: CreateProjectFormData) => {
+  const onSubmit = async (data: CreateProjectFormData) => {
     createProject(data.name, data.judgeName, data.baremeId)
     const bareme = availableBaremes.find((b) => b.id === data.baremeId)
     if (bareme) setBareme(bareme)
     reset()
     setShowProjectModal(false)
+
+    // Auto-save to projects folder
+    try {
+      const folder = useUIStore.getState().projectsFolderPath
+        || await tauri.getDefaultProjectsFolder()
+      const sanitized = data.name.replace(/[<>:"/\\|?*]/g, '_')
+      const filePath = `${folder}\\${sanitized}.json`
+
+      const projectState = useProjectStore.getState()
+      projectState.setFilePath(filePath)
+
+      const notationState = useNotationStore.getState()
+      const notesData = notationState.getNotesData()
+      const projectData = projectState.getProjectData(notesData)
+      if (projectData) {
+        await tauri.saveProjectFile(projectData, filePath)
+        projectState.markClean()
+      }
+    } catch (e) {
+      console.error('Failed to auto-save new project:', e)
+    }
   }
 
   const onClose = () => {

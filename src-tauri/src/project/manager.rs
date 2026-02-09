@@ -70,3 +70,72 @@ pub fn export_json(data: serde_json::Value, file_path: String) -> Result<(), Str
     fs::write(&file_path, json).map_err(|e| format!("Failed to export: {}", e))?;
     Ok(())
 }
+
+// --- Project folder management ---
+
+#[derive(Debug, Serialize, Clone)]
+pub struct ProjectSummary {
+    pub name: String,
+    pub judge_name: String,
+    pub updated_at: String,
+    pub file_path: String,
+}
+
+#[tauri::command]
+pub fn get_default_projects_folder() -> Result<String, String> {
+    let docs = dirs::document_dir().ok_or("Cannot find Documents folder")?;
+    let folder = docs.join("AMV Notation").join("Projets");
+    fs::create_dir_all(&folder).map_err(|e| format!("Failed to create projects folder: {}", e))?;
+    Ok(folder.to_string_lossy().to_string())
+}
+
+#[tauri::command]
+pub fn list_projects_in_folder(folder_path: String) -> Result<Vec<ProjectSummary>, String> {
+    let path = Path::new(&folder_path);
+    if !path.exists() {
+        return Ok(Vec::new());
+    }
+
+    let mut projects = Vec::new();
+
+    let entries = fs::read_dir(path).map_err(|e| e.to_string())?;
+    for entry in entries.flatten() {
+        let file_path = entry.path();
+        if file_path.extension().and_then(|e| e.to_str()) != Some("json") {
+            continue;
+        }
+        // Try to parse project metadata
+        if let Ok(content) = fs::read_to_string(&file_path) {
+            if let Ok(data) = serde_json::from_str::<serde_json::Value>(&content) {
+                let project = &data["project"];
+                let name = project["name"].as_str().unwrap_or("Sans nom").to_string();
+                let judge_name = project["judgeName"]
+                    .as_str()
+                    .or_else(|| project["judge_name"].as_str())
+                    .unwrap_or("")
+                    .to_string();
+                let updated_at = project["updatedAt"]
+                    .as_str()
+                    .or_else(|| project["updated_at"].as_str())
+                    .unwrap_or("")
+                    .to_string();
+
+                projects.push(ProjectSummary {
+                    name,
+                    judge_name,
+                    updated_at,
+                    file_path: file_path.to_string_lossy().to_string(),
+                });
+            }
+        }
+    }
+
+    // Sort by updated_at descending
+    projects.sort_by(|a, b| b.updated_at.cmp(&a.updated_at));
+    Ok(projects)
+}
+
+#[tauri::command]
+pub fn ensure_directory_exists(path: String) -> Result<(), String> {
+    fs::create_dir_all(&path).map_err(|e| e.to_string())
+}

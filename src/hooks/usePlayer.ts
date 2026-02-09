@@ -11,6 +11,9 @@ export function usePlayer() {
 
   // Poll player status every 250ms
   useEffect(() => {
+    // Muted by default - set volume to 0 on init
+    tauri.playerSetVolume(0).catch(() => {})
+
     const poll = async () => {
       try {
         const status = await tauri.playerGetStatus()
@@ -72,6 +75,14 @@ export function usePlayer() {
     tauri.playerSetVolume(vol).catch(() => {})
   }, [])
 
+  const toggleFullscreen = useCallback(async () => {
+    const current = usePlayerStore.getState().isFullscreen
+    try {
+      await tauri.playerSetFullscreen(!current)
+      usePlayerStore.getState().setFullscreen(!current)
+    } catch { /* ignore */ }
+  }, [])
+
   return {
     ...store,
     currentClip,
@@ -82,5 +93,6 @@ export function usePlayer() {
     seekRelative,
     setVolume,
     setMuted,
+    toggleFullscreen,
   }
 }

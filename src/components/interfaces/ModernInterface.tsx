@@ -179,7 +179,7 @@ export default function ModernInterface() {
   if (!currentBareme) {
     return (
       <div className="flex items-center justify-center h-full text-gray-500 text-sm">
-        Aucun bareme selectionne
+        Aucun barème sélectionné
       </div>
     )
   }
@@ -187,7 +187,7 @@ export default function ModernInterface() {
   if (!currentClip) {
     return (
       <div className="flex items-center justify-center h-full text-gray-500 text-sm">
-        Selectionnez une video pour commencer la notation
+        Sélectionnez une vidéo pour commencer la notation
       </div>
     )
   }
@@ -240,7 +240,7 @@ export default function ModernInterface() {
                 markDirty()
               }
             }}
-            className="w-full px-3 py-2 text-xs bg-surface-dark border border-gray-700 rounded-lg text-gray-300 placeholder-gray-600 focus:border-primary-500 focus:outline-none resize-none"
+            className="w-full px-3 py-2 text-xs bg-surface-dark border border-gray-700 rounded-lg text-gray-300 placeholder-gray-600 focus:border-primary-500 focus:outline-none resize-y min-h-[40px]"
             rows={2}
           />
         </div>

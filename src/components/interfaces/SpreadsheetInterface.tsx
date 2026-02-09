@@ -2,6 +2,7 @@ import { useRef, useCallback, useMemo } from 'react'
 import { FolderPlus } from 'lucide-react'
 import { useNotationStore } from '@/store/useNotationStore'
 import { useProjectStore } from '@/store/useProjectStore'
+import { useUIStore } from '@/store/useUIStore'
 import * as tauri from '@/services/tauri'
 import { generateId, parseClipName } from '@/utils/formatters'
 import type { Clip } from '@/types/project'
@@ -43,7 +44,9 @@ export default function SpreadsheetInterface() {
     markClipScored,
     markDirty,
   } = useProjectStore()
+  const { setShowPipVideo } = useUIStore()
   const cellRefs = useRef<Map<string, HTMLInputElement>>(new Map())
+  const rowRefs = useRef<Map<number, HTMLTableRowElement>>(new Map())
 
   const criteriaCount = currentBareme?.criteria.length ?? 0
 
@@ -79,6 +82,11 @@ export default function SpreadsheetInterface() {
       if (input) {
         input.focus()
         input.select()
+      }
+      // Scroll row into view
+      const row = rowRefs.current.get(clipIdx)
+      if (row) {
+        row.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
       }
       setCurrentClip(clipIdx)
     },
@@ -312,6 +320,7 @@ export default function SpreadsheetInterface() {
               return (
                 <tr
                   key={clip.id}
+                  ref={(el) => { if (el) rowRefs.current.set(clipIdx, el) }}
                   className={`transition-colors cursor-pointer ${
                     isActive
                       ? 'bg-primary-600/15'
@@ -341,6 +350,7 @@ export default function SpreadsheetInterface() {
                           ? 'bg-surface-dark'
                           : 'bg-surface'
                     }`}
+                    onDoubleClick={() => setShowPipVideo(true)}
                   >
                     <div className="flex items-center gap-1 min-w-0">
                       {clip.scored && (
@@ -506,7 +516,7 @@ export default function SpreadsheetInterface() {
               setTextNotes(currentClip.id, e.target.value)
               markDirty()
             }}
-            className="w-full px-2 py-1.5 text-xs bg-surface-dark border border-gray-700 rounded text-gray-300 placeholder-gray-600 focus:border-primary-500 focus:outline-none resize-none"
+            className="w-full px-2 py-1.5 text-xs bg-surface-dark border border-gray-700 rounded text-gray-300 placeholder-gray-600 focus:border-primary-500 focus:outline-none resize-y min-h-[40px]"
             rows={2}
           />
         </div>

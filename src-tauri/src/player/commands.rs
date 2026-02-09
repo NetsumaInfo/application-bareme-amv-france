@@ -218,3 +218,24 @@ pub fn player_hide(state: State<'_, AppState>) -> Result<(), String> {
         None => Err("Child window not available".to_string()),
     }
 }
+
+#[tauri::command]
+pub fn player_set_fullscreen(state: State<'_, AppState>, fullscreen: bool) -> Result<(), String> {
+    let child = state.child_window.lock().map_err(|e| e.to_string())?;
+    match &*child {
+        Some(cw) => {
+            cw.set_fullscreen(fullscreen);
+            Ok(())
+        }
+        None => Err("Child window not available".to_string()),
+    }
+}
+
+#[tauri::command]
+pub fn player_is_fullscreen(state: State<'_, AppState>) -> Result<bool, String> {
+    let child = state.child_window.lock().map_err(|e| e.to_string())?;
+    match &*child {
+        Some(cw) => Ok(cw.is_fullscreen()),
+        None => Ok(false),
+    }
+}

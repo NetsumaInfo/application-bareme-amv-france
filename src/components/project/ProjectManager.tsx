@@ -11,7 +11,6 @@ import {
 import { useProjectStore } from '@/store/useProjectStore'
 import { useNotationStore } from '@/store/useNotationStore'
 import { useUIStore } from '@/store/useUIStore'
-import { addRecentProject } from '@/utils/recentProjects'
 import { generateId, parseClipName } from '@/utils/formatters'
 import type { Clip } from '@/types/project'
 import * as tauri from '@/services/tauri'
@@ -72,12 +71,7 @@ export default function ProjectManager() {
         loadNotes(data.notes)
       }
 
-      addRecentProject(
-        data.project.name,
-        data.project.judgeName || '',
-        filePath,
-      )
-    } catch (e) {
+} catch (e) {
       console.error('Failed to open project:', e)
       alert(`Erreur lors de l'ouverture: ${e}`)
     }
@@ -101,7 +95,6 @@ export default function ProjectManager() {
 
       await tauri.saveProjectFile(projectData, filePath)
       markClean()
-      addRecentProject(currentProject.name, currentProject.judgeName, filePath)
     } catch (e) {
       console.error('Failed to save:', e)
       alert(`Erreur lors de la sauvegarde: ${e}`)
@@ -123,7 +116,6 @@ export default function ProjectManager() {
 
       await tauri.saveProjectFile(projectData, filePath)
       markClean()
-      addRecentProject(currentProject.name, currentProject.judgeName, filePath)
     } catch (e) {
       console.error('Failed to save as:', e)
       alert(`Erreur lors de la sauvegarde: ${e}`)

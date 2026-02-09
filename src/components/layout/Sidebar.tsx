@@ -7,7 +7,7 @@ export default function Sidebar() {
   const { clips, currentClipIndex, nextClip, previousClip } = useProjectStore()
 
   return (
-    <aside className="flex flex-col w-60 bg-surface border-r border-gray-700 min-w-[200px]">
+    <aside className="flex flex-col w-60 bg-primary-950/80 border-r border-primary-800/50 min-w-[200px]">
       {/* Video list */}
       <div className="flex-1 overflow-hidden">
         <VideoList />
@@ -15,11 +15,11 @@ export default function Sidebar() {
 
       {/* Navigation buttons */}
       {clips.length > 0 && (
-        <div className="flex items-center gap-1 px-2 py-2 border-t border-gray-700">
+        <div className="flex items-center gap-1 px-2 py-2 border-t border-primary-800/50">
           <button
             onClick={previousClip}
             disabled={currentClipIndex === 0}
-            className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 text-xs rounded bg-surface-light text-gray-300 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+            className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 text-xs rounded bg-primary-900 text-gray-300 hover:bg-primary-800 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
           >
             <ChevronLeft size={14} />
             Précédent
@@ -27,7 +27,7 @@ export default function Sidebar() {
           <button
             onClick={nextClip}
             disabled={currentClipIndex >= clips.length - 1}
-            className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 text-xs rounded bg-surface-light text-gray-300 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+            className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 text-xs rounded bg-primary-900 text-gray-300 hover:bg-primary-800 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
           >
             Suivant
             <ChevronRight size={14} />

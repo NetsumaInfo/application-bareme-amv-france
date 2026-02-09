@@ -12,6 +12,11 @@ const SW_SHOW: i32 = 5;
 const SW_HIDE: i32 = 0;
 const WM_MOUSEACTIVATE: u32 = 0x0021;
 const MA_NOACTIVATE: isize = 3;
+const SWP_NOZORDER: u32 = 0x0004;
+const MONITOR_DEFAULTTONEAREST: u32 = 1;
+const HWND_TOPMOST: isize = -1;
+const HWND_NOTOPMOST: isize = -2;
+const SWP_SHOWWINDOW: u32 = 0x0040;
 
 #[repr(C)]
 struct WndClassExW {
@@ -33,6 +38,22 @@ struct WndClassExW {
 struct Point {
     x: i32,
     y: i32,
+}
+
+#[repr(C)]
+struct Rect {
+    left: i32,
+    top: i32,
+    right: i32,
+    bottom: i32,
+}
+
+#[repr(C)]
+struct MonitorInfo {
+    cb_size: u32,
+    rc_monitor: Rect,
+    rc_work: Rect,
+    dw_flags: u32,
 }
 
 #[link(name = "user32")]
@@ -58,6 +79,9 @@ extern "system" {
     fn DefWindowProcW(hwnd: isize, msg: u32, wparam: usize, lparam: isize) -> isize;
     fn GetModuleHandleW(module_name: *const u16) -> isize;
     fn ClientToScreen(hwnd: isize, point: *mut Point) -> i32;
+    fn SetWindowPos(hwnd: isize, hwnd_insert_after: isize, x: i32, y: i32, cx: i32, cy: i32, flags: u32) -> i32;
+    fn MonitorFromWindow(hwnd: isize, dw_flags: u32) -> isize;
+    fn GetMonitorInfoW(h_monitor: isize, lpmi: *mut MonitorInfo) -> i32;
 }
 
 #[link(name = "gdi32")]
@@ -88,6 +112,8 @@ unsafe extern "system" fn wnd_proc(
 pub struct MpvChildWindow {
     hwnd: isize,
     owner: isize,
+    is_fullscreen: std::sync::atomic::AtomicBool,
+    saved_geometry: std::sync::Mutex<(i32, i32, i32, i32)>,
 }
 
 unsafe impl Send for MpvChildWindow {}
@@ -145,7 +171,12 @@ impl MpvChildWindow {
             }
 
             eprintln!("[mpv] Created popup window: hwnd={}, owner={}", hwnd, parent_hwnd);
-            Some(MpvChildWindow { hwnd, owner: parent_hwnd })
+            Some(MpvChildWindow {
+                hwnd,
+                owner: parent_hwnd,
+                is_fullscreen: std::sync::atomic::AtomicBool::new(false),
+                saved_geometry: std::sync::Mutex::new((0, 0, 1, 1)),
+            })
         }
     }
 
@@ -175,6 +206,63 @@ impl MpvChildWindow {
         unsafe {
             ShowWindow(self.hwnd, SW_HIDE);
         }
+    }
+
+    pub fn is_fullscreen(&self) -> bool {
+        self.is_fullscreen.load(std::sync::atomic::Ordering::Relaxed)
+    }
+
+    pub fn set_fullscreen(&self, fullscreen: bool) {
+        if fullscreen == self.is_fullscreen() {
+            return;
+        }
+
+        unsafe {
+            if fullscreen {
+                // Save current geometry
+                // Note: We'll get the monitor rect and go fullscreen
+                let monitor = MonitorFromWindow(self.owner, MONITOR_DEFAULTTONEAREST);
+                if monitor == 0 {
+                    return;
+                }
+
+                let mut mi = MonitorInfo {
+                    cb_size: std::mem::size_of::<MonitorInfo>() as u32,
+                    rc_monitor: Rect { left: 0, top: 0, right: 0, bottom: 0 },
+                    rc_work: Rect { left: 0, top: 0, right: 0, bottom: 0 },
+                    dw_flags: 0,
+                };
+                if GetMonitorInfoW(monitor, &mut mi) == 0 {
+                    return;
+                }
+
+                let screen_w = mi.rc_monitor.right - mi.rc_monitor.left;
+                let screen_h = mi.rc_monitor.bottom - mi.rc_monitor.top;
+
+                SetWindowPos(
+                    self.hwnd,
+                    HWND_TOPMOST,
+                    mi.rc_monitor.left,
+                    mi.rc_monitor.top,
+                    screen_w,
+                    screen_h,
+                    SWP_SHOWWINDOW,
+                );
+            } else {
+                // Restore: remove TOPMOST and let frontend re-set geometry
+                SetWindowPos(
+                    self.hwnd,
+                    HWND_NOTOPMOST,
+                    0,
+                    0,
+                    1,
+                    1,
+                    SWP_NOZORDER,
+                );
+            }
+        }
+
+        self.is_fullscreen.store(fullscreen, std::sync::atomic::Ordering::Relaxed);
     }
 }
 

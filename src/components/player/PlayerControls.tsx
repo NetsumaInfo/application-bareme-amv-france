@@ -1,5 +1,6 @@
-import { Play, Pause, SkipBack, SkipForward, Volume2, VolumeX } from 'lucide-react'
+import { Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, Maximize2, Minimize2 } from 'lucide-react'
 import { usePlayer } from '@/hooks/usePlayer'
+import { usePlayerStore } from '@/store/usePlayerStore'
 import { formatTime } from '@/utils/formatters'
 
 interface PlayerControlsProps {
@@ -19,7 +20,9 @@ export default function PlayerControls({ compact }: PlayerControlsProps) {
     seekRelative,
     setVolume,
     setMuted,
+    toggleFullscreen,
   } = usePlayer()
+  const isFullscreen = usePlayerStore((s) => s.isFullscreen)
 
   if (compact) {
     return (
@@ -98,8 +101,8 @@ export default function PlayerControls({ compact }: PlayerControlsProps) {
           </button>
         </div>
 
-        {/* Volume */}
         <div className="flex items-center gap-1">
+          {/* Volume */}
           <button
             onClick={() => setMuted(!muted)}
             className="p-1 rounded hover:bg-surface-light text-gray-400 hover:text-white transition-colors"
@@ -117,6 +120,16 @@ export default function PlayerControls({ compact }: PlayerControlsProps) {
             }}
             className="w-16 h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-primary-500"
           />
+
+          {/* Fullscreen */}
+          <button
+            onClick={toggleFullscreen}
+            className="p-1 rounded hover:bg-surface-light text-gray-400 hover:text-white transition-colors ml-1"
+            disabled={!isLoaded}
+            title={isFullscreen ? 'Quitter le plein écran (F11)' : 'Plein écran (F11)'}
+          >
+            {isFullscreen ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
+          </button>
         </div>
       </div>
     </div>

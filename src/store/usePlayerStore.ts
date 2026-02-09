@@ -14,6 +14,7 @@ interface PlayerStore {
   audioTracks: AudioTrack[]
   currentSubtitleId: number | null
   currentAudioId: number | null
+  isFullscreen: boolean
 
   setPlaying: (playing: boolean) => void
   setCurrentTime: (time: number) => void
@@ -26,6 +27,7 @@ interface PlayerStore {
   setAudioTracks: (tracks: AudioTrack[]) => void
   setCurrentSubtitleId: (id: number | null) => void
   setCurrentAudioId: (id: number | null) => void
+  setFullscreen: (fs: boolean) => void
   reset: () => void
 }
 
@@ -34,7 +36,7 @@ const initialState = {
   currentTime: 0,
   duration: 0,
   volume: 80,
-  muted: false,
+  muted: true,
   playbackSpeed: 1,
   isLoaded: false,
   currentFilePath: null as string | null,
@@ -42,6 +44,7 @@ const initialState = {
   audioTracks: [] as AudioTrack[],
   currentSubtitleId: null as number | null,
   currentAudioId: null as number | null,
+  isFullscreen: false,
 }
 
 export const usePlayerStore = create<PlayerStore>((set) => ({
@@ -65,5 +68,6 @@ export const usePlayerStore = create<PlayerStore>((set) => ({
   setAudioTracks: (tracks) => set({ audioTracks: tracks }),
   setCurrentSubtitleId: (id) => set({ currentSubtitleId: id }),
   setCurrentAudioId: (id) => set({ currentAudioId: id }),
+  setFullscreen: (fs) => set({ isFullscreen: fs }),
   reset: () => set({ ...initialState }),
 }))

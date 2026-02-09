@@ -88,6 +88,14 @@ export async function playerHide(): Promise<void> {
   await invoke('player_hide')
 }
 
+export async function playerSetFullscreen(fullscreen: boolean): Promise<void> {
+  await invoke('player_set_fullscreen', { fullscreen })
+}
+
+export async function playerIsFullscreen(): Promise<boolean> {
+  return await invoke('player_is_fullscreen')
+}
+
 // --- Project Commands ---
 
 export async function saveProjectFile(data: unknown, filePath: string): Promise<void> {
@@ -113,6 +121,27 @@ export interface VideoMetadata {
 
 export async function scanVideoFolder(folderPath: string): Promise<VideoMetadata[]> {
   return await invoke('scan_video_folder', { folderPath })
+}
+
+// --- Project Folder Commands ---
+
+export interface ProjectSummary {
+  name: string
+  judge_name: string
+  updated_at: string
+  file_path: string
+}
+
+export async function getDefaultProjectsFolder(): Promise<string> {
+  return await invoke('get_default_projects_folder')
+}
+
+export async function listProjectsInFolder(folderPath: string): Promise<ProjectSummary[]> {
+  return await invoke('list_projects_in_folder', { folderPath })
+}
+
+export async function ensureDirectoryExists(path: string): Promise<void> {
+  await invoke('ensure_directory_exists', { path })
 }
 
 // --- Dialog Helpers ---
