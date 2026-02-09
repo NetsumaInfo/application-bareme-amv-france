@@ -94,16 +94,20 @@ export function usePlayer() {
     tauri.playerSetVolume(vol).catch(() => {})
   }, [])
 
-  const toggleFullscreen = useCallback(async () => {
+  const setFullscreen = useCallback(async (next: boolean) => {
     try {
-      const current = await tauri
-        .playerIsFullscreen()
-        .catch(() => usePlayerStore.getState().isFullscreen)
-      const next = !current
       await tauri.playerSetFullscreen(next)
       usePlayerStore.getState().setFullscreen(next)
     } catch { /* ignore */ }
   }, [])
+
+  const toggleFullscreen = useCallback(async () => {
+    await setFullscreen(!usePlayerStore.getState().isFullscreen)
+  }, [setFullscreen])
+
+  const exitFullscreen = useCallback(async () => {
+    await setFullscreen(false)
+  }, [setFullscreen])
 
   return {
     isPlaying,
@@ -127,6 +131,8 @@ export function usePlayer() {
     seekRelative,
     setVolume,
     setMuted,
+    setFullscreen,
+    exitFullscreen,
     toggleFullscreen,
   }
 }

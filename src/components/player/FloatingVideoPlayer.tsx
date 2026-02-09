@@ -36,6 +36,7 @@ export function FloatingVideoPlayer({ onClose }: FloatingVideoPlayerProps) {
     seekRelative,
     setMuted,
     toggleFullscreen,
+    exitFullscreen,
     isFullscreen,
   } = usePlayer()
   const clips = useProjectStore((state) => state.clips)
@@ -43,7 +44,6 @@ export function FloatingVideoPlayer({ onClose }: FloatingVideoPlayerProps) {
   const currentClip = clips[currentClipIndex]
 
   const updateGeometry = useCallback(() => {
-    if (usePlayerStore.getState().isFullscreen) return
     const el = videoAreaRef.current
     if (!el) return
 
@@ -112,7 +112,9 @@ export function FloatingVideoPlayer({ onClose }: FloatingVideoPlayerProps) {
     }
 
     return () => {
-      tauri.playerHide().catch(() => {})
+      if (!usePlayerStore.getState().isFullscreen) {
+        tauri.playerHide().catch(() => {})
+      }
     }
   }, [currentClip?.filePath, updateGeometry])
 
@@ -131,12 +133,12 @@ export function FloatingVideoPlayer({ onClose }: FloatingVideoPlayerProps) {
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape' && usePlayerStore.getState().isFullscreen) {
-        toggleFullscreen()
+        exitFullscreen().catch(() => {})
       }
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [toggleFullscreen])
+  }, [exitFullscreen])
 
   const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
     dragStartRef.current = {

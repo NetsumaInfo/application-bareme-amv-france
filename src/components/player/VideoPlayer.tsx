@@ -17,7 +17,6 @@ export default function VideoPlayer({ compact }: VideoPlayerProps) {
 
   // Update geometry of mpv child window to match container position
   const updateGeometry = useCallback(() => {
-    if (usePlayerStore.getState().isFullscreen) return
     const el = containerRef.current
     if (!el) return
 
@@ -78,7 +77,9 @@ export default function VideoPlayer({ compact }: VideoPlayerProps) {
     }
 
     return () => {
-      tauri.playerHide().catch(() => {})
+      if (!usePlayerStore.getState().isFullscreen) {
+        tauri.playerHide().catch(() => {})
+      }
     }
   }, [currentClip?.filePath, updateGeometry])
 

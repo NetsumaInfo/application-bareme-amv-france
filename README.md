@@ -1,35 +1,37 @@
 # AMV Notation
 
-Application desktop de notation pour les concours AMV (Anime Music Video).
+Application desktop de notation pour concours AMV (Anime Music Video).
 
 ## Stack technique
 
-- **Desktop** : Tauri v1 (Rust backend + WebView frontend)
-- **Frontend** : React 19, TypeScript, Tailwind CSS 3, Zustand 5, Zod 4
-- **Video** : mpv/libmpv via FFI dynamique (`libloading`) - tous codecs FFmpeg
-- **Plateforme** : Windows
+- **Desktop**: Tauri v1 (Rust + WebView)
+- **Frontend**: React 19, TypeScript, Tailwind CSS 3, Zustand 5, Zod 4
+- **Lecture vidéo**: mpv/libmpv via FFI dynamique (`libloading`)
+- **Plateforme**: Windows
 
-## Fonctionnalites
+## Fonctionnalités
 
-- Lecture video integree (mpv embarque dans l'interface via Win32 child window)
-- 3 interfaces de notation interchangeables (Tableur, Moderne, Notation)
-- Systeme de baremes personnalisables (criteres, poids, categories)
-- Gestion de projets (creation, sauvegarde `.json`, ouverture, projets recents)
-- Import de videos depuis un dossier
-- Export JSON des resultats
+- Lecture vidéo intégrée (mpv embarqué via fenêtre Win32)
+- Plein écran vidéo avec overlay de contrôle
+- 3 interfaces de notation: **Tableur**, **Moderne**, **Notation**
+- Barèmes personnalisables (catégories, critères, coefficients)
+- Projets JSON (création, sauvegarde, ouverture, récents)
+- Import de clips depuis un dossier
+- Export JSON
 - Sauvegarde automatique configurable
-- Raccourcis clavier (Espace, fleches, N/P, Ctrl+1/2/3)
 
-## Prerequis
+## Prérequis
 
 - [Node.js](https://nodejs.org/) >= 18
 - [Rust](https://rustup.rs/) >= 1.60
+- `libmpv-2.dll` à la racine du projet (sinon l'app démarre sans lecture vidéo)
 
-### Installation de libmpv (lecture video)
+### Installation de `libmpv-2.dll`
 
-1. Telecharger l'archive mpv : [mpv-dev-x86_64-v3-20260201-git-40d2947.7z](https://cdn.discordapp.com/attachments/1227985261682757735/1470490938496389272/mpv-dev-x86_64-v3-20260201-git-40d2947.7z?ex=698b7ce8&is=698a2b68&hm=0f5edc1d114e1264bc881c6a4d70798ab44bbeab7a71ed39ee721df8c71127e4&)
-2. Extraire l'archive avec 7-Zip
-3. Copier le fichier `libmpv-2.dll` dans le dossier `/app bareme amv/`
+1. Télécharger `libmpv-2.dll`:
+   [libmpv-2.dll](https://cdn.discordapp.com/attachments/1227985261682757735/1470540545041502238/libmpv-2.dll?ex=698bab1b&is=698a599b&hm=7c60b7be993d6873c34c12cbaf2e1548b5ba33c45256cb4d2ebc2c0eba942206&)
+2. Copier le fichier dans le dossier racine du projet:
+   `s:\projet_app\app bareme amv\libmpv-2.dll`
 
 ## Installation
 
@@ -37,53 +39,81 @@ Application desktop de notation pour les concours AMV (Anime Music Video).
 npm install
 ```
 
-## Developpement
+## Développement
 
 ```bash
-# Lance Vite + Tauri ensemble
+# Vite + Tauri
 npm run tauri dev
 
 # Frontend seul (sans backend Rust)
 npm run dev
+
+# Lint
+npm run lint
+
+# Vérification Rust
+cd src-tauri
+cargo check
 ```
 
-## Build production
+## Build
 
 ```bash
-# Frontend uniquement (TypeScript check + Vite build)
+# Frontend (tsc + vite)
 npm run build
 
-# Application desktop complete
+# App desktop complète
 npm run tauri build
 ```
 
-## Structure du projet
+## Raccourcis clavier (lecteur)
 
-```
-src/                    # Frontend React
+- `Espace`: lecture/pause
+- `←` / `→`: reculer/avancer de 5s
+- `Shift+←` / `Shift+→`: reculer/avancer de 30s
+- `N` / `P`: clip suivant / précédent
+- `F11`: bascule plein écran
+- `Esc`: quitter le plein écran
+
+## Plein écran et overlay
+
+- En mode plein écran, l'app utilise une fenêtre overlay dédiée au-dessus du rendu mpv.
+- Les contrôles (play/pause, seek, volume, navigation clip, quitter plein écran) apparaissent au mouvement de souris puis se masquent après inactivité.
+- Le bouton quitter et `Esc` déclenchent une sortie explicite du plein écran (pas un toggle ambigu).
+
+## Dépannage rapide
+
+- **Pas de vidéo**: vérifier que `libmpv-2.dll` est présent à la racine.
+- **Comportement plein écran incohérent après update Rust**: fermer totalement l'app puis relancer `npm run tauri dev`.
+- **Commandes non prises en compte**: vérifier que la fenêtre overlay est bien au premier plan en plein écran.
+
+## Architecture (résumé)
+
+```text
+src/                    Frontend React
   components/
-    layout/             # AppLayout, Header, Sidebar
-    player/             # VideoPlayer, PlayerControls
-    interfaces/         # SpreadsheetInterface, ModernInterface, NotationInterface
-    project/            # ProjectManager, CreateProjectModal, VideoList
-    settings/           # SettingsPanel (3 onglets)
-    scoring/            # BaremeEditor
-  store/                # 4 stores Zustand
-  hooks/                # usePlayer, useAutoSave, useKeyboardShortcuts
-  services/             # tauri.ts (wrappers invoke)
-  types/                # Interfaces TypeScript
-  schemas/              # Schemas Zod
-  utils/                # scoring.ts, formatters.ts
+    layout/             AppLayout, Header, Sidebar
+    player/             VideoPlayer, PlayerControls, FloatingVideoPlayer, FullscreenOverlay
+    interfaces/         SpreadsheetInterface, ModernInterface, NotationInterface
+    project/            ProjectManager, CreateProjectModal, VideoList
+    settings/           SettingsPanel
+    scoring/            BaremeEditor
+  store/                Zustand stores
+  hooks/                usePlayer, useAutoSave, useKeyboardShortcuts
+  services/             tauri.ts (wrappers invoke)
+  types/                Types TypeScript
+  schemas/              Schémas Zod
+  utils/                Helpers (formatage, score, etc.)
 
-src-tauri/src/          # Backend Rust
-  main.rs               # Point d'entree, setup hook, 19 commandes
-  state.rs              # AppState (player + child_window)
-  player/               # mpv_ffi, mpv_wrapper, mpv_window, commands
-  project/              # manager.rs (save/load .json)
-  video/                # import.rs (scan dossiers)
+src-tauri/src/          Backend Rust
+  main.rs               setup Tauri + init mpv + création overlay
+  state.rs              AppState
+  player/               mpv_ffi, mpv_wrapper, mpv_window, commands
+  project/              save/load/export JSON
+  video/                scan de dossiers vidéos
 ```
 
-## Formats video supportes
+## Formats vidéo supportés
 
-Via mpv/FFmpeg : MP4, MKV, AVI, MOV, WebM, FLV, M4V, AMV
-Codecs : H.264, H.265/HEVC, VP8, VP9, AV1
+Formats usuels via mpv/FFmpeg: MP4, MKV, AVI, MOV, WebM, FLV, M4V, AMV.
+Codecs usuels: H.264, H.265/HEVC, VP8, VP9, AV1.

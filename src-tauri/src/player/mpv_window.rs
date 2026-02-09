@@ -12,8 +12,12 @@ const SW_SHOW: i32 = 5;
 const SW_HIDE: i32 = 0;
 const WM_MOUSEACTIVATE: u32 = 0x0021;
 const MA_NOACTIVATE: isize = 3;
+const SWP_NOSIZE: u32 = 0x0001;
+const SWP_NOMOVE: u32 = 0x0002;
 const SWP_NOZORDER: u32 = 0x0004;
+const SWP_NOACTIVATE: u32 = 0x0010;
 const MONITOR_DEFAULTTONEAREST: u32 = 1;
+const HWND_TOP: isize = 0;
 const HWND_TOPMOST: isize = -1;
 const HWND_NOTOPMOST: isize = -2;
 const SWP_SHOWWINDOW: u32 = 0x0040;
@@ -204,7 +208,16 @@ impl MpvChildWindow {
 
     pub fn show(&self) {
         unsafe {
-            ShowWindow(self.hwnd, SW_SHOW);
+            // Keep current z-order so the fullscreen overlay window remains above mpv.
+            SetWindowPos(
+                self.hwnd,
+                0,
+                0,
+                0,
+                0,
+                0,
+                SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_SHOWWINDOW,
+            );
         }
     }
 
@@ -242,14 +255,16 @@ impl MpvChildWindow {
 
                 let screen_w = mi.rc_monitor.right - mi.rc_monitor.left;
                 let screen_h = mi.rc_monitor.bottom - mi.rc_monitor.top;
+                // Keep mpv fullscreen-sized but not TOPMOST so the dedicated
+                // overlay window can reliably stay above it.
                 SetWindowPos(
                     self.hwnd,
-                    HWND_TOPMOST,
+                    HWND_TOP,
                     mi.rc_monitor.left,
                     mi.rc_monitor.top,
                     screen_w,
                     screen_h,
-                    SWP_SHOWWINDOW,
+                    SWP_SHOWWINDOW | SWP_NOACTIVATE,
                 );
             } else {
                 let (x, y, w, h) = self

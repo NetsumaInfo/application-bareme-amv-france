@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import { FilePlus, FolderOpen, Folder } from 'lucide-react'
+import { emit, listen } from '@tauri-apps/api/event'
 import Header from './Header'
 import Sidebar from './Sidebar'
 import VideoPlayer from '@/components/player/VideoPlayer'
@@ -20,6 +21,7 @@ import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts'
 import { usePlayer } from '@/hooks/usePlayer'
 import { useSaveProject } from '@/hooks/useSaveProject'
 import * as tauri from '@/services/tauri'
+import { getClipPrimaryLabel } from '@/utils/formatters'
 
 interface ProjectListItem {
   name: string
@@ -204,12 +206,14 @@ function ScoringInterface() {
 }
 
 export default function AppLayout() {
-  const { currentProject, nextClip, previousClip } = useProjectStore()
+  const { currentProject, clips, currentClipIndex, nextClip, previousClip } = useProjectStore()
   const {
     currentInterface,
     switchInterface,
     sidebarCollapsed,
     showPipVideo,
+    showProjectModal,
+    showBaremeEditor,
     setShowPipVideo,
     zoomLevel,
     zoomIn,
@@ -217,17 +221,81 @@ export default function AppLayout() {
     resetZoom,
     setShowProjectModal,
   } = useUIStore()
-  const { togglePause, seekRelative, toggleFullscreen } = usePlayer()
+  const { togglePause, seekRelative, toggleFullscreen, exitFullscreen } = usePlayer()
+  const isPlayerLoaded = usePlayerStore((state) => state.isLoaded)
+  const isFullscreen = usePlayerStore((state) => state.isFullscreen)
   const { save, saveAs } = useSaveProject()
   const [showSettings, setShowSettings] = useState(false)
 
   useAutoSave()
 
+  // Emit clip info to overlay window when fullscreen
+  const emitClipInfo = useCallback(() => {
+    const { clips: allClips, currentClipIndex: idx } = useProjectStore.getState()
+    const clip = allClips[idx]
+    emit('main:clip-changed', {
+      name: clip ? getClipPrimaryLabel(clip) : '',
+      index: idx,
+      total: allClips.length,
+    }).catch(() => {})
+  }, [])
+
+  useEffect(() => {
+    if (isFullscreen) {
+      emitClipInfo()
+    }
+  }, [isFullscreen, currentClipIndex, clips.length, emitClipInfo])
+
+  // Listen for overlay commands (next/prev clip)
+  useEffect(() => {
+    let unlistenNext: (() => void) | null = null
+    let unlistenPrev: (() => void) | null = null
+    let unlistenRequest: (() => void) | null = null
+
+    listen('overlay:next-clip', () => {
+      useProjectStore.getState().nextClip()
+    }).then(fn => { unlistenNext = fn })
+
+    listen('overlay:prev-clip', () => {
+      useProjectStore.getState().previousClip()
+    }).then(fn => { unlistenPrev = fn })
+
+    listen('overlay:request-clip-info', () => {
+      emitClipInfo()
+    }).then(fn => { unlistenRequest = fn })
+
+    return () => {
+      if (unlistenNext) unlistenNext()
+      if (unlistenPrev) unlistenPrev()
+      if (unlistenRequest) unlistenRequest()
+    }
+  }, [emitClipInfo])
+
+  // Load clips during fullscreen (VideoPlayer may not be mounted)
+  useEffect(() => {
+    if (!isFullscreen) return
+    const currentClip = clips[currentClipIndex]
+    if (!currentClip?.filePath) return
+
+    const { isLoaded: loaded, currentFilePath } = usePlayerStore.getState()
+    if (loaded && currentFilePath === currentClip.filePath) return
+
+    usePlayerStore.getState().setLoaded(false)
+    tauri.playerLoad(currentClip.filePath)
+      .then(() => {
+        usePlayerStore.getState().setLoaded(true, currentClip.filePath)
+        tauri.playerPlay().catch(() => {})
+        // Emit updated clip info after loading
+        emitClipInfo()
+      })
+      .catch(console.error)
+  }, [isFullscreen, currentClipIndex, clips, emitClipInfo])
+
   const handleEscapeFullscreen = useCallback(() => {
     if (usePlayerStore.getState().isFullscreen) {
-      toggleFullscreen()
+      exitFullscreen().catch(() => {})
     }
-  }, [toggleFullscreen])
+  }, [exitFullscreen])
 
   const handleCtrlO = useCallback(async () => {
     try {
@@ -278,6 +346,57 @@ export default function AppLayout() {
 
   const isNotationMode = currentInterface === 'notation'
   const isSpreadsheetMode = currentInterface === 'spreadsheet'
+  const isAnyModalOpen = showSettings || showProjectModal || showBaremeEditor
+
+  useEffect(() => {
+    if (!currentProject) return
+
+    if (isAnyModalOpen) {
+      if (usePlayerStore.getState().isFullscreen) {
+        usePlayerStore.getState().setFullscreen(false)
+      }
+      tauri.playerSetFullscreen(false).catch(() => {})
+      tauri.playerHide().catch(() => {})
+      return
+    }
+
+    const hasClip = Boolean(clips[currentClipIndex]?.filePath)
+    if (!hasClip || !isPlayerLoaded) return
+
+    const shouldShowPlayer =
+      currentInterface === 'spreadsheet'
+        ? showPipVideo || usePlayerStore.getState().isFullscreen
+        : true
+
+    if (shouldShowPlayer) {
+      tauri.playerShow().catch(() => {})
+    }
+  }, [
+    currentProject,
+    isAnyModalOpen,
+    currentInterface,
+    showPipVideo,
+    isPlayerLoaded,
+    clips,
+    currentClipIndex,
+  ])
+
+  useEffect(() => {
+    const forceExitFullscreen = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return
+      if (!usePlayerStore.getState().isFullscreen) return
+      event.preventDefault()
+      event.stopPropagation()
+      exitFullscreen().catch(() => {})
+    }
+
+    window.addEventListener('keydown', forceExitFullscreen, true)
+    document.addEventListener('keydown', forceExitFullscreen, true)
+    return () => {
+      window.removeEventListener('keydown', forceExitFullscreen, true)
+      document.removeEventListener('keydown', forceExitFullscreen, true)
+    }
+  }, [exitFullscreen])
 
   return (
     <div

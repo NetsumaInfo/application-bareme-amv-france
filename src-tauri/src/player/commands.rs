@@ -220,11 +220,42 @@ pub fn player_hide(state: State<'_, AppState>) -> Result<(), String> {
 }
 
 #[tauri::command]
-pub fn player_set_fullscreen(state: State<'_, AppState>, fullscreen: bool) -> Result<(), String> {
+pub fn player_set_fullscreen(
+    state: State<'_, AppState>,
+    app_handle: tauri::AppHandle,
+    fullscreen: bool,
+) -> Result<(), String> {
     let child = state.child_window.lock().map_err(|e| e.to_string())?;
     match &*child {
         Some(cw) => {
-            cw.set_fullscreen(fullscreen);
+            use tauri::Manager;
+
+            if fullscreen {
+                // 1. Ensure mpv is visible then go fullscreen
+                cw.show();
+                cw.set_fullscreen(true);
+
+                // 2. Ensure transparent overlay window stays above mpv
+                if let Some(overlay) = app_handle.get_window("fullscreen-overlay") {
+                    let _ = overlay.set_always_on_top(true);
+                    let _ = overlay.set_fullscreen(true);
+                    let _ = overlay.set_ignore_cursor_events(false);
+                    let _ = overlay.show();
+                    let _ = overlay.set_focus();
+                } else {
+                    eprintln!("[AMV] Overlay window not found (fullscreen controls unavailable)");
+                }
+            } else {
+                // 1. Hide overlay first
+                if let Some(overlay) = app_handle.get_window("fullscreen-overlay") {
+                    let _ = overlay.set_fullscreen(false);
+                    let _ = overlay.hide();
+                }
+
+                // 2. Restore mpv
+                cw.set_fullscreen(false);
+            }
+
             Ok(())
         }
         None => Err("Child window not available".to_string()),

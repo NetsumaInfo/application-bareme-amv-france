@@ -18,6 +18,35 @@ fn main() {
             let window = app.get_window("main").unwrap();
             let state = app.state::<AppState>();
 
+            // Create overlay window once at startup (hidden).
+            // On Windows, dynamic WebView window creation inside sync commands can deadlock.
+            if app.get_window("fullscreen-overlay").is_none() {
+                match tauri::WindowBuilder::new(
+                    app,
+                    "fullscreen-overlay",
+                    tauri::WindowUrl::App("index.html".into()),
+                )
+                .transparent(true)
+                .decorations(false)
+                .always_on_top(true)
+                .fullscreen(false)
+                .visible(false)
+                .focused(false)
+                .skip_taskbar(true)
+                .resizable(false)
+                .title("AMV Notation Overlay")
+                .initialization_script("window.__AMV_FULLSCREEN_OVERLAY__ = true;")
+                .build()
+                {
+                    Ok(overlay) => {
+                        let _ = overlay.hide();
+                    }
+                    Err(e) => {
+                        eprintln!("[AMV] Failed to precreate overlay window: {}", e);
+                    }
+                }
+            }
+
             // Get the main window HWND and create embedded mpv player
             #[cfg(target_os = "windows")]
             {
