@@ -1,7 +1,0 @@
-
-> amv-notation@0.1.0 tauri
-> tauri icon 3D-AMVFR.png
-
-thread '<unnamed>' panicked at src\icon.rs:76:5:
-Source image must be square
-note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
