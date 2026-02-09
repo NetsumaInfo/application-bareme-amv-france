@@ -4,7 +4,21 @@ import { useProjectStore } from '@/store/useProjectStore'
 import * as tauri from '@/services/tauri'
 
 export function usePlayer() {
-  const store = usePlayerStore()
+  const {
+    isPlaying,
+    currentTime,
+    duration,
+    volume,
+    muted,
+    playbackSpeed,
+    isLoaded,
+    currentFilePath,
+    subtitleTracks,
+    audioTracks,
+    currentSubtitleId,
+    currentAudioId,
+    isFullscreen,
+  } = usePlayerStore()
   const { clips, currentClipIndex } = useProjectStore()
   const currentClip = clips[currentClipIndex]
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
@@ -16,10 +30,15 @@ export function usePlayer() {
 
     const poll = async () => {
       try {
-        const status = await tauri.playerGetStatus()
-        store.setPlaying(status.is_playing)
-        store.setCurrentTime(status.current_time)
-        store.setDuration(status.duration)
+        const [status, fullscreen] = await Promise.all([
+          tauri.playerGetStatus(),
+          tauri.playerIsFullscreen().catch(() => false),
+        ])
+        const state = usePlayerStore.getState()
+        state.setPlaying(status.is_playing)
+        state.setCurrentTime(status.current_time)
+        state.setDuration(status.duration)
+        state.setFullscreen(fullscreen)
       } catch {
         // Player not available
       }
@@ -52,7 +71,7 @@ export function usePlayer() {
   const seek = useCallback(async (position: number) => {
     try {
       await tauri.playerSeek(position)
-      store.setCurrentTime(position)
+      usePlayerStore.getState().setCurrentTime(position)
     } catch { /* ignore */ }
   }, [])
 
@@ -65,12 +84,12 @@ export function usePlayer() {
   const setVolume = useCallback(async (volume: number) => {
     try {
       await tauri.playerSetVolume(volume)
-      store.setVolume(volume)
+      usePlayerStore.getState().setVolume(volume)
     } catch { /* ignore */ }
   }, [])
 
   const setMuted = useCallback((muted: boolean) => {
-    store.setMuted(muted)
+    usePlayerStore.getState().setMuted(muted)
     const vol = muted ? 0 : usePlayerStore.getState().volume
     tauri.playerSetVolume(vol).catch(() => {})
   }, [])
@@ -78,13 +97,26 @@ export function usePlayer() {
   const toggleFullscreen = useCallback(async () => {
     const current = usePlayerStore.getState().isFullscreen
     try {
-      await tauri.playerSetFullscreen(!current)
-      usePlayerStore.getState().setFullscreen(!current)
+      const next = !current
+      await tauri.playerSetFullscreen(next)
+      usePlayerStore.getState().setFullscreen(next)
     } catch { /* ignore */ }
   }, [])
 
   return {
-    ...store,
+    isPlaying,
+    currentTime,
+    duration,
+    volume,
+    muted,
+    playbackSpeed,
+    isLoaded,
+    currentFilePath,
+    subtitleTracks,
+    audioTracks,
+    currentSubtitleId,
+    currentAudioId,
+    isFullscreen,
     currentClip,
     play,
     pause,

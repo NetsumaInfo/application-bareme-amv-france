@@ -23,17 +23,8 @@ export function generateId(): string {
   return crypto.randomUUID()
 }
 
-/**
- * Parse clip filename into author and display name.
- * Patterns:
- *   "pseudo-nom_du_clip.mp4" → { author: "pseudo", displayName: "nom du clip" }
- *   "nom_du_clip.mp4" → { author: undefined, displayName: "nom du clip" }
- */
 export function parseClipName(fileName: string): { displayName: string; author?: string } {
-  // Remove extension
   const withoutExt = fileName.replace(/\.[^.]+$/, '')
-
-  // Check for "pseudo-rest_of_name" pattern (first dash is separator)
   const dashIndex = withoutExt.indexOf('-')
 
   let author: string | undefined
@@ -46,8 +37,24 @@ export function parseClipName(fileName: string): { displayName: string; author?:
     rawName = withoutExt
   }
 
-  // Replace underscores with spaces for display
   const displayName = rawName.replace(/_/g, ' ').trim()
 
   return { displayName, author: author || undefined }
+}
+
+export function getClipPrimaryLabel(clip: {
+  author?: string
+  displayName?: string
+  fileName: string
+}): string {
+  return clip.author?.trim() || clip.displayName?.trim() || clip.fileName
+}
+
+export function getClipSecondaryLabel(clip: {
+  author?: string
+  displayName?: string
+}): string | null {
+  if (!clip.author) return null
+  const name = clip.displayName?.trim()
+  return name ? name : null
 }

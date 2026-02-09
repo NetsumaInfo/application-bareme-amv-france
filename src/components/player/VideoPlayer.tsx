@@ -4,6 +4,7 @@ import PlayerControls from './PlayerControls'
 import { useProjectStore } from '@/store/useProjectStore'
 import { usePlayerStore } from '@/store/usePlayerStore'
 import * as tauri from '@/services/tauri'
+import { getClipPrimaryLabel, getClipSecondaryLabel } from '@/utils/formatters'
 
 interface VideoPlayerProps {
   compact?: boolean
@@ -16,6 +17,7 @@ export default function VideoPlayer({ compact }: VideoPlayerProps) {
 
   // Update geometry of mpv child window to match container position
   const updateGeometry = useCallback(() => {
+    if (usePlayerStore.getState().isFullscreen) return
     const el = containerRef.current
     if (!el) return
 
@@ -111,10 +113,10 @@ export default function VideoPlayer({ compact }: VideoPlayerProps) {
       {currentClip && !compact && (
         <div className="text-center px-2 pb-0.5">
           <p className="text-[11px] text-gray-300 font-medium truncate">
-            {currentClip.displayName || currentClip.fileName}
+            {getClipPrimaryLabel(currentClip)}
           </p>
-          {currentClip.author && (
-            <p className="text-[9px] text-primary-400">{currentClip.author}</p>
+          {getClipSecondaryLabel(currentClip) && (
+            <p className="text-[9px] text-primary-400 truncate">{getClipSecondaryLabel(currentClip)}</p>
           )}
         </div>
       )}

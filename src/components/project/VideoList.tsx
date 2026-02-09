@@ -2,7 +2,7 @@ import { FolderPlus, Check, Circle } from 'lucide-react'
 import { useProjectStore } from '@/store/useProjectStore'
 import { useNotationStore } from '@/store/useNotationStore'
 import * as tauri from '@/services/tauri'
-import { generateId, parseClipName } from '@/utils/formatters'
+import { generateId, parseClipName, getClipPrimaryLabel, getClipSecondaryLabel } from '@/utils/formatters'
 import type { Clip } from '@/types/project'
 
 export default function VideoList() {
@@ -91,14 +91,9 @@ export default function VideoList() {
                 )}
               </span>
               <span className="truncate flex-1">
-                {clip.author ? (
-                  <>
-                    <span className="text-primary-400">{clip.author}</span>
-                    <span className="text-gray-500 mx-1">-</span>
-                    {clip.displayName}
-                  </>
-                ) : (
-                  clip.displayName || clip.fileName
+                <span className="text-primary-300">{getClipPrimaryLabel(clip)}</span>
+                {getClipSecondaryLabel(clip) && (
+                  <span className="text-gray-500 ml-1">({getClipSecondaryLabel(clip)})</span>
                 )}
               </span>
               <span className="text-gray-500 flex-shrink-0">{index + 1}</span>

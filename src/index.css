@@ -14,10 +14,11 @@
 
 body {
   margin: 0;
-  min-width: 1024px;
+  min-width: 320px;
   min-height: 100vh;
   background-color: #0f0f23;
   color: #e0e0e0;
+  overflow: hidden;
 }
 
 #root {
@@ -25,6 +26,10 @@ body {
   height: 100vh;
   display: flex;
   flex-direction: column;
+}
+
+* {
+  box-sizing: border-box;
 }
 
 /* Scrollbar styling */

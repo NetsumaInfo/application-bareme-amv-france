@@ -281,7 +281,7 @@ export default function AppLayout() {
 
   return (
     <div
-      className="flex flex-col h-screen bg-surface-dark text-gray-200"
+      className="flex flex-col h-screen w-full overflow-auto bg-surface-dark text-gray-200"
       style={{ zoom: `${zoomLevel}%` }}
     >
       <Header onOpenSettings={() => setShowSettings(true)} />
@@ -301,27 +301,35 @@ export default function AppLayout() {
       ) : (
         <div className="flex flex-1 overflow-hidden">
           {/* Sidebar - hidden in notation mode or when collapsed */}
-          {!isNotationMode && !sidebarCollapsed && <Sidebar />}
+          {!isNotationMode && !sidebarCollapsed && (
+            <div className="hidden lg:flex">
+              <Sidebar />
+            </div>
+          )}
 
           {/* Main content */}
-          <div className="flex flex-1 overflow-hidden">
+          <div
+            className={`flex flex-1 overflow-hidden ${
+              isNotationMode ? 'flex-col lg:flex-row' : 'flex-col xl:flex-row'
+            }`}
+          >
             {isNotationMode ? (
-              /* Notation mode: large video + narrow panel */
+              /* Notation mode: video + panel (responsive stack) */
               <>
-                <div className="flex flex-col flex-1 p-2 gap-1 overflow-hidden">
+                <div className="flex flex-col flex-1 p-2 gap-1 overflow-hidden min-h-[38vh]">
                   <VideoPlayer />
                 </div>
-                <div className="flex flex-col w-72 border-l border-gray-700 overflow-hidden">
+                <div className="flex flex-col w-full lg:w-80 border-t lg:border-t-0 lg:border-l border-gray-700 overflow-hidden">
                   <ScoringInterface />
                 </div>
               </>
             ) : (
-              /* Modern mode: 50/50 split */
+              /* Modern mode: responsive split */
               <>
-                <div className="flex flex-col w-1/2 p-2 gap-1 overflow-hidden">
+                <div className="flex flex-col w-full xl:w-1/2 p-2 gap-1 overflow-hidden min-h-[34vh]">
                   <VideoPlayer />
                 </div>
-                <div className="flex flex-col w-1/2 border-l border-gray-700 overflow-hidden">
+                <div className="flex flex-col w-full xl:w-1/2 border-t xl:border-t-0 xl:border-l border-gray-700 overflow-hidden">
                   <ScoringInterface />
                 </div>
               </>

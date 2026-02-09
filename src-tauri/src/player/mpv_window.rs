@@ -188,9 +188,15 @@ impl MpvChildWindow {
     /// Converts to screen coordinates for the popup.
     pub fn set_geometry(&self, x: i32, y: i32, w: i32, h: i32) {
         if w > 0 && h > 0 {
+            if self.is_fullscreen() {
+                return;
+            }
             unsafe {
                 let mut pt = Point { x, y };
                 ClientToScreen(self.owner, &mut pt);
+                if let Ok(mut saved) = self.saved_geometry.lock() {
+                    *saved = (pt.x, pt.y, w, h);
+                }
                 MoveWindow(self.hwnd, pt.x, pt.y, w, h, 1);
             }
         }
@@ -219,8 +225,6 @@ impl MpvChildWindow {
 
         unsafe {
             if fullscreen {
-                // Save current geometry
-                // Note: We'll get the monitor rect and go fullscreen
                 let monitor = MonitorFromWindow(self.owner, MONITOR_DEFAULTTONEAREST);
                 if monitor == 0 {
                     return;
@@ -238,7 +242,6 @@ impl MpvChildWindow {
 
                 let screen_w = mi.rc_monitor.right - mi.rc_monitor.left;
                 let screen_h = mi.rc_monitor.bottom - mi.rc_monitor.top;
-
                 SetWindowPos(
                     self.hwnd,
                     HWND_TOPMOST,
@@ -249,15 +252,19 @@ impl MpvChildWindow {
                     SWP_SHOWWINDOW,
                 );
             } else {
-                // Restore: remove TOPMOST and let frontend re-set geometry
+                let (x, y, w, h) = self
+                    .saved_geometry
+                    .lock()
+                    .map(|g| *g)
+                    .unwrap_or((0, 0, 1, 1));
                 SetWindowPos(
                     self.hwnd,
                     HWND_NOTOPMOST,
-                    0,
-                    0,
-                    1,
-                    1,
-                    SWP_NOZORDER,
+                    x,
+                    y,
+                    w.max(1),
+                    h.max(1),
+                    SWP_SHOWWINDOW,
                 );
             }
         }

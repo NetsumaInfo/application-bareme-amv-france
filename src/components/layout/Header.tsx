@@ -119,9 +119,9 @@ export default function Header({
   }
 
   return (
-    <header className="flex items-center justify-between px-3 py-1.5 bg-surface border-b border-gray-700 min-h-[40px]">
+    <header className="flex flex-wrap items-center gap-2 px-3 py-1.5 bg-surface border-b border-gray-700 min-h-[40px]">
       {/* Left: Home + title */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 min-w-0">
         {currentProject && (
           <button
             onClick={handleCloseProject}
@@ -135,7 +135,7 @@ export default function Header({
           AMV Notation
         </h1>
         {currentProject && (
-          <span className="text-[11px] text-gray-400 hidden sm:inline">
+          <span className="text-[11px] text-gray-400 hidden md:inline truncate">
             {currentProject.name}
             {currentProject.judgeName && (
               <span className="text-gray-500 ml-1">
@@ -149,13 +149,13 @@ export default function Header({
 
       {/* Center: Interface switcher */}
       {currentProject && (
-        <div className="absolute left-1/2 -translate-x-1/2">
+        <div className="order-3 w-full flex justify-center sm:order-none sm:w-auto sm:flex-1 sm:justify-center">
           <InterfaceSwitcher />
         </div>
       )}
 
       {/* Right: Barème + File menu + Settings */}
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-1 ml-auto">
         {currentProject && <BaremeSelector />}
         <ProjectManager />
         {currentProject && (

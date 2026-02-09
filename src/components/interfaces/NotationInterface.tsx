@@ -3,6 +3,7 @@ import { ChevronLeft, ChevronRight, Eye, EyeOff } from 'lucide-react'
 import { useNotationStore } from '@/store/useNotationStore'
 import { useProjectStore } from '@/store/useProjectStore'
 import { useUIStore } from '@/store/useUIStore'
+import { getClipPrimaryLabel, getClipSecondaryLabel } from '@/utils/formatters'
 
 function CompactCriterion({
   criterion,
@@ -123,7 +124,10 @@ export default function NotationInterface() {
           <ChevronLeft size={16} />
         </button>
         <div className="text-center min-w-0 flex-1 px-2">
-          <div className="text-xs font-medium text-white truncate">{currentClip.fileName}</div>
+          <div className="text-xs font-medium text-white truncate">{getClipPrimaryLabel(currentClip)}</div>
+          {getClipSecondaryLabel(currentClip) && (
+            <div className="text-[10px] text-primary-400 truncate">{getClipSecondaryLabel(currentClip)}</div>
+          )}
           <div className="text-[10px] text-gray-500">
             {currentClipIndex + 1} / {clips.length}
           </div>

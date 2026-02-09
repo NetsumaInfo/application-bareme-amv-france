@@ -4,19 +4,19 @@ import { useNotationStore } from '@/store/useNotationStore'
 import { useProjectStore } from '@/store/useProjectStore'
 import { useUIStore } from '@/store/useUIStore'
 import * as tauri from '@/services/tauri'
-import { generateId, parseClipName } from '@/utils/formatters'
+import { generateId, parseClipName, getClipPrimaryLabel, getClipSecondaryLabel } from '@/utils/formatters'
 import type { Clip } from '@/types/project'
 import type { Criterion } from '@/types/bareme'
 
 const CATEGORY_COLORS = [
-  { bg: 'bg-orange-900/40', border: 'border-orange-700/50', text: 'text-orange-300' },
-  { bg: 'bg-purple-900/40', border: 'border-purple-700/50', text: 'text-purple-300' },
-  { bg: 'bg-emerald-900/40', border: 'border-emerald-700/50', text: 'text-emerald-300' },
-  { bg: 'bg-amber-900/40', border: 'border-amber-700/50', text: 'text-amber-300' },
-  { bg: 'bg-sky-900/40', border: 'border-sky-700/50', text: 'text-sky-300' },
-  { bg: 'bg-rose-900/40', border: 'border-rose-700/50', text: 'text-rose-300' },
-  { bg: 'bg-teal-900/40', border: 'border-teal-700/50', text: 'text-teal-300' },
-  { bg: 'bg-indigo-900/40', border: 'border-indigo-700/50', text: 'text-indigo-300' },
+  { bg: 'bg-orange-950/60', border: 'border-orange-600/40', text: 'text-orange-300', criterionBg: 'bg-orange-950/35', criterionText: 'text-orange-200' },
+  { bg: 'bg-violet-950/60', border: 'border-violet-600/40', text: 'text-violet-300', criterionBg: 'bg-violet-950/35', criterionText: 'text-violet-200' },
+  { bg: 'bg-emerald-950/60', border: 'border-emerald-600/40', text: 'text-emerald-300', criterionBg: 'bg-emerald-950/35', criterionText: 'text-emerald-200' },
+  { bg: 'bg-amber-950/60', border: 'border-amber-600/40', text: 'text-amber-300', criterionBg: 'bg-amber-950/35', criterionText: 'text-amber-200' },
+  { bg: 'bg-sky-950/60', border: 'border-sky-600/40', text: 'text-sky-300', criterionBg: 'bg-sky-950/35', criterionText: 'text-sky-200' },
+  { bg: 'bg-rose-950/60', border: 'border-rose-600/40', text: 'text-rose-300', criterionBg: 'bg-rose-950/35', criterionText: 'text-rose-200' },
+  { bg: 'bg-teal-950/60', border: 'border-teal-600/40', text: 'text-teal-300', criterionBg: 'bg-teal-950/35', criterionText: 'text-teal-200' },
+  { bg: 'bg-indigo-950/60', border: 'border-indigo-600/40', text: 'text-indigo-300', criterionBg: 'bg-indigo-950/35', criterionText: 'text-indigo-200' },
 ]
 
 interface CategoryGroup {
@@ -265,7 +265,7 @@ export default function SpreadsheetInterface() {
                 rowSpan={2}
                 className="px-2 py-1.5 text-left text-[10px] font-medium text-gray-500 border-r border-b border-gray-700 min-w-[120px] bg-surface-dark sticky left-7 z-20"
               >
-                Clip
+                Pseudo
               </th>
               {categoryGroups.map((g) => (
                 <th
@@ -296,14 +296,17 @@ export default function SpreadsheetInterface() {
                 g.criteria.map((c) => (
                   <th
                     key={c.id}
-                    className={`px-1 py-1 text-center text-[9px] font-medium border-r border-b border-gray-700 min-w-[56px] ${g.color.bg} opacity-80`}
+                    className={`px-1 py-1 text-center text-[9px] font-medium border-r border-b border-gray-700 min-w-[76px] ${g.color.criterionBg}`}
                     title={c.description}
                   >
-                    <div className="truncate text-gray-300">
+                    <div className={`truncate ${g.color.criterionText}`}>
                       {g.criteria.length === 1 ? '' : c.name}
                     </div>
                     <div className="text-gray-500 font-normal">
                       /{c.max ?? 10}
+                    </div>
+                    <div className="text-[8px] text-gray-500">
+                      coef x{c.weight}
                     </div>
                   </th>
                 )),
@@ -356,17 +359,16 @@ export default function SpreadsheetInterface() {
                       {clip.scored && (
                         <span className="w-1.5 h-1.5 rounded-full bg-green-500 shrink-0" />
                       )}
-                      <span className="truncate text-gray-200 text-[11px]">
-                        {clip.author && (
-                          <span className="text-primary-400 font-medium">
-                            {clip.author}
+                      <div className="truncate flex flex-col min-w-0 leading-tight">
+                        <span className="truncate text-primary-300 text-[11px] font-semibold">
+                          {getClipPrimaryLabel(clip)}
+                        </span>
+                        {getClipSecondaryLabel(clip) && (
+                          <span className="truncate text-[9px] text-gray-500">
+                            {getClipSecondaryLabel(clip)}
                           </span>
                         )}
-                        {clip.author && (
-                          <span className="text-gray-600 mx-0.5">-</span>
-                        )}
-                        {clip.displayName || clip.fileName}
-                      </span>
+                      </div>
                     </div>
                   </td>
 
@@ -491,12 +493,14 @@ export default function SpreadsheetInterface() {
             </span>
             <span className="text-[10px] text-gray-600">—</span>
             <span className="text-[10px] text-gray-400">
-              {currentClip.author && (
-                <span className="text-primary-400">
-                  {currentClip.author} -{' '}
+              <span className="text-primary-400">
+                {getClipPrimaryLabel(currentClip)}
+              </span>
+              {getClipSecondaryLabel(currentClip) && (
+                <span className="text-gray-500 ml-1">
+                  ({getClipSecondaryLabel(currentClip)})
                 </span>
               )}
-              {currentClip.displayName || currentClip.fileName}
             </span>
             <span className="text-[10px] text-gray-600 ml-auto">
               {categoryGroups.map((g) => (
