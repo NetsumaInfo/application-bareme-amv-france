@@ -1,24 +1,11 @@
 import { useMemo, useState } from 'react'
-import { X, Plus, Trash2 } from 'lucide-react'
+import { X, Plus, Trash2, Upload, Download } from 'lucide-react'
 import { useNotationStore } from '@/store/useNotationStore'
 import { useUIStore } from '@/store/useUIStore'
 import { generateId } from '@/utils/formatters'
-import type { Bareme, Criterion, CriterionType } from '@/types/bareme'
-
-const CRITERION_TYPES: { value: CriterionType; label: string }[] = [
-  { value: 'numeric', label: 'Numérique' },
-  { value: 'slider', label: 'Slider' },
-  { value: 'boolean', label: 'Oui / Non' },
-]
-
-const CATEGORY_ACCENTS = [
-  'border-orange-500/40 bg-orange-950/20 text-orange-300',
-  'border-violet-500/40 bg-violet-950/20 text-violet-300',
-  'border-emerald-500/40 bg-emerald-950/20 text-emerald-300',
-  'border-amber-500/40 bg-amber-950/20 text-amber-300',
-  'border-sky-500/40 bg-sky-950/20 text-sky-300',
-  'border-rose-500/40 bg-rose-950/20 text-rose-300',
-]
+import { CATEGORY_COLOR_PRESETS, sanitizeColor, withAlpha } from '@/utils/colors'
+import * as tauri from '@/services/tauri'
+import type { Bareme, Criterion } from '@/types/bareme'
 
 function emptyCriterion(): Criterion {
   return {
@@ -30,55 +17,119 @@ function emptyCriterion(): Criterion {
     max: 10,
     step: 0.5,
     required: true,
-    category: 'Général',
+    category: '',
   }
 }
 
 function normalizeCriterion(raw: Criterion): Criterion {
-  const type = raw.type === 'boolean' || raw.type === 'slider' ? raw.type : 'numeric'
-  const weight = Number.isFinite(raw.weight) ? Math.max(0.1, raw.weight) : 1
-
-  if (type === 'boolean') {
-    return {
-      ...raw,
-      type,
-      weight,
-      min: 0,
-      max: 1,
-      step: 1,
-    }
-  }
-
-  const min = Number.isFinite(raw.min) ? Number(raw.min) : 0
-  const max = Number.isFinite(raw.max) ? Number(raw.max) : 10
+  const weight = Number.isFinite(raw.weight) ? Math.max(0.1, Number(raw.weight)) : 1
   const step = Number.isFinite(raw.step) && Number(raw.step) > 0 ? Number(raw.step) : 0.5
+  const max = Number.isFinite(raw.max) ? Number(raw.max) : 10
 
   return {
     ...raw,
-    type,
-    weight,
-    min,
-    max: max < min ? min : max,
+    type: 'numeric',
+    min: 0,
+    max,
     step,
+    weight,
+    required: raw.required !== false,
+    category: raw.category?.trim() || '',
   }
 }
 
 function getCriterionMax(criterion: Criterion): number {
-  if (criterion.type === 'boolean') return 1
-  return criterion.max ?? 10
-}
-
-function getCriterionNotationLabel(criterion: Criterion): string {
-  if (criterion.type === 'boolean') return 'Oui / Non'
-  return `${criterion.min ?? 0} → ${criterion.max ?? 10} (pas ${criterion.step ?? 0.5})`
+  return Number.isFinite(criterion.max) ? Number(criterion.max) : 10
 }
 
 function getTotalPoints(criteria: Criterion[]): number {
   return Math.round(
     criteria
-      .filter((c) => c.name.trim())
-      .reduce((sum, c) => sum + getCriterionMax(c) * c.weight, 0) * 100,
+      .filter((criterion) => criterion.name.trim())
+      .reduce((sum, criterion) => sum + getCriterionMax(criterion) * criterion.weight, 0) * 100,
   ) / 100
+}
+
+function normalizeImportedBaremes(data: unknown): Bareme[] {
+  const now = new Date().toISOString()
+
+  const asRecord = (value: unknown): Record<string, unknown> | null =>
+    value && typeof value === 'object' && !Array.isArray(value)
+      ? (value as Record<string, unknown>)
+      : null
+
+  const parseCriteria = (input: unknown): Criterion[] => {
+    if (!Array.isArray(input)) return []
+    return input
+      .map((item) => {
+        const row = asRecord(item)
+        if (!row) return null
+        const name = String(row.name || '').trim()
+        if (!name) return null
+        return normalizeCriterion({
+          id: typeof row.id === 'string' && row.id.trim() ? row.id : generateId(),
+          name,
+          description: typeof row.description === 'string' ? row.description : undefined,
+          type: 'numeric',
+          weight: Number(row.weight ?? 1),
+          min: 0,
+          max: Number(row.max ?? 10),
+          step: Number(row.step ?? 0.5),
+          required: row.required !== false,
+          category: typeof row.category === 'string' ? row.category : '',
+        })
+      })
+      .filter((criterion): criterion is Criterion => criterion !== null)
+  }
+
+  const parseCategoryColors = (input: unknown): Record<string, string> => {
+    const output: Record<string, string> = {}
+    const map = asRecord(input)
+    if (!map) return output
+    for (const [key, value] of Object.entries(map)) {
+      if (!key.trim()) continue
+      output[key.trim()] = sanitizeColor(typeof value === 'string' ? value : undefined)
+    }
+    return output
+  }
+
+  const parseOne = (input: unknown): Bareme | null => {
+    const row = asRecord(input)
+    if (!row) return null
+
+    if (row.bareme) {
+      return parseOne(row.bareme)
+    }
+
+    const name = String(row.name || '').trim()
+    const criteria = parseCriteria(row.criteria)
+    if (!name || criteria.length === 0) return null
+    return {
+      id: typeof row.id === 'string' && row.id.trim() ? row.id : `custom-${generateId()}`,
+      name,
+      description: typeof row.description === 'string' ? row.description : undefined,
+      isOfficial: false,
+      criteria,
+      categoryColors: parseCategoryColors(row.categoryColors),
+      totalPoints: getTotalPoints(criteria),
+      createdAt: typeof row.createdAt === 'string' ? row.createdAt : now,
+      updatedAt: now,
+    }
+  }
+
+  if (Array.isArray(data)) {
+    return data.map(parseOne).filter((bareme): bareme is Bareme => bareme !== null)
+  }
+
+  const root = asRecord(data)
+  if (!root) return []
+
+  if (Array.isArray(root.baremes)) {
+    return root.baremes.map(parseOne).filter((bareme): bareme is Bareme => bareme !== null)
+  }
+
+  const one = parseOne(root)
+  return one ? [one] : []
 }
 
 export default function BaremeEditor() {
@@ -90,6 +141,7 @@ export default function BaremeEditor() {
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
   const [criteria, setCriteria] = useState<Criterion[]>([emptyCriterion()])
+  const [categoryColors, setCategoryColors] = useState<Record<string, string>>({})
   const [error, setError] = useState('')
 
   const readOnly = editingBareme?.isOfficial === true
@@ -98,8 +150,8 @@ export default function BaremeEditor() {
     return Array.from(
       new Set(
         criteria
-          .map((c) => (c.category?.trim() || 'Général'))
-          .filter(Boolean),
+          .map((criterion) => criterion.category?.trim())
+          .filter((category): category is string => Boolean(category)),
       ),
     )
   }, [criteria])
@@ -118,9 +170,12 @@ export default function BaremeEditor() {
     return stats
   }, [criteria])
 
-  const getCategoryAccent = (category: string) => {
+  const getCategoryColor = (category: string) => {
+    if (!category) return '#64748b'
+    const fromMap = categoryColors[category]
+    if (fromMap) return sanitizeColor(fromMap)
     const idx = categoryOrder.indexOf(category)
-    return CATEGORY_ACCENTS[idx >= 0 ? idx % CATEGORY_ACCENTS.length : 0]
+    return CATEGORY_COLOR_PRESETS[idx >= 0 ? idx % CATEGORY_COLOR_PRESETS.length : 0]
   }
 
   if (!showBaremeEditor) return null
@@ -130,6 +185,7 @@ export default function BaremeEditor() {
     setName('')
     setDescription('')
     setCriteria([emptyCriterion()])
+    setCategoryColors({})
     setError('')
   }
 
@@ -148,14 +204,10 @@ export default function BaremeEditor() {
     setEditingBareme(bareme)
     setName(bareme.name)
     setDescription(bareme.description || '')
-    setCriteria(
-      bareme.criteria.map((criterion) =>
-        normalizeCriterion({
-          ...criterion,
-          category: criterion.category || 'Général',
-        }),
-      ),
-    )
+    setCriteria(bareme.criteria.map((criterion) => normalizeCriterion(criterion)))
+    setCategoryColors(Object.fromEntries(
+      Object.entries(bareme.categoryColors || {}).map(([k, v]) => [k, sanitizeColor(v)]),
+    ))
     setMode('edit')
     setError('')
   }
@@ -177,12 +229,65 @@ export default function BaremeEditor() {
 
   const updateCriterion = (index: number, updates: Partial<Criterion>) => {
     setCriteria((prev) =>
-      prev.map((criterion, i) => {
-        if (i !== index) return criterion
-        const next = normalizeCriterion({ ...criterion, ...updates })
-        return next
-      }),
+      prev.map((criterion, i) => (i === index ? normalizeCriterion({ ...criterion, ...updates }) : criterion)),
     )
+  }
+
+  const updateCategoryForCriterion = (index: number, rawCategory: string) => {
+    const category = rawCategory.trim()
+    updateCriterion(index, { category })
+    if (!category) return
+    setCategoryColors((prev) => {
+      if (prev[category]) return prev
+      const color = CATEGORY_COLOR_PRESETS[Object.keys(prev).length % CATEGORY_COLOR_PRESETS.length]
+      return { ...prev, [category]: color }
+    })
+  }
+
+  const handleImportBaremeJson = async () => {
+    try {
+      const filePath = await tauri.openJsonDialog()
+      if (!filePath) return
+      const data = await tauri.loadProjectFile(filePath)
+      const imported = normalizeImportedBaremes(data)
+      if (imported.length === 0) {
+        alert('Aucun barème valide trouvé dans ce fichier JSON.')
+        return
+      }
+
+      const existingIds = new Set(availableBaremes.map((b) => b.id))
+      for (const bareme of imported) {
+        const id = existingIds.has(bareme.id) ? `custom-${generateId()}` : bareme.id
+        existingIds.add(id)
+        addBareme({
+          ...bareme,
+          id,
+          updatedAt: new Date().toISOString(),
+          isOfficial: false,
+        })
+      }
+      alert(`${imported.length} barème(s) importé(s).`)
+    } catch (e) {
+      console.error('Import barème JSON failed:', e)
+      alert(`Erreur d'import JSON: ${e}`)
+    }
+  }
+
+  const handleExportBaremeJson = async (bareme: Bareme) => {
+    try {
+      const filePath = await tauri.saveJsonDialog(`${bareme.name.replace(/[\\/:*?"<>|]+/g, '_')}.json`)
+      if (!filePath) return
+      await tauri.exportJsonFile(
+        {
+          ...bareme,
+          isOfficial: false,
+        },
+        filePath,
+      )
+    } catch (e) {
+      console.error('Export barème JSON failed:', e)
+      alert(`Erreur d'export JSON: ${e}`)
+    }
   }
 
   const handleSave = () => {
@@ -207,16 +312,21 @@ export default function BaremeEditor() {
         setError(`Coefficient invalide pour "${criterion.name}".`)
         return
       }
-      if (criterion.type !== 'boolean') {
-        if ((criterion.max ?? 10) < (criterion.min ?? 0)) {
-          setError(`Min/Max invalide pour "${criterion.name}".`)
-          return
-        }
-        if ((criterion.step ?? 0) <= 0) {
-          setError(`Pas invalide pour "${criterion.name}".`)
-          return
-        }
+      if ((criterion.step ?? 0) <= 0) {
+        setError(`Pas invalide pour "${criterion.name}".`)
+        return
       }
+    }
+
+    const usedCategories = new Set(
+      normalized
+        .map((criterion) => criterion.category?.trim())
+        .filter((category): category is string => Boolean(category)),
+    )
+
+    const nextCategoryColors: Record<string, string> = {}
+    for (const category of usedCategories) {
+      nextCategoryColors[category] = sanitizeColor(categoryColors[category], getCategoryColor(category))
     }
 
     const now = new Date().toISOString()
@@ -228,8 +338,9 @@ export default function BaremeEditor() {
       criteria: normalized.map((criterion) => ({
         ...criterion,
         name: criterion.name.trim(),
-        category: criterion.category?.trim() || 'Général',
+        category: criterion.category?.trim() || undefined,
       })),
+      categoryColors: nextCategoryColors,
       totalPoints: getTotalPoints(normalized),
       createdAt: editingBareme?.createdAt || now,
       updatedAt: now,
@@ -255,6 +366,24 @@ export default function BaremeEditor() {
         <div className="flex-1 overflow-y-auto p-5">
           {mode === 'list' ? (
             <div className="flex flex-col gap-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <button
+                  onClick={startNew}
+                  className="flex items-center justify-center gap-2 px-3 py-2 rounded-lg border border-dashed border-gray-600 text-gray-400 hover:text-white hover:border-primary-500 transition-colors"
+                >
+                  <Plus size={16} />
+                  <span className="text-sm">Créer un barème</span>
+                </button>
+
+                <button
+                  onClick={handleImportBaremeJson}
+                  className="flex items-center gap-2 px-3 py-2 rounded-lg bg-surface-light text-gray-300 hover:text-white transition-colors"
+                >
+                  <Upload size={14} />
+                  <span className="text-sm">Importer JSON</span>
+                </button>
+              </div>
+
               {availableBaremes.map((bareme) => {
                 const categories = Array.from(new Set(bareme.criteria.map((criterion) => criterion.category || 'Général')))
                 return (
@@ -276,14 +405,25 @@ export default function BaremeEditor() {
                           {bareme.criteria.length} critères • {bareme.totalPoints} points
                         </div>
                         <div className="flex flex-wrap gap-1.5 mt-2">
-                          {categories.map((category, index) => (
-                            <span
-                              key={`${bareme.id}-${category}`}
-                              className={`text-[10px] px-2 py-0.5 rounded border ${CATEGORY_ACCENTS[index % CATEGORY_ACCENTS.length]}`}
-                            >
-                              {category}
-                            </span>
-                          ))}
+                          {categories.map((category, index) => {
+                            const color = sanitizeColor(
+                              bareme.categoryColors?.[category],
+                              CATEGORY_COLOR_PRESETS[index % CATEGORY_COLOR_PRESETS.length],
+                            )
+                            return (
+                              <span
+                                key={`${bareme.id}-${category}`}
+                                className="text-[10px] px-2 py-0.5 rounded border"
+                                style={{
+                                  borderColor: withAlpha(color, 0.45),
+                                  backgroundColor: withAlpha(color, 0.18),
+                                  color,
+                                }}
+                              >
+                                {category}
+                              </span>
+                            )
+                          })}
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
@@ -292,6 +432,13 @@ export default function BaremeEditor() {
                           className="px-3 py-1 text-xs rounded bg-surface-light text-gray-300 hover:text-white transition-colors"
                         >
                           {bareme.isOfficial ? 'Voir' : 'Modifier'}
+                        </button>
+                        <button
+                          onClick={() => handleExportBaremeJson(bareme)}
+                          className="p-1 rounded text-gray-400 hover:text-white hover:bg-surface-light transition-colors"
+                          title="Exporter JSON"
+                        >
+                          <Download size={14} />
                         </button>
                         {!bareme.isOfficial && (
                           <button
@@ -307,14 +454,6 @@ export default function BaremeEditor() {
                   </div>
                 )
               })}
-
-              <button
-                onClick={startNew}
-                className="flex items-center justify-center gap-2 p-3 rounded-lg border border-dashed border-gray-600 text-gray-400 hover:text-white hover:border-primary-500 transition-colors"
-              >
-                <Plus size={16} />
-                <span className="text-sm">Créer un barème</span>
-              </button>
             </div>
           ) : (
             <div className="flex flex-col gap-4">
@@ -349,11 +488,24 @@ export default function BaremeEditor() {
               </div>
 
               <div className="flex flex-wrap gap-2">
-                {Array.from(categoryStats.entries()).map(([category, stat]) => (
-                  <span key={category} className={`text-[11px] px-2 py-1 rounded border ${getCategoryAccent(category)}`}>
-                    {category}: {stat.count} crit. • /{stat.total}
-                  </span>
-                ))}
+                {Array.from(categoryStats.entries()).map(([category, stat], index) => {
+                  const color = category === 'Général'
+                    ? '#94a3b8'
+                    : sanitizeColor(categoryColors[category], CATEGORY_COLOR_PRESETS[index % CATEGORY_COLOR_PRESETS.length])
+                  return (
+                    <span
+                      key={category}
+                      className="text-[11px] px-2 py-1 rounded border"
+                      style={{
+                        borderColor: withAlpha(color, 0.45),
+                        backgroundColor: withAlpha(color, 0.18),
+                        color,
+                      }}
+                    >
+                      {category}: {stat.count} crit. • /{stat.total}
+                    </span>
+                  )
+                })}
               </div>
 
               <div className="flex items-center justify-between">
@@ -371,24 +523,46 @@ export default function BaremeEditor() {
 
               <div className="flex flex-col gap-2">
                 {criteria.map((criterion, index) => {
-                  const category = criterion.category?.trim() || 'Général'
-                  const accent = getCategoryAccent(category)
+                  const rawCategory = criterion.category?.trim() || ''
+                  const color = rawCategory ? getCategoryColor(rawCategory) : '#64748b'
+
                   return (
-                    <div key={criterion.id} className="rounded-lg border border-gray-700 bg-surface-dark/60 p-3">
+                    <div
+                      key={criterion.id}
+                      className="rounded-lg border bg-surface-dark/60 p-3"
+                      style={{ borderColor: withAlpha(color, 0.35) }}
+                    >
                       <div className="grid grid-cols-1 md:grid-cols-12 gap-2">
-                        <div className="md:col-span-2">
+                        <div className="md:col-span-3">
                           <label className="block text-[10px] text-gray-500 mb-0.5">Catégorie</label>
-                          <input
-                            value={category}
-                            onChange={(e) => updateCriterion(index, { category: e.target.value })}
-                            placeholder="Général"
-                            className={`w-full px-2 py-1.5 rounded border text-xs focus:outline-none focus:border-primary-500 ${accent}`}
-                            disabled={readOnly}
-                          />
+                          <div className="flex items-center gap-2">
+                            <input
+                              value={rawCategory}
+                              onChange={(e) => updateCategoryForCriterion(index, e.target.value)}
+                              placeholder="Général"
+                              className="w-full px-2 py-1.5 rounded border text-xs text-white bg-surface focus:outline-none focus:border-primary-500"
+                              style={{ borderColor: withAlpha(color, 0.45) }}
+                              disabled={readOnly}
+                            />
+                            <input
+                              type="color"
+                              value={sanitizeColor(color)}
+                              onChange={(e) => {
+                                if (!rawCategory) return
+                                setCategoryColors((prev) => ({
+                                  ...prev,
+                                  [rawCategory]: e.target.value,
+                                }))
+                              }}
+                              disabled={readOnly || !rawCategory}
+                              title={rawCategory ? `Couleur de ${rawCategory}` : 'Saisis une catégorie d’abord'}
+                              className="h-8 w-10 p-0 bg-transparent border border-gray-700 rounded cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                            />
+                          </div>
                         </div>
 
                         <div className="md:col-span-4">
-                          <label className="block text-[10px] text-gray-500 mb-0.5">Nom de notation</label>
+                          <label className="block text-[10px] text-gray-500 mb-0.5">Nom du critère</label>
                           <input
                             value={criterion.name}
                             onChange={(e) => updateCriterion(index, { name: e.target.value })}
@@ -399,20 +573,6 @@ export default function BaremeEditor() {
                         </div>
 
                         <div className="md:col-span-2">
-                          <label className="block text-[10px] text-gray-500 mb-0.5">Type</label>
-                          <select
-                            value={criterion.type}
-                            onChange={(e) => updateCriterion(index, { type: e.target.value as CriterionType })}
-                            className="w-full px-2 py-1.5 bg-surface border border-gray-700 rounded text-xs text-white focus:border-primary-500 focus:outline-none"
-                            disabled={readOnly}
-                          >
-                            {CRITERION_TYPES.map((type) => (
-                              <option key={type.value} value={type.value}>{type.label}</option>
-                            ))}
-                          </select>
-                        </div>
-
-                        <div className="md:col-span-1">
                           <label className="block text-[10px] text-gray-500 mb-0.5">Coef.</label>
                           <input
                             type="number"
@@ -426,10 +586,15 @@ export default function BaremeEditor() {
                         </div>
 
                         <div className="md:col-span-2">
-                          <label className="block text-[10px] text-gray-500 mb-0.5">Notation</label>
-                          <div className="px-2 py-1.5 rounded border border-gray-700 bg-surface text-[11px] text-gray-300 truncate">
-                            {getCriterionNotationLabel(criterion)}
-                          </div>
+                          <label className="block text-[10px] text-gray-500 mb-0.5">Pas</label>
+                          <input
+                            type="number"
+                            value={criterion.step ?? 0.5}
+                            onChange={(e) => updateCriterion(index, { step: Number(e.target.value) })}
+                            step={0.1}
+                            className="w-full px-2 py-1.5 bg-surface border border-gray-700 rounded text-xs text-white text-center focus:border-primary-500 focus:outline-none"
+                            disabled={readOnly}
+                          />
                         </div>
 
                         <div className="md:col-span-1 flex items-end justify-between md:justify-end gap-2">
@@ -456,38 +621,13 @@ export default function BaremeEditor() {
                       </div>
 
                       <div className="grid grid-cols-1 md:grid-cols-12 gap-2 mt-2">
-                        <div className="md:col-span-2">
-                          <label className="block text-[10px] text-gray-500 mb-0.5">Min</label>
-                          <input
-                            type="number"
-                            value={criterion.min ?? 0}
-                            onChange={(e) => updateCriterion(index, { min: Number(e.target.value) })}
-                            className="w-full px-2 py-1.5 bg-surface border border-gray-700 rounded text-xs text-white text-center focus:border-primary-500 focus:outline-none disabled:opacity-40"
-                            disabled={readOnly || criterion.type === 'boolean'}
-                          />
+                        <div className="md:col-span-3">
+                          <label className="block text-[10px] text-gray-500 mb-0.5">Minimum</label>
+                          <div className="w-full px-2 py-1.5 bg-surface border border-gray-700 rounded text-xs text-gray-300 text-center">
+                            0
+                          </div>
                         </div>
-                        <div className="md:col-span-2">
-                          <label className="block text-[10px] text-gray-500 mb-0.5">Max</label>
-                          <input
-                            type="number"
-                            value={criterion.max ?? 10}
-                            onChange={(e) => updateCriterion(index, { max: Number(e.target.value) })}
-                            className="w-full px-2 py-1.5 bg-surface border border-gray-700 rounded text-xs text-white text-center focus:border-primary-500 focus:outline-none disabled:opacity-40"
-                            disabled={readOnly || criterion.type === 'boolean'}
-                          />
-                        </div>
-                        <div className="md:col-span-2">
-                          <label className="block text-[10px] text-gray-500 mb-0.5">Pas</label>
-                          <input
-                            type="number"
-                            value={criterion.step ?? 0.5}
-                            onChange={(e) => updateCriterion(index, { step: Number(e.target.value) })}
-                            step={0.1}
-                            className="w-full px-2 py-1.5 bg-surface border border-gray-700 rounded text-xs text-white text-center focus:border-primary-500 focus:outline-none disabled:opacity-40"
-                            disabled={readOnly || criterion.type === 'boolean'}
-                          />
-                        </div>
-                        <div className="md:col-span-6">
+                        <div className="md:col-span-9">
                           <label className="block text-[10px] text-gray-500 mb-0.5">Description</label>
                           <input
                             value={criterion.description || ''}

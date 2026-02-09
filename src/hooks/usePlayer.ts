@@ -95,8 +95,10 @@ export function usePlayer() {
   }, [])
 
   const toggleFullscreen = useCallback(async () => {
-    const current = usePlayerStore.getState().isFullscreen
     try {
+      const current = await tauri
+        .playerIsFullscreen()
+        .catch(() => usePlayerStore.getState().isFullscreen)
       const next = !current
       await tauri.playerSetFullscreen(next)
       usePlayerStore.getState().setFullscreen(next)

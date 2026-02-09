@@ -1,10 +1,11 @@
-import { useCallback } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
 import { ChevronDown, ChevronUp, AlertCircle } from 'lucide-react'
-import { useState } from 'react'
 import { useNotationStore } from '@/store/useNotationStore'
 import { useProjectStore } from '@/store/useProjectStore'
 import { useUIStore } from '@/store/useUIStore'
+import { getClipPrimaryLabel, getClipSecondaryLabel } from '@/utils/formatters'
+import { CATEGORY_COLOR_PRESETS, sanitizeColor, withAlpha } from '@/utils/colors'
 
 function ScoreRing({ value, max, size = 48 }: { value: number; max: number; size?: number }) {
   const percentage = max > 0 ? (value / max) * 100 : 0
@@ -43,10 +44,12 @@ function CriterionCard({
   criterion,
   score,
   onValueChange,
+  color,
 }: {
   criterion: { id: string; name: string; description?: string; min?: number; max?: number; step?: number; weight: number }
   score?: { value: number | string | boolean; isValid: boolean; validationErrors: string[] }
   onValueChange: (value: number) => void
+  color: string
 }) {
   const value = typeof score?.value === 'number' ? score.value : 0
   const hasError = score && !score.isValid
@@ -59,9 +62,11 @@ function CriterionCard({
       layout
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      className={`rounded-xl border p-4 transition-colors ${
-        hasError ? 'border-accent/50 bg-accent/5' : score?.value !== undefined && score.value !== '' ? 'border-primary-500/30 bg-primary-500/5' : 'border-gray-700 bg-surface'
-      }`}
+      className="rounded-xl border p-4 transition-colors"
+      style={{
+        borderColor: hasError ? withAlpha('#ef4444', 0.5) : withAlpha(color, score?.value !== undefined && score.value !== '' ? 0.45 : 0.25),
+        backgroundColor: hasError ? withAlpha('#ef4444', 0.08) : withAlpha(color, score?.value !== undefined && score.value !== '' ? 0.09 : 0.05),
+      }}
     >
       <div className="flex items-start justify-between gap-3 mb-3">
         <div className="flex-1 min-w-0">
@@ -71,7 +76,6 @@ function CriterionCard({
         <ScoreRing value={value} max={max} />
       </div>
 
-      {/* Slider */}
       <div className="space-y-2">
         <input
           type="range"
@@ -80,7 +84,8 @@ function CriterionCard({
           step={step}
           value={value}
           onChange={(e) => onValueChange(Number(e.target.value))}
-          className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-primary-500"
+          className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer"
+          style={{ accentColor: color }}
         />
         <div className="flex items-center justify-between text-xs text-gray-500">
           <span>{min}</span>
@@ -107,21 +112,28 @@ function CategorySection({
   criteria,
   note,
   onValueChange,
+  color,
   defaultOpen = true,
 }: {
   category: string
   criteria: { id: string; name: string; description?: string; min?: number; max?: number; step?: number; weight: number }[]
   note?: ReturnType<ReturnType<typeof useNotationStore.getState>['getNoteForClip']>
   onValueChange: (criterionId: string, value: number) => void
+  color: string
   defaultOpen?: boolean
 }) {
   const [isOpen, setIsOpen] = useState(defaultOpen)
 
   return (
-    <div>
+    <div className="rounded-lg border border-gray-800/80 bg-surface-dark/60 overflow-hidden">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center justify-between w-full px-2 py-2 text-xs font-semibold uppercase tracking-wider text-primary-400 hover:text-primary-300 transition-colors"
+        className="flex items-center justify-between w-full px-3 py-2 text-xs font-semibold uppercase tracking-wider transition-colors"
+        style={{
+          color,
+          backgroundColor: withAlpha(color, 0.12),
+          borderBottom: `1px solid ${withAlpha(color, 0.2)}`,
+        }}
       >
         <span>{category}</span>
         {isOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
@@ -135,13 +147,14 @@ function CategorySection({
             transition={{ duration: 0.2 }}
             className="overflow-hidden"
           >
-            <div className="grid grid-cols-1 gap-3 pb-3">
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-3 p-3">
               {criteria.map((criterion) => (
                 <CriterionCard
                   key={criterion.id}
                   criterion={criterion}
                   score={note?.scores[criterion.id]}
                   onValueChange={(v) => onValueChange(criterion.id, v)}
+                  color={color}
                 />
               ))}
             </div>
@@ -166,8 +179,6 @@ export default function ModernInterface() {
       if (!currentClip) return
       updateCriterion(currentClip.id, criterionId, value)
       markDirty()
-
-      // Check completion
       const store = useNotationStore.getState()
       if (store.isClipComplete(currentClip.id) && !currentClip.scored) {
         markClipScored(currentClip.id)
@@ -175,6 +186,24 @@ export default function ModernInterface() {
     },
     [currentClip, updateCriterion, markDirty, markClipScored],
   )
+
+  const categories = useMemo(() => {
+    if (!currentBareme) return []
+    const map = new Map<string, typeof currentBareme.criteria>()
+    for (const criterion of currentBareme.criteria) {
+      const category = criterion.category || 'Général'
+      if (!map.has(category)) map.set(category, [])
+      map.get(category)!.push(criterion)
+    }
+    return Array.from(map.entries()).map(([category, criteria], index) => ({
+      category,
+      criteria,
+      color: sanitizeColor(
+        currentBareme.categoryColors?.[category],
+        CATEGORY_COLOR_PRESETS[index % CATEGORY_COLOR_PRESETS.length],
+      ),
+    }))
+  }, [currentBareme])
 
   if (!currentBareme) {
     return (
@@ -192,29 +221,29 @@ export default function ModernInterface() {
     )
   }
 
-  // Group by category
-  const categories = new Map<string, typeof currentBareme.criteria>()
-  for (const criterion of currentBareme.criteria) {
-    const cat = criterion.category || 'General'
-    if (!categories.has(cat)) categories.set(cat, [])
-    categories.get(cat)!.push(criterion)
-  }
-
   return (
     <div className="flex flex-col h-full">
-      <div className="flex-1 overflow-y-auto px-4 py-3 space-y-1">
-        {Array.from(categories.entries()).map(([category, criteria]) => (
+      <div className="px-4 py-2 border-b border-gray-700 bg-surface/70">
+        <p className="text-xs text-gray-500 uppercase tracking-wide">Clip courant</p>
+        <p className="text-sm font-semibold text-primary-300 truncate">{getClipPrimaryLabel(currentClip)}</p>
+        {getClipSecondaryLabel(currentClip) && (
+          <p className="text-[11px] text-gray-500 truncate">{getClipSecondaryLabel(currentClip)}</p>
+        )}
+      </div>
+
+      <div className="flex-1 overflow-y-auto px-3 py-3 space-y-2">
+        {categories.map(({ category, criteria, color }) => (
           <CategorySection
             key={category}
             category={category}
             criteria={criteria}
             note={note}
             onValueChange={handleValueChange}
+            color={color}
           />
         ))}
       </div>
 
-      {/* Footer */}
       <div className="border-t border-gray-700">
         {!hideFinalScore && (
           <div className="flex items-center justify-between px-4 py-3 bg-surface">
@@ -229,7 +258,6 @@ export default function ModernInterface() {
           </div>
         )}
 
-        {/* Notes */}
         <div className="px-4 py-2 border-t border-gray-700">
           <textarea
             placeholder="Notes libres..."
@@ -240,7 +268,7 @@ export default function ModernInterface() {
                 markDirty()
               }
             }}
-            className="w-full px-3 py-2 text-xs bg-surface-dark border border-gray-700 rounded-lg text-gray-300 placeholder-gray-600 focus:border-primary-500 focus:outline-none resize-y min-h-[40px]"
+            className="w-full px-3 py-2 text-xs bg-surface-dark border border-gray-700 rounded-lg text-gray-300 placeholder-gray-600 focus:border-primary-500 focus:outline-none resize-y min-h-[42px]"
             rows={2}
           />
         </div>

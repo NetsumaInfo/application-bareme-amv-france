@@ -170,6 +170,14 @@ export async function openFolderDialog(): Promise<string | null> {
   return typeof result === 'string' ? result : null
 }
 
+export async function openJsonDialog(): Promise<string | null> {
+  const result = await open({
+    filters: [{ name: 'JSON', extensions: ['json'] }],
+    multiple: false,
+  })
+  return typeof result === 'string' ? result : null
+}
+
 export async function saveJsonDialog(defaultName?: string): Promise<string | null> {
   const result = await save({
     filters: [{ name: 'JSON', extensions: ['json'] }],

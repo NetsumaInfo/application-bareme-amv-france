@@ -1,10 +1,10 @@
 import React, { useEffect, useRef, useCallback, useState } from 'react'
-import { Play, Pause, SkipForward, Volume2, VolumeX, X } from 'lucide-react'
+import { Play, Pause, SkipForward, SkipBack, Volume2, VolumeX, Maximize2, Minimize2, X } from 'lucide-react'
 import { usePlayerStore } from '@/store/usePlayerStore'
 import { useProjectStore } from '@/store/useProjectStore'
 import { usePlayer } from '@/hooks/usePlayer'
 import * as tauri from '@/services/tauri'
-import { getClipPrimaryLabel } from '@/utils/formatters'
+import { formatTime, getClipPrimaryLabel } from '@/utils/formatters'
 
 interface FloatingVideoPlayerProps {
   onClose: () => void
@@ -25,7 +25,19 @@ export function FloatingVideoPlayer({ onClose }: FloatingVideoPlayerProps) {
   const [isDragging, setIsDragging] = useState(false)
   const [isHovering, setIsHovering] = useState(false)
 
-  const { isPlaying, muted, togglePause, seekRelative, setMuted } = usePlayer()
+  const {
+    isPlaying,
+    muted,
+    isLoaded,
+    currentTime,
+    duration,
+    togglePause,
+    seek,
+    seekRelative,
+    setMuted,
+    toggleFullscreen,
+    isFullscreen,
+  } = usePlayer()
   const clips = useProjectStore((state) => state.clips)
   const currentClipIndex = useProjectStore((state) => state.currentClipIndex)
   const currentClip = clips[currentClipIndex]
@@ -116,6 +128,16 @@ export function FloatingVideoPlayer({ onClose }: FloatingVideoPlayerProps) {
     return () => window.removeEventListener('resize', handleResize)
   }, [clampPosition])
 
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && usePlayerStore.getState().isFullscreen) {
+        toggleFullscreen()
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [toggleFullscreen])
+
   const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
     dragStartRef.current = {
       x: position.left,
@@ -199,12 +221,33 @@ export function FloatingVideoPlayer({ onClose }: FloatingVideoPlayerProps) {
         style={{ width: `${panelWidth}px`, height: `${videoHeight}px` }}
       />
 
-      {/* Mini Controls */}
-      <div className="flex items-center justify-center gap-1 bg-gray-900/90 px-2 py-1.5">
+      <div className="bg-gray-900/90 px-2 py-1.5 space-y-1">
+        <div className="flex items-center gap-2">
+          <span className="text-[9px] text-gray-500 font-mono w-8 text-right">
+            {formatTime(currentTime)}
+          </span>
+          <input
+            type="range"
+            min={0}
+            max={duration || 100}
+            step={0.1}
+            value={currentTime}
+            onChange={(e) => seek(Number(e.target.value))}
+            className="flex-1 h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-primary-500"
+            disabled={!isLoaded}
+          />
+          <span className="text-[9px] text-gray-500 font-mono w-8">
+            {formatTime(duration)}
+          </span>
+        </div>
+
+        {/* Mini Controls */}
+        <div className="flex items-center justify-center gap-1">
         <button
           onClick={togglePause}
           className="flex items-center justify-center w-6 h-6 rounded hover:bg-gray-700 transition-colors"
           title={isPlaying ? 'Pause' : 'Lecture'}
+          disabled={!isLoaded}
         >
           {isPlaying ? (
             <Pause size={14} className="text-gray-300" />
@@ -214,9 +257,19 @@ export function FloatingVideoPlayer({ onClose }: FloatingVideoPlayerProps) {
         </button>
 
         <button
+          onClick={() => seekRelative(-5)}
+          className="flex items-center justify-center w-6 h-6 rounded hover:bg-gray-700 transition-colors"
+          title="Reculer 5s"
+          disabled={!isLoaded}
+        >
+          <SkipBack size={14} className="text-gray-300" />
+        </button>
+
+        <button
           onClick={() => seekRelative(5)}
           className="flex items-center justify-center w-6 h-6 rounded hover:bg-gray-700 transition-colors"
           title="Avancer 5s"
+          disabled={!isLoaded}
         >
           <SkipForward size={14} className="text-gray-300" />
         </button>
@@ -232,6 +285,20 @@ export function FloatingVideoPlayer({ onClose }: FloatingVideoPlayerProps) {
             <Volume2 size={14} className="text-gray-300" />
           )}
         </button>
+
+        <button
+          onClick={toggleFullscreen}
+          className="flex items-center justify-center w-6 h-6 rounded hover:bg-gray-700 transition-colors"
+          title={isFullscreen ? 'Quitter le plein écran' : 'Agrandir'}
+          disabled={!isLoaded}
+        >
+          {isFullscreen ? (
+            <Minimize2 size={14} className="text-gray-300" />
+          ) : (
+            <Maximize2 size={14} className="text-gray-300" />
+          )}
+        </button>
+        </div>
       </div>
     </div>
   )

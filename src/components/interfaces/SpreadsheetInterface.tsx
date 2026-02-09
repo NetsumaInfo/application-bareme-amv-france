@@ -5,25 +5,15 @@ import { useProjectStore } from '@/store/useProjectStore'
 import { useUIStore } from '@/store/useUIStore'
 import * as tauri from '@/services/tauri'
 import { generateId, parseClipName, getClipPrimaryLabel, getClipSecondaryLabel } from '@/utils/formatters'
+import { CATEGORY_COLOR_PRESETS, sanitizeColor, withAlpha } from '@/utils/colors'
 import type { Clip } from '@/types/project'
 import type { Criterion } from '@/types/bareme'
-
-const CATEGORY_COLORS = [
-  { bg: 'bg-orange-950/60', border: 'border-orange-600/40', text: 'text-orange-300', criterionBg: 'bg-orange-950/35', criterionText: 'text-orange-200' },
-  { bg: 'bg-violet-950/60', border: 'border-violet-600/40', text: 'text-violet-300', criterionBg: 'bg-violet-950/35', criterionText: 'text-violet-200' },
-  { bg: 'bg-emerald-950/60', border: 'border-emerald-600/40', text: 'text-emerald-300', criterionBg: 'bg-emerald-950/35', criterionText: 'text-emerald-200' },
-  { bg: 'bg-amber-950/60', border: 'border-amber-600/40', text: 'text-amber-300', criterionBg: 'bg-amber-950/35', criterionText: 'text-amber-200' },
-  { bg: 'bg-sky-950/60', border: 'border-sky-600/40', text: 'text-sky-300', criterionBg: 'bg-sky-950/35', criterionText: 'text-sky-200' },
-  { bg: 'bg-rose-950/60', border: 'border-rose-600/40', text: 'text-rose-300', criterionBg: 'bg-rose-950/35', criterionText: 'text-rose-200' },
-  { bg: 'bg-teal-950/60', border: 'border-teal-600/40', text: 'text-teal-300', criterionBg: 'bg-teal-950/35', criterionText: 'text-teal-200' },
-  { bg: 'bg-indigo-950/60', border: 'border-indigo-600/40', text: 'text-indigo-300', criterionBg: 'bg-indigo-950/35', criterionText: 'text-indigo-200' },
-]
 
 interface CategoryGroup {
   category: string
   criteria: Criterion[]
   totalMax: number
-  color: (typeof CATEGORY_COLORS)[0]
+  color: string
 }
 
 export default function SpreadsheetInterface() {
@@ -56,17 +46,21 @@ export default function SpreadsheetInterface() {
     const seen = new Map<string, number>()
 
     for (const c of currentBareme.criteria) {
-      const cat = c.category || c.name
+      const cat = c.category || 'Général'
       if (seen.has(cat)) {
         groups[seen.get(cat)!].criteria.push(c)
         groups[seen.get(cat)!].totalMax += (c.max ?? 10) * c.weight
       } else {
         seen.set(cat, groups.length)
+        const colorFromBareme = currentBareme.categoryColors?.[cat]
         groups.push({
           category: cat,
           criteria: [c],
           totalMax: (c.max ?? 10) * c.weight,
-          color: CATEGORY_COLORS[groups.length % CATEGORY_COLORS.length],
+          color: sanitizeColor(
+            colorFromBareme,
+            CATEGORY_COLOR_PRESETS[groups.length % CATEGORY_COLOR_PRESETS.length],
+          ),
         })
       }
     }
@@ -271,9 +265,13 @@ export default function SpreadsheetInterface() {
                 <th
                   key={g.category}
                   colSpan={g.criteria.length}
-                  className={`px-2 py-1.5 text-center text-[10px] font-bold uppercase tracking-wider border-r border-b border-gray-600 ${g.color.bg} ${g.color.border}`}
+                  className="px-2 py-1.5 text-center text-[10px] font-bold uppercase tracking-wider border-r border-b border-gray-600"
+                  style={{
+                    backgroundColor: withAlpha(g.color, 0.22),
+                    borderColor: withAlpha(g.color, 0.35),
+                  }}
                 >
-                  <span className={g.color.text}>{g.category}</span>
+                  <span style={{ color: g.color }}>{g.category}</span>
                   <span className="font-normal text-gray-500 ml-1">
                     /{g.totalMax}
                   </span>
@@ -296,10 +294,11 @@ export default function SpreadsheetInterface() {
                 g.criteria.map((c) => (
                   <th
                     key={c.id}
-                    className={`px-1 py-1 text-center text-[9px] font-medium border-r border-b border-gray-700 min-w-[76px] ${g.color.criterionBg}`}
+                    className="px-1 py-1 text-center text-[9px] font-medium border-r border-b border-gray-700 min-w-[76px]"
                     title={c.description}
+                    style={{ backgroundColor: withAlpha(g.color, 0.12) }}
                   >
-                    <div className={`truncate ${g.color.criterionText}`}>
+                    <div className="truncate" style={{ color: withAlpha(g.color, 0.92) }}>
                       {g.criteria.length === 1 ? '' : c.name}
                     </div>
                     <div className="text-gray-500 font-normal">
@@ -454,7 +453,8 @@ export default function SpreadsheetInterface() {
                         <td
                           key={`avg-${c.id}`}
                           colSpan={g.criteria.length}
-                          className={`px-1 py-1.5 text-center border-r border-gray-700 ${g.color.bg}`}
+                          className="px-1 py-1.5 text-center border-r border-gray-700"
+                          style={{ backgroundColor: withAlpha(g.color, 0.18) }}
                         >
                           <span className="text-[10px] font-mono font-medium text-gray-300">
                             {avg.toFixed(1)}
@@ -505,7 +505,7 @@ export default function SpreadsheetInterface() {
             <span className="text-[10px] text-gray-600 ml-auto">
               {categoryGroups.map((g) => (
                 <span key={g.category} className="ml-2">
-                  <span className={g.color.text}>{g.category}</span>:{' '}
+                  <span style={{ color: g.color }}>{g.category}</span>:{' '}
                   <span className="text-gray-400">
                     {getCategoryScore(currentClip.id, g)}/{g.totalMax}
                   </span>

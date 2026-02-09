@@ -27,6 +27,7 @@ export interface Bareme {
   description?: string
   isOfficial: boolean
   criteria: Criterion[]
+  categoryColors?: Record<string, string>
   totalPoints: number
   createdAt: string
   updatedAt: string
@@ -40,6 +41,13 @@ export const OFFICIAL_BAREME: Bareme = {
   totalPoints: 50,
   createdAt: new Date().toISOString(),
   updatedAt: new Date().toISOString(),
+  categoryColors: {
+    MONTAGE: '#fb923c',
+    VFX: '#a78bfa',
+    'CHOIX ARTISTIQUE': '#34d399',
+    ENCODAGE: '#f59e0b',
+    'MIX AUDIO': '#38bdf8',
+  },
   criteria: [
     // MONTAGE /20
     {

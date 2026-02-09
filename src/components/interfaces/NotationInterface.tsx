@@ -1,9 +1,10 @@
-import { useCallback, useRef } from 'react'
+import { useCallback, useMemo, useRef } from 'react'
 import { ChevronLeft, ChevronRight, Eye, EyeOff } from 'lucide-react'
 import { useNotationStore } from '@/store/useNotationStore'
 import { useProjectStore } from '@/store/useProjectStore'
 import { useUIStore } from '@/store/useUIStore'
 import { getClipPrimaryLabel, getClipSecondaryLabel } from '@/utils/formatters'
+import { CATEGORY_COLOR_PRESETS, sanitizeColor, withAlpha } from '@/utils/colors'
 
 function CompactCriterion({
   criterion,
@@ -11,25 +12,29 @@ function CompactCriterion({
   onValueChange,
   onKeyDown,
   inputRef,
+  color,
 }: {
   criterion: { id: string; name: string; min?: number; max?: number; step?: number; weight: number }
   score?: { value: number | string | boolean; isValid: boolean; validationErrors: string[] }
   onValueChange: (value: number | string) => void
   onKeyDown: (e: React.KeyboardEvent) => void
   inputRef: (el: HTMLInputElement | null) => void
+  color: string
 }) {
   const value = score?.value ?? ''
   const hasError = score && !score.isValid
 
   return (
     <div
-      className={`flex items-center gap-2 px-3 py-1.5 rounded transition-colors ${
-        hasError ? 'bg-accent/10' : ''
-      }`}
+      className="flex items-center gap-2 px-3 py-1.5 rounded transition-colors"
+      style={{
+        backgroundColor: hasError ? withAlpha('#ef4444', 0.12) : withAlpha(color, 0.07),
+      }}
     >
-      <span className="flex-1 text-xs text-gray-300 truncate" title={criterion.name}>
+      <span className="flex-1 text-xs text-gray-200 truncate" title={criterion.name}>
         {criterion.name}
       </span>
+      <span className="text-[10px] text-gray-500">x{criterion.weight}</span>
       <input
         ref={inputRef}
         type="number"
@@ -39,13 +44,14 @@ function CompactCriterion({
         value={value === '' ? '' : String(value)}
         onChange={(e) => onValueChange(e.target.value === '' ? '' : Number(e.target.value))}
         onKeyDown={onKeyDown}
-        className={`w-14 px-1.5 py-0.5 text-center text-xs rounded border font-mono ${
+        className={`w-16 px-1.5 py-0.5 text-center text-xs rounded border font-mono ${
           hasError
             ? 'border-accent bg-accent/10 text-accent-light'
-            : 'border-gray-700 bg-surface-dark text-white focus:border-primary-500'
+            : 'bg-surface-dark text-white focus:border-primary-500'
         } focus:outline-none`}
+        style={!hasError ? { borderColor: withAlpha(color, 0.42) } : undefined}
       />
-      <span className="text-xs text-gray-600 w-6 text-right font-mono">{criterion.max ?? '-'}</span>
+      <span className="text-xs text-gray-600 w-7 text-right font-mono">{criterion.max ?? '-'}</span>
     </div>
   )
 }
@@ -59,6 +65,29 @@ export default function NotationInterface() {
 
   const note = currentClip ? getNoteForClip(currentClip.id) : undefined
   const totalScore = currentClip ? getScoreForClip(currentClip.id) : 0
+
+  const categories = useMemo(() => {
+    if (!currentBareme) return []
+    const map = new Map<string, typeof currentBareme.criteria>()
+    for (const criterion of currentBareme.criteria) {
+      const category = criterion.category || 'Général'
+      if (!map.has(category)) map.set(category, [])
+      map.get(category)!.push(criterion)
+    }
+    return Array.from(map.entries()).map(([category, criteria], index) => ({
+      category,
+      criteria,
+      color: sanitizeColor(
+        currentBareme.categoryColors?.[category],
+        CATEGORY_COLOR_PRESETS[index % CATEGORY_COLOR_PRESETS.length],
+      ),
+    }))
+  }, [currentBareme])
+
+  const flatCriteria = useMemo(
+    () => categories.flatMap((group) => group.criteria),
+    [categories],
+  )
 
   const handleValueChange = useCallback(
     (criterionId: string, value: number | string) => {
@@ -78,17 +107,16 @@ export default function NotationInterface() {
 
   const moveFocus = useCallback(
     (fromIndex: number, direction: 'up' | 'down') => {
-      if (!currentBareme) return
       const targetIndex = direction === 'down' ? fromIndex + 1 : fromIndex - 1
-      if (targetIndex < 0 || targetIndex >= currentBareme.criteria.length) return
-      const targetId = currentBareme.criteria[targetIndex].id
+      if (targetIndex < 0 || targetIndex >= flatCriteria.length) return
+      const targetId = flatCriteria[targetIndex].id
       const input = inputRefs.current.get(targetId)
       if (input) {
         input.focus()
         input.select()
       }
     },
-    [currentBareme],
+    [flatCriteria],
   )
 
   const handleKeyDown = useCallback(
@@ -114,7 +142,6 @@ export default function NotationInterface() {
 
   return (
     <div className="flex flex-col h-full bg-surface-dark">
-      {/* Compact header */}
       <div className="flex items-center justify-between px-3 py-2 border-b border-gray-700 bg-surface">
         <button
           onClick={previousClip}
@@ -141,23 +168,45 @@ export default function NotationInterface() {
         </button>
       </div>
 
-      {/* Criteria list - compact */}
-      <div className="flex-1 overflow-y-auto py-1">
-        {currentBareme.criteria.map((criterion, index) => (
-          <CompactCriterion
-            key={criterion.id}
-            criterion={criterion}
-            score={note?.scores[criterion.id]}
-            onValueChange={(v) => handleValueChange(criterion.id, v)}
-            onKeyDown={(e) => handleKeyDown(e, index)}
-            inputRef={(el) => {
-              if (el) inputRefs.current.set(criterion.id, el)
-            }}
-          />
+      <div className="flex-1 overflow-y-auto py-2 px-2 space-y-2">
+        {categories.map(({ category, criteria, color }) => (
+          <div
+            key={category}
+            className="rounded-md border border-gray-800/80 bg-surface-dark/70 overflow-hidden"
+            style={{ borderColor: withAlpha(color, 0.28) }}
+          >
+            <div
+              className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider"
+              style={{
+                color,
+                backgroundColor: withAlpha(color, 0.14),
+                borderBottom: `1px solid ${withAlpha(color, 0.24)}`,
+              }}
+            >
+              {category}
+            </div>
+            <div className="p-1.5 space-y-1">
+              {criteria.map((criterion) => {
+                const flatIndex = flatCriteria.findIndex((item) => item.id === criterion.id)
+                return (
+                  <CompactCriterion
+                    key={criterion.id}
+                    criterion={criterion}
+                    score={note?.scores[criterion.id]}
+                    onValueChange={(v) => handleValueChange(criterion.id, v)}
+                    onKeyDown={(e) => handleKeyDown(e, flatIndex)}
+                    inputRef={(el) => {
+                      if (el) inputRefs.current.set(criterion.id, el)
+                    }}
+                    color={color}
+                  />
+                )
+              })}
+            </div>
+          </div>
         ))}
       </div>
 
-      {/* Score footer */}
       <div className="border-t border-gray-700 bg-surface">
         <div className="flex items-center justify-between px-3 py-2">
           <button
@@ -175,7 +224,6 @@ export default function NotationInterface() {
           )}
         </div>
 
-        {/* Quick notes */}
         <div className="px-3 pb-2">
           <textarea
             placeholder="Notes..."
@@ -186,7 +234,7 @@ export default function NotationInterface() {
                 markDirty()
               }
             }}
-            className="w-full px-2 py-1 text-[11px] bg-surface-dark border border-gray-700 rounded text-gray-300 placeholder-gray-600 focus:border-primary-500 focus:outline-none resize-y min-h-[40px]"
+            className="w-full px-2 py-1 text-[11px] bg-surface-dark border border-gray-700 rounded text-gray-300 placeholder-gray-600 focus:border-primary-500 focus:outline-none resize-y min-h-[42px]"
             rows={2}
           />
         </div>

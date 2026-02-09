@@ -43,6 +43,7 @@ export const baremeSchema = z.object({
   description: z.string().optional(),
   isOfficial: z.boolean(),
   criteria: z.array(criterionSchema).min(1, 'Au moins un critère requis'),
+  categoryColors: z.record(z.string(), z.string()).optional(),
   totalPoints: z.number().positive('Le total des points doit être positif'),
   createdAt: z.string(),
   updatedAt: z.string(),
