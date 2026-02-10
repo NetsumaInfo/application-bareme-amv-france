@@ -1,5 +1,4 @@
 import { useCallback, useMemo, useState } from 'react'
-import { motion, AnimatePresence } from 'motion/react'
 import { ChevronDown, ChevronUp, AlertCircle } from 'lucide-react'
 import { useNotationStore } from '@/store/useNotationStore'
 import { useProjectStore } from '@/store/useProjectStore'
@@ -30,7 +29,7 @@ function ScoreRing({ value, max, size = 48 }: { value: number; max: number; size
           strokeDasharray={circumference}
           strokeDashoffset={offset}
           strokeLinecap="round"
-          className={`${color} transition-all duration-300`}
+          className={`${color} transition-all duration-150`}
         />
       </svg>
       <div className="absolute inset-0 flex items-center justify-center">
@@ -46,7 +45,7 @@ function CriterionCard({
   onValueChange,
   color,
 }: {
-  criterion: { id: string; name: string; description?: string; min?: number; max?: number; step?: number; weight: number }
+  criterion: { id: string; name: string; description?: string; min?: number; max?: number; step?: number }
   score?: { value: number | string | boolean; isValid: boolean; validationErrors: string[] }
   onValueChange: (value: number) => void
   color: string
@@ -58,11 +57,8 @@ function CriterionCard({
   const step = criterion.step ?? 0.5
 
   return (
-    <motion.div
-      layout
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="rounded-xl border p-4 transition-colors"
+    <div
+      className="rounded-xl border p-4 transition-colors duration-150"
       style={{
         borderColor: hasError ? withAlpha('#ef4444', 0.5) : withAlpha(color, score?.value !== undefined && score.value !== '' ? 0.45 : 0.25),
         backgroundColor: hasError ? withAlpha('#ef4444', 0.08) : withAlpha(color, score?.value !== undefined && score.value !== '' ? 0.09 : 0.05),
@@ -89,10 +85,7 @@ function CriterionCard({
         />
         <div className="flex items-center justify-between text-xs text-gray-500">
           <span>{min}</span>
-          <div className="flex items-center gap-2">
-            <span className="text-gray-400">x{criterion.weight}</span>
-            <span className="text-white font-mono font-bold text-sm">{value}</span>
-          </div>
+          <span className="text-white font-mono font-bold text-sm">{value}</span>
           <span>{max}</span>
         </div>
       </div>
@@ -103,7 +96,7 @@ function CriterionCard({
           {score.validationErrors[0]}
         </div>
       )}
-    </motion.div>
+    </div>
   )
 }
 
@@ -116,7 +109,7 @@ function CategorySection({
   defaultOpen = true,
 }: {
   category: string
-  criteria: { id: string; name: string; description?: string; min?: number; max?: number; step?: number; weight: number }[]
+  criteria: { id: string; name: string; description?: string; min?: number; max?: number; step?: number }[]
   note?: ReturnType<ReturnType<typeof useNotationStore.getState>['getNoteForClip']>
   onValueChange: (criterionId: string, value: number) => void
   color: string
@@ -138,29 +131,21 @@ function CategorySection({
         <span>{category}</span>
         {isOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
       </button>
-      <AnimatePresence initial={false}>
-        {isOpen && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            className="overflow-hidden"
-          >
-            <div className="grid grid-cols-1 xl:grid-cols-2 gap-3 p-3">
-              {criteria.map((criterion) => (
-                <CriterionCard
-                  key={criterion.id}
-                  criterion={criterion}
-                  score={note?.scores[criterion.id]}
-                  onValueChange={(v) => onValueChange(criterion.id, v)}
-                  color={color}
-                />
-              ))}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {isOpen && (
+        <div className="overflow-hidden">
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-3 p-3">
+            {criteria.map((criterion) => (
+              <CriterionCard
+                key={criterion.id}
+                criterion={criterion}
+                score={note?.scores[criterion.id]}
+                onValueChange={(v) => onValueChange(criterion.id, v)}
+                color={color}
+              />
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

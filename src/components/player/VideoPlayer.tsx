@@ -67,11 +67,37 @@ export default function VideoPlayer({ compact }: VideoPlayerProps) {
       // New file - load it
       usePlayerStore.getState().setLoaded(false)
       tauri.playerLoad(currentClip.filePath)
-        .then(() => {
+        .then(async () => {
           usePlayerStore.getState().setLoaded(true, currentClip.filePath)
           tauri.playerShow().catch(() => {})
           tauri.playerPlay().catch(() => {})
           setTimeout(updateGeometry, 50)
+
+          // Fetch tracks after load (subtitles, audio)
+          try {
+            const tracks = await tauri.playerGetTracks()
+            const store = usePlayerStore.getState()
+            store.setSubtitleTracks(tracks.subtitle_tracks.map(t => ({
+              id: t.id,
+              title: t.title ?? undefined,
+              lang: t.lang ?? undefined,
+              codec: t.codec ?? undefined,
+              external: t.external,
+            })))
+            store.setAudioTracks(tracks.audio_tracks.map(t => ({
+              id: t.id,
+              title: t.title ?? undefined,
+              lang: t.lang ?? undefined,
+              codec: t.codec ?? undefined,
+              external: t.external,
+            })))
+            if (tracks.audio_tracks.length > 0) {
+              store.setCurrentAudioId(tracks.audio_tracks[0].id)
+            }
+            // Disable subtitles by default
+            store.setCurrentSubtitleId(null)
+            tauri.playerSetSubtitleTrack(null).catch(() => {})
+          } catch { /* tracks not available */ }
         })
         .catch(console.error)
     }

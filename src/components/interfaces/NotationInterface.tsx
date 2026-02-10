@@ -14,7 +14,7 @@ function CompactCriterion({
   inputRef,
   color,
 }: {
-  criterion: { id: string; name: string; min?: number; max?: number; step?: number; weight: number }
+  criterion: { id: string; name: string; min?: number; max?: number; step?: number }
   score?: { value: number | string | boolean; isValid: boolean; validationErrors: string[] }
   onValueChange: (value: number | string) => void
   onKeyDown: (e: React.KeyboardEvent) => void
@@ -34,7 +34,6 @@ function CompactCriterion({
       <span className="flex-1 text-xs text-gray-200 truncate" title={criterion.name}>
         {criterion.name}
       </span>
-      <span className="text-[10px] text-gray-500">x{criterion.weight}</span>
       <input
         ref={inputRef}
         type="number"
@@ -44,7 +43,7 @@ function CompactCriterion({
         value={value === '' ? '' : String(value)}
         onChange={(e) => onValueChange(e.target.value === '' ? '' : Number(e.target.value))}
         onKeyDown={onKeyDown}
-        className={`w-16 px-1.5 py-0.5 text-center text-xs rounded border font-mono ${
+        className={`amv-soft-number w-16 px-1.5 py-0.5 text-center text-xs rounded border font-mono focus-visible:outline-none ${
           hasError
             ? 'border-accent bg-accent/10 text-accent-light'
             : 'bg-surface-dark text-white focus:border-primary-500'

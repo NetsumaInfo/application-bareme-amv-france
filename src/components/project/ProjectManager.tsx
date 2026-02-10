@@ -53,18 +53,21 @@ export default function ProjectManager() {
       if (!filePath) return
 
       const data = (await tauri.loadProjectFile(filePath)) as {
+        version?: string
         project: Parameters<typeof setProjectFromData>[0]['project']
         clips: Parameters<typeof setProjectFromData>[0]['clips']
         notes: Record<string, Parameters<typeof loadNotes>[0][string]>
         baremeId: string
+        importedJudges?: Parameters<typeof setProjectFromData>[0]['importedJudges']
       }
 
       setProjectFromData({
-        version: '1.0',
+        ...data,
+        version: typeof data.version === 'string' ? data.version : '1.0',
         project: { ...data.project, filePath },
-        baremeId: data.baremeId,
-        clips: data.clips,
-        notes: data.notes,
+        baremeId: data.baremeId ?? data.project.baremeId,
+        clips: Array.isArray(data.clips) ? data.clips : [],
+        notes: data.notes ?? {},
       })
 
       if (data.notes) {
@@ -162,7 +165,7 @@ export default function ProjectManager() {
 
     try {
       const filePath = await tauri.saveJsonDialog(
-        `${currentProject.name}_resultats.json`,
+        `${currentProject.name}_projet.json`,
       )
       if (!filePath) return
 
@@ -172,6 +175,40 @@ export default function ProjectManager() {
     } catch (e) {
       console.error('Failed to export:', e)
       alert(`Erreur lors de l'export: ${e}`)
+    }
+  }
+
+  const handleExportJudgeNotes = async () => {
+    setOpen(false)
+    if (!currentProject) return
+
+    try {
+      const defaultName = `${currentProject.name}_${currentProject.judgeName || 'juge'}_JE.json`
+      const filePath = await tauri.saveJsonDialog(defaultName)
+      if (!filePath) return
+
+      const notesData = getNotesData()
+      await tauri.exportJsonFile(
+        {
+          version: '1.0',
+          type: 'judge-notes',
+          exportedAt: new Date().toISOString(),
+          projectName: currentProject.name,
+          judgeName: currentProject.judgeName,
+          baremeId: currentProject.baremeId,
+          clips: clips.map((clip) => ({
+            id: clip.id,
+            fileName: clip.fileName,
+            displayName: clip.displayName,
+            author: clip.author,
+          })),
+          notes: notesData,
+        },
+        filePath,
+      )
+    } catch (e) {
+      console.error('Failed to export judge notes:', e)
+      alert(`Erreur lors de l'export notation: ${e}`)
     }
   }
 
@@ -228,8 +265,13 @@ export default function ProjectManager() {
               <div className="border-t border-gray-700 my-1" />
               <MenuItem
                 icon={<FileDown size={13} />}
-                label="Exporter JSON"
+                label="Exporter projet (JSON)"
                 onClick={handleExport}
+              />
+              <MenuItem
+                icon={<FileDown size={13} />}
+                label="Exporter notation (JE.json)"
+                onClick={handleExportJudgeNotes}
               />
             </>
           )}

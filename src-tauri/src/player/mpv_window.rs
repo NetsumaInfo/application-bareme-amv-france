@@ -93,6 +93,21 @@ extern "system" {
     fn CreateSolidBrush(color: u32) -> isize;
 }
 
+/// Public helper so commands.rs can position the overlay window via Win32 API.
+/// # Safety
+/// Caller must pass a valid HWND.
+pub unsafe fn set_window_pos_raw(
+    hwnd: isize,
+    hwnd_insert_after: isize,
+    x: i32,
+    y: i32,
+    cx: i32,
+    cy: i32,
+    flags: u32,
+) {
+    SetWindowPos(hwnd, hwnd_insert_after, x, y, cx, cy, flags);
+}
+
 fn to_wide(s: &str) -> Vec<u16> {
     s.encode_utf16().chain(std::iter::once(0)).collect()
 }
@@ -224,6 +239,29 @@ impl MpvChildWindow {
     pub fn hide(&self) {
         unsafe {
             ShowWindow(self.hwnd, SW_HIDE);
+        }
+    }
+
+    /// Returns (left, top, width, height) of the monitor the owner window is on.
+    /// Used to position the overlay on the same monitor as mpv fullscreen.
+    pub fn get_fullscreen_monitor_rect(&self) -> Option<(i32, i32, i32, i32)> {
+        unsafe {
+            let monitor = MonitorFromWindow(self.owner, MONITOR_DEFAULTTONEAREST);
+            if monitor == 0 {
+                return None;
+            }
+            let mut mi = MonitorInfo {
+                cb_size: std::mem::size_of::<MonitorInfo>() as u32,
+                rc_monitor: Rect { left: 0, top: 0, right: 0, bottom: 0 },
+                rc_work: Rect { left: 0, top: 0, right: 0, bottom: 0 },
+                dw_flags: 0,
+            };
+            if GetMonitorInfoW(monitor, &mut mi) == 0 {
+                return None;
+            }
+            let w = mi.rc_monitor.right - mi.rc_monitor.left;
+            let h = mi.rc_monitor.bottom - mi.rc_monitor.top;
+            Some((mi.rc_monitor.left, mi.rc_monitor.top, w, h))
         }
     }
 

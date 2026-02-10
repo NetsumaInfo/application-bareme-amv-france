@@ -51,8 +51,19 @@ body {
   background: #4a4a6a;
 }
 
-/* Focus styles for keyboard navigation */
+/* Focus styles for keyboard navigation (softened) */
 *:focus-visible {
-  outline: 2px solid #3b82f6;
-  outline-offset: 2px;
+  outline: 1px solid rgba(96, 165, 250, 0.55);
+  outline-offset: 1px;
+}
+
+/* Softer number inputs used in notation/results tables */
+.amv-soft-number {
+  color-scheme: dark;
+}
+
+.amv-soft-number::-webkit-outer-spin-button,
+.amv-soft-number::-webkit-inner-spin-button {
+  opacity: 0.7;
+  filter: saturate(0.75) hue-rotate(170deg) brightness(0.9);
 }

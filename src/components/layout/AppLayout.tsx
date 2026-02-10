@@ -4,11 +4,14 @@ import { FilePlus, FolderOpen, Folder } from 'lucide-react'
 import { emit, listen } from '@tauri-apps/api/event'
 import Header from './Header'
 import Sidebar from './Sidebar'
+import ContextMenu from './ContextMenu'
 import VideoPlayer from '@/components/player/VideoPlayer'
 import { FloatingVideoPlayer } from '@/components/player/FloatingVideoPlayer'
 import SpreadsheetInterface from '@/components/interfaces/SpreadsheetInterface'
 import ModernInterface from '@/components/interfaces/ModernInterface'
 import NotationInterface from '@/components/interfaces/NotationInterface'
+import ResultatsInterface from '@/components/interfaces/ResultatsInterface'
+import ExportInterface from '@/components/interfaces/ExportInterface'
 import CreateProjectModal from '@/components/project/CreateProjectModal'
 import SettingsPanel from '@/components/settings/SettingsPanel'
 import BaremeEditor from '@/components/scoring/BaremeEditor'
@@ -69,11 +72,12 @@ function WelcomeScreen() {
       const data = await tauri.loadProjectFile(filePath) as any
 
       setProjectFromData({
-        version: '1.0',
+        ...data,
+        version: typeof data.version === 'string' ? data.version : '1.0',
         project: { ...data.project, filePath },
-        baremeId: data.baremeId,
-        clips: data.clips,
-        notes: data.notes,
+        baremeId: data.baremeId ?? data.project?.baremeId ?? '',
+        clips: Array.isArray(data.clips) ? data.clips : [],
+        notes: data.notes ?? {},
       })
       if (data.notes) loadNotes(data.notes)
     } catch (e) {
@@ -192,10 +196,10 @@ function ScoringInterface() {
     <AnimatePresence mode="wait">
       <motion.div
         key={currentInterface}
-        initial={{ opacity: 0, x: 10 }}
-        animate={{ opacity: 1, x: 0 }}
-        exit={{ opacity: 0, x: -10 }}
-        transition={{ duration: 0.15 }}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.12 }}
         className="flex flex-col h-full"
       >
         {currentInterface === 'modern' && <ModernInterface />}
@@ -205,23 +209,86 @@ function ScoringInterface() {
   )
 }
 
+function NotationTabContent() {
+  const {
+    currentInterface,
+    sidebarCollapsed,
+    showPipVideo,
+    setShowPipVideo,
+  } = useUIStore()
+
+  const isNotationMode = currentInterface === 'notation'
+  const isSpreadsheetMode = currentInterface === 'spreadsheet'
+
+  if (isSpreadsheetMode) {
+    return (
+      <div className="flex flex-1 overflow-hidden">
+        <div className="flex-1 overflow-hidden">
+          <SpreadsheetInterface />
+        </div>
+        {showPipVideo && (
+          <FloatingVideoPlayer onClose={() => setShowPipVideo(false)} />
+        )}
+      </div>
+    )
+  }
+
+  return (
+    <div className="flex flex-1 overflow-hidden">
+      {/* Sidebar - hidden in notation mode or when collapsed */}
+      {!isNotationMode && !sidebarCollapsed && (
+        <div className="hidden lg:flex">
+          <Sidebar />
+        </div>
+      )}
+
+      {/* Main content */}
+      <div
+        className={`flex flex-1 overflow-hidden ${
+          isNotationMode ? 'flex-col lg:flex-row' : 'flex-col xl:flex-row'
+        }`}
+      >
+        {isNotationMode ? (
+          <>
+            <div className="flex flex-col flex-1 p-2 gap-1 overflow-hidden min-h-[38vh]">
+              <VideoPlayer />
+            </div>
+            <div className="flex flex-col w-full lg:w-80 border-t lg:border-t-0 lg:border-l border-gray-700 overflow-hidden">
+              <ScoringInterface />
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="flex flex-col w-full xl:w-1/2 p-2 gap-1 overflow-hidden min-h-[34vh]">
+              <VideoPlayer />
+            </div>
+            <div className="flex flex-col w-full xl:w-1/2 border-t xl:border-t-0 xl:border-l border-gray-700 overflow-hidden">
+              <ScoringInterface />
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  )
+}
+
 export default function AppLayout() {
   const { currentProject, clips, currentClipIndex, nextClip, previousClip } = useProjectStore()
   const {
+    currentTab,
+    switchTab,
     currentInterface,
-    switchInterface,
-    sidebarCollapsed,
     showPipVideo,
     showProjectModal,
     showBaremeEditor,
-    setShowPipVideo,
     zoomLevel,
+    zoomMode,
     zoomIn,
     zoomOut,
     resetZoom,
     setShowProjectModal,
   } = useUIStore()
-  const { togglePause, seekRelative, toggleFullscreen, exitFullscreen } = usePlayer()
+  const { togglePause, seekRelative, toggleFullscreen, exitFullscreen, pause } = usePlayer()
   const isPlayerLoaded = usePlayerStore((state) => state.isLoaded)
   const isFullscreen = usePlayerStore((state) => state.isFullscreen)
   const { save, saveAs } = useSaveProject()
@@ -285,7 +352,6 @@ export default function AppLayout() {
       .then(() => {
         usePlayerStore.getState().setLoaded(true, currentClip.filePath)
         tauri.playerPlay().catch(() => {})
-        // Emit updated clip info after loading
         emitClipInfo()
       })
       .catch(console.error)
@@ -304,11 +370,12 @@ export default function AppLayout() {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const data = await tauri.loadProjectFile(filePath) as any
       useProjectStore.getState().setProjectFromData({
-        version: '1.0',
+        ...data,
+        version: typeof data.version === 'string' ? data.version : '1.0',
         project: { ...data.project, filePath },
-        baremeId: data.baremeId,
-        clips: data.clips,
-        notes: data.notes,
+        baremeId: data.baremeId ?? data.project?.baremeId ?? '',
+        clips: Array.isArray(data.clips) ? data.clips : [],
+        notes: data.notes ?? {},
       })
       if (data.notes) useNotationStore.getState().loadNotes(data.notes)
     } catch (e) {
@@ -326,9 +393,9 @@ export default function AppLayout() {
       'shift+arrowleft': () => seekRelative(-30),
       n: nextClip,
       p: previousClip,
-      'ctrl+1': () => switchInterface('spreadsheet'),
-      'ctrl+2': () => switchInterface('modern'),
-      'ctrl+3': () => switchInterface('notation'),
+      'ctrl+1': () => switchTab('notation'),
+      'ctrl+2': () => switchTab('resultats'),
+      'ctrl+3': () => switchTab('export'),
     },
     // Global shortcuts (fire even in inputs)
     {
@@ -344,41 +411,77 @@ export default function AppLayout() {
     },
   )
 
-  const isNotationMode = currentInterface === 'notation'
-  const isSpreadsheetMode = currentInterface === 'spreadsheet'
+  // Context menu state
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null)
+
+  const handleContextMenu = useCallback((e: React.MouseEvent) => {
+    // Keep native context menu on interactive elements
+    const target = e.target as HTMLElement
+    if (
+      target.closest('input, textarea, select, button, a, [contenteditable="true"]')
+      || target.closest('[data-native-context="true"]')
+    ) {
+      return
+    }
+
+    e.preventDefault()
+    setContextMenu({ x: e.clientX, y: e.clientY })
+  }, [])
+
   const isAnyModalOpen = showSettings || showProjectModal || showBaremeEditor
 
   useEffect(() => {
-    if (!currentProject) return
+    if (!currentProject) {
+      pause().catch(() => {})
+      tauri.playerHide().catch(() => {})
+      return
+    }
 
     if (isAnyModalOpen) {
       if (usePlayerStore.getState().isFullscreen) {
         usePlayerStore.getState().setFullscreen(false)
       }
       tauri.playerSetFullscreen(false).catch(() => {})
+      pause().catch(() => {})
       tauri.playerHide().catch(() => {})
       return
     }
 
+    if (isFullscreen) {
+      tauri.playerShow().catch(() => {})
+      return
+    }
+
     const hasClip = Boolean(clips[currentClipIndex]?.filePath)
-    if (!hasClip || !isPlayerLoaded) return
+    if (!hasClip || !isPlayerLoaded) {
+      tauri.playerHide().catch(() => {})
+      return
+    }
 
     const shouldShowPlayer =
-      currentInterface === 'spreadsheet'
-        ? showPipVideo || usePlayerStore.getState().isFullscreen
-        : true
+      currentTab === 'notation'
+        ? currentInterface === 'spreadsheet'
+          ? showPipVideo
+          : true
+        : false
 
     if (shouldShowPlayer) {
       tauri.playerShow().catch(() => {})
+    } else {
+      pause().catch(() => {})
+      tauri.playerHide().catch(() => {})
     }
   }, [
     currentProject,
     isAnyModalOpen,
+    currentTab,
     currentInterface,
     showPipVideo,
     isPlayerLoaded,
+    isFullscreen,
     clips,
     currentClipIndex,
+    pause,
   ])
 
   useEffect(() => {
@@ -398,63 +501,68 @@ export default function AppLayout() {
     }
   }, [exitFullscreen])
 
-  return (
-    <div
-      className="flex flex-col h-screen w-full overflow-auto bg-surface-dark text-gray-200"
-      style={{ zoom: `${zoomLevel}%` }}
-    >
+  const isNavigableZoom = zoomMode === 'navigable'
+  const zoomScale = Math.max(0.5, zoomLevel / 100)
+  const zoomStyle = isNavigableZoom ? undefined : { zoom: `${zoomLevel}%` }
+  const navigableCanvasStyle = isNavigableZoom
+    ? {
+        transform: `scale(${zoomScale})`,
+        transformOrigin: 'top left',
+        width: `${100 / zoomScale}%`,
+        minHeight: `${100 / zoomScale}vh`,
+      }
+    : undefined
+
+  const zoomOverflow = zoomMode === 'fixed'
+    ? 'overflow-x-hidden overflow-y-auto'
+    : 'overflow-auto'
+
+  const appContent = (
+    <>
       <Header onOpenSettings={() => setShowSettings(true)} />
 
       {!currentProject ? (
         <WelcomeScreen />
-      ) : isSpreadsheetMode ? (
-        /* Spreadsheet mode: full-width table + floating PiP video */
-        <div className="flex flex-1 overflow-hidden">
-          <div className="flex-1 overflow-hidden">
-            <SpreadsheetInterface />
-          </div>
-          {showPipVideo && (
-            <FloatingVideoPlayer onClose={() => setShowPipVideo(false)} />
-          )}
+      ) : (
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={currentTab}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.12 }}
+            className="flex flex-col flex-1 overflow-hidden"
+          >
+            {currentTab === 'notation' && <NotationTabContent />}
+            {currentTab === 'resultats' && <ResultatsInterface />}
+            {currentTab === 'export' && <ExportInterface />}
+          </motion.div>
+        </AnimatePresence>
+      )}
+    </>
+  )
+
+  return (
+    <div
+      className={`flex flex-col h-screen w-full bg-surface-dark text-gray-200 ${zoomOverflow}`}
+      style={zoomStyle}
+      onContextMenu={currentProject && currentTab === 'notation' ? handleContextMenu : undefined}
+    >
+      {isNavigableZoom ? (
+        <div className="flex flex-col min-h-screen min-w-full" style={navigableCanvasStyle}>
+          {appContent}
         </div>
       ) : (
-        <div className="flex flex-1 overflow-hidden">
-          {/* Sidebar - hidden in notation mode or when collapsed */}
-          {!isNotationMode && !sidebarCollapsed && (
-            <div className="hidden lg:flex">
-              <Sidebar />
-            </div>
-          )}
+        appContent
+      )}
 
-          {/* Main content */}
-          <div
-            className={`flex flex-1 overflow-hidden ${
-              isNotationMode ? 'flex-col lg:flex-row' : 'flex-col xl:flex-row'
-            }`}
-          >
-            {isNotationMode ? (
-              /* Notation mode: video + panel (responsive stack) */
-              <>
-                <div className="flex flex-col flex-1 p-2 gap-1 overflow-hidden min-h-[38vh]">
-                  <VideoPlayer />
-                </div>
-                <div className="flex flex-col w-full lg:w-80 border-t lg:border-t-0 lg:border-l border-gray-700 overflow-hidden">
-                  <ScoringInterface />
-                </div>
-              </>
-            ) : (
-              /* Modern mode: responsive split */
-              <>
-                <div className="flex flex-col w-full xl:w-1/2 p-2 gap-1 overflow-hidden min-h-[34vh]">
-                  <VideoPlayer />
-                </div>
-                <div className="flex flex-col w-full xl:w-1/2 border-t xl:border-t-0 xl:border-l border-gray-700 overflow-hidden">
-                  <ScoringInterface />
-                </div>
-              </>
-            )}
-          </div>
-        </div>
+      {/* Context menu */}
+      {contextMenu && (
+        <ContextMenu
+          x={contextMenu.x}
+          y={contextMenu.y}
+          onClose={() => setContextMenu(null)}
+        />
       )}
 
       {/* Modals */}

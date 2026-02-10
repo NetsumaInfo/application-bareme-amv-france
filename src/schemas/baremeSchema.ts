@@ -11,7 +11,6 @@ export const criterionSchema = z.object({
   name: z.string().min(1, 'Nom du critère requis'),
   description: z.string().optional(),
   type: z.enum(['numeric', 'slider', 'boolean', 'select', 'text']),
-  weight: z.number().min(0, 'Le poids doit être positif'),
   min: z.number().optional(),
   max: z.number().optional(),
   step: z.number().positive().optional(),

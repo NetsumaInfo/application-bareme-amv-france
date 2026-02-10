@@ -34,7 +34,7 @@ export default function SpreadsheetInterface() {
     markClipScored,
     markDirty,
   } = useProjectStore()
-  const { setShowPipVideo } = useUIStore()
+  const { setShowPipVideo, hideAverages } = useUIStore()
   const cellRefs = useRef<Map<string, HTMLInputElement>>(new Map())
   const rowRefs = useRef<Map<number, HTMLTableRowElement>>(new Map())
 
@@ -49,14 +49,14 @@ export default function SpreadsheetInterface() {
       const cat = c.category || 'Général'
       if (seen.has(cat)) {
         groups[seen.get(cat)!].criteria.push(c)
-        groups[seen.get(cat)!].totalMax += (c.max ?? 10) * c.weight
+        groups[seen.get(cat)!].totalMax += (c.max ?? 10)
       } else {
         seen.set(cat, groups.length)
         const colorFromBareme = currentBareme.categoryColors?.[cat]
         groups.push({
           category: cat,
           criteria: [c],
-          totalMax: (c.max ?? 10) * c.weight,
+          totalMax: (c.max ?? 10),
           color: sanitizeColor(
             colorFromBareme,
             CATEGORY_COLOR_PRESETS[groups.length % CATEGORY_COLOR_PRESETS.length],
@@ -80,7 +80,7 @@ export default function SpreadsheetInterface() {
       // Scroll row into view
       const row = rowRefs.current.get(clipIdx)
       if (row) {
-        row.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
+        row.scrollIntoView({ block: 'nearest' })
       }
       setCurrentClip(clipIdx)
     },
@@ -198,7 +198,7 @@ export default function SpreadsheetInterface() {
       for (const c of group.criteria) {
         const score = note.scores[c.id]
         if (score && score.isValid && typeof score.value === 'number') {
-          total += score.value * c.weight
+          total += score.value
         }
       }
       return Math.round(total * 100) / 100
@@ -304,9 +304,6 @@ export default function SpreadsheetInterface() {
                     <div className="text-gray-500 font-normal">
                       /{c.max ?? 10}
                     </div>
-                    <div className="text-[8px] text-gray-500">
-                      coef x{c.weight}
-                    </div>
                   </th>
                 )),
               )}
@@ -399,7 +396,7 @@ export default function SpreadsheetInterface() {
                           onFocus={() => setCurrentClip(clipIdx)}
                           onBlur={() => handleBlur(clip.id)}
                           onClick={(e) => e.stopPropagation()}
-                          className={`w-full px-1 py-0.5 text-center rounded text-xs font-mono transition-colors ${
+                          className={`amv-soft-number w-full px-1 py-0.5 text-center rounded text-xs font-mono transition-colors focus-visible:outline-none ${
                             hasError
                               ? 'border border-accent bg-accent/10 text-accent-light'
                               : 'border border-transparent bg-transparent text-white hover:bg-surface-light/50 focus:border-primary-500 focus:bg-surface-dark'
@@ -424,18 +421,18 @@ export default function SpreadsheetInterface() {
           </tbody>
 
           {/* Footer averages */}
-          {clips.length > 1 && (
+          {clips.length > 1 && !hideAverages && (
             <tfoot>
               <tr>
                 <td
                   colSpan={2 + currentBareme.criteria.length + 1}
-                  className="h-px bg-gray-600"
+                  className="h-[2px] bg-gray-500"
                 />
               </tr>
-              <tr className="bg-surface-dark/80">
+              <tr className="bg-surface-dark">
                 <td
                   colSpan={2}
-                  className="px-2 py-1.5 font-bold text-[9px] uppercase tracking-wider text-gray-400 border-r border-gray-700 sticky left-0 z-10 bg-surface-dark"
+                  className="px-2 py-2 font-bold text-[10px] uppercase tracking-wider text-gray-300 border-r border-gray-600 sticky left-0 z-10 bg-surface-dark"
                 >
                   Moyennes
                 </td>
@@ -453,13 +450,16 @@ export default function SpreadsheetInterface() {
                         <td
                           key={`avg-${c.id}`}
                           colSpan={g.criteria.length}
-                          className="px-1 py-1.5 text-center border-r border-gray-700"
-                          style={{ backgroundColor: withAlpha(g.color, 0.18) }}
+                          className="px-1 py-2 text-center border-r border-gray-600"
+                          style={{ backgroundColor: withAlpha(g.color, 0.22) }}
                         >
-                          <span className="text-[10px] font-mono font-medium text-gray-300">
+                          <span
+                            className="text-[11px] font-mono font-bold"
+                            style={{ color: g.color }}
+                          >
                             {avg.toFixed(1)}
                           </span>
-                          <span className="text-[9px] text-gray-500">
+                          <span className="text-[9px] text-gray-400">
                             /{g.totalMax}
                           </span>
                         </td>
@@ -468,7 +468,7 @@ export default function SpreadsheetInterface() {
                     return null
                   }),
                 )}
-                <td className="px-2 py-1.5 text-center font-mono font-bold text-[11px] text-gray-300 bg-surface-dark">
+                <td className="px-2 py-2 text-center font-mono font-bold text-[12px] text-white bg-surface-dark">
                   {clips.length > 0
                     ? (
                         clips.reduce(

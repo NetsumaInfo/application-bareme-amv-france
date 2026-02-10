@@ -12,7 +12,6 @@ function emptyCriterion(): Criterion {
     id: generateId(),
     name: '',
     type: 'numeric',
-    weight: 1,
     min: 0,
     max: 10,
     step: 0.5,
@@ -22,7 +21,6 @@ function emptyCriterion(): Criterion {
 }
 
 function normalizeCriterion(raw: Criterion): Criterion {
-  const weight = Number.isFinite(raw.weight) ? Math.max(0.1, Number(raw.weight)) : 1
   const step = Number.isFinite(raw.step) && Number(raw.step) > 0 ? Number(raw.step) : 0.5
   const max = Number.isFinite(raw.max) ? Number(raw.max) : 10
 
@@ -32,7 +30,6 @@ function normalizeCriterion(raw: Criterion): Criterion {
     min: 0,
     max,
     step,
-    weight,
     required: raw.required !== false,
     category: raw.category?.trim() || '',
   }
@@ -46,7 +43,7 @@ function getTotalPoints(criteria: Criterion[]): number {
   return Math.round(
     criteria
       .filter((criterion) => criterion.name.trim())
-      .reduce((sum, criterion) => sum + getCriterionMax(criterion) * criterion.weight, 0) * 100,
+      .reduce((sum, criterion) => sum + getCriterionMax(criterion), 0) * 100,
   ) / 100
 }
 
@@ -71,7 +68,6 @@ function normalizeImportedBaremes(data: unknown): Bareme[] {
           name,
           description: typeof row.description === 'string' ? row.description : undefined,
           type: 'numeric',
-          weight: Number(row.weight ?? 1),
           min: 0,
           max: Number(row.max ?? 10),
           step: Number(row.step ?? 0.5),
@@ -164,7 +160,7 @@ export default function BaremeEditor() {
       const current = stats.get(key) ?? { count: 0, total: 0 }
       stats.set(key, {
         count: current.count + 1,
-        total: Math.round((current.total + getCriterionMax(criterion) * criterion.weight) * 100) / 100,
+        total: Math.round((current.total + getCriterionMax(criterion)) * 100) / 100,
       })
     }
     return stats
@@ -234,8 +230,11 @@ export default function BaremeEditor() {
   }
 
   const updateCategoryForCriterion = (index: number, rawCategory: string) => {
+    updateCriterion(index, { category: rawCategory })
+  }
+
+  const commitCategoryColor = (rawCategory: string) => {
     const category = rawCategory.trim()
-    updateCriterion(index, { category })
     if (!category) return
     setCategoryColors((prev) => {
       if (prev[category]) return prev
@@ -308,10 +307,6 @@ export default function BaremeEditor() {
     }
 
     for (const criterion of normalized) {
-      if (criterion.weight <= 0) {
-        setError(`Coefficient invalide pour "${criterion.name}".`)
-        return
-      }
       if ((criterion.step ?? 0) <= 0) {
         setError(`Pas invalide pour "${criterion.name}".`)
         return
@@ -539,6 +534,7 @@ export default function BaremeEditor() {
                             <input
                               value={rawCategory}
                               onChange={(e) => updateCategoryForCriterion(index, e.target.value)}
+                              onBlur={(e) => commitCategoryColor(e.target.value)}
                               placeholder="Général"
                               className="w-full px-2 py-1.5 rounded border text-xs text-white bg-surface focus:outline-none focus:border-primary-500"
                               style={{ borderColor: withAlpha(color, 0.45) }}
@@ -559,6 +555,32 @@ export default function BaremeEditor() {
                               className="h-8 w-10 p-0 bg-transparent border border-gray-700 rounded cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                             />
                           </div>
+                          {rawCategory && (
+                            <div className="flex flex-wrap gap-1 mt-1">
+                              {CATEGORY_COLOR_PRESETS.map((preset) => (
+                                <button
+                                  key={`${criterion.id}-${preset}`}
+                                  type="button"
+                                  onClick={() => {
+                                    const categoryKey = rawCategory.trim()
+                                    if (!categoryKey) return
+                                    setCategoryColors((prev) => ({
+                                      ...prev,
+                                      [categoryKey]: preset,
+                                    }))
+                                  }}
+                                  disabled={readOnly}
+                                  className={`w-4 h-4 rounded border transition-opacity ${
+                                    sanitizeColor(color) === sanitizeColor(preset)
+                                      ? 'border-white'
+                                      : 'border-gray-700'
+                                  }`}
+                                  style={{ backgroundColor: preset }}
+                                  title={`Appliquer ${preset}`}
+                                />
+                              ))}
+                            </div>
+                          )}
                         </div>
 
                         <div className="md:col-span-4">
@@ -573,13 +595,13 @@ export default function BaremeEditor() {
                         </div>
 
                         <div className="md:col-span-2">
-                          <label className="block text-[10px] text-gray-500 mb-0.5">Coef.</label>
+                          <label className="block text-[10px] text-gray-500 mb-0.5">Noté sur</label>
                           <input
                             type="number"
-                            value={criterion.weight}
-                            onChange={(e) => updateCriterion(index, { weight: Number(e.target.value) })}
-                            min={0.1}
-                            step={0.1}
+                            value={criterion.max ?? 10}
+                            onChange={(e) => updateCriterion(index, { max: Number(e.target.value) })}
+                            min={1}
+                            step={1}
                             className="w-full px-2 py-1.5 bg-surface border border-gray-700 rounded text-xs text-white text-center focus:border-primary-500 focus:outline-none"
                             disabled={readOnly}
                           />
@@ -620,14 +642,8 @@ export default function BaremeEditor() {
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-12 gap-2 mt-2">
-                        <div className="md:col-span-3">
-                          <label className="block text-[10px] text-gray-500 mb-0.5">Minimum</label>
-                          <div className="w-full px-2 py-1.5 bg-surface border border-gray-700 rounded text-xs text-gray-300 text-center">
-                            0
-                          </div>
-                        </div>
-                        <div className="md:col-span-9">
+                      <div className="grid grid-cols-1 gap-2 mt-2">
+                        <div>
                           <label className="block text-[10px] text-gray-500 mb-0.5">Description</label>
                           <input
                             value={criterion.description || ''}

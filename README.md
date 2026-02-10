@@ -1,4 +1,5 @@
 # AMV Notation
+![Version](https://img.shields.io/badge/version-v0.2-2563eb)
 
 Application desktop de notation pour concours AMV (Anime Music Video).
 
@@ -14,10 +15,14 @@ Application desktop de notation pour concours AMV (Anime Music Video).
 - Lecture vidéo intégrée (mpv embarqué via fenêtre Win32)
 - Plein écran vidéo avec overlay de contrôle
 - 3 interfaces de notation: **Tableur**, **Moderne**, **Notation**
+- Onglets dédiés: **Résultat** et **Export**
 - Barèmes personnalisables (catégories, critères, coefficients)
 - Projets JSON (création, sauvegarde, ouverture, récents)
 - Import de clips depuis un dossier
-- Export JSON
+- Import de notation juge (`JE.json`) dans l'onglet Résultat
+- Exports distincts:
+  - **Exporter projet (JSON)**: projet complet (clips, notes, config)
+  - **Exporter notation (JE.json)**: uniquement les notes du juge pour partage/intégration
 - Sauvegarde automatique configurable
 
 ## Prérequis
@@ -94,7 +99,7 @@ src/                    Frontend React
   components/
     layout/             AppLayout, Header, Sidebar
     player/             VideoPlayer, PlayerControls, FloatingVideoPlayer, FullscreenOverlay
-    interfaces/         SpreadsheetInterface, ModernInterface, NotationInterface
+    interfaces/         SpreadsheetInterface, ModernInterface, NotationInterface, ResultatsInterface, ExportInterface
     project/            ProjectManager, CreateProjectModal, VideoList
     settings/           SettingsPanel
     scoring/            BaremeEditor

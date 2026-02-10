@@ -35,15 +35,18 @@ export function usePlayer() {
           tauri.playerIsFullscreen().catch(() => false),
         ])
         const state = usePlayerStore.getState()
-        state.setPlaying(status.is_playing)
-        state.setCurrentTime(status.current_time)
-        state.setDuration(status.duration)
-        state.setFullscreen(fullscreen)
+        state.syncStatus({
+          isPlaying: status.is_playing,
+          currentTime: status.current_time,
+          duration: status.duration,
+          isFullscreen: fullscreen,
+        })
       } catch {
         // Player not available
       }
     }
 
+    poll()
     pollRef.current = setInterval(poll, 250)
     return () => {
       if (pollRef.current) clearInterval(pollRef.current)

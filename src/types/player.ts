@@ -12,6 +12,7 @@ export interface AudioTrack {
   title?: string
   codec?: string
   channels?: number
+  external?: boolean
 }
 
 export interface PlayerState {

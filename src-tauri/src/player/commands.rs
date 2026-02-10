@@ -235,12 +235,34 @@ pub fn player_set_fullscreen(
                 cw.show();
                 cw.set_fullscreen(true);
 
-                // 2. Ensure transparent overlay window stays above mpv
+                // 2. Position overlay on the SAME monitor as mpv (not primary)
                 if let Some(overlay) = app_handle.get_window("fullscreen-overlay") {
                     let _ = overlay.set_always_on_top(true);
-                    let _ = overlay.set_fullscreen(true);
                     let _ = overlay.set_ignore_cursor_events(false);
                     let _ = overlay.show();
+
+                    // Get the monitor rect from the child window and position overlay there
+                    if let Some((mx, my, mw, mh)) = cw.get_fullscreen_monitor_rect() {
+                        // Use Win32 SetWindowPos to place overlay on the correct monitor
+                        #[cfg(target_os = "windows")]
+                        {
+                            if let Ok(hwnd) = overlay.hwnd() {
+                                let overlay_hwnd = hwnd.0 as isize;
+                                // HWND_TOPMOST = -1, SWP_SHOWWINDOW = 0x0040
+                                unsafe {
+                                    crate::player::mpv_window::set_window_pos_raw(
+                                        overlay_hwnd, -1, mx, my, mw, mh, 0x0040,
+                                    );
+                                }
+                            } else {
+                                let _ = overlay.set_fullscreen(true);
+                            }
+                        }
+                    } else {
+                        // Fallback: use Tauri's fullscreen (goes to primary)
+                        let _ = overlay.set_fullscreen(true);
+                    }
+
                     let _ = overlay.set_focus();
                 } else {
                     eprintln!("[AMV] Overlay window not found (fullscreen controls unavailable)");
@@ -254,6 +276,11 @@ pub fn player_set_fullscreen(
 
                 // 2. Restore mpv
                 cw.set_fullscreen(false);
+
+                // 3. Restore focus to main window for keyboard shortcuts
+                if let Some(main) = app_handle.get_window("main") {
+                    let _ = main.set_focus();
+                }
             }
 
             Ok(())

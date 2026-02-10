@@ -37,6 +37,7 @@ export interface ProjectData {
   baremeId: string
   clips: Clip[]
   notes: Record<string, NoteData>
+  importedJudges?: ImportedJudgeData[]
 }
 
 export interface NoteData {
@@ -52,6 +53,21 @@ export interface CriterionScoreData {
   criterionId: string
   value: number | string | boolean
   isValid: boolean
+}
+
+export interface ImportedJudgeCriterionScore {
+  value: number | string | boolean
+  isValid: boolean
+}
+
+export interface ImportedJudgeNote {
+  scores: Record<string, ImportedJudgeCriterionScore>
+  finalScore?: number
+}
+
+export interface ImportedJudgeData {
+  judgeName: string
+  notes: Record<string, ImportedJudgeNote>
 }
 
 export const DEFAULT_PROJECT_SETTINGS: ProjectSettings = {

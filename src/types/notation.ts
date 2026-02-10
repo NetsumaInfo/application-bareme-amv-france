@@ -15,3 +15,4 @@ export interface Note {
 }
 
 export type InterfaceMode = 'spreadsheet' | 'modern' | 'notation'
+export type AppTab = 'notation' | 'resultats' | 'export'

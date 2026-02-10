@@ -12,11 +12,13 @@ const byInitFlag =
   (window as any).__AMV_FULLSCREEN_OVERLAY__ === true
 const byQuery = window.location.search.includes('overlay=true') || window.location.hash.includes('overlay=true')
 const byPath = window.location.pathname.toLowerCase().includes('overlay')
+const byWindowName = window.name === 'fullscreen-overlay'
 
 const isOverlayWindow =
   byInitFlag ||
   appWindow.label === 'fullscreen-overlay' ||
   tauriWindowLabel === 'fullscreen-overlay' ||
+  byWindowName ||
   byQuery ||
   byPath
 

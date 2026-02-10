@@ -2,6 +2,7 @@ import { Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, Maximize2, Minimi
 import { usePlayer } from '@/hooks/usePlayer'
 import { usePlayerStore } from '@/store/usePlayerStore'
 import { formatTime } from '@/utils/formatters'
+import SubtitleSelector from './SubtitleSelector'
 
 interface PlayerControlsProps {
   compact?: boolean
@@ -120,6 +121,9 @@ export default function PlayerControls({ compact }: PlayerControlsProps) {
             }}
             className="w-16 h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-primary-500"
           />
+
+          {/* Subtitles */}
+          <SubtitleSelector />
 
           {/* Fullscreen */}
           <button

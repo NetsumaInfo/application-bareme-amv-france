@@ -7,21 +7,24 @@ export function useAutoSave() {
   const { currentProject, isDirty, markClean, getProjectData } = useProjectStore()
   const { getNotesData } = useNotationStore()
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const doSaveRef = useRef<() => Promise<void>>(async () => {})
 
-  const doSave = async () => {
-    if (!currentProject?.filePath || !isDirty) return
+  useEffect(() => {
+    doSaveRef.current = async () => {
+      if (!currentProject?.filePath || !isDirty) return
 
-    try {
-      const notesData = getNotesData()
-      const projectData = getProjectData(notesData)
-      if (!projectData) return
+      try {
+        const notesData = getNotesData()
+        const projectData = getProjectData(notesData)
+        if (!projectData) return
 
-      await tauri.saveProjectFile(projectData, currentProject.filePath)
-      markClean()
-    } catch (e) {
-      console.error('Auto-save failed:', e)
+        await tauri.saveProjectFile(projectData, currentProject.filePath)
+        markClean()
+      } catch (e) {
+        console.error('Auto-save failed:', e)
+      }
     }
-  }
+  }, [currentProject?.filePath, isDirty, getNotesData, getProjectData, markClean])
 
   useEffect(() => {
     if (!currentProject?.settings.autoSave || !isDirty) return
@@ -32,7 +35,9 @@ export function useAutoSave() {
       clearTimeout(saveTimeoutRef.current)
     }
 
-    saveTimeoutRef.current = setTimeout(doSave, interval)
+    saveTimeoutRef.current = setTimeout(() => {
+      void doSaveRef.current()
+    }, interval)
 
     return () => {
       if (saveTimeoutRef.current) {
@@ -41,5 +46,7 @@ export function useAutoSave() {
     }
   }, [isDirty, currentProject?.settings.autoSave, currentProject?.settings.autoSaveInterval])
 
-  return { doSave }
+  return {
+    doSave: () => doSaveRef.current(),
+  }
 }

@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react'
-import { X } from 'lucide-react'
+import { useState, useEffect, useCallback } from 'react'
+import { X, Table, LayoutGrid, Maximize2 } from 'lucide-react'
 import { useProjectStore } from '@/store/useProjectStore'
 import { useNotationStore } from '@/store/useNotationStore'
 import { useUIStore } from '@/store/useUIStore'
-import * as tauri from '@/services/tauri'
+import { sanitizeColor, withAlpha, CATEGORY_COLOR_PRESETS } from '@/utils/colors'
+import type { InterfaceMode } from '@/types/notation'
 
 function Toggle({
   checked,
@@ -28,7 +29,35 @@ function Toggle({
   )
 }
 
-type Tab = 'general' | 'notation' | 'player'
+type Tab = 'general' | 'notation' | 'raccourcis'
+
+const DEFAULT_SHORTCUTS: { action: string; label: string; defaultKeys: string }[] = [
+  { action: 'togglePause', label: 'Lecture / Pause', defaultKeys: 'Espace' },
+  { action: 'seekBack', label: 'Reculer 5s', defaultKeys: '←' },
+  { action: 'seekForward', label: 'Avancer 5s', defaultKeys: '→' },
+  { action: 'seekBackLong', label: 'Reculer 30s', defaultKeys: 'Shift + ←' },
+  { action: 'seekForwardLong', label: 'Avancer 30s', defaultKeys: 'Shift + →' },
+  { action: 'nextClip', label: 'Clip suivant', defaultKeys: 'N' },
+  { action: 'prevClip', label: 'Clip précédent', defaultKeys: 'P' },
+  { action: 'tabNotation', label: 'Onglet Notation', defaultKeys: 'Ctrl + 1' },
+  { action: 'tabResultats', label: 'Onglet Résultat', defaultKeys: 'Ctrl + 2' },
+  { action: 'tabExport', label: 'Onglet Export', defaultKeys: 'Ctrl + 3' },
+  { action: 'fullscreen', label: 'Plein écran vidéo', defaultKeys: 'F11' },
+  { action: 'exitFullscreen', label: 'Quitter le plein écran', defaultKeys: 'Escape' },
+  { action: 'save', label: 'Sauvegarder', defaultKeys: 'Ctrl + S' },
+  { action: 'saveAs', label: 'Sauvegarder sous...', defaultKeys: 'Ctrl + Alt + S' },
+  { action: 'newProject', label: 'Nouveau projet', defaultKeys: 'Ctrl + N' },
+  { action: 'openProject', label: 'Ouvrir un projet', defaultKeys: 'Ctrl + O' },
+  { action: 'zoomIn', label: 'Zoom +', defaultKeys: 'Ctrl + =' },
+  { action: 'zoomOut', label: 'Zoom -', defaultKeys: 'Ctrl + -' },
+  { action: 'resetZoom', label: 'Réinitialiser le zoom', defaultKeys: 'Ctrl + 0' },
+]
+
+const INTERFACE_OPTIONS: { mode: InterfaceMode; label: string; icon: typeof Table }[] = [
+  { mode: 'spreadsheet', label: 'Tableur', icon: Table },
+  { mode: 'modern', label: 'Moderne', icon: LayoutGrid },
+  { mode: 'notation', label: 'Notation', icon: Maximize2 },
+]
 
 export default function SettingsPanel({ onClose }: { onClose: () => void }) {
   const { currentProject, updateSettings, updateProject } = useProjectStore()
@@ -36,31 +65,89 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
   const {
     hideFinalScore,
     toggleFinalScore,
+    hideAverages,
+    toggleAverages,
     setShowBaremeEditor,
+    currentInterface,
+    switchInterface,
     zoomLevel,
     setZoomLevel,
+    zoomMode,
+    setZoomMode,
     projectsFolderPath,
   } = useUIStore()
   const [activeTab, setActiveTab] = useState<Tab>('general')
-  const [mpvAvailable, setMpvAvailable] = useState<boolean | null>(null)
+  const [editingShortcut, setEditingShortcut] = useState<string | null>(null)
 
   const settings = currentProject?.settings
-
-  useEffect(() => {
-    tauri.playerIsAvailable().then(setMpvAvailable).catch(() => setMpvAvailable(false))
-  }, [])
 
   const tabs: { id: Tab; label: string }[] = [
     { id: 'general', label: 'Général' },
     { id: 'notation', label: 'Notation' },
-    { id: 'player', label: 'Lecteur' },
+    { id: 'raccourcis', label: 'Raccourcis' },
   ]
+
+  const handleShortcutCapture = useCallback(
+    (e: KeyboardEvent) => {
+      if (!editingShortcut) return
+      e.preventDefault()
+      e.stopPropagation()
+
+      if (e.key === 'Escape') {
+        setEditingShortcut(null)
+        return
+      }
+
+      // Don't complete on modifier-only press
+      if (['Control', 'Shift', 'Alt', 'Meta'].includes(e.key)) return
+
+      setEditingShortcut(null)
+    },
+    [editingShortcut],
+  )
+
+  useEffect(() => {
+    if (editingShortcut) {
+      window.addEventListener('keydown', handleShortcutCapture, true)
+      return () => window.removeEventListener('keydown', handleShortcutCapture, true)
+    }
+  }, [editingShortcut, handleShortcutCapture])
+
+  // Get categories with colors for notation tab
+  const categories = currentBareme
+    ? (() => {
+        const cats = new Map<string, { count: number; total: number; color: string }>()
+        const order: string[] = []
+        for (const c of currentBareme.criteria) {
+          const cat = c.category || 'Général'
+          if (!cats.has(cat)) {
+            const idx = order.length
+            order.push(cat)
+            cats.set(cat, {
+              count: 0,
+              total: 0,
+              color: sanitizeColor(
+                currentBareme.categoryColors?.[cat],
+                CATEGORY_COLOR_PRESETS[idx % CATEGORY_COLOR_PRESETS.length],
+              ),
+            })
+          }
+          const existing = cats.get(cat)!
+          cats.set(cat, {
+            ...existing,
+            count: existing.count + 1,
+            total: existing.total + (c.max ?? 10),
+          })
+        }
+        return Array.from(cats.entries()).map(([name, data]) => ({ name, ...data }))
+      })()
+    : []
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
-      <div className="bg-surface rounded-xl shadow-2xl w-full max-w-lg border border-gray-700">
+      <div className="bg-surface rounded-xl shadow-2xl w-full max-w-xl border border-gray-700 max-h-[85vh] flex flex-col mx-4">
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-3 border-b border-gray-700">
+        <div className="flex items-center justify-between px-5 py-3 border-b border-gray-700 shrink-0">
           <h2 className="text-sm font-semibold text-white">Paramètres</h2>
           <button
             onClick={onClose}
@@ -71,7 +158,7 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
         </div>
 
         {/* Tabs */}
-        <div className="flex border-b border-gray-700">
+        <div className="flex border-b border-gray-700 shrink-0">
           {tabs.map((tab) => (
             <button
               key={tab.id}
@@ -88,7 +175,7 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
         </div>
 
         {/* Content */}
-        <div className="p-5 space-y-4 min-h-[240px]">
+        <div className="p-5 space-y-4 overflow-y-auto flex-1">
           {activeTab === 'general' && (
             <>
               {/* Judge name */}
@@ -117,25 +204,89 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                 />
               </div>
 
-              {/* Zoom */}
+              {/* Interface mode selector */}
+              <div>
+                <label className="text-xs font-medium text-gray-400 mb-2 block">
+                  Interface de notation
+                </label>
+                <div className="grid grid-cols-3 gap-2">
+                  {INTERFACE_OPTIONS.map(({ mode, label, icon: Icon }) => (
+                    <button
+                      key={mode}
+                      onClick={() => switchInterface(mode)}
+                      className={`flex items-center justify-center gap-1.5 px-2 py-2 rounded-lg text-xs font-medium transition-all border ${
+                        currentInterface === mode
+                          ? 'bg-primary-600/20 border-primary-500 text-primary-300'
+                          : 'bg-surface-dark border-gray-700 text-gray-400 hover:text-white hover:border-gray-600'
+                      }`}
+                    >
+                      <Icon size={14} />
+                      <span className="truncate">{label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Zoom mode */}
+              <div>
+                <label className="text-xs font-medium text-gray-400 mb-2 block">
+                  Mode de zoom
+                </label>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setZoomMode('fixed')}
+                    className={`flex-1 px-3 py-2 rounded-lg text-xs font-medium transition-all border text-left ${
+                      zoomMode === 'fixed'
+                        ? 'bg-primary-600/20 border-primary-500 text-primary-300'
+                        : 'bg-surface-dark border-gray-700 text-gray-400 hover:text-white hover:border-gray-600'
+                    }`}
+                  >
+                    Zoom fixe
+                    <p className="text-[9px] text-gray-500 font-normal mt-0.5">Pas de défilement horizontal</p>
+                  </button>
+                  <button
+                    onClick={() => setZoomMode('navigable')}
+                    className={`flex-1 px-3 py-2 rounded-lg text-xs font-medium transition-all border text-left ${
+                      zoomMode === 'navigable'
+                        ? 'bg-primary-600/20 border-primary-500 text-primary-300'
+                        : 'bg-surface-dark border-gray-700 text-gray-400 hover:text-white hover:border-gray-600'
+                    }`}
+                  >
+                    Zoom navigable
+                    <p className="text-[9px] text-gray-500 font-normal mt-0.5">Défilement libre</p>
+                  </button>
+                </div>
+              </div>
+
+              {/* Zoom slider */}
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm text-gray-300">Zoom de l'interface</span>
-                  <span className="text-xs text-gray-500">{zoomLevel}%</span>
+                  <span className="text-xs font-medium text-gray-400">Niveau de zoom</span>
+                  <span className="text-xs text-gray-500 font-mono">{zoomLevel}%</span>
                 </div>
                 <input
                   type="range"
                   min={50}
                   max={200}
-                  step={10}
+                  step={5}
                   value={zoomLevel}
                   onChange={(e) => setZoomLevel(Number(e.target.value))}
                   className="w-full h-1.5 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-primary-500"
                 />
-                <div className="flex justify-between text-[9px] text-gray-600 mt-1">
-                  <span>50%</span>
-                  <span>100%</span>
-                  <span>200%</span>
+                <div className="flex gap-1.5 mt-2">
+                  {[75, 100, 125, 150].map((preset) => (
+                    <button
+                      key={preset}
+                      onClick={() => setZoomLevel(preset)}
+                      className={`flex-1 px-2 py-1 rounded text-[10px] font-medium transition-colors ${
+                        zoomLevel === preset
+                          ? 'bg-primary-600 text-white'
+                          : 'bg-surface-dark text-gray-400 hover:text-white border border-gray-700'
+                      }`}
+                    >
+                      {preset}%
+                    </button>
+                  ))}
                 </div>
               </div>
 
@@ -204,7 +355,7 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                     }}
                     className="text-[10px] text-primary-400 hover:text-primary-300"
                   >
-                    Modifier
+                    Éditeur complet
                   </button>
                 </div>
                 <div className="text-sm text-white font-medium">
@@ -219,161 +370,132 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                 )}
               </div>
 
-              {/* Criteria with weights */}
+              {/* Criteria list */}
               {currentBareme && (
                 <div>
                   <label className="text-xs font-medium text-gray-400 mb-2 block">
-                    Critères et poids
+                    Critères
                   </label>
                   <div className="space-y-1">
-                    {currentBareme.criteria.map((c) => (
-                      <div
-                        key={c.id}
-                        className="flex items-center justify-between px-3 py-1.5 rounded bg-surface-dark/50 text-xs"
-                      >
-                        <span className="text-gray-300">{c.name}</span>
-                        <span className="text-gray-500">
-                          0-{c.max ?? 10} × {c.weight}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Categories summary */}
-              {currentBareme && (
-                <div>
-                  <label className="text-xs font-medium text-gray-400 mb-2 block">
-                    Catégories
-                  </label>
-                  <div className="space-y-1">
-                    {(() => {
-                      const cats = new Map<
-                        string,
-                        { count: number; total: number }
-                      >()
-                      for (const c of currentBareme.criteria) {
-                        const cat = c.category || 'Général'
-                        const existing = cats.get(cat) || {
-                          count: 0,
-                          total: 0,
-                        }
-                        cats.set(cat, {
-                          count: existing.count + 1,
-                          total: existing.total + (c.max ?? 10) * c.weight,
-                        })
-                      }
-                      return Array.from(cats.entries()).map(
-                        ([name, { count, total }]) => (
-                          <div
-                            key={name}
-                            className="flex items-center justify-between px-3 py-1.5 rounded bg-surface-dark/50 text-xs"
-                          >
-                            <span className="text-gray-300">{name}</span>
-                            <span className="text-gray-500">
-                              {count} critère{count > 1 ? 's' : ''} — /{total}
-                            </span>
-                          </div>
-                        ),
+                    {currentBareme.criteria.map((c) => {
+                      const catColor = sanitizeColor(
+                        currentBareme.categoryColors?.[c.category || ''],
+                        CATEGORY_COLOR_PRESETS[0],
                       )
-                    })()}
+                      return (
+                        <div
+                          key={c.id}
+                          className="flex items-center gap-2 px-3 py-1.5 rounded text-xs"
+                          style={{ backgroundColor: withAlpha(catColor, 0.08) }}
+                        >
+                          <span
+                            className="w-2 h-2 rounded-full shrink-0"
+                            style={{ backgroundColor: catColor }}
+                          />
+                          <span className="text-gray-300 flex-1 truncate">{c.name}</span>
+                          <span className="text-gray-500 font-mono">/{c.max ?? 10}</span>
+                        </div>
+                      )
+                    })}
                   </div>
                 </div>
               )}
 
-              {/* Hide score */}
-              <div className="flex items-center justify-between">
-                <div>
-                  <span className="text-sm text-gray-300 block">
-                    Masquer les scores
-                  </span>
-                  <span className="text-[10px] text-gray-500">
-                    Cache le score total pendant la notation
-                  </span>
+              {/* Category summary */}
+              {categories.length > 0 && (
+                <div className="flex flex-wrap gap-1.5">
+                  {categories.map(({ name, count, total, color }) => (
+                    <span
+                      key={name}
+                      className="text-[10px] px-2 py-1 rounded border"
+                      style={{
+                        borderColor: withAlpha(color, 0.45),
+                        backgroundColor: withAlpha(color, 0.15),
+                        color,
+                      }}
+                    >
+                      {name}: {count} crit. — /{total}
+                    </span>
+                  ))}
                 </div>
-                <Toggle checked={hideFinalScore} onChange={toggleFinalScore} />
+              )}
+
+              {/* Hide score & averages */}
+              <div className="space-y-3 pt-2 border-t border-gray-700">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="text-sm text-gray-300 block">
+                      Masquer les scores
+                    </span>
+                    <span className="text-[10px] text-gray-500">
+                      Cache le score total pendant la notation
+                    </span>
+                  </div>
+                  <Toggle checked={hideFinalScore} onChange={toggleFinalScore} />
+                </div>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="text-sm text-gray-300 block">
+                      Masquer les moyennes
+                    </span>
+                    <span className="text-[10px] text-gray-500">
+                      Cache la ligne de moyennes du tableur
+                    </span>
+                  </div>
+                  <Toggle checked={hideAverages} onChange={toggleAverages} />
+                </div>
               </div>
             </>
           )}
 
-          {activeTab === 'player' && (
+          {activeTab === 'raccourcis' && (
             <>
-              {/* Volume */}
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm text-gray-300">Volume par défaut</span>
-                  <span className="text-xs text-gray-500">
-                    {settings?.defaultVolume ?? 80}%
-                  </span>
-                </div>
-                <input
-                  type="range"
-                  min={0}
-                  max={100}
-                  value={settings?.defaultVolume ?? 80}
-                  onChange={(e) =>
-                    updateSettings({ defaultVolume: Number(e.target.value) })
-                  }
-                  className="w-full h-1.5 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-primary-500"
-                />
+              <div className="space-y-1">
+                {DEFAULT_SHORTCUTS.map((shortcut) => (
+                  <div
+                    key={shortcut.action}
+                    className="flex items-center justify-between px-2 py-1.5 rounded bg-surface-dark/50 text-[11px]"
+                  >
+                    <span className="text-gray-300">{shortcut.label}</span>
+                    <div className="flex items-center gap-2">
+                      <kbd
+                        className={`px-1.5 py-0.5 rounded text-[10px] font-mono min-w-[60px] text-center ${
+                          editingShortcut === shortcut.action
+                            ? 'bg-primary-600 text-white border border-primary-400 animate-pulse'
+                            : 'bg-surface text-gray-400 border border-gray-700'
+                        }`}
+                      >
+                        {editingShortcut === shortcut.action
+                          ? 'Appuyez...'
+                          : shortcut.defaultKeys}
+                      </kbd>
+                      <button
+                        onClick={() =>
+                          setEditingShortcut(
+                            editingShortcut === shortcut.action ? null : shortcut.action,
+                          )
+                        }
+                        className="text-[9px] text-gray-500 hover:text-primary-400 transition-colors px-1"
+                      >
+                        {editingShortcut === shortcut.action ? 'Annuler' : 'Modifier'}
+                      </button>
+                    </div>
+                  </div>
+                ))}
               </div>
 
-              {/* mpv status */}
-              <div className="p-3 rounded-lg bg-surface-dark border border-gray-700">
-                <span className="text-xs font-medium text-gray-400 block mb-1">
-                  Lecteur vidéo
-                </span>
-                <div className="flex items-center gap-2 mb-2">
-                  <span
-                    className={`w-2 h-2 rounded-full ${
-                      mpvAvailable ? 'bg-green-500' : 'bg-red-500'
-                    }`}
-                  />
-                  <span className="text-[11px] text-gray-300">
-                    mpv/libmpv — {mpvAvailable ? 'Disponible' : 'Non disponible'}
-                  </span>
-                </div>
-                <p className="text-[11px] text-gray-500">
-                  Le lecteur utilise mpv (libmpv) via chargement dynamique.
-                  Supporte tous les codecs FFmpeg : MP4, MKV, AVI, MOV, WebM, FLV,
-                  H.264, H.265/HEVC, VP9, AV1.
-                </p>
-              </div>
-
-              {/* Keyboard shortcuts reference */}
-              <div>
-                <label className="text-xs font-medium text-gray-400 mb-2 block">
-                  Raccourcis clavier
-                </label>
-                <div className="space-y-1 text-[11px]">
-                  <ShortcutRow keys="Espace" action="Lecture / Pause" />
-                  <ShortcutRow keys="← / →" action="Reculer / Avancer 5s" />
-                  <ShortcutRow
-                    keys="Shift + ← / →"
-                    action="Reculer / Avancer 30s"
-                  />
-                  <ShortcutRow keys="N / P" action="Clip suivant / précédent" />
-                  <ShortcutRow
-                    keys="Ctrl + 1/2/3"
-                    action="Changer d'interface"
-                  />
-                  <ShortcutRow keys="F11" action="Plein écran vidéo" />
-                  <ShortcutRow keys="Escape" action="Quitter le plein écran" />
-                  <ShortcutRow keys="Ctrl + S" action="Sauvegarder" />
-                  <ShortcutRow keys="Ctrl + Alt + S" action="Sauvegarder sous..." />
-                  <ShortcutRow keys="Ctrl + N" action="Nouveau projet" />
-                  <ShortcutRow keys="Ctrl + O" action="Ouvrir un projet" />
-                  <ShortcutRow keys="Ctrl + / -" action="Zoom + / -" />
-                  <ShortcutRow keys="Ctrl + 0" action="Réinitialiser le zoom" />
-                </div>
-              </div>
+              <button
+                onClick={() => setEditingShortcut(null)}
+                className="w-full mt-3 px-4 py-2 text-xs rounded-lg bg-surface-dark border border-gray-700 text-gray-400 hover:text-white hover:border-gray-600 transition-colors"
+              >
+                Réinitialiser les raccourcis par défaut
+              </button>
             </>
           )}
         </div>
 
         {/* Footer */}
-        <div className="flex justify-end px-5 py-3 border-t border-gray-700">
+        <div className="flex justify-end px-5 py-3 border-t border-gray-700 shrink-0">
           <button
             onClick={onClose}
             className="px-4 py-1.5 text-xs rounded-lg bg-surface-light text-gray-300 hover:text-white transition-colors"
@@ -382,17 +504,6 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
           </button>
         </div>
       </div>
-    </div>
-  )
-}
-
-function ShortcutRow({ keys, action }: { keys: string; action: string }) {
-  return (
-    <div className="flex items-center justify-between px-2 py-1 rounded bg-surface-dark/50">
-      <kbd className="px-1.5 py-0.5 bg-surface rounded text-gray-400 text-[10px] font-mono">
-        {keys}
-      </kbd>
-      <span className="text-gray-500">{action}</span>
     </div>
   )
 }

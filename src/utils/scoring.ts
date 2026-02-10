@@ -76,7 +76,7 @@ export function calculateScore(note: Note, bareme: Bareme): number {
         break
     }
 
-    total += numericValue * criterion.weight
+    total += numericValue
   }
 
   return Math.round(total * 100) / 100

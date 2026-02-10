@@ -11,7 +11,6 @@ export interface Criterion {
   name: string
   description?: string
   type: CriterionType
-  weight: number
   min?: number
   max?: number
   step?: number
@@ -54,7 +53,6 @@ export const OFFICIAL_BAREME: Bareme = {
       id: 'rythme-synchro',
       name: 'Rythme / Synchro',
       type: 'numeric',
-      weight: 1,
       min: 0,
       max: 10,
       step: 0.5,
@@ -65,7 +63,6 @@ export const OFFICIAL_BAREME: Bareme = {
       id: 'selection-scene',
       name: 'Sélection de scène',
       type: 'numeric',
-      weight: 1,
       min: 0,
       max: 10,
       step: 0.5,
@@ -77,7 +74,6 @@ export const OFFICIAL_BAREME: Bareme = {
       id: 'incrustation',
       name: 'Incrust / Intégration',
       type: 'numeric',
-      weight: 1,
       min: 0,
       max: 5,
       step: 0.5,
@@ -88,7 +84,6 @@ export const OFFICIAL_BAREME: Bareme = {
       id: 'coherence',
       name: 'Cohérence / Logique',
       type: 'numeric',
-      weight: 1,
       min: 0,
       max: 5,
       step: 0.5,
@@ -99,7 +94,6 @@ export const OFFICIAL_BAREME: Bareme = {
       id: 'complexite',
       name: 'Complexité technique',
       type: 'numeric',
-      weight: 1,
       min: 0,
       max: 5,
       step: 0.5,
@@ -111,7 +105,6 @@ export const OFFICIAL_BAREME: Bareme = {
       id: 'cc-colorimetrie',
       name: 'CC / Colorimétrie',
       type: 'numeric',
-      weight: 1,
       min: 0,
       max: 4,
       step: 0.5,
@@ -122,7 +115,6 @@ export const OFFICIAL_BAREME: Bareme = {
       id: 'concept-story',
       name: 'Concept / Story',
       type: 'numeric',
-      weight: 1,
       min: 0,
       max: 4,
       step: 0.5,
@@ -133,7 +125,6 @@ export const OFFICIAL_BAREME: Bareme = {
       id: 'choix-jury',
       name: 'Choix du jury',
       type: 'numeric',
-      weight: 1,
       min: 0,
       max: 3,
       step: 0.5,
@@ -145,7 +136,6 @@ export const OFFICIAL_BAREME: Bareme = {
       id: 'encodage',
       name: 'Encodage',
       type: 'numeric',
-      weight: 1,
       min: 0,
       max: 2,
       step: 0.5,
@@ -157,7 +147,6 @@ export const OFFICIAL_BAREME: Bareme = {
       id: 'mix-audio',
       name: 'Mix Audio',
       type: 'numeric',
-      weight: 1,
       min: 0,
       max: 2,
       step: 0.5,

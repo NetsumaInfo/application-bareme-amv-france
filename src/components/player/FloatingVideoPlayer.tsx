@@ -5,6 +5,7 @@ import { useProjectStore } from '@/store/useProjectStore'
 import { usePlayer } from '@/hooks/usePlayer'
 import * as tauri from '@/services/tauri'
 import { formatTime, getClipPrimaryLabel } from '@/utils/formatters'
+import SubtitleSelector from './SubtitleSelector'
 
 interface FloatingVideoPlayerProps {
   onClose: () => void
@@ -42,6 +43,32 @@ export function FloatingVideoPlayer({ onClose }: FloatingVideoPlayerProps) {
   const clips = useProjectStore((state) => state.clips)
   const currentClipIndex = useProjectStore((state) => state.currentClipIndex)
   const currentClip = clips[currentClipIndex]
+
+  const loadTracks = useCallback(async () => {
+    try {
+      const tracks = await tauri.playerGetTracks()
+      const store = usePlayerStore.getState()
+      store.setSubtitleTracks(tracks.subtitle_tracks.map((track) => ({
+        id: track.id,
+        title: track.title ?? undefined,
+        lang: track.lang ?? undefined,
+        codec: track.codec ?? undefined,
+        external: track.external,
+      })))
+      store.setAudioTracks(tracks.audio_tracks.map((track) => ({
+        id: track.id,
+        title: track.title ?? undefined,
+        lang: track.lang ?? undefined,
+        codec: track.codec ?? undefined,
+        external: track.external,
+      })))
+      if (tracks.audio_tracks.length > 0) {
+        store.setCurrentAudioId(tracks.audio_tracks[0].id)
+      }
+    } catch {
+      // Ignore track loading failures
+    }
+  }, [])
 
   const updateGeometry = useCallback(() => {
     const el = videoAreaRef.current
@@ -99,6 +126,7 @@ export function FloatingVideoPlayer({ onClose }: FloatingVideoPlayerProps) {
     if (isLoaded && currentFilePath === currentClip.filePath) {
       tauri.playerShow().catch(() => {})
       updateGeometry()
+      loadTracks().catch(() => {})
     } else {
       usePlayerStore.getState().setLoaded(false)
       tauri.playerLoad(currentClip.filePath)
@@ -106,6 +134,7 @@ export function FloatingVideoPlayer({ onClose }: FloatingVideoPlayerProps) {
           usePlayerStore.getState().setLoaded(true, currentClip.filePath)
           tauri.playerShow().catch(() => {})
           tauri.playerPlay().catch(() => {})
+          loadTracks().catch(() => {})
           setTimeout(updateGeometry, 50)
         })
         .catch(console.error)
@@ -116,7 +145,7 @@ export function FloatingVideoPlayer({ onClose }: FloatingVideoPlayerProps) {
         tauri.playerHide().catch(() => {})
       }
     }
-  }, [currentClip?.filePath, updateGeometry])
+  }, [currentClip?.filePath, updateGeometry, loadTracks])
 
   useEffect(() => {
     updateGeometry()
@@ -244,7 +273,16 @@ export function FloatingVideoPlayer({ onClose }: FloatingVideoPlayerProps) {
         </div>
 
         {/* Mini Controls */}
-        <div className="flex items-center justify-center gap-1">
+        <div className="flex items-center justify-center gap-1 flex-wrap">
+        <button
+          onClick={() => seekRelative(-5)}
+          className="flex items-center justify-center w-6 h-6 rounded hover:bg-gray-700 transition-colors"
+          title="Reculer 5s"
+          disabled={!isLoaded}
+        >
+          <SkipBack size={14} className="text-gray-300" />
+        </button>
+
         <button
           onClick={togglePause}
           className="flex items-center justify-center w-6 h-6 rounded hover:bg-gray-700 transition-colors"
@@ -256,15 +294,6 @@ export function FloatingVideoPlayer({ onClose }: FloatingVideoPlayerProps) {
           ) : (
             <Play size={14} className="text-gray-300" />
           )}
-        </button>
-
-        <button
-          onClick={() => seekRelative(-5)}
-          className="flex items-center justify-center w-6 h-6 rounded hover:bg-gray-700 transition-colors"
-          title="Reculer 5s"
-          disabled={!isLoaded}
-        >
-          <SkipBack size={14} className="text-gray-300" />
         </button>
 
         <button
@@ -287,6 +316,8 @@ export function FloatingVideoPlayer({ onClose }: FloatingVideoPlayerProps) {
             <Volume2 size={14} className="text-gray-300" />
           )}
         </button>
+
+        <SubtitleSelector />
 
         <button
           onClick={toggleFullscreen}

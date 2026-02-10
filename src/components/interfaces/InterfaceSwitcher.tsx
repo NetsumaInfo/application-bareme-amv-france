@@ -1,24 +1,24 @@
-import { LayoutGrid, Table, Maximize2 } from 'lucide-react'
+import { Table, BarChart2, FileOutput } from 'lucide-react'
 import { useUIStore } from '@/store/useUIStore'
-import type { InterfaceMode } from '@/types/notation'
+import type { AppTab } from '@/types/notation'
 
-const INTERFACES: { mode: InterfaceMode; label: string; icon: typeof Table; shortcut: string }[] = [
-  { mode: 'spreadsheet', label: 'Tableur', icon: Table, shortcut: '1' },
-  { mode: 'modern', label: 'Moderne', icon: LayoutGrid, shortcut: '2' },
-  { mode: 'notation', label: 'Notation', icon: Maximize2, shortcut: '3' },
+const TABS: { tab: AppTab; label: string; icon: typeof Table; shortcut: string }[] = [
+  { tab: 'notation', label: 'Notation', icon: Table, shortcut: '1' },
+  { tab: 'resultats', label: 'Résultat', icon: BarChart2, shortcut: '2' },
+  { tab: 'export', label: 'Export', icon: FileOutput, shortcut: '3' },
 ]
 
 export default function InterfaceSwitcher() {
-  const { currentInterface, switchInterface } = useUIStore()
+  const { currentTab, switchTab } = useUIStore()
 
   return (
     <div className="flex items-center bg-surface-dark rounded-lg p-0.5 gap-0.5">
-      {INTERFACES.map(({ mode, label, icon: Icon, shortcut }) => {
-        const isActive = currentInterface === mode
+      {TABS.map(({ tab, label, icon: Icon, shortcut }) => {
+        const isActive = currentTab === tab
         return (
           <button
-            key={mode}
-            onClick={() => switchInterface(mode)}
+            key={tab}
+            onClick={() => switchTab(tab)}
             className={`flex items-center gap-1.5 px-2.5 py-1 text-xs rounded-md transition-all ${
               isActive
                 ? 'bg-primary-600 text-white shadow-sm'
