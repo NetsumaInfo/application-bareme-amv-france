@@ -15,7 +15,10 @@ fn main() {
         .manage(app_state)
         .setup(|app| {
             use tauri::Manager;
-            let window = app.get_window("main").unwrap();
+            let Some(window) = app.get_window("main") else {
+                eprintln!("[AMV] Main window not found at setup; continuing without player");
+                return Ok(());
+            };
             let state = app.state::<AppState>();
 
             // Create overlay window once at startup (hidden).
@@ -50,10 +53,13 @@ fn main() {
             // Get the main window HWND and create embedded mpv player
             #[cfg(target_os = "windows")]
             {
-                let hwnd = window.hwnd().map_err(|e| {
-                    eprintln!("[AMV] Failed to get window HWND: {}", e);
-                    e
-                })?;
+                let hwnd = match window.hwnd() {
+                    Ok(hwnd) => hwnd,
+                    Err(e) => {
+                        eprintln!("[AMV] Failed to get window HWND: {}", e);
+                        return Ok(());
+                    }
+                };
                 let parent_hwnd = hwnd.0 as isize;
                 eprintln!("[AMV] Main window HWND: {}", parent_hwnd);
 
@@ -65,8 +71,22 @@ fn main() {
                     // Initialize mpv with wid pointing to child window
                     match player::mpv_wrapper::MpvPlayer::new(Some(child_hwnd as i64)) {
                         Ok(p) => {
-                            *state.player.lock().unwrap() = Some(p);
-                            *state.child_window.lock().unwrap() = Some(child);
+                            match state.player.lock() {
+                                Ok(mut player_slot) => {
+                                    *player_slot = Some(p);
+                                }
+                                Err(e) => {
+                                    eprintln!("[AMV] Failed to store player state: {}", e);
+                                }
+                            }
+                            match state.child_window.lock() {
+                                Ok(mut child_slot) => {
+                                    *child_slot = Some(child);
+                                }
+                                Err(e) => {
+                                    eprintln!("[AMV] Failed to store child window state: {}", e);
+                                }
+                            }
                             eprintln!("[AMV] mpv player initialized with embedded window");
                         }
                         Err(e) => {
@@ -80,6 +100,22 @@ fn main() {
             }
 
             Ok(())
+        })
+        .on_window_event(|event| {
+            if event.window().label() != "main" {
+                return;
+            }
+            if !matches!(
+                event.event(),
+                tauri::WindowEvent::CloseRequested { .. } | tauri::WindowEvent::Destroyed
+            ) {
+                return;
+            }
+
+            use tauri::Manager;
+            if let Some(overlay) = event.window().app_handle().get_window("fullscreen-overlay") {
+                let _ = overlay.close();
+            }
         })
         .invoke_handler(tauri::generate_handler![
             // Player commands

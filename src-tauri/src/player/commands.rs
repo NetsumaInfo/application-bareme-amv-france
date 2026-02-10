@@ -1,6 +1,6 @@
+use crate::state::AppState;
 use serde::Serialize;
 use tauri::State;
-use crate::state::AppState;
 
 #[derive(Debug, Serialize)]
 pub struct PlayerStatus {
@@ -160,7 +160,10 @@ pub fn player_get_tracks(state: State<'_, AppState>) -> Result<TrackListResult, 
 }
 
 #[tauri::command]
-pub fn player_set_subtitle_track(state: State<'_, AppState>, id: Option<i64>) -> Result<(), String> {
+pub fn player_set_subtitle_track(
+    state: State<'_, AppState>,
+    id: Option<i64>,
+) -> Result<(), String> {
     let player = state.player.lock().map_err(|e| e.to_string())?;
     match &*player {
         Some(p) => p.set_subtitle_track(id),
@@ -184,7 +187,13 @@ pub fn player_is_available(state: State<'_, AppState>) -> bool {
 }
 
 #[tauri::command]
-pub fn player_set_geometry(state: State<'_, AppState>, x: i32, y: i32, width: i32, height: i32) -> Result<(), String> {
+pub fn player_set_geometry(
+    state: State<'_, AppState>,
+    x: i32,
+    y: i32,
+    width: i32,
+    height: i32,
+) -> Result<(), String> {
     let child = state.child_window.lock().map_err(|e| e.to_string())?;
     match &*child {
         Some(cw) => {
@@ -251,7 +260,13 @@ pub fn player_set_fullscreen(
                                 // HWND_TOPMOST = -1, SWP_SHOWWINDOW = 0x0040
                                 unsafe {
                                     crate::player::mpv_window::set_window_pos_raw(
-                                        overlay_hwnd, -1, mx, my, mw, mh, 0x0040,
+                                        overlay_hwnd,
+                                        -1,
+                                        mx,
+                                        my,
+                                        mw,
+                                        mh,
+                                        0x0040,
                                     );
                                 }
                             } else {

@@ -31,7 +31,11 @@ pub fn scan_video_folder(folder_path: String) -> Result<Vec<VideoMetadata>, Stri
 
     let mut videos = Vec::new();
 
-    for entry in WalkDir::new(path).max_depth(1).into_iter().filter_map(|e| e.ok()) {
+    for entry in WalkDir::new(path)
+        .max_depth(1)
+        .into_iter()
+        .filter_map(|e| e.ok())
+    {
         let file_path = entry.path();
         if file_path.is_file() && is_video_file(file_path) {
             let file_name = file_path

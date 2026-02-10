@@ -1,5 +1,5 @@
-use crate::player::mpv_wrapper::MpvPlayer;
 use crate::player::mpv_window::MpvChildWindow;
+use crate::player::mpv_wrapper::MpvPlayer;
 use std::sync::Mutex;
 
 pub struct AppState {

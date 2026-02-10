@@ -198,11 +198,23 @@ impl MpvPlayer {
 
             let track_type = self.get_property_string_safe(&format!("{}/type", prefix));
             let title_raw = self.get_property_string_safe(&format!("{}/title", prefix));
-            let title = if title_raw.is_empty() { None } else { Some(title_raw) };
+            let title = if title_raw.is_empty() {
+                None
+            } else {
+                Some(title_raw)
+            };
             let lang_raw = self.get_property_string_safe(&format!("{}/lang", prefix));
-            let lang = if lang_raw.is_empty() { None } else { Some(lang_raw) };
+            let lang = if lang_raw.is_empty() {
+                None
+            } else {
+                Some(lang_raw)
+            };
             let codec_raw = self.get_property_string_safe(&format!("{}/codec", prefix));
-            let codec = if codec_raw.is_empty() { None } else { Some(codec_raw) };
+            let codec = if codec_raw.is_empty() {
+                None
+            } else {
+                Some(codec_raw)
+            };
             let external_str = self.get_property_string_safe(&format!("{}/external", prefix));
             let external = external_str == "yes";
 

@@ -54,11 +54,7 @@ pub struct MpvLib {
 impl MpvLib {
     pub fn load() -> Result<Self, String> {
         // Try multiple possible locations for mpv DLL
-        let lib_names = vec![
-            "mpv-2.dll",
-            "libmpv-2.dll",
-            "mpv-1.dll",
-        ];
+        let lib_names = vec!["mpv-2.dll", "libmpv-2.dll", "mpv-1.dll"];
 
         let mut last_error = String::new();
         let mut search_dirs: Vec<std::path::PathBuf> = Vec::new();
@@ -76,6 +72,7 @@ impl MpvLib {
         if let Ok(exe_path) = std::env::current_exe() {
             if let Some(exe_dir) = exe_path.parent() {
                 search_dirs.push(exe_dir.to_path_buf());
+                search_dirs.push(exe_dir.join("resources"));
                 search_dirs.push(exe_dir.join("resources").join("windows"));
                 // Walk up from exe dir to find project root
                 // In dev: exe is at src-tauri/target/debug/ -> go up 3 levels
@@ -119,7 +116,10 @@ impl MpvLib {
         }
 
         // Log all searched paths for debugging
-        let searched: Vec<String> = search_dirs.iter().map(|d| d.display().to_string()).collect();
+        let searched: Vec<String> = search_dirs
+            .iter()
+            .map(|d| d.display().to_string())
+            .collect();
         Err(format!(
             "mpv library not found. Place libmpv-2.dll in the project root. Searched: [{}]. Last error: {}",
             searched.join(", "),

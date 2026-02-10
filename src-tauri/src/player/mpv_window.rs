@@ -83,7 +83,15 @@ extern "system" {
     fn DefWindowProcW(hwnd: isize, msg: u32, wparam: usize, lparam: isize) -> isize;
     fn GetModuleHandleW(module_name: *const u16) -> isize;
     fn ClientToScreen(hwnd: isize, point: *mut Point) -> i32;
-    fn SetWindowPos(hwnd: isize, hwnd_insert_after: isize, x: i32, y: i32, cx: i32, cy: i32, flags: u32) -> i32;
+    fn SetWindowPos(
+        hwnd: isize,
+        hwnd_insert_after: isize,
+        x: i32,
+        y: i32,
+        cx: i32,
+        cy: i32,
+        flags: u32,
+    ) -> i32;
     fn MonitorFromWindow(hwnd: isize, dw_flags: u32) -> isize;
     fn GetMonitorInfoW(h_monitor: isize, lpmi: *mut MonitorInfo) -> i32;
 }
@@ -113,12 +121,7 @@ fn to_wide(s: &str) -> Vec<u16> {
 }
 
 /// Window procedure: prevents focus stealing on click
-unsafe extern "system" fn wnd_proc(
-    hwnd: isize,
-    msg: u32,
-    wparam: usize,
-    lparam: isize,
-) -> isize {
+unsafe extern "system" fn wnd_proc(hwnd: isize, msg: u32, wparam: usize, lparam: isize) -> isize {
     match msg {
         WM_MOUSEACTIVATE => MA_NOACTIVATE,
         _ => DefWindowProcW(hwnd, msg, wparam, lparam),
@@ -189,7 +192,10 @@ impl MpvChildWindow {
                 return None;
             }
 
-            eprintln!("[mpv] Created popup window: hwnd={}, owner={}", hwnd, parent_hwnd);
+            eprintln!(
+                "[mpv] Created popup window: hwnd={}, owner={}",
+                hwnd, parent_hwnd
+            );
             Some(MpvChildWindow {
                 hwnd,
                 owner: parent_hwnd,
@@ -252,8 +258,18 @@ impl MpvChildWindow {
             }
             let mut mi = MonitorInfo {
                 cb_size: std::mem::size_of::<MonitorInfo>() as u32,
-                rc_monitor: Rect { left: 0, top: 0, right: 0, bottom: 0 },
-                rc_work: Rect { left: 0, top: 0, right: 0, bottom: 0 },
+                rc_monitor: Rect {
+                    left: 0,
+                    top: 0,
+                    right: 0,
+                    bottom: 0,
+                },
+                rc_work: Rect {
+                    left: 0,
+                    top: 0,
+                    right: 0,
+                    bottom: 0,
+                },
                 dw_flags: 0,
             };
             if GetMonitorInfoW(monitor, &mut mi) == 0 {
@@ -266,7 +282,8 @@ impl MpvChildWindow {
     }
 
     pub fn is_fullscreen(&self) -> bool {
-        self.is_fullscreen.load(std::sync::atomic::Ordering::Relaxed)
+        self.is_fullscreen
+            .load(std::sync::atomic::Ordering::Relaxed)
     }
 
     pub fn set_fullscreen(&self, fullscreen: bool) {
@@ -283,8 +300,18 @@ impl MpvChildWindow {
 
                 let mut mi = MonitorInfo {
                     cb_size: std::mem::size_of::<MonitorInfo>() as u32,
-                    rc_monitor: Rect { left: 0, top: 0, right: 0, bottom: 0 },
-                    rc_work: Rect { left: 0, top: 0, right: 0, bottom: 0 },
+                    rc_monitor: Rect {
+                        left: 0,
+                        top: 0,
+                        right: 0,
+                        bottom: 0,
+                    },
+                    rc_work: Rect {
+                        left: 0,
+                        top: 0,
+                        right: 0,
+                        bottom: 0,
+                    },
                     dw_flags: 0,
                 };
                 if GetMonitorInfoW(monitor, &mut mi) == 0 {
@@ -322,7 +349,8 @@ impl MpvChildWindow {
             }
         }
 
-        self.is_fullscreen.store(fullscreen, std::sync::atomic::Ordering::Relaxed);
+        self.is_fullscreen
+            .store(fullscreen, std::sync::atomic::Ordering::Relaxed);
     }
 }
 
