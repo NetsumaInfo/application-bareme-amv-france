@@ -153,7 +153,7 @@ function CategorySection({
 export default function ModernInterface() {
   const { currentBareme, updateCriterion, getNoteForClip, getScoreForClip } = useNotationStore()
   const { clips, currentClipIndex, markClipScored, markDirty } = useProjectStore()
-  const { hideFinalScore } = useUIStore()
+  const { hideFinalScore, hideTextNotes } = useUIStore()
   const currentClip = clips[currentClipIndex]
 
   const note = currentClip ? getNoteForClip(currentClip.id) : undefined
@@ -243,20 +243,22 @@ export default function ModernInterface() {
           </div>
         )}
 
-        <div className="px-4 py-2 border-t border-gray-700">
-          <textarea
-            placeholder="Notes libres..."
-            value={note?.textNotes ?? ''}
-            onChange={(e) => {
-              if (currentClip) {
-                useNotationStore.getState().setTextNotes(currentClip.id, e.target.value)
-                markDirty()
-              }
-            }}
-            className="w-full px-3 py-2 text-xs bg-surface-dark border border-gray-700 rounded-lg text-gray-300 placeholder-gray-600 focus:border-primary-500 focus:outline-none resize-y min-h-[42px]"
-            rows={2}
-          />
-        </div>
+        {!hideTextNotes && (
+          <div className="px-4 py-2 border-t border-gray-700">
+            <textarea
+              placeholder="Notes libres..."
+              value={note?.textNotes ?? ''}
+              onChange={(e) => {
+                if (currentClip) {
+                  useNotationStore.getState().setTextNotes(currentClip.id, e.target.value)
+                  markDirty()
+                }
+              }}
+              className="w-full px-3 py-2 text-xs bg-surface-dark border border-gray-700 rounded-lg text-gray-300 placeholder-gray-600 focus:border-primary-500 focus:outline-none resize-y min-h-[42px]"
+              rows={2}
+            />
+          </div>
+        )}
       </div>
     </div>
   )

@@ -21,17 +21,15 @@ fn main() {
             };
             let state = app.state::<AppState>();
 
-            // Create overlay window once at startup (hidden).
-            // On Windows, dynamic WebView window creation inside sync commands can deadlock.
             if app.get_window("fullscreen-overlay").is_none() {
                 match tauri::WindowBuilder::new(
                     app,
                     "fullscreen-overlay",
-                    tauri::WindowUrl::App("index.html".into()),
+                    tauri::WindowUrl::App("index.html?overlay=true".into()),
                 )
                 .transparent(true)
                 .decorations(false)
-                .always_on_top(true)
+                .always_on_top(false)
                 .fullscreen(false)
                 .visible(false)
                 .focused(false)
@@ -71,6 +69,8 @@ fn main() {
                     // Initialize mpv with wid pointing to child window
                     match player::mpv_wrapper::MpvPlayer::new(Some(child_hwnd as i64)) {
                         Ok(p) => {
+                            child.detach();
+                            let _ = p.set_detached_controls_enabled(false);
                             match state.player.lock() {
                                 Ok(mut player_slot) => {
                                     *player_slot = Some(p);
@@ -137,6 +137,8 @@ fn main() {
             player::commands::player_hide,
             player::commands::player_set_fullscreen,
             player::commands::player_is_fullscreen,
+            player::commands::player_is_visible,
+            player::commands::player_sync_overlay,
             // Project commands
             project::manager::save_project,
             project::manager::load_project,

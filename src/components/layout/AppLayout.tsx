@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import { FilePlus, FolderOpen, Folder } from 'lucide-react'
 import { emit, listen } from '@tauri-apps/api/event'
@@ -213,8 +213,6 @@ function NotationTabContent() {
   const {
     currentInterface,
     sidebarCollapsed,
-    showPipVideo,
-    setShowPipVideo,
   } = useUIStore()
 
   const isNotationMode = currentInterface === 'notation'
@@ -226,9 +224,6 @@ function NotationTabContent() {
         <div className="flex-1 overflow-hidden">
           <SpreadsheetInterface />
         </div>
-        {showPipVideo && (
-          <FloatingVideoPlayer onClose={() => setShowPipVideo(false)} />
-        )}
       </div>
     )
   }
@@ -279,6 +274,7 @@ export default function AppLayout() {
     switchTab,
     currentInterface,
     showPipVideo,
+    setShowPipVideo,
     showProjectModal,
     showBaremeEditor,
     zoomLevel,
@@ -287,11 +283,14 @@ export default function AppLayout() {
     zoomOut,
     resetZoom,
     setShowProjectModal,
+    shortcutBindings,
   } = useUIStore()
   const { togglePause, seekRelative, toggleFullscreen, exitFullscreen, pause } = usePlayer()
   const isPlayerLoaded = usePlayerStore((state) => state.isLoaded)
   const isFullscreen = usePlayerStore((state) => state.isFullscreen)
+  const isDetached = usePlayerStore((state) => state.isDetached)
   const { save, saveAs } = useSaveProject()
+  const undoLastChange = useNotationStore((state) => state.undoLastChange)
   const [showSettings, setShowSettings] = useState(false)
 
   useAutoSave()
@@ -308,16 +307,17 @@ export default function AppLayout() {
   }, [])
 
   useEffect(() => {
-    if (isFullscreen) {
+    if (isFullscreen || isDetached) {
       emitClipInfo()
     }
-  }, [isFullscreen, currentClipIndex, clips.length, emitClipInfo])
+  }, [isFullscreen, isDetached, currentClipIndex, clips.length, emitClipInfo])
 
   // Listen for overlay commands (next/prev clip)
   useEffect(() => {
     let unlistenNext: (() => void) | null = null
     let unlistenPrev: (() => void) | null = null
     let unlistenRequest: (() => void) | null = null
+    let unlistenClose: (() => void) | null = null
 
     listen('overlay:next-clip', () => {
       useProjectStore.getState().nextClip()
@@ -331,16 +331,22 @@ export default function AppLayout() {
       emitClipInfo()
     }).then(fn => { unlistenRequest = fn })
 
+    listen('overlay:close-player', () => {
+      useUIStore.getState().setShowPipVideo(false)
+      tauri.playerHide().catch(() => {})
+    }).then(fn => { unlistenClose = fn })
+
     return () => {
       if (unlistenNext) unlistenNext()
       if (unlistenPrev) unlistenPrev()
       if (unlistenRequest) unlistenRequest()
+      if (unlistenClose) unlistenClose()
     }
   }, [emitClipInfo])
 
-  // Load clips during fullscreen (VideoPlayer may not be mounted)
+  // Load clips during fullscreen or detached player window
   useEffect(() => {
-    if (!isFullscreen) return
+    if (!isFullscreen && !isDetached) return
     const currentClip = clips[currentClipIndex]
     if (!currentClip?.filePath) return
 
@@ -355,7 +361,22 @@ export default function AppLayout() {
         emitClipInfo()
       })
       .catch(console.error)
-  }, [isFullscreen, currentClipIndex, clips, emitClipInfo])
+  }, [isFullscreen, isDetached, currentClipIndex, clips, emitClipInfo])
+
+  useEffect(() => {
+    if (!currentProject) return
+
+    if (!(isDetached || isFullscreen)) {
+      tauri.playerSyncOverlay().catch(() => {})
+      return
+    }
+
+    tauri.playerSyncOverlay().catch(() => {})
+    const timer = setInterval(() => {
+      tauri.playerSyncOverlay().catch(() => {})
+    }, 120)
+    return () => clearInterval(timer)
+  }, [currentProject, isDetached, isFullscreen, currentClipIndex, clips.length])
 
   const handleEscapeFullscreen = useCallback(() => {
     if (usePlayerStore.getState().isFullscreen) {
@@ -383,33 +404,59 @@ export default function AppLayout() {
     }
   }, [])
 
-  // Regular shortcuts (blocked in inputs)
-  useKeyboardShortcuts(
-    {
-      ' ': togglePause,
-      arrowright: () => seekRelative(5),
-      arrowleft: () => seekRelative(-5),
-      'shift+arrowright': () => seekRelative(30),
-      'shift+arrowleft': () => seekRelative(-30),
-      n: nextClip,
-      p: previousClip,
-      'ctrl+1': () => switchTab('notation'),
-      'ctrl+2': () => switchTab('resultats'),
-      'ctrl+3': () => switchTab('export'),
-    },
-    // Global shortcuts (fire even in inputs)
-    {
-      'ctrl+s': () => { save().catch(console.error) },
-      'ctrl+alt+s': () => { saveAs().catch(console.error) },
-      'ctrl+=': zoomIn,
-      'ctrl+-': zoomOut,
-      'ctrl+0': resetZoom,
-      f11: toggleFullscreen,
-      escape: handleEscapeFullscreen,
-      'ctrl+n': () => setShowProjectModal(true),
-      'ctrl+o': () => { handleCtrlO() },
-    },
-  )
+  const regularShortcuts = useMemo(() => {
+    const map: Record<string, () => void> = {}
+    map[shortcutBindings.togglePause] = togglePause
+    map[shortcutBindings.seekForward] = () => seekRelative(5)
+    map[shortcutBindings.seekBack] = () => seekRelative(-5)
+    map[shortcutBindings.seekForwardLong] = () => seekRelative(30)
+    map[shortcutBindings.seekBackLong] = () => seekRelative(-30)
+    map[shortcutBindings.nextClip] = nextClip
+    map[shortcutBindings.prevClip] = previousClip
+    map[shortcutBindings.tabNotation] = () => switchTab('notation')
+    map[shortcutBindings.tabResultats] = () => switchTab('resultats')
+    map[shortcutBindings.tabExport] = () => switchTab('export')
+    map[shortcutBindings.undo] = () => {
+      undoLastChange()
+      useProjectStore.getState().markDirty()
+    }
+    return map
+  }, [
+    shortcutBindings,
+    togglePause,
+    seekRelative,
+    nextClip,
+    previousClip,
+    switchTab,
+    undoLastChange,
+  ])
+
+  const globalShortcuts = useMemo(() => {
+    const map: Record<string, () => void> = {}
+    map[shortcutBindings.save] = () => { save().catch(console.error) }
+    map[shortcutBindings.saveAs] = () => { saveAs().catch(console.error) }
+    map[shortcutBindings.zoomIn] = zoomIn
+    map[shortcutBindings.zoomOut] = zoomOut
+    map[shortcutBindings.resetZoom] = resetZoom
+    map[shortcutBindings.fullscreen] = toggleFullscreen
+    map[shortcutBindings.exitFullscreen] = handleEscapeFullscreen
+    map[shortcutBindings.newProject] = () => setShowProjectModal(true)
+    map[shortcutBindings.openProject] = () => { handleCtrlO() }
+    return map
+  }, [
+    shortcutBindings,
+    save,
+    saveAs,
+    zoomIn,
+    zoomOut,
+    resetZoom,
+    toggleFullscreen,
+    handleEscapeFullscreen,
+    setShowProjectModal,
+    handleCtrlO,
+  ])
+
+  useKeyboardShortcuts(regularShortcuts, globalShortcuts)
 
   // Context menu state
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null)
@@ -452,6 +499,24 @@ export default function AppLayout() {
       return
     }
 
+    if (isDetached) {
+      const hasClip = Boolean(clips[currentClipIndex]?.filePath)
+      const shouldShowDetached =
+        currentTab === 'notation' &&
+        !isAnyModalOpen &&
+        showPipVideo &&
+        hasClip &&
+        isPlayerLoaded
+
+      if (shouldShowDetached) {
+        tauri.playerShow().catch(() => {})
+      } else {
+        pause().catch(() => {})
+        tauri.playerHide().catch(() => {})
+      }
+      return
+    }
+
     const hasClip = Boolean(clips[currentClipIndex]?.filePath)
     if (!hasClip || !isPlayerLoaded) {
       tauri.playerHide().catch(() => {})
@@ -482,7 +547,24 @@ export default function AppLayout() {
     clips,
     currentClipIndex,
     pause,
+    isDetached,
   ])
+
+  useEffect(() => {
+    if (!currentProject || !isDetached) return
+
+    const timer = setInterval(() => {
+      tauri.playerIsVisible()
+        .then((visible) => {
+          if (!visible && useUIStore.getState().showPipVideo) {
+            useUIStore.getState().setShowPipVideo(false)
+          }
+        })
+        .catch(() => {})
+    }, 300)
+
+    return () => clearInterval(timer)
+  }, [currentProject, isDetached])
 
   useEffect(() => {
     const forceExitFullscreen = (event: KeyboardEvent) => {
@@ -570,6 +652,10 @@ export default function AppLayout() {
       <BaremeEditor />
       {showSettings && (
         <SettingsPanel onClose={() => setShowSettings(false)} />
+      )}
+
+      {currentProject && currentTab === 'notation' && currentInterface === 'spreadsheet' && showPipVideo && !isDetached && (
+        <FloatingVideoPlayer onClose={() => setShowPipVideo(false)} />
       )}
     </div>
   )

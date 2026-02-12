@@ -6,6 +6,7 @@ import { usePlayer } from '@/hooks/usePlayer'
 import * as tauri from '@/services/tauri'
 import { formatTime, getClipPrimaryLabel } from '@/utils/formatters'
 import SubtitleSelector from './SubtitleSelector'
+import AudioTrackSelector from './AudioTrackSelector'
 
 interface FloatingVideoPlayerProps {
   onClose: () => void
@@ -20,7 +21,7 @@ export function FloatingVideoPlayer({ onClose }: FloatingVideoPlayerProps) {
 
   const [position, setPosition] = useState({
     left: typeof window !== 'undefined' ? Math.max(12, window.innerWidth - panelWidth - 16) : 0,
-    top: typeof window !== 'undefined' ? Math.max(48, window.innerHeight - videoHeight - 90) : 0,
+    top: 80,
   })
 
   const [isDragging, setIsDragging] = useState(false)
@@ -40,6 +41,7 @@ export function FloatingVideoPlayer({ onClose }: FloatingVideoPlayerProps) {
     exitFullscreen,
     isFullscreen,
   } = usePlayer()
+  const isDetached = usePlayerStore((state) => state.isDetached)
   const clips = useProjectStore((state) => state.clips)
   const currentClipIndex = useProjectStore((state) => state.currentClipIndex)
   const currentClip = clips[currentClipIndex]
@@ -71,6 +73,8 @@ export function FloatingVideoPlayer({ onClose }: FloatingVideoPlayerProps) {
   }, [])
 
   const updateGeometry = useCallback(() => {
+    if (usePlayerStore.getState().isDetached) return
+
     const el = videoAreaRef.current
     if (!el) return
 
@@ -118,7 +122,9 @@ export function FloatingVideoPlayer({ onClose }: FloatingVideoPlayerProps) {
 
   useEffect(() => {
     if (!currentClip?.filePath) {
-      tauri.playerHide().catch(() => {})
+      if (!usePlayerStore.getState().isDetached) {
+        tauri.playerHide().catch(() => {})
+      }
       return () => {}
     }
 
@@ -139,13 +145,16 @@ export function FloatingVideoPlayer({ onClose }: FloatingVideoPlayerProps) {
         })
         .catch(console.error)
     }
+  }, [currentClip?.filePath, updateGeometry, loadTracks])
 
+  useEffect(() => {
     return () => {
-      if (!usePlayerStore.getState().isFullscreen) {
+      const store = usePlayerStore.getState()
+      if (!store.isDetached && !store.isFullscreen) {
         tauri.playerHide().catch(() => {})
       }
     }
-  }, [currentClip?.filePath, updateGeometry, loadTracks])
+  }, [])
 
   useEffect(() => {
     updateGeometry()
@@ -205,9 +214,17 @@ export function FloatingVideoPlayer({ onClose }: FloatingVideoPlayerProps) {
     }
   }, [isDragging, handleMouseMove, handleMouseUp])
 
-  const handleClose = () => {
+  const handleClose = async () => {
+    const store = usePlayerStore.getState()
+    if (store.isFullscreen) {
+      await tauri.playerSetFullscreen(false).catch(() => {})
+    }
     tauri.playerHide().catch(() => {})
     onClose()
+  }
+
+  if (isDetached) {
+    return null
   }
 
   return (
@@ -232,7 +249,7 @@ export function FloatingVideoPlayer({ onClose }: FloatingVideoPlayerProps) {
         }`}
       >
         <span className="text-[10px] font-medium text-gray-400">
-          {currentClip ? getClipPrimaryLabel(currentClip) : 'Vidéo'}
+          {isDetached ? 'Lecteur détaché' : currentClip ? getClipPrimaryLabel(currentClip) : 'Vidéo'}
         </span>
         {isHovering && (
           <button
@@ -318,6 +335,8 @@ export function FloatingVideoPlayer({ onClose }: FloatingVideoPlayerProps) {
         </button>
 
         <SubtitleSelector />
+
+        <AudioTrackSelector />
 
         <button
           onClick={toggleFullscreen}

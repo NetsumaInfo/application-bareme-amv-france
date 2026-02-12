@@ -11,6 +11,7 @@ const CS_VREDRAW: u32 = 0x0001;
 const SW_SHOW: i32 = 5;
 const SW_HIDE: i32 = 0;
 const WM_MOUSEACTIVATE: u32 = 0x0021;
+const WM_CLOSE: u32 = 0x0010;
 const MA_NOACTIVATE: isize = 3;
 const SWP_NOSIZE: u32 = 0x0001;
 const SWP_NOMOVE: u32 = 0x0002;
@@ -21,6 +22,14 @@ const HWND_TOP: isize = 0;
 const HWND_TOPMOST: isize = -1;
 const HWND_NOTOPMOST: isize = -2;
 const SWP_SHOWWINDOW: u32 = 0x0040;
+const SWP_FRAMECHANGED: u32 = 0x0020;
+const GWL_STYLE: i32 = -16;
+const GWL_EXSTYLE: i32 = -20;
+const GWLP_HWNDPARENT: i32 = -8;
+const WS_CAPTION: u32 = 0x00C00000;
+const WS_THICKFRAME: u32 = 0x00040000;
+const WS_EX_APPWINDOW: u32 = 0x00040000;
+const WS_VISIBLE: u32 = 0x10000000;
 
 #[repr(C)]
 struct WndClassExW {
@@ -94,6 +103,13 @@ extern "system" {
     ) -> i32;
     fn MonitorFromWindow(hwnd: isize, dw_flags: u32) -> isize;
     fn GetMonitorInfoW(h_monitor: isize, lpmi: *mut MonitorInfo) -> i32;
+    fn SetWindowLongPtrW(hwnd: isize, n_index: i32, dw_new_long: isize) -> isize;
+    fn GetWindowLongPtrW(hwnd: isize, n_index: i32) -> isize;
+    fn GetWindowRect(hwnd: isize, lp_rect: *mut Rect) -> i32;
+    fn GetClientRect(hwnd: isize, lp_rect: *mut Rect) -> i32;
+    fn SetWindowTextW(hwnd: isize, lp_string: *const u16) -> i32;
+    fn IsWindow(hwnd: isize) -> i32;
+    fn IsWindowVisible(hwnd: isize) -> i32;
 }
 
 #[link(name = "gdi32")]
@@ -124,6 +140,10 @@ fn to_wide(s: &str) -> Vec<u16> {
 unsafe extern "system" fn wnd_proc(hwnd: isize, msg: u32, wparam: usize, lparam: isize) -> isize {
     match msg {
         WM_MOUSEACTIVATE => MA_NOACTIVATE,
+        WM_CLOSE => {
+            ShowWindow(hwnd, SW_HIDE);
+            0
+        }
         _ => DefWindowProcW(hwnd, msg, wparam, lparam),
     }
 }
@@ -135,7 +155,9 @@ pub struct MpvChildWindow {
     hwnd: isize,
     owner: isize,
     is_fullscreen: std::sync::atomic::AtomicBool,
+    is_detached: std::sync::atomic::AtomicBool,
     saved_geometry: std::sync::Mutex<(i32, i32, i32, i32)>,
+    saved_detached_geometry: std::sync::Mutex<(i32, i32, i32, i32)>,
 }
 
 unsafe impl Send for MpvChildWindow {}
@@ -200,7 +222,9 @@ impl MpvChildWindow {
                 hwnd,
                 owner: parent_hwnd,
                 is_fullscreen: std::sync::atomic::AtomicBool::new(false),
+                is_detached: std::sync::atomic::AtomicBool::new(false),
                 saved_geometry: std::sync::Mutex::new((0, 0, 1, 1)),
+                saved_detached_geometry: std::sync::Mutex::new((0, 0, 1, 1)),
             })
         }
     }
@@ -209,11 +233,69 @@ impl MpvChildWindow {
         self.hwnd
     }
 
+    /// Returns the current outer window rect as (left, top, width, height).
+    pub fn get_window_rect(&self) -> Option<(i32, i32, i32, i32)> {
+        if !self.is_valid_window() {
+            return None;
+        }
+        unsafe {
+            let mut rect = Rect {
+                left: 0,
+                top: 0,
+                right: 0,
+                bottom: 0,
+            };
+            if GetWindowRect(self.hwnd, &mut rect) == 0 {
+                return None;
+            }
+            let w = (rect.right - rect.left).max(1);
+            let h = (rect.bottom - rect.top).max(1);
+            Some((rect.left, rect.top, w, h))
+        }
+    }
+
+    /// Returns the client/video area rect in screen coordinates as (left, top, width, height).
+    /// Useful for detached mode so overlays don't cover the native title bar.
+    pub fn get_client_rect_screen(&self) -> Option<(i32, i32, i32, i32)> {
+        if !self.is_valid_window() {
+            return None;
+        }
+
+        unsafe {
+            let mut client = Rect {
+                left: 0,
+                top: 0,
+                right: 0,
+                bottom: 0,
+            };
+            if GetClientRect(self.hwnd, &mut client) == 0 {
+                return None;
+            }
+
+            let mut top_left = Point { x: client.left, y: client.top };
+            let mut bottom_right = Point {
+                x: client.right,
+                y: client.bottom,
+            };
+
+            if ClientToScreen(self.hwnd, &mut top_left) == 0 || ClientToScreen(self.hwnd, &mut bottom_right) == 0 {
+                return None;
+            }
+
+            let w = (bottom_right.x - top_left.x).max(1);
+            let h = (bottom_right.y - top_left.y).max(1);
+            Some((top_left.x, top_left.y, w, h))
+        }
+    }
+
     /// Position the window. x/y are client-area coordinates of the owner window.
     /// Converts to screen coordinates for the popup.
     pub fn set_geometry(&self, x: i32, y: i32, w: i32, h: i32) {
         if w > 0 && h > 0 {
-            if self.is_fullscreen() {
+            if !self.is_valid_window() {
+                return;
+            }
+            if self.is_fullscreen() || self.is_detached() {
                 return;
             }
             unsafe {
@@ -227,7 +309,33 @@ impl MpvChildWindow {
         }
     }
 
+    /// Set absolute geometry when in detached mode (screen coordinates).
+    pub fn set_detached_geometry_absolute(&self, x: i32, y: i32, w: i32, h: i32) {
+        if !self.is_valid_window() || !self.is_detached() {
+            return;
+        }
+        let width = w.max(1);
+        let height = h.max(1);
+        unsafe {
+            SetWindowPos(
+                self.hwnd,
+                HWND_TOP,
+                x,
+                y,
+                width,
+                height,
+                SWP_SHOWWINDOW | SWP_NOACTIVATE,
+            );
+        }
+        if let Ok(mut saved) = self.saved_detached_geometry.lock() {
+            *saved = (x, y, width, height);
+        }
+    }
+
     pub fn show(&self) {
+        if !self.is_valid_window() {
+            return;
+        }
         unsafe {
             // Keep current z-order so the fullscreen overlay window remains above mpv.
             SetWindowPos(
@@ -243,6 +351,9 @@ impl MpvChildWindow {
     }
 
     pub fn hide(&self) {
+        if !self.is_valid_window() {
+            return;
+        }
         unsafe {
             ShowWindow(self.hwnd, SW_HIDE);
         }
@@ -251,8 +362,16 @@ impl MpvChildWindow {
     /// Returns (left, top, width, height) of the monitor the owner window is on.
     /// Used to position the overlay on the same monitor as mpv fullscreen.
     pub fn get_fullscreen_monitor_rect(&self) -> Option<(i32, i32, i32, i32)> {
+        if !self.is_valid_window() {
+            return None;
+        }
         unsafe {
-            let monitor = MonitorFromWindow(self.owner, MONITOR_DEFAULTTONEAREST);
+            let monitor_target = if self.is_detached() {
+                self.hwnd
+            } else {
+                self.owner
+            };
+            let monitor = MonitorFromWindow(monitor_target, MONITOR_DEFAULTTONEAREST);
             if monitor == 0 {
                 return None;
             }
@@ -290,10 +409,18 @@ impl MpvChildWindow {
         if fullscreen == self.is_fullscreen() {
             return;
         }
+        if !self.is_valid_window() {
+            return;
+        }
 
         unsafe {
             if fullscreen {
-                let monitor = MonitorFromWindow(self.owner, MONITOR_DEFAULTTONEAREST);
+                let monitor_target = if self.is_detached() {
+                    self.hwnd
+                } else {
+                    self.owner
+                };
+                let monitor = MonitorFromWindow(monitor_target, MONITOR_DEFAULTTONEAREST);
                 if monitor == 0 {
                     return;
                 }
@@ -318,6 +445,27 @@ impl MpvChildWindow {
                     return;
                 }
 
+                if self.is_detached() {
+                    let mut rect = Rect {
+                        left: 0,
+                        top: 0,
+                        right: 0,
+                        bottom: 0,
+                    };
+                    if GetWindowRect(self.hwnd, &mut rect) != 0 {
+                        let w = (rect.right - rect.left).max(1);
+                        let h = (rect.bottom - rect.top).max(1);
+                        if let Ok(mut saved) = self.saved_detached_geometry.lock() {
+                            *saved = (rect.left, rect.top, w, h);
+                        }
+                    }
+
+                    // Borderless style in fullscreen for true edge-to-edge video.
+                    let fs_style = WS_POPUP | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS;
+                    SetWindowLongPtrW(self.hwnd, GWL_STYLE, fs_style as isize);
+                    SetWindowLongPtrW(self.hwnd, GWL_EXSTYLE, WS_EX_APPWINDOW as isize);
+                }
+
                 let screen_w = mi.rc_monitor.right - mi.rc_monitor.left;
                 let screen_h = mi.rc_monitor.bottom - mi.rc_monitor.top;
                 // Keep mpv fullscreen-sized but not TOPMOST so the dedicated
@@ -329,14 +477,34 @@ impl MpvChildWindow {
                     mi.rc_monitor.top,
                     screen_w,
                     screen_h,
-                    SWP_SHOWWINDOW | SWP_NOACTIVATE,
+                    SWP_SHOWWINDOW
+                        | SWP_NOACTIVATE
+                        | if self.is_detached() { SWP_FRAMECHANGED } else { 0 },
                 );
             } else {
-                let (x, y, w, h) = self
-                    .saved_geometry
-                    .lock()
-                    .map(|g| *g)
-                    .unwrap_or((0, 0, 1, 1));
+                let (x, y, w, h) = if self.is_detached() {
+                    self.saved_detached_geometry
+                        .lock()
+                        .map(|g| *g)
+                        .unwrap_or((0, 0, 1, 1))
+                } else {
+                    self.saved_geometry
+                        .lock()
+                        .map(|g| *g)
+                        .unwrap_or((0, 0, 1, 1))
+                };
+
+                if self.is_detached() {
+                    let detached_style = WS_POPUP
+                        | WS_VISIBLE
+                        | WS_CAPTION
+                        | WS_THICKFRAME
+                        | WS_CLIPCHILDREN
+                        | WS_CLIPSIBLINGS;
+                    SetWindowLongPtrW(self.hwnd, GWL_STYLE, detached_style as isize);
+                    SetWindowLongPtrW(self.hwnd, GWL_EXSTYLE, WS_EX_APPWINDOW as isize);
+                }
+
                 SetWindowPos(
                     self.hwnd,
                     HWND_NOTOPMOST,
@@ -344,13 +512,139 @@ impl MpvChildWindow {
                     y,
                     w.max(1),
                     h.max(1),
-                    SWP_SHOWWINDOW,
+                    SWP_SHOWWINDOW | if self.is_detached() { SWP_FRAMECHANGED } else { 0 },
                 );
             }
         }
 
         self.is_fullscreen
             .store(fullscreen, std::sync::atomic::Ordering::Relaxed);
+    }
+
+    pub fn is_detached(&self) -> bool {
+        self.is_detached.load(std::sync::atomic::Ordering::Relaxed)
+    }
+
+    pub fn is_visible(&self) -> bool {
+        if !self.is_valid_window() {
+            return false;
+        }
+        unsafe { IsWindowVisible(self.hwnd) != 0 }
+    }
+
+    /// Detach the mpv window from the Tauri parent.
+    /// Makes it a standalone top-level window with title bar that can be
+    /// freely moved to any monitor.
+    pub fn detach(&self) {
+        if self.is_detached() || self.is_fullscreen() {
+            return;
+        }
+        if !self.is_valid_window() {
+            return;
+        }
+
+        unsafe {
+            // Get current screen position for initial placement
+            let mut rect = Rect {
+                left: 0,
+                top: 0,
+                right: 0,
+                bottom: 0,
+            };
+            GetWindowRect(self.hwnd, &mut rect);
+            let cur_w = (rect.right - rect.left).max(640);
+            let cur_h = (rect.bottom - rect.top).max(360);
+
+            if let Ok(mut saved) = self.saved_detached_geometry.lock() {
+                *saved = (rect.left, rect.top, cur_w, cur_h);
+            }
+
+            // Change style: add caption + thick frame + sysmenu for a real window
+            let new_style = WS_POPUP
+                | WS_VISIBLE
+                | WS_CAPTION
+                | WS_THICKFRAME
+                | WS_CLIPCHILDREN
+                | WS_CLIPSIBLINGS;
+            SetWindowLongPtrW(self.hwnd, GWL_STYLE, new_style as isize);
+
+            // Change extended style: show in taskbar, allow activation
+            let new_ex_style = WS_EX_APPWINDOW;
+            SetWindowLongPtrW(self.hwnd, GWL_EXSTYLE, new_ex_style as isize);
+
+            // Remove owner
+            SetWindowLongPtrW(self.hwnd, GWLP_HWNDPARENT, 0);
+
+            // Set window title
+            let title = to_wide("AMV Notation - Video");
+            SetWindowTextW(self.hwnd, title.as_ptr());
+
+            // Apply frame changes and reposition
+            SetWindowPos(
+                self.hwnd,
+                HWND_NOTOPMOST,
+                rect.left,
+                rect.top,
+                cur_w,
+                cur_h,
+                SWP_FRAMECHANGED | SWP_SHOWWINDOW,
+            );
+        }
+
+        self.is_detached
+            .store(true, std::sync::atomic::Ordering::Relaxed);
+        eprintln!("[mpv] Window detached");
+    }
+
+    /// Re-attach the mpv window to the Tauri parent.
+    pub fn attach(&self) {
+        if !self.is_detached() {
+            return;
+        }
+        if !self.is_valid_window() {
+            return;
+        }
+        if self.is_fullscreen() {
+            self.set_fullscreen(false);
+        }
+
+        unsafe {
+            // Restore original style
+            let orig_style = WS_POPUP | WS_CLIPCHILDREN | WS_CLIPSIBLINGS;
+            SetWindowLongPtrW(self.hwnd, GWL_STYLE, orig_style as isize);
+
+            // Restore extended style
+            let orig_ex_style = WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE;
+            SetWindowLongPtrW(self.hwnd, GWL_EXSTYLE, orig_ex_style as isize);
+
+            // Restore owner
+            SetWindowLongPtrW(self.hwnd, GWLP_HWNDPARENT, self.owner);
+
+            // Restore saved geometry
+            let (x, y, w, h) = self
+                .saved_geometry
+                .lock()
+                .map(|g| *g)
+                .unwrap_or((0, 0, 1, 1));
+
+            SetWindowPos(
+                self.hwnd,
+                HWND_NOTOPMOST,
+                x,
+                y,
+                w.max(1),
+                h.max(1),
+                SWP_FRAMECHANGED | SWP_SHOWWINDOW,
+            );
+        }
+
+        self.is_detached
+            .store(false, std::sync::atomic::Ordering::Relaxed);
+        eprintln!("[mpv] Window re-attached");
+    }
+
+    fn is_valid_window(&self) -> bool {
+        unsafe { IsWindow(self.hwnd) != 0 }
     }
 }
 

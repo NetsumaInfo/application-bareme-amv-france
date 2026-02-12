@@ -3,6 +3,7 @@ import { usePlayer } from '@/hooks/usePlayer'
 import { usePlayerStore } from '@/store/usePlayerStore'
 import { formatTime } from '@/utils/formatters'
 import SubtitleSelector from './SubtitleSelector'
+import AudioTrackSelector from './AudioTrackSelector'
 
 interface PlayerControlsProps {
   compact?: boolean
@@ -124,6 +125,9 @@ export default function PlayerControls({ compact }: PlayerControlsProps) {
 
           {/* Subtitles */}
           <SubtitleSelector />
+
+          {/* Audio tracks */}
+          <AudioTrackSelector />
 
           {/* Fullscreen */}
           <button

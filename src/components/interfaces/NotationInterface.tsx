@@ -58,7 +58,7 @@ function CompactCriterion({
 export default function NotationInterface() {
   const { currentBareme, updateCriterion, getNoteForClip, getScoreForClip } = useNotationStore()
   const { clips, currentClipIndex, nextClip, previousClip, markClipScored, markDirty } = useProjectStore()
-  const { hideFinalScore, toggleFinalScore } = useUIStore()
+  const { hideFinalScore, toggleFinalScore, hideTextNotes } = useUIStore()
   const currentClip = clips[currentClipIndex]
   const inputRefs = useRef<Map<string, HTMLInputElement>>(new Map())
 
@@ -223,20 +223,22 @@ export default function NotationInterface() {
           )}
         </div>
 
-        <div className="px-3 pb-2">
-          <textarea
-            placeholder="Notes..."
-            value={note?.textNotes ?? ''}
-            onChange={(e) => {
-              if (currentClip) {
-                useNotationStore.getState().setTextNotes(currentClip.id, e.target.value)
-                markDirty()
-              }
-            }}
-            className="w-full px-2 py-1 text-[11px] bg-surface-dark border border-gray-700 rounded text-gray-300 placeholder-gray-600 focus:border-primary-500 focus:outline-none resize-y min-h-[42px]"
-            rows={2}
-          />
-        </div>
+        {!hideTextNotes && (
+          <div className="px-3 pb-2">
+            <textarea
+              placeholder="Notes..."
+              value={note?.textNotes ?? ''}
+              onChange={(e) => {
+                if (currentClip) {
+                  useNotationStore.getState().setTextNotes(currentClip.id, e.target.value)
+                  markDirty()
+                }
+              }}
+              className="w-full px-2 py-1 text-[11px] bg-surface-dark border border-gray-700 rounded text-gray-300 placeholder-gray-600 focus:border-primary-500 focus:outline-none resize-y min-h-[42px]"
+              rows={2}
+            />
+          </div>
+        )}
       </div>
     </div>
   )

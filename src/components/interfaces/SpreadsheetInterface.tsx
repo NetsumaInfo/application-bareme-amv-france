@@ -1,5 +1,5 @@
-import { useRef, useCallback, useMemo } from 'react'
-import { FolderPlus } from 'lucide-react'
+import { useRef, useCallback, useMemo, useState, useEffect } from 'react'
+import { FolderPlus, FilePlus, ArrowUpDown } from 'lucide-react'
 import { useNotationStore } from '@/store/useNotationStore'
 import { useProjectStore } from '@/store/useProjectStore'
 import { useUIStore } from '@/store/useUIStore'
@@ -15,6 +15,8 @@ interface CategoryGroup {
   totalMax: number
   color: string
 }
+
+type SortMode = 'folder' | 'alpha' | 'score'
 
 export default function SpreadsheetInterface() {
   const {
@@ -33,10 +35,33 @@ export default function SpreadsheetInterface() {
     updateProject,
     markClipScored,
     markDirty,
+    removeClip,
   } = useProjectStore()
-  const { setShowPipVideo, hideAverages } = useUIStore()
+  const { setShowPipVideo, hideAverages, hideTextNotes } = useUIStore()
   const cellRefs = useRef<Map<string, HTMLInputElement>>(new Map())
   const rowRefs = useRef<Map<number, HTMLTableRowElement>>(new Map())
+  const [sortMode, setSortMode] = useState<SortMode>('folder')
+  const [contextMenu, setContextMenu] = useState<{ clipId: string; x: number; y: number } | null>(null)
+  const contextMenuRef = useRef<HTMLDivElement | null>(null)
+
+  const openClipContextMenu = useCallback((clipId: string, x: number, y: number) => {
+    const width = 210
+    const height = 46
+    const paddedX = Math.max(8, Math.min(x, window.innerWidth - width - 8))
+    const paddedY = Math.max(8, Math.min(y, window.innerHeight - height - 8))
+    setContextMenu({ clipId, x: paddedX, y: paddedY })
+  }, [])
+
+  useEffect(() => {
+    if (!contextMenu) return
+    const handleClick = (e: MouseEvent) => {
+      if (contextMenuRef.current && !contextMenuRef.current.contains(e.target as Node)) {
+        setContextMenu(null)
+      }
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [contextMenu])
 
   const criteriaCount = currentBareme?.criteria.length ?? 0
 
@@ -67,9 +92,44 @@ export default function SpreadsheetInterface() {
     return groups
   }, [currentBareme])
 
+  const sortedClips = useMemo(() => {
+    const base = [...clips]
+    const originalIndex = new Map(clips.map((clip, index) => [clip.id, index]))
+
+    if (sortMode === 'alpha') {
+      base.sort((a, b) => {
+        const labelA = getClipPrimaryLabel(a)
+        const labelB = getClipPrimaryLabel(b)
+        const cmp = labelA.localeCompare(labelB, 'fr', { sensitivity: 'base' })
+        if (cmp !== 0) return cmp
+        return (originalIndex.get(a.id) ?? 0) - (originalIndex.get(b.id) ?? 0)
+      })
+      return base
+    }
+
+    if (sortMode === 'score') {
+      base.sort((a, b) => {
+        const scoreA = getScoreForClip(a.id)
+        const scoreB = getScoreForClip(b.id)
+        if (scoreB !== scoreA) return scoreB - scoreA
+        return (originalIndex.get(a.id) ?? 0) - (originalIndex.get(b.id) ?? 0)
+      })
+      return base
+    }
+
+    // folder mode (default)
+    base.sort((a, b) => {
+      const orderA = Number.isFinite(a.order) ? a.order : (originalIndex.get(a.id) ?? 0)
+      const orderB = Number.isFinite(b.order) ? b.order : (originalIndex.get(b.id) ?? 0)
+      if (orderA !== orderB) return orderA - orderB
+      return (originalIndex.get(a.id) ?? 0) - (originalIndex.get(b.id) ?? 0)
+    })
+    return base
+  }, [clips, sortMode, getScoreForClip])
+
   const focusCell = useCallback(
     (clipIdx: number, critIdx: number) => {
-      if (clipIdx < 0 || clipIdx >= clips.length) return
+      if (clipIdx < 0 || clipIdx >= sortedClips.length) return
       if (critIdx < 0 || critIdx >= criteriaCount) return
       const key = `${clipIdx}-${critIdx}`
       const input = cellRefs.current.get(key)
@@ -82,9 +142,14 @@ export default function SpreadsheetInterface() {
       if (row) {
         row.scrollIntoView({ block: 'nearest' })
       }
-      setCurrentClip(clipIdx)
+      // Map sorted index to original index
+      const clip = sortedClips[clipIdx]
+      const originalIndex = clips.findIndex(c => c.id === clip.id)
+      if (originalIndex !== -1) {
+        setCurrentClip(originalIndex)
+      }
     },
-    [clips.length, criteriaCount, setCurrentClip],
+    [sortedClips, clips, criteriaCount, setCurrentClip],
   )
 
   const handleKeyDown = useCallback(
@@ -92,7 +157,7 @@ export default function SpreadsheetInterface() {
       if (e.key === 'Tab' && !e.shiftKey) {
         e.preventDefault()
         if (critIdx < criteriaCount - 1) focusCell(clipIdx, critIdx + 1)
-        else if (clipIdx < clips.length - 1) focusCell(clipIdx + 1, 0)
+        else if (clipIdx < sortedClips.length - 1) focusCell(clipIdx + 1, 0)
       } else if (e.key === 'Tab' && e.shiftKey) {
         e.preventDefault()
         if (critIdx > 0) focusCell(clipIdx, critIdx - 1)
@@ -120,7 +185,7 @@ export default function SpreadsheetInterface() {
         focusCell(clipIdx + 1, critIdx)
       }
     },
-    [focusCell, clips.length, criteriaCount],
+    [focusCell, sortedClips.length, criteriaCount],
   )
 
   const handleChange = useCallback(
@@ -190,6 +255,35 @@ export default function SpreadsheetInterface() {
     }
   }
 
+  const handleImportFiles = async () => {
+    try {
+      const filePaths = await tauri.openVideoFilesDialog()
+      if (!filePaths || filePaths.length === 0) return
+
+      const newClips: Clip[] = filePaths.map((filePath, i) => {
+        const fileName = filePath.split(/[\\/]/).pop() || filePath
+        const parsed = parseClipName(fileName)
+        return {
+          id: generateId(),
+          fileName,
+          filePath,
+          displayName: parsed.displayName,
+          author: parsed.author,
+          duration: 0,
+          hasInternalSubtitles: false,
+          audioTrackCount: 1,
+          scored: false,
+          order: clips.length + i,
+        }
+      })
+
+      setClips([...clips, ...newClips])
+    } catch (e) {
+      console.error('Failed to import files:', e)
+      alert(`Erreur lors de l'import: ${e}`)
+    }
+  }
+
   const getCategoryScore = useCallback(
     (clipId: string, group: CategoryGroup): number => {
       const note = getNoteForClip(clipId)
@@ -220,13 +314,22 @@ export default function SpreadsheetInterface() {
         <p className="text-gray-500 text-sm">
           Importez des vidéos pour commencer
         </p>
-        <button
-          onClick={handleImportFolder}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary-600 hover:bg-primary-500 text-white text-sm font-medium transition-colors"
-        >
-          <FolderPlus size={16} />
-          Importer un dossier
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={handleImportFolder}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary-600 hover:bg-primary-500 text-white text-sm font-medium transition-colors"
+          >
+            <FolderPlus size={16} />
+            Importer un dossier
+          </button>
+          <button
+            onClick={handleImportFiles}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg border border-primary-600 text-primary-500 hover:bg-primary-600/10 text-sm font-medium transition-colors"
+          >
+            <FilePlus size={16} />
+            Importer des fichiers
+          </button>
+        </div>
       </div>
     )
   }
@@ -243,6 +346,25 @@ export default function SpreadsheetInterface() {
 
   return (
     <div className="flex flex-col h-full">
+      {/* Toolbar */}
+      <div className="flex items-center justify-end gap-2 px-2 py-1.5 bg-surface-dark border-b border-gray-700">
+        <button
+          onClick={() => {
+            const modes: SortMode[] = ['folder', 'alpha', 'score']
+            const currentIndex = modes.indexOf(sortMode)
+            const nextIndex = (currentIndex + 1) % modes.length
+            setSortMode(modes[nextIndex])
+          }}
+          className="flex items-center gap-1.5 px-2 py-1 rounded border border-gray-700 bg-surface text-[11px] text-gray-300 hover:border-primary-500 hover:bg-surface-light transition-colors"
+          title="Changer le mode de tri"
+        >
+          <ArrowUpDown size={12} className="text-gray-500" />
+          <span>
+            {sortMode === 'folder' ? 'Ordre du dossier' : sortMode === 'alpha' ? 'Alphabétique' : 'Par note'}
+          </span>
+        </button>
+      </div>
+
       {/* Table */}
       <div className="flex-1 overflow-auto">
         <table className="w-full border-collapse text-xs">
@@ -311,10 +433,11 @@ export default function SpreadsheetInterface() {
           </thead>
 
           <tbody>
-            {clips.map((clip, clipIdx) => {
+            {sortedClips.map((clip, clipIdx) => {
               const note = getNoteForClip(clip.id)
               const totalScore = getScoreForClip(clip.id)
-              const isActive = clipIdx === currentClipIndex
+              const currentClip = clips[currentClipIndex]
+              const isActive = currentClip?.id === clip.id
 
               return (
                 <tr
@@ -327,7 +450,15 @@ export default function SpreadsheetInterface() {
                         ? 'bg-surface-dark/30'
                         : 'bg-transparent'
                   } hover:bg-primary-600/10`}
-                  onClick={() => setCurrentClip(clipIdx)}
+                  onClick={() => {
+                    const originalIndex = clips.findIndex(c => c.id === clip.id)
+                    if (originalIndex !== -1) setCurrentClip(originalIndex)
+                  }}
+                  onContextMenu={(e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    openClipContextMenu(clip.id, e.clientX, e.clientY)
+                  }}
                 >
                   <td
                     className={`px-2 py-1 text-center font-mono text-[10px] text-gray-500 border-r border-gray-800 sticky left-0 z-10 ${
@@ -342,7 +473,7 @@ export default function SpreadsheetInterface() {
                   </td>
 
                   <td
-                    className={`px-2 py-1 border-r border-gray-800 sticky left-7 z-10 ${
+                    className={`px-2 py-1 border-r border-gray-800 sticky left-7 z-10 group/clip ${
                       isActive
                         ? 'bg-primary-900/30'
                         : clipIdx % 2 === 0
@@ -350,12 +481,17 @@ export default function SpreadsheetInterface() {
                           : 'bg-surface'
                     }`}
                     onDoubleClick={() => setShowPipVideo(true)}
+                    onContextMenu={(e) => {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      openClipContextMenu(clip.id, e.clientX, e.clientY)
+                    }}
                   >
                     <div className="flex items-center gap-1 min-w-0">
                       {clip.scored && (
                         <span className="w-1.5 h-1.5 rounded-full bg-green-500 shrink-0" />
                       )}
-                      <div className="truncate flex flex-col min-w-0 leading-tight">
+                      <div className="truncate flex flex-col min-w-0 leading-tight flex-1">
                         <span className="truncate text-primary-300 text-[11px] font-semibold">
                           {getClipPrimaryLabel(clip)}
                         </span>
@@ -393,7 +529,10 @@ export default function SpreadsheetInterface() {
                             handleChange(clip.id, criterion.id, e.target.value)
                           }
                           onKeyDown={(e) => handleKeyDown(e, clipIdx, critIdx)}
-                          onFocus={() => setCurrentClip(clipIdx)}
+                          onFocus={() => {
+                            const originalIndex = clips.findIndex(c => c.id === clip.id)
+                            if (originalIndex !== -1) setCurrentClip(originalIndex)
+                          }}
                           onBlur={() => handleBlur(clip.id)}
                           onClick={(e) => e.stopPropagation()}
                           className={`amv-soft-number w-full px-1 py-0.5 text-center rounded text-xs font-mono transition-colors focus-visible:outline-none ${
@@ -485,7 +624,7 @@ export default function SpreadsheetInterface() {
       </div>
 
       {/* Notes for selected clip */}
-      {currentClip && (
+      {currentClip && !hideTextNotes && (
         <div className="px-3 py-2 border-t border-gray-700 bg-surface shrink-0">
           <div className="flex items-center gap-2 mb-1">
             <span className="text-[10px] text-gray-500 uppercase tracking-wider">
@@ -523,6 +662,25 @@ export default function SpreadsheetInterface() {
             className="w-full px-2 py-1.5 text-xs bg-surface-dark border border-gray-700 rounded text-gray-300 placeholder-gray-600 focus:border-primary-500 focus:outline-none resize-y min-h-[40px]"
             rows={2}
           />
+        </div>
+      )}
+
+      {/* Context menu */}
+      {contextMenu && (
+        <div
+          ref={contextMenuRef}
+          className="fixed z-50 bg-gray-900 border border-gray-700 rounded-lg shadow-xl py-1 min-w-[140px]"
+          style={{ left: contextMenu.x, top: contextMenu.y }}
+        >
+          <button
+            onClick={() => {
+              removeClip(contextMenu.clipId)
+              setContextMenu(null)
+            }}
+            className="w-full text-left px-3 py-1.5 text-[11px] text-red-400 hover:bg-gray-800 transition-colors"
+          >
+            Supprimer la vidéo
+          </button>
         </div>
       )}
     </div>

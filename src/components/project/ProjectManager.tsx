@@ -159,6 +159,38 @@ export default function ProjectManager() {
     }
   }
 
+  const handleImportFiles = async () => {
+    setOpen(false)
+    if (!currentProject) return
+
+    try {
+      const filePaths = await tauri.openVideoFilesDialog()
+      if (!filePaths || filePaths.length === 0) return
+
+      const newClips: Clip[] = filePaths.map((filePath, i) => {
+        const fileName = filePath.split(/[\\/]/).pop() || filePath
+        const parsed = parseClipName(fileName)
+        return {
+          id: generateId(),
+          fileName,
+          filePath,
+          displayName: parsed.displayName,
+          author: parsed.author,
+          duration: 0,
+          hasInternalSubtitles: false,
+          audioTrackCount: 1,
+          scored: false,
+          order: clips.length + i,
+        }
+      })
+
+      setClips([...clips, ...newClips])
+    } catch (e) {
+      console.error('Failed to import files:', e)
+      alert(`Erreur lors de l'import: ${e}`)
+    }
+  }
+
   const handleExport = async () => {
     setOpen(false)
     if (!currentProject) return
@@ -247,8 +279,13 @@ export default function ProjectManager() {
               <div className="border-t border-gray-700 my-1" />
               <MenuItem
                 icon={<FolderPlus size={13} />}
-                label="Importer des vidéos..."
+                label="Importer un dossier..."
                 onClick={handleImportFolder}
+              />
+              <MenuItem
+                icon={<FilePlus size={13} />}
+                label="Importer des fichiers..."
+                onClick={handleImportFiles}
               />
               <div className="border-t border-gray-700 my-1" />
               <MenuItem

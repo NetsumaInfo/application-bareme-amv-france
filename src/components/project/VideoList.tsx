@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from 'react'
 import { FolderPlus, Check, Circle } from 'lucide-react'
 import { useProjectStore } from '@/store/useProjectStore'
 import { useNotationStore } from '@/store/useNotationStore'
@@ -6,9 +7,22 @@ import { generateId, parseClipName, getClipPrimaryLabel, getClipSecondaryLabel }
 import type { Clip } from '@/types/project'
 
 export default function VideoList() {
-  const { clips, currentClipIndex, setCurrentClip, setClips, currentProject, updateProject } =
+  const { clips, currentClipIndex, setCurrentClip, setClips, currentProject, updateProject, removeClip } =
     useProjectStore()
   const { isClipComplete } = useNotationStore()
+  const [contextMenu, setContextMenu] = useState<{ clipId: string; x: number; y: number } | null>(null)
+  const contextMenuRef = useRef<HTMLDivElement | null>(null)
+
+  useEffect(() => {
+    if (!contextMenu) return
+    const handleOutside = (event: MouseEvent) => {
+      const target = event.target as Node
+      if (contextMenuRef.current?.contains(target)) return
+      setContextMenu(null)
+    }
+    document.addEventListener('mousedown', handleOutside)
+    return () => document.removeEventListener('mousedown', handleOutside)
+  }, [contextMenu])
 
   const handleImportFolder = async () => {
     try {
@@ -77,6 +91,15 @@ export default function VideoList() {
             <button
               key={clip.id}
               onClick={() => setCurrentClip(index)}
+              onContextMenu={(event) => {
+                event.preventDefault()
+                event.stopPropagation()
+                const width = 220
+                const height = 46
+                const x = Math.max(8, Math.min(event.clientX, window.innerWidth - width - 8))
+                const y = Math.max(8, Math.min(event.clientY, window.innerHeight - height - 8))
+                setContextMenu({ clipId: clip.id, x, y })
+              }}
               className={`w-full text-left px-3 py-2 text-xs flex items-center gap-2 border-b border-gray-800 transition-colors ${
                 isActive
                   ? 'bg-primary-600/20 text-primary-300 border-l-2 border-l-primary-500'
@@ -101,6 +124,24 @@ export default function VideoList() {
           )
         })}
       </div>
+
+      {contextMenu && (
+        <div
+          ref={contextMenuRef}
+          className="fixed z-[95] bg-gray-900 border border-gray-700 rounded-lg shadow-xl py-1 min-w-[210px]"
+          style={{ left: contextMenu.x, top: contextMenu.y }}
+        >
+          <button
+            onClick={() => {
+              removeClip(contextMenu.clipId)
+              setContextMenu(null)
+            }}
+            className="w-full text-left px-3 py-1.5 text-[11px] text-red-400 hover:bg-gray-800 transition-colors"
+          >
+            Supprimer la vidéo
+          </button>
+        </div>
+      )}
     </div>
   )
 }

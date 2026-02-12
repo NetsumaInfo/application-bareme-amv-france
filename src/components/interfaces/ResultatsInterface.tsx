@@ -1,7 +1,8 @@
-import { useMemo, useState } from 'react'
-import { Upload, X, Users, ArrowUpDown } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Upload, Users, ArrowUpDown } from 'lucide-react'
 import { useNotationStore } from '@/store/useNotationStore'
 import { useProjectStore } from '@/store/useProjectStore'
+import { useUIStore } from '@/store/useUIStore'
 import * as tauri from '@/services/tauri'
 import { getClipPrimaryLabel, getClipSecondaryLabel } from '@/utils/formatters'
 import { withAlpha } from '@/utils/colors'
@@ -16,7 +17,7 @@ import {
 import type { ImportedJudgeData, ImportedJudgeNote, ImportedJudgeCriterionScore } from '@/types/project'
 import type { Criterion } from '@/types/bareme'
 
-type SortMode = 'folder' | 'alpha'
+type SortMode = 'folder' | 'alpha' | 'score'
 
 function normalizeImportedJudge(
   raw: unknown,
@@ -119,9 +120,15 @@ function normalizeImportedJudge(
     }
 
     const maybeFinal = Number(noteRaw.finalScore)
+    const textNotes =
+      typeof noteRaw.textNotes === 'string'
+        ? noteRaw.textNotes
+        : typeof noteRaw.text_notes === 'string'
+          ? noteRaw.text_notes
+          : undefined
     notes[targetClipId] = Number.isFinite(maybeFinal)
-      ? { scores, finalScore: maybeFinal }
-      : { scores }
+      ? { scores, finalScore: maybeFinal, textNotes }
+      : { scores, textNotes }
   }
 
   if (Object.keys(notes).length === 0) return null
@@ -224,7 +231,9 @@ export default function ResultatsInterface() {
   const currentBareme = useNotationStore((state) => state.currentBareme)
   const notes = useNotationStore((state) => state.notes)
   const updateCriterion = useNotationStore((state) => state.updateCriterion)
+  const setTextNotes = useNotationStore((state) => state.setTextNotes)
   const isClipComplete = useNotationStore((state) => state.isClipComplete)
+  const { switchTab, switchInterface, setShowPipVideo, hideTextNotes } = useUIStore()
 
   const {
     currentProject,
@@ -233,11 +242,18 @@ export default function ResultatsInterface() {
     setImportedJudges,
     markDirty,
     markClipScored,
+    setCurrentClip,
+    removeClip,
   } = useProjectStore()
 
   const [importing, setImporting] = useState(false)
   const [sortMode, setSortMode] = useState<SortMode>('folder')
   const [draftCells, setDraftCells] = useState<Record<string, string>>({})
+  const [selectedClipId, setSelectedClipId] = useState<string | null>(null)
+  const [memberContextMenu, setMemberContextMenu] = useState<{ index: number; x: number; y: number } | null>(null)
+  const [clipContextMenu, setClipContextMenu] = useState<{ clipId: string; x: number; y: number } | null>(null)
+  const memberContextMenuRef = useRef<HTMLDivElement | null>(null)
+  const clipContextMenuRef = useRef<HTMLDivElement | null>(null)
 
   const categoryGroups = useMemo(
     () => (currentBareme ? buildCategoryGroups(currentBareme) : []),
@@ -255,6 +271,16 @@ export default function ResultatsInterface() {
     [],
   )
 
+  const getClipAverageTotal = useCallback((clipId: string) => {
+    if (!currentBareme) return 0
+    const totals = judges.map((judge) =>
+      getNoteTotal(judge.notes[clipId] as NoteLike | undefined, currentBareme),
+    )
+    return totals.length > 0
+      ? totals.reduce((sum, v) => sum + v, 0) / totals.length
+      : 0
+  }, [currentBareme, judges])
+
   const sortedClips = useMemo(() => {
     const base = [...clips]
     const originalIndex = new Map(clips.map((clip, index) => [clip.id, index]))
@@ -270,6 +296,16 @@ export default function ResultatsInterface() {
       return base
     }
 
+    if (sortMode === 'score') {
+      base.sort((a, b) => {
+        const scoreA = getClipAverageTotal(a.id)
+        const scoreB = getClipAverageTotal(b.id)
+        if (scoreB !== scoreA) return scoreB - scoreA
+        return (originalIndex.get(a.id) ?? 0) - (originalIndex.get(b.id) ?? 0)
+      })
+      return base
+    }
+
     base.sort((a, b) => {
       const orderA = Number.isFinite(a.order) ? a.order : (originalIndex.get(a.id) ?? 0)
       const orderB = Number.isFinite(b.order) ? b.order : (originalIndex.get(b.id) ?? 0)
@@ -277,7 +313,35 @@ export default function ResultatsInterface() {
       return (originalIndex.get(a.id) ?? 0) - (originalIndex.get(b.id) ?? 0)
     })
     return base
-  }, [clips, collator, sortMode])
+  }, [clips, collator, sortMode, getClipAverageTotal])
+
+  useEffect(() => {
+    if (!selectedClipId || !sortedClips.some((clip) => clip.id === selectedClipId)) {
+      setSelectedClipId(sortedClips[0]?.id ?? null)
+    }
+  }, [sortedClips, selectedClipId])
+
+  useEffect(() => {
+    if (!memberContextMenu) return
+    const handleOutside = (event: MouseEvent) => {
+      const target = event.target as Node
+      if (memberContextMenuRef.current?.contains(target)) return
+      setMemberContextMenu(null)
+    }
+    document.addEventListener('mousedown', handleOutside)
+    return () => document.removeEventListener('mousedown', handleOutside)
+  }, [memberContextMenu])
+
+  useEffect(() => {
+    if (!clipContextMenu) return
+    const handleOutside = (event: MouseEvent) => {
+      const target = event.target as Node
+      if (clipContextMenuRef.current?.contains(target)) return
+      setClipContextMenu(null)
+    }
+    document.addEventListener('mousedown', handleOutside)
+    return () => document.removeEventListener('mousedown', handleOutside)
+  }, [clipContextMenu])
 
   const rows = useMemo(() => {
     if (!currentBareme) return []
@@ -306,6 +370,15 @@ export default function ResultatsInterface() {
       }
     })
   }, [categoryGroups, currentBareme, judges, sortedClips])
+
+  const openClipInNotation = useCallback((clipId: string) => {
+    const index = clips.findIndex((clip) => clip.id === clipId)
+    if (index < 0) return
+    setCurrentClip(index)
+    setShowPipVideo(true)
+    switchInterface('spreadsheet')
+    switchTab('notation')
+  }, [clips, setCurrentClip, setShowPipVideo, switchInterface, switchTab])
 
   const handleImportJudgeJson = async () => {
     if (importing || clips.length === 0) return
@@ -337,6 +410,7 @@ export default function ResultatsInterface() {
 
   const removeImportedJudge = (index: number) => {
     setImportedJudges(importedJudges.filter((_, i) => i !== index))
+    setMemberContextMenu(null)
   }
 
   const getCellKey = (clipId: string, category: string, judgeKey: string) =>
@@ -438,6 +512,8 @@ export default function ResultatsInterface() {
     )
   }
 
+  const selectedClip = sortedClips.find((clip) => clip.id === selectedClipId) ?? sortedClips[0]
+
   return (
     <div className="flex flex-col h-full p-3 gap-3">
       <div className="flex flex-wrap items-center gap-2">
@@ -455,17 +531,17 @@ export default function ResultatsInterface() {
           {judges.length} juge{judges.length > 1 ? 's' : ''}
         </div>
 
-        <div className="relative">
-          <ArrowUpDown size={12} className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-500" />
-          <select
-            value={sortMode}
-            onChange={(event) => setSortMode(event.target.value as SortMode)}
-            className="pl-7 pr-2 py-1 rounded border border-gray-700 bg-surface text-[11px] text-gray-300 focus:border-primary-500 outline-none"
-          >
-            <option value="folder">Ordre du dossier</option>
-            <option value="alpha">Alphabétique</option>
-          </select>
-        </div>
+        <button
+          onClick={() => {
+            const modes: SortMode[] = ['folder', 'alpha', 'score']
+            const idx = modes.indexOf(sortMode)
+            setSortMode(modes[(idx + 1) % modes.length])
+          }}
+          className="flex items-center gap-1.5 pl-2 pr-2 py-1 rounded border border-gray-700 bg-surface text-[11px] text-gray-300 hover:border-primary-500 hover:bg-surface-light transition-colors"
+        >
+          <ArrowUpDown size={12} className="text-gray-500" />
+          <span>{sortMode === 'folder' ? 'Ordre du dossier' : sortMode === 'alpha' ? 'Alphabétique' : 'Par moyenne'}</span>
+        </button>
 
         {currentJudge && (
           <span className="inline-flex items-center gap-1 text-[11px] px-2 py-1 rounded border border-primary-500/40 bg-primary-600/10 text-primary-300">
@@ -474,24 +550,18 @@ export default function ResultatsInterface() {
         )}
 
         {importedJudges.map((judge, index) => (
-          <span
+          <button
             key={`${judge.judgeName}-${index}`}
-            className="inline-flex items-center gap-1 text-[11px] px-2 py-1 rounded border border-gray-700 bg-surface-dark text-gray-300"
+            onContextMenu={(event) => {
+              event.preventDefault()
+              setMemberContextMenu({ index, x: event.clientX, y: event.clientY })
+            }}
+            className="inline-flex items-center gap-1 text-[11px] px-2 py-1 rounded border border-gray-700 bg-surface-dark text-gray-300 hover:border-gray-500 transition-colors"
+            title="Clic droit pour options"
           >
             {judge.judgeName}
-            <button
-              onClick={() => removeImportedJudge(index)}
-              className="text-gray-500 hover:text-white transition-colors"
-              title="Retirer ce juge importé"
-            >
-              <X size={12} />
-            </button>
-          </span>
+          </button>
         ))}
-      </div>
-
-      <div className="text-[10px] text-gray-500 px-1">
-        Clique dans une cellule de catégorie pour modifier la note (toi + juges importés).
       </div>
 
       <div className="flex-1 overflow-auto rounded-lg border border-gray-700">
@@ -506,7 +576,7 @@ export default function ResultatsInterface() {
               </th>
               <th
                 rowSpan={2}
-                className="px-2 py-1.5 text-left text-[10px] font-medium text-gray-500 border-r border-b border-gray-700 min-w-[180px] bg-surface-dark sticky left-8 z-20"
+                className="px-2 py-1.5 text-left text-[10px] font-medium text-gray-500 border-r border-b border-gray-700 min-w-[120px] max-w-[180px] bg-surface-dark sticky left-8 z-20"
               >
                 Clip
               </th>
@@ -569,19 +639,43 @@ export default function ResultatsInterface() {
           </thead>
 
           <tbody>
-            {rows.map((row, index) => (
-              <tr
-                key={row.clip.id}
-                className={index % 2 === 0 ? 'bg-surface-dark/20' : 'bg-transparent'}
-              >
+            {rows.map((row, index) => {
+              const isSelected = selectedClipId === row.clip.id
+              return (
+                <tr
+                  key={row.clip.id}
+                  onClick={() => setSelectedClipId(row.clip.id)}
+                  className={`cursor-pointer transition-colors ${
+                    isSelected
+                      ? 'bg-primary-600/12'
+                      : index % 2 === 0
+                        ? 'bg-surface-dark/20'
+                        : 'bg-transparent'
+                  } hover:bg-primary-600/8`}
+                >
                 <td className="px-2 py-1 text-center text-[10px] text-gray-500 border-r border-gray-800 sticky left-0 z-10 bg-surface-dark">
                   {index + 1}
                 </td>
-                <td className="px-2 py-1 border-r border-gray-800 sticky left-8 z-10 bg-surface-dark">
-                  <div className="truncate">
-                    <span className="text-primary-300 font-semibold">{getClipPrimaryLabel(row.clip)}</span>
+                <td
+                  className="px-2 py-1 border-r border-gray-800 sticky left-8 z-10 bg-surface-dark max-w-[180px]"
+                  onDoubleClick={(event) => {
+                    event.stopPropagation()
+                    openClipInNotation(row.clip.id)
+                  }}
+                  onContextMenu={(event) => {
+                    event.preventDefault()
+                    event.stopPropagation()
+                    const width = 210
+                    const height = 46
+                    const x = Math.max(8, Math.min(event.clientX, window.innerWidth - width - 8))
+                    const y = Math.max(8, Math.min(event.clientY, window.innerHeight - height - 8))
+                    setClipContextMenu({ clipId: row.clip.id, x, y })
+                  }}
+                >
+                  <div className="flex flex-col min-w-0 leading-tight">
+                    <span className="truncate text-primary-300 text-[11px] font-semibold">{getClipPrimaryLabel(row.clip)}</span>
                     {getClipSecondaryLabel(row.clip) && (
-                      <span className="text-gray-500 ml-1">- {getClipSecondaryLabel(row.clip)}</span>
+                      <span className="truncate text-[9px] text-gray-500">{getClipSecondaryLabel(row.clip)}</span>
                     )}
                   </div>
                 </td>
@@ -645,11 +739,85 @@ export default function ResultatsInterface() {
                 <td className="px-2 py-1 text-center border-r border-gray-700 font-mono font-bold text-white">
                   {row.averageTotal.toFixed(1)}
                 </td>
-              </tr>
-            ))}
+                </tr>
+              )
+            })}
           </tbody>
         </table>
       </div>
+
+      {!hideTextNotes && selectedClip && (
+        <div className="shrink-0 border border-gray-700 rounded-lg bg-surface overflow-hidden">
+          <div className="px-3 py-2 border-b border-gray-700 text-[11px] text-gray-400">
+            Notes du clip
+            <span className="text-primary-300 ml-1">{getClipPrimaryLabel(selectedClip)}</span>
+          </div>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-2 p-2">
+            {judges.map((judge) => {
+              const judgeNote = judge.notes[selectedClip.id] as (NoteLike & { textNotes?: string }) | undefined
+              const noteText = judgeNote?.textNotes ?? ''
+              return (
+                <div key={`note-${judge.key}`} className="rounded border border-gray-700 bg-surface-dark p-2">
+                  <div className="text-[10px] text-gray-400 mb-1">
+                    <span className={judge.isCurrentJudge ? 'text-primary-300' : 'text-gray-300'}>
+                      {judge.judgeName}
+                    </span>
+                  </div>
+                  {judge.isCurrentJudge ? (
+                    <textarea
+                      value={noteText}
+                      onChange={(event) => {
+                        setTextNotes(selectedClip.id, event.target.value)
+                        markDirty()
+                      }}
+                      className="w-full px-2 py-1 text-[11px] bg-surface border border-gray-700 rounded text-gray-300 placeholder-gray-600 focus:border-primary-500 focus:outline-none resize-y min-h-[52px]"
+                      rows={2}
+                      placeholder="Notes libres..."
+                    />
+                  ) : (
+                    <p className="text-[11px] text-gray-300 min-h-[52px] whitespace-pre-wrap">
+                      {noteText || 'Aucune note'}
+                    </p>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
+      {memberContextMenu && (
+        <div
+          ref={memberContextMenuRef}
+          className="fixed z-[90] bg-gray-900 border border-gray-700 rounded-lg shadow-xl py-1 min-w-[210px]"
+          style={{ left: memberContextMenu.x, top: memberContextMenu.y }}
+        >
+          <button
+            onClick={() => removeImportedJudge(memberContextMenu.index)}
+            className="w-full text-left px-3 py-1.5 text-[11px] text-red-400 hover:bg-gray-800 transition-colors"
+          >
+            Supprimer le membre sélectionné
+          </button>
+        </div>
+      )}
+
+      {clipContextMenu && (
+        <div
+          ref={clipContextMenuRef}
+          className="fixed z-[90] bg-gray-900 border border-gray-700 rounded-lg shadow-xl py-1 min-w-[210px]"
+          style={{ left: clipContextMenu.x, top: clipContextMenu.y }}
+        >
+          <button
+            onClick={() => {
+              removeClip(clipContextMenu.clipId)
+              setClipContextMenu(null)
+            }}
+            className="w-full text-left px-3 py-1.5 text-[11px] text-red-400 hover:bg-gray-800 transition-colors"
+          >
+            Supprimer la vidéo
+          </button>
+        </div>
+      )}
     </div>
   )
 }

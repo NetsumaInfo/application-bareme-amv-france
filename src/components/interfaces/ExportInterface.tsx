@@ -262,17 +262,13 @@ export default function ExportInterface() {
 
           <div>
             <label className="block text-xs text-gray-400 mb-1">Tri</label>
-            <div className="relative">
-              <ArrowUpDown size={12} className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-500" />
-              <select
-                value={sortMode}
-                onChange={(event) => setSortMode(event.target.value as SortMode)}
-                className="w-full pl-7 pr-2 py-1.5 rounded border border-gray-700 bg-surface-dark text-xs text-white focus:border-primary-500 focus:outline-none"
-              >
-                <option value="folder">Ordre du dossier</option>
-                <option value="alpha">Alphabétique</option>
-              </select>
-            </div>
+            <button
+              onClick={() => setSortMode(sortMode === 'folder' ? 'alpha' : 'folder')}
+              className="w-full flex items-center gap-2 px-2 py-1.5 rounded border border-gray-700 bg-surface-dark text-xs text-white hover:border-primary-500 hover:bg-surface-light transition-colors"
+            >
+              <ArrowUpDown size={12} className="text-gray-500" />
+              <span>{sortMode === 'folder' ? 'Ordre du dossier' : 'Alphabétique'}</span>
+            </button>
           </div>
 
           <div>

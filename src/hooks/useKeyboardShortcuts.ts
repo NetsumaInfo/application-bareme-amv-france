@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import { normalizeShortcutFromEvent } from '@/utils/shortcuts'
 
 type ShortcutHandler = () => void
 type ShortcutMap = Record<string, ShortcutHandler>
@@ -6,11 +7,8 @@ type ShortcutMap = Record<string, ShortcutHandler>
 export function useKeyboardShortcuts(shortcuts: ShortcutMap, globalShortcuts?: ShortcutMap) {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      let key = ''
-      if (e.ctrlKey) key += 'ctrl+'
-      if (e.shiftKey) key += 'shift+'
-      if (e.altKey) key += 'alt+'
-      key += e.key.toLowerCase()
+      const key = normalizeShortcutFromEvent(e)
+      if (!key) return
 
       // Check global shortcuts first (always fire)
       if (globalShortcuts && globalShortcuts[key]) {

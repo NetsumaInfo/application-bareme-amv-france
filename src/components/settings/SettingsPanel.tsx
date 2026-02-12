@@ -3,7 +3,12 @@ import { X, Table, LayoutGrid, Maximize2 } from 'lucide-react'
 import { useProjectStore } from '@/store/useProjectStore'
 import { useNotationStore } from '@/store/useNotationStore'
 import { useUIStore } from '@/store/useUIStore'
-import { sanitizeColor, withAlpha, CATEGORY_COLOR_PRESETS } from '@/utils/colors'
+import {
+  SHORTCUT_DEFINITIONS,
+  normalizeShortcutFromEvent,
+  formatShortcutDisplay,
+  type ShortcutAction,
+} from '@/utils/shortcuts'
 import type { InterfaceMode } from '@/types/notation'
 
 function Toggle({
@@ -31,28 +36,6 @@ function Toggle({
 
 type Tab = 'general' | 'notation' | 'raccourcis'
 
-const DEFAULT_SHORTCUTS: { action: string; label: string; defaultKeys: string }[] = [
-  { action: 'togglePause', label: 'Lecture / Pause', defaultKeys: 'Espace' },
-  { action: 'seekBack', label: 'Reculer 5s', defaultKeys: '←' },
-  { action: 'seekForward', label: 'Avancer 5s', defaultKeys: '→' },
-  { action: 'seekBackLong', label: 'Reculer 30s', defaultKeys: 'Shift + ←' },
-  { action: 'seekForwardLong', label: 'Avancer 30s', defaultKeys: 'Shift + →' },
-  { action: 'nextClip', label: 'Clip suivant', defaultKeys: 'N' },
-  { action: 'prevClip', label: 'Clip précédent', defaultKeys: 'P' },
-  { action: 'tabNotation', label: 'Onglet Notation', defaultKeys: 'Ctrl + 1' },
-  { action: 'tabResultats', label: 'Onglet Résultat', defaultKeys: 'Ctrl + 2' },
-  { action: 'tabExport', label: 'Onglet Export', defaultKeys: 'Ctrl + 3' },
-  { action: 'fullscreen', label: 'Plein écran vidéo', defaultKeys: 'F11' },
-  { action: 'exitFullscreen', label: 'Quitter le plein écran', defaultKeys: 'Escape' },
-  { action: 'save', label: 'Sauvegarder', defaultKeys: 'Ctrl + S' },
-  { action: 'saveAs', label: 'Sauvegarder sous...', defaultKeys: 'Ctrl + Alt + S' },
-  { action: 'newProject', label: 'Nouveau projet', defaultKeys: 'Ctrl + N' },
-  { action: 'openProject', label: 'Ouvrir un projet', defaultKeys: 'Ctrl + O' },
-  { action: 'zoomIn', label: 'Zoom +', defaultKeys: 'Ctrl + =' },
-  { action: 'zoomOut', label: 'Zoom -', defaultKeys: 'Ctrl + -' },
-  { action: 'resetZoom', label: 'Réinitialiser le zoom', defaultKeys: 'Ctrl + 0' },
-]
-
 const INTERFACE_OPTIONS: { mode: InterfaceMode; label: string; icon: typeof Table }[] = [
   { mode: 'spreadsheet', label: 'Tableur', icon: Table },
   { mode: 'modern', label: 'Moderne', icon: LayoutGrid },
@@ -67,6 +50,8 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
     toggleFinalScore,
     hideAverages,
     toggleAverages,
+    hideTextNotes,
+    toggleTextNotes,
     setShowBaremeEditor,
     currentInterface,
     switchInterface,
@@ -75,9 +60,12 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
     zoomMode,
     setZoomMode,
     projectsFolderPath,
+    shortcutBindings,
+    setShortcut,
+    resetShortcuts,
   } = useUIStore()
   const [activeTab, setActiveTab] = useState<Tab>('general')
-  const [editingShortcut, setEditingShortcut] = useState<string | null>(null)
+  const [editingShortcut, setEditingShortcut] = useState<ShortcutAction | null>(null)
 
   const settings = currentProject?.settings
 
@@ -98,12 +86,12 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
         return
       }
 
-      // Don't complete on modifier-only press
-      if (['Control', 'Shift', 'Alt', 'Meta'].includes(e.key)) return
-
+      const shortcut = normalizeShortcutFromEvent(e)
+      if (!shortcut) return
+      setShortcut(editingShortcut, shortcut)
       setEditingShortcut(null)
     },
-    [editingShortcut],
+    [editingShortcut, setShortcut],
   )
 
   useEffect(() => {
@@ -112,36 +100,6 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
       return () => window.removeEventListener('keydown', handleShortcutCapture, true)
     }
   }, [editingShortcut, handleShortcutCapture])
-
-  // Get categories with colors for notation tab
-  const categories = currentBareme
-    ? (() => {
-        const cats = new Map<string, { count: number; total: number; color: string }>()
-        const order: string[] = []
-        for (const c of currentBareme.criteria) {
-          const cat = c.category || 'Général'
-          if (!cats.has(cat)) {
-            const idx = order.length
-            order.push(cat)
-            cats.set(cat, {
-              count: 0,
-              total: 0,
-              color: sanitizeColor(
-                currentBareme.categoryColors?.[cat],
-                CATEGORY_COLOR_PRESETS[idx % CATEGORY_COLOR_PRESETS.length],
-              ),
-            })
-          }
-          const existing = cats.get(cat)!
-          cats.set(cat, {
-            ...existing,
-            count: existing.count + 1,
-            total: existing.total + (c.max ?? 10),
-          })
-        }
-        return Array.from(cats.entries()).map(([name, data]) => ({ name, ...data }))
-      })()
-    : []
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
@@ -370,56 +328,6 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                 )}
               </div>
 
-              {/* Criteria list */}
-              {currentBareme && (
-                <div>
-                  <label className="text-xs font-medium text-gray-400 mb-2 block">
-                    Critères
-                  </label>
-                  <div className="space-y-1">
-                    {currentBareme.criteria.map((c) => {
-                      const catColor = sanitizeColor(
-                        currentBareme.categoryColors?.[c.category || ''],
-                        CATEGORY_COLOR_PRESETS[0],
-                      )
-                      return (
-                        <div
-                          key={c.id}
-                          className="flex items-center gap-2 px-3 py-1.5 rounded text-xs"
-                          style={{ backgroundColor: withAlpha(catColor, 0.08) }}
-                        >
-                          <span
-                            className="w-2 h-2 rounded-full shrink-0"
-                            style={{ backgroundColor: catColor }}
-                          />
-                          <span className="text-gray-300 flex-1 truncate">{c.name}</span>
-                          <span className="text-gray-500 font-mono">/{c.max ?? 10}</span>
-                        </div>
-                      )
-                    })}
-                  </div>
-                </div>
-              )}
-
-              {/* Category summary */}
-              {categories.length > 0 && (
-                <div className="flex flex-wrap gap-1.5">
-                  {categories.map(({ name, count, total, color }) => (
-                    <span
-                      key={name}
-                      className="text-[10px] px-2 py-1 rounded border"
-                      style={{
-                        borderColor: withAlpha(color, 0.45),
-                        backgroundColor: withAlpha(color, 0.15),
-                        color,
-                      }}
-                    >
-                      {name}: {count} crit. — /{total}
-                    </span>
-                  ))}
-                </div>
-              )}
-
               {/* Hide score & averages */}
               <div className="space-y-3 pt-2 border-t border-gray-700">
                 <div className="flex items-center justify-between">
@@ -444,6 +352,17 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                   </div>
                   <Toggle checked={hideAverages} onChange={toggleAverages} />
                 </div>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="text-sm text-gray-300 block">
+                      Masquer la prise de notes
+                    </span>
+                    <span className="text-[10px] text-gray-500">
+                      Cache les zones de texte "Notes libres"
+                    </span>
+                  </div>
+                  <Toggle checked={hideTextNotes} onChange={toggleTextNotes} />
+                </div>
               </div>
             </>
           )}
@@ -451,7 +370,7 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
           {activeTab === 'raccourcis' && (
             <>
               <div className="space-y-1">
-                {DEFAULT_SHORTCUTS.map((shortcut) => (
+                {SHORTCUT_DEFINITIONS.map((shortcut) => (
                   <div
                     key={shortcut.action}
                     className="flex items-center justify-between px-2 py-1.5 rounded bg-surface-dark/50 text-[11px]"
@@ -467,7 +386,7 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                       >
                         {editingShortcut === shortcut.action
                           ? 'Appuyez...'
-                          : shortcut.defaultKeys}
+                          : formatShortcutDisplay(shortcutBindings[shortcut.action])}
                       </kbd>
                       <button
                         onClick={() =>
@@ -485,7 +404,10 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
               </div>
 
               <button
-                onClick={() => setEditingShortcut(null)}
+                onClick={() => {
+                  setEditingShortcut(null)
+                  resetShortcuts()
+                }}
                 className="w-full mt-3 px-4 py-2 text-xs rounded-lg bg-surface-dark border border-gray-700 text-gray-400 hover:text-white hover:border-gray-600 transition-colors"
               >
                 Réinitialiser les raccourcis par défaut

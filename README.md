@@ -1,5 +1,5 @@
 # AMV Notation
-![Version](https://img.shields.io/badge/version-v0.2-2563eb)
+![Version](https://img.shields.io/badge/version-v0.2.1-2563eb)
 
 Application desktop de notation pour concours AMV (Anime Music Video).
 

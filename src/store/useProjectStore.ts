@@ -28,6 +28,7 @@ interface ProjectStore {
   nextClip: () => void
   previousClip: () => void
   markClipScored: (clipId: string) => void
+  removeClip: (clipId: string) => void
   addImportedJudge: (judge: ImportedJudgeData) => void
   removeImportedJudge: (index: number) => void
   setImportedJudges: (judges: ImportedJudgeData[]) => void
@@ -193,9 +194,14 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
             }
 
             const parsedFinalScore = Number(noteRow.finalScore)
+            const textNotes = typeof noteRow.textNotes === 'string'
+              ? noteRow.textNotes
+              : typeof noteRow.text_notes === 'string'
+                ? noteRow.text_notes
+                : undefined
             notes[clipId] = Number.isFinite(parsedFinalScore)
-              ? { scores, finalScore: parsedFinalScore }
-              : { scores }
+              ? { scores, finalScore: parsedFinalScore, textNotes }
+              : { scores, textNotes }
           }
 
           return {
@@ -271,6 +277,20 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
       clips: clips.map((c) => (c.id === clipId ? { ...c, scored: true } : c)),
       isDirty: true,
     })
+  },
+
+  removeClip: (clipId: string) => {
+    const { clips, currentClipIndex } = get()
+    const newClips = clips.filter((c) => c.id !== clipId)
+    const removedIndex = clips.findIndex((c) => c.id === clipId)
+    let newIndex = currentClipIndex
+    if (removedIndex <= currentClipIndex && currentClipIndex > 0) {
+      newIndex = Math.min(currentClipIndex - 1, newClips.length - 1)
+    }
+    if (newIndex >= newClips.length) {
+      newIndex = Math.max(0, newClips.length - 1)
+    }
+    set({ clips: newClips, currentClipIndex: newIndex, isDirty: true })
   },
 
   addImportedJudge: (judge) =>

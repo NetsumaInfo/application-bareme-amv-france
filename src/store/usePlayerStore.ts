@@ -15,6 +15,7 @@ interface PlayerStore {
   currentSubtitleId: number | null
   currentAudioId: number | null
   isFullscreen: boolean
+  isDetached: boolean
 
   setPlaying: (playing: boolean) => void
   setCurrentTime: (time: number) => void
@@ -28,6 +29,7 @@ interface PlayerStore {
   setCurrentSubtitleId: (id: number | null) => void
   setCurrentAudioId: (id: number | null) => void
   setFullscreen: (fs: boolean) => void
+  setDetached: (detached: boolean) => void
   syncStatus: (status: { isPlaying: boolean; currentTime: number; duration: number; isFullscreen: boolean }) => void
   reset: () => void
 }
@@ -46,6 +48,7 @@ const initialState = {
   currentSubtitleId: null as number | null,
   currentAudioId: null as number | null,
   isFullscreen: false,
+  isDetached: true,
 }
 
 export const usePlayerStore = create<PlayerStore>((set) => ({
@@ -74,6 +77,7 @@ export const usePlayerStore = create<PlayerStore>((set) => ({
   setCurrentSubtitleId: (id) => set({ currentSubtitleId: id }),
   setCurrentAudioId: (id) => set({ currentAudioId: id }),
   setFullscreen: (fs) => set({ isFullscreen: fs }),
+  setDetached: (detached) => set({ isDetached: detached }),
   syncStatus: ({ isPlaying, currentTime, duration, isFullscreen }) =>
     set((state) => {
       const nextTime = Number.isFinite(currentTime) ? currentTime : 0

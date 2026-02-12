@@ -96,6 +96,14 @@ export async function playerIsFullscreen(): Promise<boolean> {
   return await invoke('player_is_fullscreen')
 }
 
+export async function playerIsVisible(): Promise<boolean> {
+  return await invoke('player_is_visible')
+}
+
+export async function playerSyncOverlay(): Promise<void> {
+  await invoke('player_sync_overlay')
+}
+
 // --- Project Commands ---
 
 export async function saveProjectFile(data: unknown, filePath: string): Promise<void> {
@@ -184,4 +192,15 @@ export async function saveJsonDialog(defaultName?: string): Promise<string | nul
     defaultPath: defaultName,
   })
   return result
+}
+
+export async function openVideoFilesDialog(): Promise<string[] | null> {
+  const result = await open({
+    filters: [{
+      name: 'Fichiers vidéo',
+      extensions: ['mp4', 'mkv', 'avi', 'mov', 'webm', 'flv', 'm4v', 'amv']
+    }],
+    multiple: true,
+  })
+  return Array.isArray(result) ? result : null
 }

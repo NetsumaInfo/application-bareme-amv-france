@@ -63,6 +63,7 @@ export interface ImportedJudgeCriterionScore {
 export interface ImportedJudgeNote {
   scores: Record<string, ImportedJudgeCriterionScore>
   finalScore?: number
+  textNotes?: string
 }
 
 export interface ImportedJudgeData {

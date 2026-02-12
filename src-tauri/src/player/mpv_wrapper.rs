@@ -104,12 +104,7 @@ impl MpvPlayer {
 
     pub fn load_file(&self, path: &str) -> Result<(), String> {
         let cmd = format!("loadfile \"{}\"", path.replace('\\', "/"));
-        let cmd_c = to_cstring(&cmd);
-        let result = unsafe { (self.lib.command_string)(self.handle, cmd_c.as_ptr()) };
-        if result < 0 {
-            return Err(format!("Failed to load file: error {}", result));
-        }
-        Ok(())
+        self.execute_command(&cmd)
     }
 
     pub fn play(&self) -> Result<(), String> {
@@ -127,22 +122,12 @@ impl MpvPlayer {
 
     pub fn seek(&self, position: f64) -> Result<(), String> {
         let cmd = format!("seek {} absolute", position);
-        let cmd_c = to_cstring(&cmd);
-        let result = unsafe { (self.lib.command_string)(self.handle, cmd_c.as_ptr()) };
-        if result < 0 {
-            return Err(format!("Failed to seek: error {}", result));
-        }
-        Ok(())
+        self.execute_command(&cmd)
     }
 
     pub fn seek_relative(&self, offset: f64) -> Result<(), String> {
         let cmd = format!("seek {} relative", offset);
-        let cmd_c = to_cstring(&cmd);
-        let result = unsafe { (self.lib.command_string)(self.handle, cmd_c.as_ptr()) };
-        if result < 0 {
-            return Err(format!("Failed to seek relative: error {}", result));
-        }
-        Ok(())
+        self.execute_command(&cmd)
     }
 
     pub fn set_volume(&self, volume: f64) -> Result<(), String> {
@@ -235,7 +220,24 @@ impl MpvPlayer {
         self.set_property_string("wid", &wid.to_string())
     }
 
+    pub fn set_detached_controls_enabled(&self, enabled: bool) -> Result<(), String> {
+        let flag = if enabled { "yes" } else { "no" };
+        self.set_property_string("osc", flag)?;
+        self.set_property_string("input-default-bindings", flag)?;
+        self.set_property_string("input-vo-keyboard", flag)?;
+        Ok(())
+    }
+
     // Low-level property helpers
+    fn execute_command(&self, command: &str) -> Result<(), String> {
+        let cmd_c = to_cstring(command);
+        let result = unsafe { (self.lib.command_string)(self.handle, cmd_c.as_ptr()) };
+        if result < 0 {
+            return Err(format!("Failed command `{}`: error {}", command, result));
+        }
+        Ok(())
+    }
+
     fn set_property_double(&self, name: &str, value: f64) -> Result<(), String> {
         let name_c = to_cstring(name);
         let mut val = value;

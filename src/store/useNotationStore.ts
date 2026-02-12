@@ -7,6 +7,7 @@ import { validateCriterionValue, calculateScore, isNoteComplete } from '@/utils/
 
 interface NotationStore {
   notes: Record<string, Note>
+  history: Record<string, Note>[]
   currentBareme: Bareme | null
   availableBaremes: Bareme[]
 
@@ -20,6 +21,7 @@ interface NotationStore {
   getNoteForClip: (clipId: string) => Note | undefined
   loadNotes: (notesData: Record<string, NoteData>) => void
   getNotesData: () => Record<string, NoteData>
+  undoLastChange: () => void
   reset: () => void
 }
 
@@ -62,8 +64,20 @@ function noteToNoteData(note: Note): NoteData {
   }
 }
 
+function cloneNotes(notes: Record<string, Note>): Record<string, Note> {
+  return JSON.parse(JSON.stringify(notes))
+}
+
+function pushHistory(
+  history: Record<string, Note>[],
+  snapshot: Record<string, Note>,
+): Record<string, Note>[] {
+  return [...history, snapshot].slice(-100)
+}
+
 export const useNotationStore = create<NotationStore>((set, get) => ({
   notes: {},
+  history: [],
   currentBareme: OFFICIAL_BAREME,
   availableBaremes: [OFFICIAL_BAREME],
 
@@ -123,9 +137,10 @@ export const useNotationStore = create<NotationStore>((set, get) => ({
 
     updatedNote.finalScore = calculateScore(updatedNote, currentBareme)
 
-    set({
+    set((state) => ({
       notes: { ...notes, [clipId]: updatedNote },
-    })
+      history: pushHistory(state.history, cloneNotes(notes)),
+    }))
   },
 
   setTextNotes: (clipId: string, text: string) => {
@@ -139,12 +154,15 @@ export const useNotationStore = create<NotationStore>((set, get) => ({
       textNotes: '',
     }
 
-    set({
+    if (existingNote.textNotes === text) return
+
+    set((state) => ({
       notes: {
         ...notes,
         [clipId]: { ...existingNote, textNotes: text },
       },
-    })
+      history: pushHistory(state.history, cloneNotes(notes)),
+    }))
   },
 
   getScoreForClip: (clipId: string): number => {
@@ -170,7 +188,7 @@ export const useNotationStore = create<NotationStore>((set, get) => ({
     for (const [key, data] of Object.entries(notesData)) {
       notes[key] = noteDataToNote(data)
     }
-    set({ notes })
+    set({ notes, history: [] })
   },
 
   getNotesData: (): Record<string, NoteData> => {
@@ -182,9 +200,20 @@ export const useNotationStore = create<NotationStore>((set, get) => ({
     return data
   },
 
+  undoLastChange: () =>
+    set((state) => {
+      if (state.history.length === 0) return state
+      const previous = state.history[state.history.length - 1]
+      return {
+        notes: cloneNotes(previous),
+        history: state.history.slice(0, -1),
+      }
+    }),
+
   reset: () => {
     set({
       notes: {},
+      history: [],
       currentBareme: OFFICIAL_BAREME,
       availableBaremes: [OFFICIAL_BAREME],
     })

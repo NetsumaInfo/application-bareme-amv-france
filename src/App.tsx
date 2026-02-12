@@ -23,7 +23,6 @@ const isOverlayWindow =
   byPath
 
 function App() {
-  // For the overlay window: make background transparent
   useEffect(() => {
     if (isOverlayWindow) {
       document.documentElement.style.background = 'transparent'

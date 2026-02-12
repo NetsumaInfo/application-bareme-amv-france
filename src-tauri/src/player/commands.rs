@@ -26,6 +26,68 @@ pub struct TrackItem {
     pub external: bool,
 }
 
+fn sync_overlay_with_child(
+    app_handle: &tauri::AppHandle,
+    cw: &crate::player::mpv_window::MpvChildWindow,
+    focus_overlay: bool,
+) {
+    use tauri::Manager;
+
+    let Some(overlay) = app_handle.get_window("fullscreen-overlay") else {
+        return;
+    };
+
+    let should_show = (cw.is_detached() || cw.is_fullscreen()) && cw.is_visible();
+    if !should_show {
+        let _ = overlay.set_fullscreen(false);
+        let _ = overlay.hide();
+        return;
+    }
+
+    let _ = overlay.set_always_on_top(false);
+    let _ = overlay.set_ignore_cursor_events(false);
+    let _ = overlay.set_fullscreen(false);
+    let _ = overlay.show();
+
+    let target_rect = if cw.is_detached() && !cw.is_fullscreen() {
+        cw.get_client_rect_screen().or_else(|| cw.get_window_rect())
+    } else {
+        cw.get_window_rect().or_else(|| cw.get_fullscreen_monitor_rect())
+    };
+
+    if let Some((mx, my, mw, mh)) = target_rect {
+        #[cfg(target_os = "windows")]
+        {
+            if let Ok(hwnd) = overlay.hwnd() {
+                let overlay_hwnd = hwnd.0 as isize;
+                unsafe {
+                    crate::player::mpv_window::set_window_pos_raw(
+                        overlay_hwnd,
+                        0,
+                        mx,
+                        my,
+                        mw,
+                        mh,
+                        0x0050,
+                    );
+                }
+            } else {
+                let _ = overlay.set_fullscreen(true);
+            }
+        }
+        #[cfg(not(target_os = "windows"))]
+        {
+            let _ = overlay.set_fullscreen(true);
+        }
+    } else {
+        let _ = overlay.set_fullscreen(true);
+    }
+
+    if focus_overlay {
+        let _ = overlay.set_focus();
+    }
+}
+
 #[tauri::command]
 pub fn player_load(state: State<'_, AppState>, path: String) -> Result<(), String> {
     let player = state.player.lock().map_err(|e| e.to_string())?;
@@ -234,68 +296,28 @@ pub fn player_set_fullscreen(
     app_handle: tauri::AppHandle,
     fullscreen: bool,
 ) -> Result<(), String> {
+    let player = state.player.lock().map_err(|e| e.to_string())?;
     let child = state.child_window.lock().map_err(|e| e.to_string())?;
     match &*child {
         Some(cw) => {
             use tauri::Manager;
 
             if fullscreen {
-                // 1. Ensure mpv is visible then go fullscreen
                 cw.show();
                 cw.set_fullscreen(true);
-
-                // 2. Position overlay on the SAME monitor as mpv (not primary)
-                if let Some(overlay) = app_handle.get_window("fullscreen-overlay") {
-                    let _ = overlay.set_always_on_top(true);
-                    let _ = overlay.set_ignore_cursor_events(false);
-                    let _ = overlay.show();
-
-                    // Get the monitor rect from the child window and position overlay there
-                    if let Some((mx, my, mw, mh)) = cw.get_fullscreen_monitor_rect() {
-                        // Use Win32 SetWindowPos to place overlay on the correct monitor
-                        #[cfg(target_os = "windows")]
-                        {
-                            if let Ok(hwnd) = overlay.hwnd() {
-                                let overlay_hwnd = hwnd.0 as isize;
-                                // HWND_TOPMOST = -1, SWP_SHOWWINDOW = 0x0040
-                                unsafe {
-                                    crate::player::mpv_window::set_window_pos_raw(
-                                        overlay_hwnd,
-                                        -1,
-                                        mx,
-                                        my,
-                                        mw,
-                                        mh,
-                                        0x0040,
-                                    );
-                                }
-                            } else {
-                                let _ = overlay.set_fullscreen(true);
-                            }
-                        }
-                    } else {
-                        // Fallback: use Tauri's fullscreen (goes to primary)
-                        let _ = overlay.set_fullscreen(true);
-                    }
-
-                    let _ = overlay.set_focus();
-                } else {
-                    eprintln!("[AMV] Overlay window not found (fullscreen controls unavailable)");
-                }
+                sync_overlay_with_child(&app_handle, cw, true);
             } else {
-                // 1. Hide overlay first
-                if let Some(overlay) = app_handle.get_window("fullscreen-overlay") {
-                    let _ = overlay.set_fullscreen(false);
-                    let _ = overlay.hide();
-                }
-
-                // 2. Restore mpv
                 cw.set_fullscreen(false);
-
-                // 3. Restore focus to main window for keyboard shortcuts
-                if let Some(main) = app_handle.get_window("main") {
-                    let _ = main.set_focus();
+                sync_overlay_with_child(&app_handle, cw, cw.is_detached());
+                if !cw.is_detached() {
+                    if let Some(main) = app_handle.get_window("main") {
+                        let _ = main.set_focus();
+                    }
                 }
+            }
+
+            if let Some(p) = &*player {
+                let _ = p.set_detached_controls_enabled(false);
             }
 
             Ok(())
@@ -310,5 +332,29 @@ pub fn player_is_fullscreen(state: State<'_, AppState>) -> Result<bool, String> 
     match &*child {
         Some(cw) => Ok(cw.is_fullscreen()),
         None => Ok(false),
+    }
+}
+
+#[tauri::command]
+pub fn player_is_visible(state: State<'_, AppState>) -> Result<bool, String> {
+    let child = state.child_window.lock().map_err(|e| e.to_string())?;
+    match &*child {
+        Some(cw) => Ok(cw.is_visible()),
+        None => Ok(false),
+    }
+}
+
+#[tauri::command]
+pub fn player_sync_overlay(
+    state: State<'_, AppState>,
+    app_handle: tauri::AppHandle,
+) -> Result<(), String> {
+    let child = state.child_window.lock().map_err(|e| e.to_string())?;
+    match &*child {
+        Some(cw) => {
+            sync_overlay_with_child(&app_handle, cw, false);
+            Ok(())
+        }
+        None => Err("Child window not available".to_string()),
     }
 }
