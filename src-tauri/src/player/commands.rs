@@ -3,6 +3,8 @@ use base64::engine::general_purpose::STANDARD as BASE64_STD;
 use base64::Engine;
 use serde::Serialize;
 use serde_json::Value;
+use std::fs;
+use std::path::PathBuf;
 use std::process::{Command, Stdio};
 use std::sync::mpsc;
 use std::time::{Duration, Instant};
@@ -264,29 +266,57 @@ fn probe_frame_preview_with_ffmpeg(path: &str, seconds: f64, width: u32) -> Resu
     let seek = format!("{:.3}", safe_seconds);
     let scale = format!("scale={}:-1:flags=lanczos", safe_width);
 
-    let output = Command::new("ffmpeg")
-        .args([
-            "-hide_banner",
-            "-loglevel",
-            "error",
-            "-ss",
-            &seek,
-            "-i",
-            path,
-            "-frames:v",
-            "1",
-            "-vf",
-            &scale,
-            "-f",
-            "image2pipe",
-            "-vcodec",
-            "mjpeg",
-            "-",
-        ])
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .output()
-        .map_err(|e| format!("ffmpeg indisponible: {}", e))?;
+    let args = [
+        "-hide_banner",
+        "-loglevel",
+        "error",
+        "-ss",
+        &seek,
+        "-i",
+        path,
+        "-frames:v",
+        "1",
+        "-vf",
+        &scale,
+        "-f",
+        "image2pipe",
+        "-vcodec",
+        "mjpeg",
+        "-",
+    ];
+
+    let mut launch_errors: Vec<String> = Vec::new();
+    let mut ran_any_candidate = false;
+    let mut output = None;
+
+    for ffmpeg_bin in ffmpeg_candidates() {
+        match Command::new(&ffmpeg_bin)
+            .args(args)
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .output()
+        {
+            Ok(out) => {
+                ran_any_candidate = true;
+                output = Some(out);
+                break;
+            }
+            Err(err) => {
+                launch_errors.push(format!("{} ({})", ffmpeg_bin.display(), err));
+            }
+        }
+    }
+
+    if !ran_any_candidate {
+        let details = if launch_errors.is_empty() {
+            "aucun binaire ffmpeg trouvé".to_string()
+        } else {
+            launch_errors.join(" | ")
+        };
+        return Err(format!("ffmpeg indisponible: {}", details));
+    }
+
+    let output = output.expect("ffmpeg output should exist when candidate ran");
 
     if !output.status.success() {
         let err = String::from_utf8_lossy(&output.stderr).trim().to_string();
@@ -303,6 +333,119 @@ fn probe_frame_preview_with_ffmpeg(path: &str, seconds: f64, width: u32) -> Resu
 
     let b64 = BASE64_STD.encode(output.stdout);
     Ok(format!("data:image/jpeg;base64,{}", b64))
+}
+
+fn ffmpeg_candidates() -> Vec<PathBuf> {
+    let mut candidates: Vec<PathBuf> = Vec::new();
+    let ffmpeg_name = if cfg!(target_os = "windows") {
+        "ffmpeg.exe"
+    } else {
+        "ffmpeg"
+    };
+
+    if let Ok(custom) = std::env::var("AMV_FFMPEG_PATH") {
+        let custom = custom.trim();
+        if !custom.is_empty() {
+            candidates.push(PathBuf::from(custom));
+        }
+    }
+
+    if let Ok(exe) = std::env::current_exe() {
+        if let Some(exe_dir) = exe.parent() {
+            candidates.push(exe_dir.join(ffmpeg_name));
+            candidates.push(exe_dir.join("resources").join(ffmpeg_name));
+            candidates.push(exe_dir.join("resources").join("windows").join(ffmpeg_name));
+            candidates.push(exe_dir.join("ffmpeg").join(ffmpeg_name));
+        }
+    }
+
+    if let Ok(cwd) = std::env::current_dir() {
+        candidates.push(cwd.join(ffmpeg_name));
+        candidates.push(cwd.join("src-tauri").join("resources").join("windows").join(ffmpeg_name));
+    }
+
+    candidates.push(PathBuf::from(ffmpeg_name));
+
+    let mut unique: Vec<PathBuf> = Vec::new();
+    for candidate in candidates {
+        if unique.iter().any(|existing| existing == &candidate) {
+            continue;
+        }
+        unique.push(candidate);
+    }
+    unique
+}
+
+fn probe_frame_preview_with_mpv(path: &str, seconds: f64) -> Result<String, String> {
+    let safe_seconds = if seconds.is_finite() && seconds >= 0.0 {
+        seconds
+    } else {
+        0.0
+    };
+
+    let preview_player = super::mpv_wrapper::MpvPlayer::new(None)
+        .map_err(|e| format!("mpv preview init impossible: {}", e))?;
+    preview_player
+        .load_file(path)
+        .map_err(|e| format!("mpv preview load impossible: {}", e))?;
+    let _ = preview_player.pause();
+
+    let start_load = Instant::now();
+    while start_load.elapsed() < Duration::from_millis(2200) {
+        let current = normalize_path(&preview_player.get_current_path());
+        let duration = preview_player.get_duration();
+        if !current.is_empty() && duration.is_finite() && duration > 0.0 {
+            break;
+        }
+        std::thread::sleep(Duration::from_millis(30));
+    }
+
+    preview_player
+        .seek(safe_seconds)
+        .map_err(|e| format!("mpv preview seek impossible: {}", e))?;
+    let _ = preview_player.pause();
+    std::thread::sleep(Duration::from_millis(120));
+
+    let nonce = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_nanos())
+        .unwrap_or(0);
+    let tmp_path = std::env::temp_dir().join(format!("amv-preview-{}.png", nonce));
+    let tmp_path_str = tmp_path.to_string_lossy().to_string();
+    preview_player
+        .screenshot(&tmp_path_str)
+        .map_err(|e| format!("mpv preview screenshot impossible: {}", e))?;
+
+    let start_wait = Instant::now();
+    while start_wait.elapsed() < Duration::from_millis(1200) {
+        if let Ok(meta) = fs::metadata(&tmp_path) {
+            if meta.len() > 0 {
+                break;
+            }
+        }
+        std::thread::sleep(Duration::from_millis(25));
+    }
+
+    let bytes = fs::read(&tmp_path).map_err(|e| {
+        let _ = fs::remove_file(&tmp_path);
+        format!("lecture preview impossible: {}", e)
+    })?;
+    let _ = fs::remove_file(&tmp_path);
+
+    if bytes.is_empty() {
+        return Err("preview vide".to_string());
+    }
+
+    let mime = if is_jpeg(&bytes) {
+        "image/jpeg"
+    } else {
+        "image/png"
+    };
+    Ok(format!("data:{};base64,{}", mime, BASE64_STD.encode(bytes)))
+}
+
+fn is_jpeg(data: &[u8]) -> bool {
+    data.len() > 3 && data[0] == 0xFF && data[1] == 0xD8 && data[data.len() - 2] == 0xFF && data[data.len() - 1] == 0xD9
 }
 
 fn sync_overlay_with_child(
@@ -674,16 +817,17 @@ pub fn player_get_frame_preview(
     let (tx, rx) = mpsc::channel();
 
     std::thread::spawn(move || {
-        let _ = tx.send(probe_frame_preview_with_ffmpeg(
-            &normalized_path,
-            seconds,
-            safe_width,
-        ));
+        let result = match probe_frame_preview_with_ffmpeg(&normalized_path, seconds, safe_width) {
+            Ok(image) => Ok(image),
+            Err(ffmpeg_err) => probe_frame_preview_with_mpv(&normalized_path, seconds)
+                .map_err(|mpv_err| format!("ffmpeg: {}; mpv: {}", ffmpeg_err, mpv_err)),
+        };
+        let _ = tx.send(result);
     });
 
-    match rx.recv_timeout(Duration::from_millis(2200)) {
+    match rx.recv_timeout(Duration::from_millis(4200)) {
         Ok(result) => result,
-        Err(_) => Err("Preview frame trop lent (ffmpeg timeout)".to_string()),
+        Err(_) => Err("Preview frame trop lent (timeout)".to_string()),
     }
 }
 
