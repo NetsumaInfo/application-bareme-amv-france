@@ -26,7 +26,7 @@ Application desktop de notation pour concours AMV (Anime Music Video).
 
 ### Notation
 
-- 3 interfaces de notation interchangeables: **Tableur**, **Moderne**, **Notation**
+- 2 vues de notation interchangeables: **Tableur** et **Notes**
 - Barèmes personnalisables (catégories, critères, coefficients, couleurs par catégorie)
 - Notes par critère avec commentaires textuels
 - Notes par catégorie et notes globales
