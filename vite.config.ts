@@ -19,5 +19,11 @@ export default defineConfig({
     target: 'chrome105',
     minify: !process.env.TAURI_DEBUG ? 'esbuild' : false,
     sourcemap: !!process.env.TAURI_DEBUG,
+    rollupOptions: {
+      input: {
+        main: path.resolve(__dirname, 'index.html'),
+        notes: path.resolve(__dirname, 'notes.html'),
+      },
+    },
   },
 })

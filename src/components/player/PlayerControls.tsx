@@ -1,9 +1,16 @@
-import { Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, Maximize2, Minimize2 } from 'lucide-react'
+import { useCallback, useMemo } from 'react'
+import { Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, Maximize2, Minimize2, ChevronLeft, ChevronRight, Camera } from 'lucide-react'
+import { emit } from '@tauri-apps/api/event'
 import { usePlayer } from '@/hooks/usePlayer'
 import { usePlayerStore } from '@/store/usePlayerStore'
+import { useUIStore } from '@/store/useUIStore'
+import { useNotationStore } from '@/store/useNotationStore'
+import { useProjectStore } from '@/store/useProjectStore'
 import { formatTime } from '@/utils/formatters'
+import { buildNoteTimecodeMarkers, type NoteTimecodeMarker } from '@/utils/timecodes'
 import SubtitleSelector from './SubtitleSelector'
 import AudioTrackSelector from './AudioTrackSelector'
+import AudioDbMeter from './AudioDbMeter'
 
 interface PlayerControlsProps {
   compact?: boolean
@@ -18,13 +25,48 @@ export default function PlayerControls({ compact }: PlayerControlsProps) {
     muted,
     isLoaded,
     togglePause,
+    pause,
     seek,
     seekRelative,
     setVolume,
     setMuted,
     toggleFullscreen,
+    frameStep,
+    frameBackStep,
+    screenshot,
   } = usePlayer()
   const isFullscreen = usePlayerStore((s) => s.isFullscreen)
+  const showAudioDb = useUIStore((s) => s.showAudioDb)
+  const setShowPipVideo = useUIStore((s) => s.setShowPipVideo)
+  const currentBareme = useNotationStore((s) => s.currentBareme)
+  const notes = useNotationStore((s) => s.notes)
+  const { clips, currentClipIndex } = useProjectStore()
+  const currentClip = clips[currentClipIndex]
+  const currentNote = currentClip ? notes[currentClip.id] : undefined
+
+  const noteMarkers = useMemo(() => {
+    if (!currentClip || !currentBareme || duration <= 0) return []
+    return buildNoteTimecodeMarkers(currentNote, currentBareme, duration).slice(0, 90)
+  }, [currentClip, currentBareme, currentNote, duration])
+
+  const handleMarkerJump = useCallback(async (marker: NoteTimecodeMarker) => {
+    if (!currentClip || !isLoaded) return
+    setShowPipVideo(true)
+    await seek(marker.seconds)
+    await pause()
+
+    const payload = {
+      clipId: currentClip.id,
+      seconds: marker.seconds,
+      category: marker.category ?? null,
+      criterionId: marker.criterionId ?? null,
+      source: marker.source,
+      raw: marker.raw,
+    }
+
+    window.dispatchEvent(new CustomEvent('amv:focus-note-marker', { detail: payload }))
+    emit('main:focus-note-marker', payload).catch(() => {})
+  }, [currentClip, isLoaded, pause, seek, setShowPipVideo])
 
   if (compact) {
     return (
@@ -36,16 +78,44 @@ export default function PlayerControls({ compact }: PlayerControlsProps) {
         >
           {isPlaying ? <Pause size={10} /> : <Play size={10} />}
         </button>
-        <input
-          type="range"
-          min={0}
-          max={duration || 100}
-          step={0.1}
-          value={currentTime}
-          onChange={(e) => seek(Number(e.target.value))}
-          className="flex-1 h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-primary-500"
-          disabled={!isLoaded}
-        />
+        <div className="relative flex-1">
+          <input
+            type="range"
+            min={0}
+            max={duration || 100}
+            step={0.1}
+            value={currentTime}
+            onChange={(e) => seek(Number(e.target.value))}
+            className="w-full h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-primary-500"
+            disabled={!isLoaded}
+          />
+          {duration > 0 && noteMarkers.length > 0 && (
+            <div className="pointer-events-none absolute left-0 right-0 top-1/2 -translate-y-1/2 h-0">
+              {noteMarkers.map((marker) => {
+                const left = Math.max(0, Math.min(100, (marker.seconds / duration) * 100))
+                return (
+                  <button
+                    key={marker.key}
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handleMarkerJump(marker)
+                    }}
+                    className="pointer-events-auto absolute top-0 -translate-x-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full border shadow-sm hover:scale-110 transition-transform"
+                    style={{
+                      left: `${left}%`,
+                      backgroundColor: marker.color,
+                      borderColor: 'rgba(15,23,42,0.8)',
+                    }}
+                    title={marker.previewText
+                      ? `${marker.raw} - ${marker.previewText}`
+                      : `${marker.raw} - ${marker.category ?? 'Notes globales'}`}
+                  />
+                )
+              })}
+            </div>
+          )}
+        </div>
         <span className="text-[8px] text-gray-500 font-mono w-7 text-right shrink-0">
           {formatTime(currentTime)}
         </span>
@@ -60,16 +130,44 @@ export default function PlayerControls({ compact }: PlayerControlsProps) {
         <span className="text-[10px] text-gray-400 w-10 text-right font-mono">
           {formatTime(currentTime)}
         </span>
-        <input
-          type="range"
-          min={0}
-          max={duration || 100}
-          step={0.1}
-          value={currentTime}
-          onChange={(e) => seek(Number(e.target.value))}
-          className="flex-1 h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-primary-500"
-          disabled={!isLoaded}
-        />
+        <div className="relative flex-1">
+          <input
+            type="range"
+            min={0}
+            max={duration || 100}
+            step={0.1}
+            value={currentTime}
+            onChange={(e) => seek(Number(e.target.value))}
+            className="w-full h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-primary-500"
+            disabled={!isLoaded}
+          />
+          {duration > 0 && noteMarkers.length > 0 && (
+            <div className="pointer-events-none absolute left-0 right-0 top-1/2 -translate-y-1/2 h-0">
+              {noteMarkers.map((marker) => {
+                const left = Math.max(0, Math.min(100, (marker.seconds / duration) * 100))
+                return (
+                  <button
+                    key={marker.key}
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handleMarkerJump(marker)
+                    }}
+                    className="pointer-events-auto absolute top-0 -translate-x-1/2 -translate-y-1/2 w-2 h-2 rounded-full border shadow-sm hover:scale-110 transition-transform"
+                    style={{
+                      left: `${left}%`,
+                      backgroundColor: marker.color,
+                      borderColor: 'rgba(15,23,42,0.8)',
+                    }}
+                    title={marker.previewText
+                      ? `${marker.raw} - ${marker.previewText}`
+                      : `${marker.raw} - ${marker.category ?? 'Notes globales'}`}
+                  />
+                )
+              })}
+            </div>
+          )}
+        </div>
         <span className="text-[10px] text-gray-400 w-10 font-mono">
           {formatTime(duration)}
         </span>
@@ -78,6 +176,14 @@ export default function PlayerControls({ compact }: PlayerControlsProps) {
       {/* Controls row */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-1">
+          <button
+            onClick={frameBackStep}
+            className="p-1 rounded hover:bg-surface-light text-gray-400 hover:text-white transition-colors"
+            disabled={!isLoaded}
+            title="Image précédente (,)"
+          >
+            <ChevronLeft size={14} />
+          </button>
           <button
             onClick={() => seekRelative(-5)}
             className="p-1 rounded hover:bg-surface-light text-gray-400 hover:text-white transition-colors"
@@ -101,6 +207,14 @@ export default function PlayerControls({ compact }: PlayerControlsProps) {
           >
             <SkipForward size={14} />
           </button>
+          <button
+            onClick={frameStep}
+            className="p-1 rounded hover:bg-surface-light text-gray-400 hover:text-white transition-colors"
+            disabled={!isLoaded}
+            title="Image suivante (.)"
+          >
+            <ChevronRight size={14} />
+          </button>
         </div>
 
         <div className="flex items-center gap-1">
@@ -123,11 +237,23 @@ export default function PlayerControls({ compact }: PlayerControlsProps) {
             className="w-16 h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-primary-500"
           />
 
+          <AudioDbMeter enabled={showAudioDb} compact className="ml-1" />
+
           {/* Subtitles */}
           <SubtitleSelector />
 
           {/* Audio tracks */}
           <AudioTrackSelector />
+
+          {/* Screenshot */}
+          <button
+            onClick={screenshot}
+            className="p-1 rounded hover:bg-surface-light text-gray-400 hover:text-white transition-colors"
+            disabled={!isLoaded}
+            title="Capture d'écran (Ctrl+Shift+S)"
+          >
+            <Camera size={14} />
+          </button>
 
           {/* Fullscreen */}
           <button

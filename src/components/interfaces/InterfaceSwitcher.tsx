@@ -1,5 +1,6 @@
 import { Table, BarChart2, FileOutput } from 'lucide-react'
 import { useUIStore } from '@/store/useUIStore'
+import { useProjectStore } from '@/store/useProjectStore'
 import type { AppTab } from '@/types/notation'
 
 const TABS: { tab: AppTab; label: string; icon: typeof Table; shortcut: string }[] = [
@@ -10,10 +11,13 @@ const TABS: { tab: AppTab; label: string; icon: typeof Table; shortcut: string }
 
 export default function InterfaceSwitcher() {
   const { currentTab, switchTab } = useUIStore()
+  const { currentProject, clips } = useProjectStore()
+  const allClipsScored = clips.length > 0 && clips.every((clip) => clip.scored)
+  const lockResultsUntilScored = Boolean(currentProject?.settings.hideFinalScoreUntilEnd) && !allClipsScored
 
   return (
     <div className="flex items-center bg-surface-dark rounded-lg p-0.5 gap-0.5">
-      {TABS.map(({ tab, label, icon: Icon, shortcut }) => {
+      {TABS.filter(({ tab }) => !(lockResultsUntilScored && (tab === 'resultats' || tab === 'export'))).map(({ tab, label, icon: Icon, shortcut }) => {
         const isActive = currentTab === tab
         return (
           <button

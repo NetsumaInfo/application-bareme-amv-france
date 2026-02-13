@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, type ChangeEvent } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo, type ChangeEvent } from 'react'
 import {
   Play, Pause, SkipBack, SkipForward,
   Volume2, VolumeX, Minimize2, Maximize2, X,
@@ -10,11 +10,23 @@ import { formatTime } from '@/utils/formatters'
 import { emit, listen } from '@tauri-apps/api/event'
 import { appWindow } from '@tauri-apps/api/window'
 import type { TrackItem } from '@/services/tauri'
+import AudioDbMeter from './AudioDbMeter'
 
 interface ClipInfo {
   name: string
   index: number
   total: number
+}
+
+interface OverlayTimecodeMarker {
+  key: string
+  raw: string
+  seconds: number
+  color: string
+  previewText?: string
+  source?: string | null
+  category?: string | null
+  criterionId?: string | null
 }
 
 export default function FullscreenOverlay() {
@@ -26,6 +38,9 @@ export default function FullscreenOverlay() {
   const [volume, setVolume] = useState(80)
   const [isMuted, setIsMuted] = useState(true)
   const [clipInfo, setClipInfo] = useState<ClipInfo>({ name: '', index: 0, total: 0 })
+  const [noteMarkers, setNoteMarkers] = useState<OverlayTimecodeMarker[]>([])
+  const [overlayClipId, setOverlayClipId] = useState<string | null>(null)
+  const [markerTooltip, setMarkerTooltip] = useState<{ left: number; text: string } | null>(null)
   const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const refocusTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const wasFullscreenRef = useRef(false)
@@ -37,6 +52,10 @@ export default function FullscreenOverlay() {
   const [currentAudioId, setCurrentAudioId] = useState<number | null>(null)
   const [subMenuOpen, setSubMenuOpen] = useState(false)
   const [audioMenuOpen, setAudioMenuOpen] = useState(false)
+  const [showAudioDb, setShowAudioDb] = useState(() => {
+    if (typeof window === 'undefined') return false
+    return window.localStorage.getItem('amv.showAudioDb') === '1'
+  })
   const [viewport, setViewport] = useState({
     width: typeof window !== 'undefined' ? window.innerWidth : 1280,
     height: typeof window !== 'undefined' ? window.innerHeight : 720,
@@ -56,6 +75,13 @@ export default function FullscreenOverlay() {
     window.addEventListener('resize', updateViewport)
     updateViewport()
     return () => window.removeEventListener('resize', updateViewport)
+  }, [])
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      tauri.playerSyncOverlay().catch(() => {})
+    }, 120)
+    return () => clearInterval(timer)
   }, [])
 
   const refreshTracks = useCallback(() => {
@@ -112,6 +138,7 @@ export default function FullscreenOverlay() {
         setCurrentTime(status.current_time)
         setDuration(status.duration)
         setIsPlayerFullscreen(fullscreen)
+        setShowAudioDb(window.localStorage.getItem('amv.showAudioDb') === '1')
         if (fullscreen && !wasFullscreenRef.current) {
           setShowControls(true)
         }
@@ -125,18 +152,36 @@ export default function FullscreenOverlay() {
     return () => clearInterval(interval)
   }, [])
 
+  useEffect(() => {
+    const onStorage = () => {
+      setShowAudioDb(window.localStorage.getItem('amv.showAudioDb') === '1')
+    }
+    window.addEventListener('storage', onStorage)
+    return () => window.removeEventListener('storage', onStorage)
+  }, [])
+
   // Listen for clip info from main window
   useEffect(() => {
     let unlisten: (() => void) | null = null
+    let unlistenMarkers: (() => void) | null = null
     listen<ClipInfo>('main:clip-changed', (event) => {
       setClipInfo(event.payload)
       refreshTracks()
     }).then(fn => { unlisten = fn })
 
+    listen<{ clipId?: string | null; markers?: OverlayTimecodeMarker[] }>('main:overlay-markers', (event) => {
+      setOverlayClipId(event.payload?.clipId ?? null)
+      setNoteMarkers(event.payload?.markers ?? [])
+    }).then(fn => { unlistenMarkers = fn })
+
     // Request initial clip info
     emit('overlay:request-clip-info').catch(() => {})
+    emit('overlay:request-note-markers').catch(() => {})
 
-    return () => { if (unlisten) unlisten() }
+    return () => {
+      if (unlisten) unlisten()
+      if (unlistenMarkers) unlistenMarkers()
+    }
   }, [refreshTracks])
 
   // Ensure overlay window keeps keyboard focus in fullscreen mode
@@ -295,6 +340,26 @@ export default function FullscreenOverlay() {
     emit('overlay:close-player').catch(() => {})
   }
 
+  const handleMarkerJump = (marker: OverlayTimecodeMarker) => {
+    tauri.playerSeek(marker.seconds).catch(() => {})
+    tauri.playerPause().catch(() => {})
+    setCurrentTime(marker.seconds)
+    emit('overlay:focus-note-marker', {
+      clipId: overlayClipId,
+      seconds: marker.seconds,
+      category: marker.category ?? null,
+      criterionId: marker.criterionId ?? null,
+      source: marker.source ?? null,
+      raw: marker.raw,
+    }).catch(() => {})
+    resetHideTimer()
+  }
+
+  const visibleMarkers = useMemo(() => {
+    if (!(duration > 0) || noteMarkers.length === 0) return []
+    return noteMarkers.filter((marker) => Number.isFinite(marker.seconds) && marker.seconds >= 0 && marker.seconds <= duration)
+  }, [noteMarkers, duration])
+
   const handleNextClip = () => {
     emit('overlay:next-clip').catch(() => {})
     resetHideTimer()
@@ -381,19 +446,63 @@ export default function FullscreenOverlay() {
           <span className={`${compactControls ? 'text-xs w-10' : 'text-sm w-14'} text-white font-mono text-right select-none`}>
             {formatTime(currentTime)}
           </span>
-          <input
-            type="range"
-            min={0}
-            max={duration || 100}
-            step={0.1}
-            value={currentTime}
-            onChange={handleSeek}
-            className={`flex-1 ${compactControls ? 'h-1' : 'h-1.5'} bg-white/30 rounded-full appearance-none cursor-pointer accent-primary-500
-              [&::-webkit-slider-thumb]:appearance-none ${compactControls ? '[&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3' : '[&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4'}
-              [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-primary-500
-              [&::-webkit-slider-thumb]:shadow-lg [&::-webkit-slider-thumb]:cursor-pointer"
-            `}
-          />
+          <div className="relative flex-1">
+            <input
+              type="range"
+              min={0}
+              max={duration || 100}
+              step={0.1}
+              value={currentTime}
+              onChange={handleSeek}
+              className={`w-full ${compactControls ? 'h-1' : 'h-1.5'} bg-white/30 rounded-full appearance-none cursor-pointer accent-primary-500
+                [&::-webkit-slider-thumb]:appearance-none ${compactControls ? '[&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3' : '[&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4'}
+                [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-primary-500
+                [&::-webkit-slider-thumb]:shadow-lg [&::-webkit-slider-thumb]:cursor-pointer"
+              `}
+            />
+            {visibleMarkers.length > 0 && (
+              <div className="pointer-events-none absolute left-0 right-0 top-1/2 -translate-y-1/2 h-0 z-20">
+                {visibleMarkers.map((marker) => {
+                  const left = Math.max(0, Math.min(100, (marker.seconds / duration) * 100))
+                  const tooltipText = marker.previewText?.trim()
+                    ? marker.previewText
+                    : `${marker.category ?? 'Notes'}`
+                  return (
+                    <button
+                      key={marker.key}
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault()
+                        e.stopPropagation()
+                        handleMarkerJump(marker)
+                      }}
+                      onMouseEnter={() => {
+                        setMarkerTooltip({ left, text: tooltipText })
+                      }}
+                      onMouseLeave={() => setMarkerTooltip(null)}
+                      className={`${compactControls ? 'w-2 h-2' : 'w-2.5 h-2.5'} pointer-events-auto absolute top-0 -translate-x-1/2 -translate-y-1/2 rounded-full border shadow-md hover:scale-110 transition-transform`}
+                      style={{
+                        left: `${left}%`,
+                        backgroundColor: marker.color,
+                        borderColor: 'rgba(15,23,42,0.9)',
+                      }}
+                      title={marker.previewText
+                        ? `${marker.raw} - ${marker.previewText}`
+                        : `${marker.raw} - ${marker.category ?? 'Notes globales'}`}
+                    />
+                  )
+                })}
+              </div>
+            )}
+            {markerTooltip && (
+              <div
+                className="pointer-events-none absolute -top-8 -translate-x-1/2 px-2 py-1 rounded bg-slate-900/95 border border-white/15 text-[10px] text-gray-100 whitespace-nowrap max-w-[260px] overflow-hidden text-ellipsis"
+                style={{ left: `${markerTooltip.left}%` }}
+              >
+                {markerTooltip.text}
+              </div>
+            )}
+          </div>
           <span className={`${compactControls ? 'text-xs w-10' : 'text-sm w-14'} text-white font-mono select-none`}>
             {formatTime(duration)}
           </span>
@@ -471,6 +580,8 @@ export default function FullscreenOverlay() {
                 [&::-webkit-slider-thumb]:shadow-lg [&::-webkit-slider-thumb]:cursor-pointer"
               `}
             />
+
+            <AudioDbMeter enabled={showAudioDb} compact={compactControls} />
 
             {/* Subtitles */}
             <div ref={subRef} className="relative">

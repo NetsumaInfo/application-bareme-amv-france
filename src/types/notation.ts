@@ -10,6 +10,8 @@ export interface Note {
   baremeId: string
   scores: Record<string, CriterionScore>
   textNotes: string
+  criterionNotes?: Record<string, string>
+  categoryNotes?: Record<string, string>
   finalScore?: number
   scoredAt?: string
 }

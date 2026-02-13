@@ -139,3 +139,26 @@ pub fn list_projects_in_folder(folder_path: String) -> Result<Vec<ProjectSummary
 pub fn ensure_directory_exists(path: String) -> Result<(), String> {
     fs::create_dir_all(&path).map_err(|e| e.to_string())
 }
+
+// --- User settings persistence ---
+
+#[tauri::command]
+pub fn save_user_settings(data: serde_json::Value) -> Result<(), String> {
+    let docs = dirs::document_dir().ok_or("Cannot find Documents folder")?;
+    let folder = docs.join("AMV Notation");
+    fs::create_dir_all(&folder).map_err(|e| e.to_string())?;
+    let path = folder.join("settings.json");
+    let json = serde_json::to_string_pretty(&data).map_err(|e| e.to_string())?;
+    fs::write(&path, json).map_err(|e| format!("Failed to save settings: {}", e))
+}
+
+#[tauri::command]
+pub fn load_user_settings() -> Result<serde_json::Value, String> {
+    let docs = dirs::document_dir().ok_or("Cannot find Documents folder")?;
+    let path = docs.join("AMV Notation").join("settings.json");
+    if !path.exists() {
+        return Ok(serde_json::Value::Null);
+    }
+    let json = fs::read_to_string(&path).map_err(|e| format!("Failed to read settings: {}", e))?;
+    serde_json::from_str(&json).map_err(|e| format!("Failed to parse settings: {}", e))
+}

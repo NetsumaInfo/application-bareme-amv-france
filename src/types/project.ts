@@ -29,6 +29,7 @@ export interface ProjectSettings {
   defaultPlaybackSpeed: number
   defaultVolume: number
   hideFinalScoreUntilEnd: boolean
+  hideTotals: boolean
 }
 
 export interface ProjectData {
@@ -45,6 +46,8 @@ export interface NoteData {
   baremeId: string
   scores: Record<string, CriterionScoreData>
   textNotes: string
+  criterionNotes?: Record<string, string>
+  categoryNotes?: Record<string, string>
   finalScore?: number
   scoredAt?: string
 }
@@ -77,4 +80,5 @@ export const DEFAULT_PROJECT_SETTINGS: ProjectSettings = {
   defaultPlaybackSpeed: 1,
   defaultVolume: 80,
   hideFinalScoreUntilEnd: false,
+  hideTotals: false,
 }

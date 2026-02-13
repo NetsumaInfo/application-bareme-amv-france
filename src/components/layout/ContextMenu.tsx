@@ -1,7 +1,6 @@
 import { useEffect, useRef } from 'react'
 import {
   Table,
-  LayoutGrid,
   Maximize2,
   ChevronLeft,
   ChevronRight,
@@ -11,7 +10,6 @@ import {
   Image,
   FileText,
   Play,
-  CheckCircle,
 } from 'lucide-react'
 import { useUIStore } from '@/store/useUIStore'
 import { useProjectStore } from '@/store/useProjectStore'
@@ -53,7 +51,7 @@ export default function ContextMenu({
     showPipVideo,
     setShowPipVideo,
   } = useUIStore()
-  const { nextClip, previousClip, currentClipIndex, clips, markClipScored } = useProjectStore()
+  const { nextClip, previousClip } = useProjectStore()
 
   useEffect(() => {
     const handleClick = () => onClose()
@@ -68,8 +66,6 @@ export default function ContextMenu({
     }
   }, [onClose])
 
-  const currentClip = clips[currentClipIndex]
-
   const items: MenuItem[] = []
 
   if (currentTab === 'notation') {
@@ -80,13 +76,7 @@ export default function ContextMenu({
       active: currentInterface === 'spreadsheet',
     })
     items.push({
-      label: 'Vue moderne',
-      icon: LayoutGrid,
-      onClick: () => { switchInterface('modern' as InterfaceMode); onClose() },
-      active: currentInterface === 'modern',
-    })
-    items.push({
-      label: 'Vue notation',
+      label: 'Vue notes',
       icon: Maximize2,
       onClick: () => { switchInterface('notation' as InterfaceMode); onClose() },
       active: currentInterface === 'notation',
@@ -102,21 +92,12 @@ export default function ContextMenu({
       icon: ChevronLeft,
       onClick: () => { previousClip(); onClose() },
     })
-    if (currentClip) {
-      items.push({ separator: true, label: '' })
-      items.push({
-        label: 'Lire ce clip',
-        icon: Play,
-        onClick: () => { onClose() },
-      })
-      if (!currentClip.scored) {
-        items.push({
-          label: 'Marquer comme noté',
-          icon: CheckCircle,
-          onClick: () => { markClipScored(currentClip.id); onClose() },
-        })
-      }
-    }
+    items.push({ separator: true, label: '' })
+    items.push({
+      label: 'Lire ce clip',
+      icon: Play,
+      onClick: () => { onClose() },
+    })
     items.push({ separator: true, label: '' })
     items.push({
       label: showPipVideo ? 'Masquer la vidéo PiP' : 'Afficher la vidéo PiP',

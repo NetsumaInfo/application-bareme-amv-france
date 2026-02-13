@@ -28,6 +28,7 @@ interface ProjectStore {
   nextClip: () => void
   previousClip: () => void
   markClipScored: (clipId: string) => void
+  setClipScored: (clipId: string, scored: boolean) => void
   removeClip: (clipId: string) => void
   addImportedJudge: (judge: ImportedJudgeData) => void
   removeImportedJudge: (index: number) => void
@@ -125,6 +126,12 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
             : typeof rawSettings.hide_final_score_until_end === 'boolean'
               ? rawSettings.hide_final_score_until_end
               : DEFAULT_PROJECT_SETTINGS.hideFinalScoreUntilEnd,
+        hideTotals:
+          typeof rawSettings.hideTotals === 'boolean'
+            ? rawSettings.hideTotals
+            : typeof rawSettings.hide_totals === 'boolean'
+              ? rawSettings.hide_totals
+              : DEFAULT_PROJECT_SETTINGS.hideTotals,
       },
       filePath:
         (rawProject.filePath as string | undefined) ||
@@ -275,6 +282,14 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
     const { clips } = get()
     set({
       clips: clips.map((c) => (c.id === clipId ? { ...c, scored: true } : c)),
+      isDirty: true,
+    })
+  },
+
+  setClipScored: (clipId: string, scored: boolean) => {
+    const { clips } = get()
+    set({
+      clips: clips.map((c) => (c.id === clipId ? { ...c, scored } : c)),
       isDirty: true,
     })
   },

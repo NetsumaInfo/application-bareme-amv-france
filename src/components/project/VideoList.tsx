@@ -2,14 +2,16 @@ import { useEffect, useRef, useState } from 'react'
 import { FolderPlus, Check, Circle } from 'lucide-react'
 import { useProjectStore } from '@/store/useProjectStore'
 import { useNotationStore } from '@/store/useNotationStore'
+import { useUIStore } from '@/store/useUIStore'
 import * as tauri from '@/services/tauri'
 import { generateId, parseClipName, getClipPrimaryLabel, getClipSecondaryLabel } from '@/utils/formatters'
 import type { Clip } from '@/types/project'
 
 export default function VideoList() {
-  const { clips, currentClipIndex, setCurrentClip, setClips, currentProject, updateProject, removeClip } =
+  const { clips, currentClipIndex, setCurrentClip, setClips, currentProject, updateProject, setClipScored, removeClip } =
     useProjectStore()
   const { isClipComplete } = useNotationStore()
+  const setNotesDetached = useUIStore((state) => state.setNotesDetached)
   const [contextMenu, setContextMenu] = useState<{ clipId: string; x: number; y: number } | null>(null)
   const contextMenuRef = useRef<HTMLDivElement | null>(null)
 
@@ -95,7 +97,7 @@ export default function VideoList() {
                 event.preventDefault()
                 event.stopPropagation()
                 const width = 220
-                const height = 46
+                const height = 152
                 const x = Math.max(8, Math.min(event.clientX, window.innerWidth - width - 8))
                 const y = Math.max(8, Math.min(event.clientY, window.innerHeight - height - 8))
                 setContextMenu({ clipId: clip.id, x, y })
@@ -131,6 +133,36 @@ export default function VideoList() {
           className="fixed z-[95] bg-gray-900 border border-gray-700 rounded-lg shadow-xl py-1 min-w-[210px]"
           style={{ left: contextMenu.x, top: contextMenu.y }}
         >
+          {(() => {
+            const clip = clips.find((item) => item.id === contextMenu.clipId)
+            if (!clip) return null
+            const clipIndex = clips.findIndex((item) => item.id === clip.id)
+            return (
+              <>
+                <button
+                  onClick={() => {
+                    setClipScored(clip.id, !clip.scored)
+                    setContextMenu(null)
+                  }}
+                  className="w-full text-left px-3 py-1.5 text-[11px] text-gray-300 hover:bg-gray-800 transition-colors"
+                >
+                  {clip.scored ? 'Retirer "noté"' : 'Marquer comme noté'}
+                </button>
+                <div className="border-t border-gray-700 my-0.5" />
+                <button
+                  onClick={() => {
+                    if (clipIndex >= 0) setCurrentClip(clipIndex)
+                    tauri.openNotesWindow().then(() => setNotesDetached(true)).catch(() => {})
+                    setContextMenu(null)
+                  }}
+                  className="w-full text-left px-3 py-1.5 text-[11px] text-gray-300 hover:bg-gray-800 transition-colors"
+                >
+                  Notes du clip
+                </button>
+                <div className="border-t border-gray-700 my-0.5" />
+              </>
+            )
+          })()}
           <button
             onClick={() => {
               removeClip(contextMenu.clipId)

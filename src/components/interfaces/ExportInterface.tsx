@@ -1,5 +1,5 @@
-import { useMemo, useRef, useState } from 'react'
-import { Download, FileImage, FileJson, FileText, SlidersHorizontal, Sparkles, ArrowUpDown } from 'lucide-react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { Download, FileImage, FileJson, FileText, SlidersHorizontal, Sparkles } from 'lucide-react'
 import { save } from '@tauri-apps/api/dialog'
 import { writeBinaryFile } from '@tauri-apps/api/fs'
 import { useNotationStore } from '@/store/useNotationStore'
@@ -18,7 +18,7 @@ import type { Clip } from '@/types/project'
 
 type ExportTheme = 'dark' | 'light'
 type ExportDensity = 'comfortable' | 'compact'
-type SortMode = 'folder' | 'alpha'
+type ExportMode = 'grouped' | 'individual'
 
 const ACCENT_PRESETS = ['#3b82f6', '#22c55e', '#f59e0b', '#ef4444', '#a855f7', '#06b6d4']
 
@@ -39,7 +39,8 @@ export default function ExportInterface() {
 
   const [theme, setTheme] = useState<ExportTheme>('dark')
   const [density, setDensity] = useState<ExportDensity>('comfortable')
-  const [sortMode, setSortMode] = useState<SortMode>('folder')
+  const [exportMode, setExportMode] = useState<ExportMode>('grouped')
+  const [selectedJudgeKey, setSelectedJudgeKey] = useState<string>('current')
   const [accent, setAccent] = useState(ACCENT_PRESETS[0])
   const [decimals, setDecimals] = useState(1)
   const [showJudgeColumns, setShowJudgeColumns] = useState(true)
@@ -59,21 +60,9 @@ export default function ExportInterface() {
     [currentProject?.judgeName, notes, importedJudges],
   )
 
-  const sortedClips = useMemo(() => {
+  const orderedClips = useMemo(() => {
     const base = [...clips]
     const originalIndex = new Map(clips.map((clip, index) => [clip.id, index]))
-
-    if (sortMode === 'alpha') {
-      base.sort((a, b) => {
-        const labelA = getClipPrimaryLabel(a)
-        const labelB = getClipPrimaryLabel(b)
-        const cmp = labelA.localeCompare(labelB, 'fr', { sensitivity: 'base' })
-        if (cmp !== 0) return cmp
-        return (originalIndex.get(a.id) ?? 0) - (originalIndex.get(b.id) ?? 0)
-      })
-      return base
-    }
-
     base.sort((a, b) => {
       const orderA = Number.isFinite(a.order) ? a.order : (originalIndex.get(a.id) ?? 0)
       const orderB = Number.isFinite(b.order) ? b.order : (originalIndex.get(b.id) ?? 0)
@@ -81,11 +70,11 @@ export default function ExportInterface() {
       return (originalIndex.get(a.id) ?? 0) - (originalIndex.get(b.id) ?? 0)
     })
     return base
-  }, [clips, sortMode])
+  }, [clips])
 
   const rows = useMemo(() => {
     if (!currentBareme) return []
-    return sortedClips.map((clip) => {
+    return orderedClips.map((clip) => {
       const categoryJudgeScores: Record<string, number[]> = {}
       const categoryAverages: Record<string, number> = {}
       for (const group of categoryGroups) {
@@ -107,16 +96,48 @@ export default function ExportInterface() {
 
       return { clip, categoryJudgeScores, categoryAverages, judgeTotals, averageTotal }
     })
-  }, [sortedClips, categoryGroups, currentBareme, judges])
+  }, [orderedClips, categoryGroups, currentBareme, judges])
+
+  useEffect(() => {
+    if (judges.length === 0) return
+    if (!judges.some((judge) => judge.key === selectedJudgeKey)) {
+      const current = judges.find((judge) => judge.isCurrentJudge)
+      setSelectedJudgeKey((current ?? judges[0]).key)
+    }
+  }, [judges, selectedJudgeKey])
+
+  const selectedJudgeIndex = useMemo(() => {
+    const idx = judges.findIndex((judge) => judge.key === selectedJudgeKey)
+    return idx >= 0 ? idx : 0
+  }, [judges, selectedJudgeKey])
+
+  const selectedJudge = judges[selectedJudgeIndex]
+
+  const displayRows = useMemo(() => {
+    const orderByClipId = new Map(orderedClips.map((clip, idx) => [clip.id, idx]))
+    const ranked = [...rows]
+    ranked.sort((a, b) => {
+      const scoreA =
+        exportMode === 'individual'
+          ? (a.judgeTotals[selectedJudgeIndex] ?? 0)
+          : a.averageTotal
+      const scoreB =
+        exportMode === 'individual'
+          ? (b.judgeTotals[selectedJudgeIndex] ?? 0)
+          : b.averageTotal
+      if (scoreB !== scoreA) return scoreB - scoreA
+      return (orderByClipId.get(a.clip.id) ?? 0) - (orderByClipId.get(b.clip.id) ?? 0)
+    })
+    return ranked
+  }, [rows, orderedClips, exportMode, selectedJudgeIndex])
 
   const rankByClipId = useMemo(() => {
-    const sortedByScore = [...rows].sort((a, b) => b.averageTotal - a.averageTotal)
     const map = new Map<string, number>()
-    sortedByScore.forEach((row, index) => {
+    displayRows.forEach((row, index) => {
       map.set(row.clip.id, index + 1)
     })
     return map
-  }, [rows])
+  }, [displayRows])
 
   const formatScore = (value: number) => value.toFixed(decimals)
 
@@ -193,7 +214,8 @@ export default function ExportInterface() {
           projectName: currentProject?.name || '',
           judgeCount: judges.length,
           exportOptions: {
-            sortMode,
+            exportMode,
+            selectedJudge: selectedJudge?.judgeName ?? null,
             theme,
             density,
             decimals,
@@ -202,13 +224,17 @@ export default function ExportInterface() {
             showRank,
             showProjectMeta,
           },
-          rows: rows.map((row) => ({
+          rows: displayRows.map((row) => ({
             clipId: row.clip.id,
             rank: rankByClipId.get(row.clip.id) ?? null,
             pseudo: getClipPrimaryLabel(row.clip),
             clipName: getClipSecondaryLabel(row.clip),
             categoryAverages: row.categoryAverages,
             averageTotal: row.averageTotal,
+            displayedTotal:
+              exportMode === 'individual'
+                ? (row.judgeTotals[selectedJudgeIndex] ?? 0)
+                : row.averageTotal,
             categoryByJudge: categoryGroups.reduce<Record<string, Record<string, number>>>((acc, group) => {
               acc[group.category] = judges.reduce<Record<string, number>>((judgeMap, judge, judgeIdx) => {
                 judgeMap[judge.judgeName] = row.categoryJudgeScores[group.category][judgeIdx] ?? 0
@@ -261,15 +287,47 @@ export default function ExportInterface() {
           </div>
 
           <div>
-            <label className="block text-xs text-gray-400 mb-1">Tri</label>
-            <button
-              onClick={() => setSortMode(sortMode === 'folder' ? 'alpha' : 'folder')}
-              className="w-full flex items-center gap-2 px-2 py-1.5 rounded border border-gray-700 bg-surface-dark text-xs text-white hover:border-primary-500 hover:bg-surface-light transition-colors"
-            >
-              <ArrowUpDown size={12} className="text-gray-500" />
-              <span>{sortMode === 'folder' ? 'Ordre du dossier' : 'Alphabétique'}</span>
-            </button>
+            <label className="block text-xs text-gray-400 mb-1">Type de résultats</label>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={() => setExportMode('grouped')}
+                className={`px-2 py-1.5 rounded text-xs border transition-colors ${
+                  exportMode === 'grouped'
+                    ? 'border-primary-500 text-primary-300 bg-primary-600/10'
+                    : 'border-gray-700 text-gray-400 hover:text-white'
+                }`}
+              >
+                Groupés
+              </button>
+              <button
+                onClick={() => setExportMode('individual')}
+                className={`px-2 py-1.5 rounded text-xs border transition-colors ${
+                  exportMode === 'individual'
+                    ? 'border-primary-500 text-primary-300 bg-primary-600/10'
+                    : 'border-gray-700 text-gray-400 hover:text-white'
+                }`}
+              >
+                Individuel
+              </button>
+            </div>
           </div>
+
+          {exportMode === 'individual' && (
+            <div>
+              <label className="block text-xs text-gray-400 mb-1">Juge</label>
+              <select
+                value={selectedJudgeKey}
+                onChange={(event) => setSelectedJudgeKey(event.target.value)}
+                className="w-full px-2 py-1.5 rounded border border-gray-700 bg-surface-dark text-xs text-white focus:border-primary-500 focus:outline-none"
+              >
+                {judges.map((judge) => (
+                  <option key={judge.key} value={judge.key}>
+                    {judge.judgeName}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
           <div>
             <label className="block text-xs text-gray-400 mb-1">Arrondi des notes</label>
@@ -353,15 +411,17 @@ export default function ExportInterface() {
             </div>
           </div>
 
-          <label className="flex items-center gap-2 text-xs text-gray-300">
-            <input
-              type="checkbox"
-              checked={showJudgeColumns}
-              onChange={() => setShowJudgeColumns((prev) => !prev)}
-              className="accent-primary-500"
-            />
-            Afficher les colonnes juges
-          </label>
+          {exportMode === 'grouped' && (
+            <label className="flex items-center gap-2 text-xs text-gray-300">
+              <input
+                type="checkbox"
+                checked={showJudgeColumns}
+                onChange={() => setShowJudgeColumns((prev) => !prev)}
+                className="accent-primary-500"
+              />
+              Afficher les totaux par juge
+            </label>
+          )}
 
           <label className="flex items-center gap-2 text-xs text-gray-300">
             <input
@@ -448,7 +508,7 @@ export default function ExportInterface() {
                   Juges: {judges.length}
                 </span>
                 <span className="px-2 py-1 rounded border" style={{ borderColor: withAlpha(accent, 0.4) }}>
-                  Tri: {sortMode === 'folder' ? 'Ordre du dossier' : 'Alphabétique'}
+                  Mode: {exportMode === 'grouped' ? 'Groupé (moyenne)' : `Individuel (${selectedJudge?.judgeName || '-'})`}
                 </span>
                 <span className="px-2 py-1 rounded border" style={{ borderColor: withAlpha(accent, 0.4) }}>
                   Date: {new Date().toLocaleDateString('fr-FR')}
@@ -495,10 +555,10 @@ export default function ExportInterface() {
                   className={`px-2 ${density === 'compact' ? 'py-1' : 'py-1.5'} text-center border`}
                   style={{ borderColor: theme === 'light' ? '#d1d5db' : '#334155' }}
                 >
-                  Total
+                  {exportMode === 'individual' ? `Total ${selectedJudge?.judgeName || ''}` : 'Total moyen'}
                 </th>
 
-                {showJudgeColumns && judges.map((judge) => (
+                {exportMode === 'grouped' && showJudgeColumns && judges.map((judge) => (
                   <th
                     key={`export-judge-${judge.key}`}
                     className={`px-2 ${density === 'compact' ? 'py-1' : 'py-1.5'} text-center border`}
@@ -510,7 +570,7 @@ export default function ExportInterface() {
               </tr>
             </thead>
             <tbody>
-              {rows.map((row, index) => (
+              {displayRows.map((row, index) => (
                 <tr
                   key={`export-row-${row.clip.id}`}
                   style={{
@@ -546,7 +606,11 @@ export default function ExportInterface() {
                       className={`px-2 ${density === 'compact' ? 'py-1' : 'py-1.5'} text-center border font-mono`}
                       style={{ borderColor: theme === 'light' ? '#e5e7eb' : '#334155' }}
                     >
-                      {formatScore(row.categoryAverages[group.category])}
+                      {formatScore(
+                        exportMode === 'individual'
+                          ? (row.categoryJudgeScores[group.category][selectedJudgeIndex] ?? 0)
+                          : (row.categoryAverages[group.category] ?? 0),
+                      )}
                     </td>
                   ))}
 
@@ -554,10 +618,14 @@ export default function ExportInterface() {
                     className={`px-2 ${density === 'compact' ? 'py-1' : 'py-1.5'} text-center border font-mono font-bold`}
                     style={{ borderColor: theme === 'light' ? '#d1d5db' : '#334155' }}
                   >
-                    {formatScore(row.averageTotal)}
+                    {formatScore(
+                      exportMode === 'individual'
+                        ? (row.judgeTotals[selectedJudgeIndex] ?? 0)
+                        : row.averageTotal,
+                    )}
                   </td>
 
-                  {showJudgeColumns && row.judgeTotals.map((value, judgeIdx) => (
+                  {exportMode === 'grouped' && showJudgeColumns && row.judgeTotals.map((value, judgeIdx) => (
                     <td
                       key={`export-judge-score-${row.clip.id}-${judges[judgeIdx].key}`}
                       className={`px-2 ${density === 'compact' ? 'py-1' : 'py-1.5'} text-center border font-mono`}

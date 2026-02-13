@@ -21,6 +21,7 @@ chrono = { version = "0.4", features = ["serde"] }
 walkdir = "2.5"
 libloading = "0.8"
 dirs = "5"
+base64 = "0.22"
 
 [features]
 custom-protocol = ["tauri/custom-protocol"]

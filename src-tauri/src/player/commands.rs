@@ -1,5 +1,11 @@
 use crate::state::AppState;
+use base64::engine::general_purpose::STANDARD as BASE64_STD;
+use base64::Engine;
 use serde::Serialize;
+use serde_json::Value;
+use std::process::{Command, Stdio};
+use std::sync::mpsc;
+use std::time::{Duration, Instant};
 use tauri::State;
 
 #[derive(Debug, Serialize)]
@@ -24,6 +30,279 @@ pub struct TrackItem {
     pub lang: Option<String>,
     pub codec: Option<String>,
     pub external: bool,
+}
+
+fn normalize_path(value: &str) -> String {
+    value.replace('\\', "/")
+}
+
+fn parse_json_i64(value: Option<&Value>) -> i64 {
+    fn parse_from_str(text: &str) -> Option<i64> {
+        let cleaned: String = text
+            .trim()
+            .chars()
+            .filter(|c| c.is_ascii_digit() || *c == '.' || *c == '-' || *c == '+')
+            .collect();
+        if cleaned.is_empty() {
+            return None;
+        }
+        if let Ok(v) = cleaned.parse::<i64>() {
+            return Some(v);
+        }
+        cleaned.parse::<f64>().ok().map(|v| v.round() as i64)
+    }
+
+    value
+        .and_then(|v| {
+            v.as_i64()
+                .or_else(|| v.as_u64().and_then(|u| i64::try_from(u).ok()))
+                .or_else(|| v.as_f64().map(|f| f.round() as i64))
+                .or_else(|| v.as_str().and_then(parse_from_str))
+        })
+        .unwrap_or(0)
+}
+
+fn parse_json_f64(value: Option<&Value>) -> f64 {
+    fn parse_from_str(text: &str) -> Option<f64> {
+        let cleaned: String = text
+            .trim()
+            .chars()
+            .filter(|c| c.is_ascii_digit() || *c == '.' || *c == '-' || *c == '+')
+            .collect();
+        if cleaned.is_empty() {
+            return None;
+        }
+        cleaned.parse::<f64>().ok()
+    }
+
+    value
+        .and_then(|v| {
+            v.as_f64()
+                .or_else(|| v.as_i64().map(|n| n as f64))
+                .or_else(|| v.as_u64().map(|n| n as f64))
+                .or_else(|| v.as_str().and_then(parse_from_str))
+        })
+        .unwrap_or(0.0)
+}
+
+fn parse_json_string(value: Option<&Value>) -> String {
+    value
+        .and_then(|v| {
+            v.as_str()
+                .map(|s| s.trim().to_string())
+                .or_else(|| v.as_i64().map(|n| n.to_string()))
+                .or_else(|| v.as_u64().map(|n| n.to_string()))
+                .or_else(|| v.as_f64().map(|n| n.to_string()))
+        })
+        .unwrap_or_default()
+}
+
+fn build_minimal_media_info(path: &str) -> super::mpv_wrapper::MediaInfo {
+    let mut info = super::mpv_wrapper::MediaInfo::empty();
+    if let Ok(metadata) = std::fs::metadata(path) {
+        info.file_size = i64::try_from(metadata.len()).unwrap_or(0);
+    }
+    if let Some(ext) = std::path::Path::new(path).extension().and_then(|e| e.to_str()) {
+        info.format_name = ext.to_ascii_lowercase();
+    }
+    info
+}
+
+fn probe_media_info_via_mediainfo(path: &str) -> Result<super::mpv_wrapper::MediaInfo, String> {
+    let mut child = Command::new("mediainfo")
+        .args(["--Output=JSON", path])
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .map_err(|e| format!("mediainfo indisponible: {}", e))?;
+
+    let timeout = Duration::from_millis(2500);
+    let start = Instant::now();
+    loop {
+        match child.try_wait() {
+            Ok(Some(_)) => break,
+            Ok(None) => {
+                if start.elapsed() >= timeout {
+                    let _ = child.kill();
+                    let _ = child.wait();
+                    return Err("mediainfo timeout (2.5s)".to_string());
+                }
+                std::thread::sleep(Duration::from_millis(20));
+            }
+            Err(e) => {
+                return Err(format!("mediainfo wait failed: {}", e));
+            }
+        }
+    }
+
+    let output = child
+        .wait_with_output()
+        .map_err(|e| format!("mediainfo output failed: {}", e))?;
+    if !output.status.success() {
+        return Err(String::from_utf8_lossy(&output.stderr).to_string());
+    }
+
+    let root: Value =
+        serde_json::from_slice(&output.stdout).map_err(|e| format!("mediainfo JSON invalide: {}", e))?;
+    let tracks = root
+        .get("media")
+        .and_then(|m| m.get("track"))
+        .and_then(|t| t.as_array())
+        .cloned()
+        .unwrap_or_default();
+
+    let get_type = |track: &Value| {
+        track
+            .get("@type")
+            .or_else(|| track.get("Type"))
+            .and_then(|v| v.as_str())
+            .unwrap_or_default()
+            .to_ascii_lowercase()
+    };
+
+    let general = tracks.iter().find(|t| get_type(t) == "general");
+    let video = tracks.iter().find(|t| get_type(t) == "video");
+    let audio = tracks.iter().find(|t| get_type(t) == "audio");
+
+    let audio_track_count = tracks.iter().filter(|t| get_type(t) == "audio").count() as i64;
+    let video_track_count = tracks.iter().filter(|t| get_type(t) == "video").count() as i64;
+    let subtitle_track_count = tracks
+        .iter()
+        .filter(|t| {
+            let kind = get_type(t);
+            kind == "text" || kind == "subtitle" || kind == "subtitles"
+        })
+        .count() as i64;
+
+    let mut duration = parse_json_f64(general.and_then(|g| g.get("Duration")));
+    if duration > 10_000.0 {
+        duration /= 1000.0;
+    }
+
+    Ok(super::mpv_wrapper::MediaInfo {
+        width: parse_json_i64(video.and_then(|v| v.get("Width"))),
+        height: parse_json_i64(video.and_then(|v| v.get("Height"))),
+        video_codec: {
+            let codec = parse_json_string(video.and_then(|v| v.get("Format")));
+            if codec.is_empty() {
+                parse_json_string(video.and_then(|v| v.get("CodecID")))
+            } else {
+                codec
+            }
+        },
+        audio_codec: {
+            let codec = parse_json_string(audio.and_then(|a| a.get("Format")));
+            if codec.is_empty() {
+                parse_json_string(audio.and_then(|a| a.get("CodecID")))
+            } else {
+                codec
+            }
+        },
+        file_size: parse_json_i64(general.and_then(|g| g.get("FileSize"))),
+        video_bitrate: parse_json_i64(video.and_then(|v| v.get("BitRate"))),
+        audio_bitrate: parse_json_i64(audio.and_then(|a| a.get("BitRate"))),
+        fps: parse_json_f64(video.and_then(|v| v.get("FrameRate"))),
+        sample_rate: parse_json_i64(audio.and_then(|a| a.get("SamplingRate"))),
+        channels: parse_json_i64(audio.and_then(|a| a.get("Channels"))),
+        format_name: parse_json_string(general.and_then(|g| g.get("Format"))),
+        duration,
+        format_long_name: {
+            let name = parse_json_string(general.and_then(|g| g.get("Format_Commercial_IfAny")));
+            if name.is_empty() {
+                parse_json_string(general.and_then(|g| g.get("Format_String")))
+            } else {
+                name
+            }
+        },
+        overall_bitrate: parse_json_i64(general.and_then(|g| g.get("OverallBitRate"))),
+        video_profile: parse_json_string(video.and_then(|v| v.get("Format_Profile"))),
+        pixel_format: parse_json_string(video.and_then(|v| v.get("ChromaSubsampling"))),
+        color_space: parse_json_string(video.and_then(|v| v.get("ColorSpace"))),
+        color_primaries: {
+            let v = parse_json_string(video.and_then(|s| s.get("colour_primaries")));
+            if v.is_empty() {
+                parse_json_string(video.and_then(|s| s.get("ColorPrimaries")))
+            } else {
+                v
+            }
+        },
+        color_transfer: {
+            let v = parse_json_string(video.and_then(|s| s.get("transfer_characteristics")));
+            if v.is_empty() {
+                parse_json_string(video.and_then(|s| s.get("TransferCharacteristics")))
+            } else {
+                v
+            }
+        },
+        video_bit_depth: parse_json_i64(video.and_then(|v| v.get("BitDepth"))),
+        audio_channel_layout: parse_json_string(audio.and_then(|a| a.get("ChannelLayout"))),
+        audio_language: parse_json_string(audio.and_then(|a| a.get("Language"))),
+        audio_track_count,
+        video_track_count,
+        subtitle_track_count,
+        video_frame_count: parse_json_i64(video.and_then(|v| v.get("FrameCount"))),
+        sample_aspect_ratio: parse_json_string(video.and_then(|v| v.get("PixelAspectRatio"))),
+        display_aspect_ratio: parse_json_string(video.and_then(|v| v.get("DisplayAspectRatio"))),
+    })
+}
+
+fn probe_media_info_open_source(path: &str) -> Result<super::mpv_wrapper::MediaInfo, String> {
+    match super::mpv_wrapper::MpvPlayer::probe_media_info(path) {
+        Ok(info) => Ok(info),
+        Err(ffprobe_err) => probe_media_info_via_mediainfo(path)
+            .map_err(|mediainfo_err| format!("ffprobe: {}; mediainfo: {}", ffprobe_err, mediainfo_err)),
+    }
+}
+
+fn probe_frame_preview_with_ffmpeg(path: &str, seconds: f64, width: u32) -> Result<String, String> {
+    let safe_seconds = if seconds.is_finite() && seconds >= 0.0 {
+        seconds
+    } else {
+        0.0
+    };
+    let safe_width = width.clamp(120, 640);
+    let seek = format!("{:.3}", safe_seconds);
+    let scale = format!("scale={}:-1:flags=lanczos", safe_width);
+
+    let output = Command::new("ffmpeg")
+        .args([
+            "-hide_banner",
+            "-loglevel",
+            "error",
+            "-ss",
+            &seek,
+            "-i",
+            path,
+            "-frames:v",
+            "1",
+            "-vf",
+            &scale,
+            "-f",
+            "image2pipe",
+            "-vcodec",
+            "mjpeg",
+            "-",
+        ])
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .output()
+        .map_err(|e| format!("ffmpeg indisponible: {}", e))?;
+
+    if !output.status.success() {
+        let err = String::from_utf8_lossy(&output.stderr).trim().to_string();
+        return Err(if err.is_empty() {
+            "ffmpeg a échoué à extraire le frame".to_string()
+        } else {
+            err
+        });
+    }
+
+    if output.stdout.is_empty() {
+        return Err("Aucune image extraite".to_string());
+    }
+
+    let b64 = BASE64_STD.encode(output.stdout);
+    Ok(format!("data:image/jpeg;base64,{}", b64))
 }
 
 fn sync_overlay_with_child(
@@ -60,19 +339,67 @@ fn sync_overlay_with_child(
         {
             if let Ok(hwnd) = overlay.hwnd() {
                 let overlay_hwnd = hwnd.0 as isize;
+                let video_hwnd = cw.hwnd();
                 unsafe {
+                    crate::player::mpv_window::set_window_owner_raw(overlay_hwnd, video_hwnd);
+                }
+                // Place directly above the video window (app-local z-order only).
+                let positioned_above_video = unsafe {
                     crate::player::mpv_window::set_window_pos_raw(
                         overlay_hwnd,
-                        0,
+                        0, // HWND_TOP (within owner group)
                         mx,
                         my,
                         mw,
                         mh,
-                        0x0050,
-                    );
+                        0x0010, // SWP_NOACTIVATE
+                    )
+                };
+                if !positioned_above_video {
+                    // Ensure video window is explicitly non-topmost, then retry above-video ordering.
+                    let _ = unsafe {
+                        crate::player::mpv_window::set_window_pos_raw(
+                            video_hwnd,
+                            -2, // HWND_NOTOPMOST
+                            0,
+                            0,
+                            0,
+                            0,
+                            0x0013, // SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE
+                        )
+                    };
+                    let retry_above_video = unsafe {
+                        crate::player::mpv_window::set_window_pos_raw(
+                            overlay_hwnd,
+                            0, // HWND_TOP
+                            mx,
+                            my,
+                            mw,
+                            mh,
+                            0x0010, // SWP_NOACTIVATE
+                        )
+                    };
+                    if !retry_above_video {
+                        let positioned_top = unsafe {
+                            crate::player::mpv_window::set_window_pos_raw(
+                                overlay_hwnd,
+                                0, // HWND_TOP
+                                mx,
+                                my,
+                                mw,
+                                mh,
+                                0x0010, // SWP_NOACTIVATE
+                            )
+                        };
+                        if !positioned_top && cw.is_fullscreen() {
+                            let _ = overlay.set_fullscreen(true);
+                        }
+                    }
                 }
             } else {
-                let _ = overlay.set_fullscreen(true);
+                if cw.is_fullscreen() {
+                    let _ = overlay.set_fullscreen(true);
+                }
             }
         }
         #[cfg(not(target_os = "windows"))]
@@ -80,7 +407,9 @@ fn sync_overlay_with_child(
             let _ = overlay.set_fullscreen(true);
         }
     } else {
-        let _ = overlay.set_fullscreen(true);
+        if cw.is_fullscreen() {
+            let _ = overlay.set_fullscreen(true);
+        }
     }
 
     if focus_overlay {
@@ -243,6 +572,138 @@ pub fn player_set_audio_track(state: State<'_, AppState>, id: i64) -> Result<(),
 }
 
 #[tauri::command]
+pub fn player_frame_step(state: State<'_, AppState>) -> Result<(), String> {
+    let player = state.player.lock().map_err(|e| e.to_string())?;
+    match &*player {
+        Some(p) => p.frame_step(),
+        None => Err("Player not initialized".to_string()),
+    }
+}
+
+#[tauri::command]
+pub fn player_frame_back_step(state: State<'_, AppState>) -> Result<(), String> {
+    let player = state.player.lock().map_err(|e| e.to_string())?;
+    match &*player {
+        Some(p) => p.frame_back_step(),
+        None => Err("Player not initialized".to_string()),
+    }
+}
+
+#[tauri::command]
+pub fn player_screenshot(state: State<'_, AppState>, path: String) -> Result<(), String> {
+    let player = state.player.lock().map_err(|e| e.to_string())?;
+    match &*player {
+        Some(p) => p.screenshot(&path),
+        None => Err("Player not initialized".to_string()),
+    }
+}
+
+#[tauri::command]
+pub fn player_get_media_info(
+    state: State<'_, AppState>,
+    path: Option<String>,
+) -> Result<super::mpv_wrapper::MediaInfo, String> {
+    use std::panic::{catch_unwind, AssertUnwindSafe};
+
+    if let Some(target_path) = path {
+        let trimmed = target_path.trim().to_string();
+        if !trimmed.is_empty() {
+            let normalized_target = normalize_path(&trimmed);
+            let (tx, rx) = mpsc::channel();
+            std::thread::spawn({
+                let probe_path = normalized_target.clone();
+                move || {
+                    let _ = tx.send(probe_media_info_open_source(&probe_path));
+                }
+            });
+
+            if let Ok(Ok(info)) = rx.recv_timeout(Duration::from_millis(2500)) {
+                return Ok(info);
+            }
+
+            if let Ok(player) = state.player.try_lock() {
+                if let Some(p) = &*player {
+                    let current_path = normalize_path(&p.get_current_path());
+                    if !current_path.is_empty()
+                        && current_path.eq_ignore_ascii_case(&normalized_target)
+                    {
+                        let info = catch_unwind(AssertUnwindSafe(|| p.get_media_info()))
+                            .unwrap_or_else(|_| super::mpv_wrapper::MediaInfo::empty());
+                        return Ok(info);
+                    }
+                }
+            }
+
+            return Ok(build_minimal_media_info(&trimmed));
+        }
+    }
+
+    if let Ok(player) = state.player.try_lock() {
+        if let Some(p) = &*player {
+            let info = catch_unwind(AssertUnwindSafe(|| p.get_media_info()))
+                .unwrap_or_else(|_| super::mpv_wrapper::MediaInfo::empty());
+            return Ok(info);
+        }
+        return Err("Player not initialized".to_string());
+    }
+
+    Ok(super::mpv_wrapper::MediaInfo::empty())
+}
+
+#[tauri::command]
+pub fn player_get_frame_preview(
+    state: State<'_, AppState>,
+    path: Option<String>,
+    seconds: f64,
+    width: Option<u32>,
+) -> Result<String, String> {
+    let mut target_path = path.unwrap_or_default().trim().to_string();
+    if target_path.is_empty() {
+        let player = state.player.lock().map_err(|e| e.to_string())?;
+        if let Some(p) = &*player {
+            target_path = p.get_current_path();
+        }
+    }
+
+    if target_path.trim().is_empty() {
+        return Err("Aucun fichier vidéo disponible pour le preview".to_string());
+    }
+
+    let safe_width = width.unwrap_or(320).clamp(120, 640);
+    let normalized_path = normalize_path(target_path.trim());
+    let (tx, rx) = mpsc::channel();
+
+    std::thread::spawn(move || {
+        let _ = tx.send(probe_frame_preview_with_ffmpeg(
+            &normalized_path,
+            seconds,
+            safe_width,
+        ));
+    });
+
+    match rx.recv_timeout(Duration::from_millis(2200)) {
+        Ok(result) => result,
+        Err(_) => Err("Preview frame trop lent (ffmpeg timeout)".to_string()),
+    }
+}
+
+#[tauri::command]
+pub fn player_get_audio_levels(
+    state: State<'_, AppState>,
+) -> Result<super::mpv_wrapper::AudioLevels, String> {
+    let player = state.player.lock().map_err(|e| e.to_string())?;
+    match &*player {
+        Some(p) => Ok(p.get_audio_levels()),
+        None => Ok(super::mpv_wrapper::AudioLevels {
+            left_db: -90.0,
+            right_db: -90.0,
+            overall_db: -90.0,
+            available: false,
+        }),
+    }
+}
+
+#[tauri::command]
 pub fn player_is_available(state: State<'_, AppState>) -> bool {
     let player = state.player.lock().unwrap_or_else(|e| e.into_inner());
     player.is_some()
@@ -267,11 +728,12 @@ pub fn player_set_geometry(
 }
 
 #[tauri::command]
-pub fn player_show(state: State<'_, AppState>) -> Result<(), String> {
+pub fn player_show(state: State<'_, AppState>, app_handle: tauri::AppHandle) -> Result<(), String> {
     let child = state.child_window.lock().map_err(|e| e.to_string())?;
     match &*child {
         Some(cw) => {
             cw.show();
+            sync_overlay_with_child(&app_handle, cw, false);
             Ok(())
         }
         None => Err("Child window not available".to_string()),
@@ -279,11 +741,16 @@ pub fn player_show(state: State<'_, AppState>) -> Result<(), String> {
 }
 
 #[tauri::command]
-pub fn player_hide(state: State<'_, AppState>) -> Result<(), String> {
+pub fn player_hide(state: State<'_, AppState>, app_handle: tauri::AppHandle) -> Result<(), String> {
     let child = state.child_window.lock().map_err(|e| e.to_string())?;
     match &*child {
         Some(cw) => {
             cw.hide();
+            use tauri::Manager;
+            if let Some(overlay) = app_handle.get_window("fullscreen-overlay") {
+                let _ = overlay.set_fullscreen(false);
+                let _ = overlay.hide();
+            }
             Ok(())
         }
         None => Err("Child window not available".to_string()),
@@ -296,7 +763,6 @@ pub fn player_set_fullscreen(
     app_handle: tauri::AppHandle,
     fullscreen: bool,
 ) -> Result<(), String> {
-    let player = state.player.lock().map_err(|e| e.to_string())?;
     let child = state.child_window.lock().map_err(|e| e.to_string())?;
     match &*child {
         Some(cw) => {
@@ -314,10 +780,6 @@ pub fn player_set_fullscreen(
                         let _ = main.set_focus();
                     }
                 }
-            }
-
-            if let Some(p) = &*player {
-                let _ = p.set_detached_controls_enabled(false);
             }
 
             Ok(())

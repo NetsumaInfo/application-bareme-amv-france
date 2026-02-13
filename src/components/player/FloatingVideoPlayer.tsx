@@ -1,10 +1,13 @@
-import React, { useEffect, useRef, useCallback, useState } from 'react'
+import React, { useEffect, useRef, useCallback, useState, useMemo } from 'react'
+import { emit } from '@tauri-apps/api/event'
 import { Play, Pause, SkipForward, SkipBack, Volume2, VolumeX, Maximize2, Minimize2, X } from 'lucide-react'
 import { usePlayerStore } from '@/store/usePlayerStore'
+import { useNotationStore } from '@/store/useNotationStore'
 import { useProjectStore } from '@/store/useProjectStore'
 import { usePlayer } from '@/hooks/usePlayer'
 import * as tauri from '@/services/tauri'
 import { formatTime, getClipPrimaryLabel } from '@/utils/formatters'
+import { buildNoteTimecodeMarkers, type NoteTimecodeMarker } from '@/utils/timecodes'
 import SubtitleSelector from './SubtitleSelector'
 import AudioTrackSelector from './AudioTrackSelector'
 
@@ -34,6 +37,7 @@ export function FloatingVideoPlayer({ onClose }: FloatingVideoPlayerProps) {
     currentTime,
     duration,
     togglePause,
+    pause,
     seek,
     seekRelative,
     setMuted,
@@ -45,6 +49,32 @@ export function FloatingVideoPlayer({ onClose }: FloatingVideoPlayerProps) {
   const clips = useProjectStore((state) => state.clips)
   const currentClipIndex = useProjectStore((state) => state.currentClipIndex)
   const currentClip = clips[currentClipIndex]
+  const currentBareme = useNotationStore((state) => state.currentBareme)
+  const notes = useNotationStore((state) => state.notes)
+  const currentNote = currentClip ? notes[currentClip.id] : undefined
+
+  const noteMarkers = useMemo(() => {
+    if (!currentClip || !currentBareme || duration <= 0) return []
+    return buildNoteTimecodeMarkers(currentNote, currentBareme, duration).slice(0, 90)
+  }, [currentClip, currentBareme, currentNote, duration])
+
+  const handleMarkerJump = useCallback(async (marker: NoteTimecodeMarker) => {
+    if (!currentClip || !isLoaded) return
+    await seek(marker.seconds)
+    await pause()
+
+    const payload = {
+      clipId: currentClip.id,
+      seconds: marker.seconds,
+      category: marker.category ?? null,
+      criterionId: marker.criterionId ?? null,
+      source: marker.source,
+      raw: marker.raw,
+    }
+
+    window.dispatchEvent(new CustomEvent('amv:focus-note-marker', { detail: payload }))
+    emit('main:focus-note-marker', payload).catch(() => {})
+  }, [currentClip, isLoaded, pause, seek])
 
   const loadTracks = useCallback(async () => {
     try {
@@ -274,16 +304,44 @@ export function FloatingVideoPlayer({ onClose }: FloatingVideoPlayerProps) {
           <span className="text-[9px] text-gray-500 font-mono w-8 text-right">
             {formatTime(currentTime)}
           </span>
-          <input
-            type="range"
-            min={0}
-            max={duration || 100}
-            step={0.1}
-            value={currentTime}
-            onChange={(e) => seek(Number(e.target.value))}
-            className="flex-1 h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-primary-500"
-            disabled={!isLoaded}
-          />
+          <div className="relative flex-1">
+            <input
+              type="range"
+              min={0}
+              max={duration || 100}
+              step={0.1}
+              value={currentTime}
+              onChange={(e) => seek(Number(e.target.value))}
+              className="w-full h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-primary-500"
+              disabled={!isLoaded}
+            />
+            {duration > 0 && noteMarkers.length > 0 && (
+              <div className="pointer-events-none absolute left-0 right-0 top-1/2 -translate-y-1/2 h-0">
+                {noteMarkers.map((marker) => {
+                  const left = Math.max(0, Math.min(100, (marker.seconds / duration) * 100))
+                  return (
+                    <button
+                      key={marker.key}
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        handleMarkerJump(marker)
+                      }}
+                      className="pointer-events-auto absolute top-0 -translate-x-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full border shadow-md hover:scale-110 transition-transform"
+                      style={{
+                        left: `${left}%`,
+                        backgroundColor: marker.color,
+                        borderColor: 'rgba(15,23,42,0.85)',
+                      }}
+                      title={marker.previewText
+                        ? `${marker.raw} - ${marker.previewText}`
+                        : `${marker.raw} - ${marker.category ?? 'Notes globales'}`}
+                    />
+                  )
+                })}
+              </div>
+            )}
+          </div>
           <span className="text-[9px] text-gray-500 font-mono w-8">
             {formatTime(duration)}
           </span>

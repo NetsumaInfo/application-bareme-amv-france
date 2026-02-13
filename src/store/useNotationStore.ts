@@ -16,6 +16,8 @@ interface NotationStore {
   removeBareme: (baremeId: string) => void
   updateCriterion: (clipId: string, criterionId: string, value: number | string | boolean) => void
   setTextNotes: (clipId: string, text: string) => void
+  setCriterionNote: (clipId: string, criterionId: string, text: string) => void
+  setCategoryNote: (clipId: string, category: string, text: string) => void
   getScoreForClip: (clipId: string) => number
   isClipComplete: (clipId: string) => boolean
   getNoteForClip: (clipId: string) => Note | undefined
@@ -40,6 +42,8 @@ function noteDataToNote(data: NoteData): Note {
     baremeId: data.baremeId,
     scores,
     textNotes: data.textNotes,
+    criterionNotes: data.criterionNotes ?? {},
+    categoryNotes: data.categoryNotes ?? {},
     finalScore: data.finalScore,
     scoredAt: data.scoredAt,
   }
@@ -59,6 +63,8 @@ function noteToNoteData(note: Note): NoteData {
     baremeId: note.baremeId,
     scores,
     textNotes: note.textNotes,
+    criterionNotes: note.criterionNotes,
+    categoryNotes: note.categoryNotes,
     finalScore: note.finalScore,
     scoredAt: note.scoredAt,
   }
@@ -111,18 +117,35 @@ export const useNotationStore = create<NotationStore>((set, get) => ({
     const criterion = currentBareme.criteria.find((c) => c.id === criterionId)
     if (!criterion) return
 
-    const validation = validateCriterionValue(value, criterion)
+    let normalizedValue: number | string | boolean = value
+    if (
+      (criterion.type === 'numeric' || criterion.type === 'slider')
+      && value !== undefined
+      && value !== null
+      && value !== ''
+    ) {
+      const numeric = Number(value)
+      if (Number.isFinite(numeric)) {
+        const min = Number.isFinite(criterion.min) ? Number(criterion.min) : numeric
+        const max = Number.isFinite(criterion.max) ? Number(criterion.max) : numeric
+        normalizedValue = Math.max(min, Math.min(max, numeric))
+      }
+    }
+
+    const validation = validateCriterionValue(normalizedValue, criterion)
 
     const existingNote = notes[clipId] || {
       clipId,
       baremeId: currentBareme.id,
       scores: {},
       textNotes: '',
+      criterionNotes: {},
+      categoryNotes: {},
     }
 
     const updatedScore: CriterionScore = {
       criterionId,
-      value,
+      value: normalizedValue,
       isValid: validation.isValid,
       validationErrors: validation.errors,
     }
@@ -152,6 +175,8 @@ export const useNotationStore = create<NotationStore>((set, get) => ({
       baremeId: currentBareme.id,
       scores: {},
       textNotes: '',
+      criterionNotes: {},
+      categoryNotes: {},
     }
 
     if (existingNote.textNotes === text) return
@@ -160,6 +185,68 @@ export const useNotationStore = create<NotationStore>((set, get) => ({
       notes: {
         ...notes,
         [clipId]: { ...existingNote, textNotes: text },
+      },
+      history: pushHistory(state.history, cloneNotes(notes)),
+    }))
+  },
+
+  setCriterionNote: (clipId: string, criterionId: string, text: string) => {
+    const { notes, currentBareme } = get()
+    if (!currentBareme) return
+
+    const existingNote = notes[clipId] || {
+      clipId,
+      baremeId: currentBareme.id,
+      scores: {},
+      textNotes: '',
+      criterionNotes: {},
+      categoryNotes: {},
+    }
+
+    const prevValue = existingNote.criterionNotes?.[criterionId] ?? ''
+    if (prevValue === text) return
+
+    set((state) => ({
+      notes: {
+        ...notes,
+        [clipId]: {
+          ...existingNote,
+          criterionNotes: {
+            ...(existingNote.criterionNotes || {}),
+            [criterionId]: text,
+          },
+        },
+      },
+      history: pushHistory(state.history, cloneNotes(notes)),
+    }))
+  },
+
+  setCategoryNote: (clipId: string, category: string, text: string) => {
+    const { notes, currentBareme } = get()
+    if (!currentBareme) return
+
+    const existingNote = notes[clipId] || {
+      clipId,
+      baremeId: currentBareme.id,
+      scores: {},
+      textNotes: '',
+      criterionNotes: {},
+      categoryNotes: {},
+    }
+
+    const prevValue = existingNote.categoryNotes?.[category] ?? ''
+    if (prevValue === text) return
+
+    set((state) => ({
+      notes: {
+        ...notes,
+        [clipId]: {
+          ...existingNote,
+          categoryNotes: {
+            ...(existingNote.categoryNotes || {}),
+            [category]: text,
+          },
+        },
       },
       history: pushHistory(state.history, cloneNotes(notes)),
     }))

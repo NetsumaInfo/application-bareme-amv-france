@@ -110,6 +110,7 @@ extern "system" {
     fn SetWindowTextW(hwnd: isize, lp_string: *const u16) -> i32;
     fn IsWindow(hwnd: isize) -> i32;
     fn IsWindowVisible(hwnd: isize) -> i32;
+    fn GetForegroundWindow() -> isize;
 }
 
 #[link(name = "gdi32")]
@@ -128,8 +129,22 @@ pub unsafe fn set_window_pos_raw(
     cx: i32,
     cy: i32,
     flags: u32,
-) {
-    SetWindowPos(hwnd, hwnd_insert_after, x, y, cx, cy, flags);
+) -> bool {
+    SetWindowPos(hwnd, hwnd_insert_after, x, y, cx, cy, flags) != 0
+}
+
+/// Sets the owner window (GWLP_HWNDPARENT) for a top-level Win32 window.
+/// # Safety
+/// Caller must pass valid HWND values.
+pub unsafe fn set_window_owner_raw(hwnd: isize, owner_hwnd: isize) {
+    SetWindowLongPtrW(hwnd, GWLP_HWNDPARENT, owner_hwnd);
+}
+
+/// Returns the current foreground window HWND.
+/// # Safety
+/// Mirrors raw Win32 API usage.
+pub unsafe fn get_foreground_window_raw() -> isize {
+    GetForegroundWindow()
 }
 
 fn to_wide(s: &str) -> Vec<u16> {
@@ -337,16 +352,35 @@ impl MpvChildWindow {
             return;
         }
         unsafe {
-            // Keep current z-order so the fullscreen overlay window remains above mpv.
-            SetWindowPos(
-                self.hwnd,
-                0,
-                0,
-                0,
-                0,
-                0,
-                SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_SHOWWINDOW,
-            );
+            if IsWindowVisible(self.hwnd) != 0 {
+                return;
+            }
+        }
+        unsafe {
+            if self.is_detached() {
+                // Detached window should come to front when explicitly shown,
+                // but must not stay top-most globally.
+                SetWindowPos(
+                    self.hwnd,
+                    HWND_TOP,
+                    0,
+                    0,
+                    0,
+                    0,
+                    SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_SHOWWINDOW,
+                );
+            } else {
+                // Keep current z-order so the fullscreen overlay window remains above mpv.
+                SetWindowPos(
+                    self.hwnd,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_SHOWWINDOW,
+                );
+            }
         }
     }
 
@@ -544,6 +578,8 @@ impl MpvChildWindow {
         }
 
         unsafe {
+            let was_visible = IsWindowVisible(self.hwnd) != 0;
+
             // Get current screen position for initial placement
             let mut rect = Rect {
                 left: 0,
@@ -572,7 +608,9 @@ impl MpvChildWindow {
             let new_ex_style = WS_EX_APPWINDOW;
             SetWindowLongPtrW(self.hwnd, GWL_EXSTYLE, new_ex_style as isize);
 
-            // Remove owner
+            // Detached mode: standalone top-level window.
+            // This avoids accidental overlap priority issues with other app windows
+            // (notes/media panels) while still allowing manual focus behavior.
             SetWindowLongPtrW(self.hwnd, GWLP_HWNDPARENT, 0);
 
             // Set window title
@@ -580,6 +618,10 @@ impl MpvChildWindow {
             SetWindowTextW(self.hwnd, title.as_ptr());
 
             // Apply frame changes and reposition
+            let mut flags = SWP_FRAMECHANGED;
+            if was_visible {
+                flags |= SWP_SHOWWINDOW;
+            }
             SetWindowPos(
                 self.hwnd,
                 HWND_NOTOPMOST,
@@ -587,8 +629,11 @@ impl MpvChildWindow {
                 rect.top,
                 cur_w,
                 cur_h,
-                SWP_FRAMECHANGED | SWP_SHOWWINDOW,
+                flags,
             );
+            if !was_visible {
+                ShowWindow(self.hwnd, SW_HIDE);
+            }
         }
 
         self.is_detached
@@ -650,7 +695,7 @@ impl MpvChildWindow {
 
 impl Drop for MpvChildWindow {
     fn drop(&mut self) {
-        if self.hwnd != 0 {
+        if self.hwnd != 0 && self.is_valid_window() {
             unsafe {
                 DestroyWindow(self.hwnd);
             }

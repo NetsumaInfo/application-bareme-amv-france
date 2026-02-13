@@ -1,11 +1,16 @@
 import { useRef, useCallback, useMemo, useState, useEffect } from 'react'
-import { FolderPlus, FilePlus, ArrowUpDown } from 'lucide-react'
+import { FolderPlus, FilePlus, ArrowUpDown, Download } from 'lucide-react'
+import { emit, listen } from '@tauri-apps/api/event'
+import MediaInfoPanel from '@/components/player/MediaInfoPanel'
+import TimecodeTextarea from '@/components/notes/TimecodeTextarea'
 import { useNotationStore } from '@/store/useNotationStore'
 import { useProjectStore } from '@/store/useProjectStore'
 import { useUIStore } from '@/store/useUIStore'
+import { usePlayer } from '@/hooks/usePlayer'
 import * as tauri from '@/services/tauri'
 import { generateId, parseClipName, getClipPrimaryLabel, getClipSecondaryLabel } from '@/utils/formatters'
 import { CATEGORY_COLOR_PRESETS, sanitizeColor, withAlpha } from '@/utils/colors'
+import { normalizeShortcutFromEvent } from '@/utils/shortcuts'
 import type { Clip } from '@/types/project'
 import type { Criterion } from '@/types/bareme'
 
@@ -17,6 +22,7 @@ interface CategoryGroup {
 }
 
 type SortMode = 'folder' | 'alpha' | 'score'
+const VIDEO_EXTENSIONS = ['mp4', 'mkv', 'avi', 'mov', 'webm', 'flv', 'm4v', 'wmv', 'mpg', 'mpeg', 'ts', 'vob', 'ogv', 'amv']
 
 export default function SpreadsheetInterface() {
   const {
@@ -26,6 +32,7 @@ export default function SpreadsheetInterface() {
     getScoreForClip,
     setTextNotes,
   } = useNotationStore()
+  const { seek, pause } = usePlayer()
   const {
     clips,
     currentClipIndex,
@@ -33,20 +40,135 @@ export default function SpreadsheetInterface() {
     setClips,
     currentProject,
     updateProject,
-    markClipScored,
+    setClipScored,
     markDirty,
     removeClip,
   } = useProjectStore()
-  const { setShowPipVideo, hideAverages, hideTextNotes } = useUIStore()
+  const { setShowPipVideo, hideAverages, hideTextNotes, setNotesDetached, shortcutBindings } = useUIStore()
   const cellRefs = useRef<Map<string, HTMLInputElement>>(new Map())
   const rowRefs = useRef<Map<number, HTMLTableRowElement>>(new Map())
   const [sortMode, setSortMode] = useState<SortMode>('folder')
   const [contextMenu, setContextMenu] = useState<{ clipId: string; x: number; y: number } | null>(null)
   const contextMenuRef = useRef<HTMLDivElement | null>(null)
+  const [mediaInfoClip, setMediaInfoClip] = useState<{ name: string; path: string } | null>(null)
+  const [isDragOver, setIsDragOver] = useState(false)
+  const [scoringCategory, setScoringCategory] = useState<string | null>(null)
+  const scoringPanelRef = useRef<HTMLDivElement | null>(null)
+  const dragHoverTsRef = useRef(0)
+
+  const isVideoFile = useCallback((path: string) => {
+    const ext = path.split('.').pop()?.toLowerCase() ?? ''
+    return VIDEO_EXTENSIONS.includes(ext)
+  }, [])
+
+  const handleFileDrop = useCallback(async (paths: string[]) => {
+    const existingPaths = new Set(clips.map((c) => c.filePath))
+    const videoPaths = paths.filter((p) => isVideoFile(p) && !existingPaths.has(p))
+    const folderPaths = paths.filter((p) => !p.includes('.') || (!isVideoFile(p) && !p.endsWith('.json')))
+
+    // Scan dropped folders
+    let folderVideos: tauri.VideoMetadata[] = []
+    for (const folder of folderPaths) {
+      try {
+        const videos = await tauri.scanVideoFolder(folder)
+        folderVideos = [...folderVideos, ...videos.filter((v) => !existingPaths.has(v.file_path))]
+      } catch { /* ignore invalid folders */ }
+    }
+
+    const allNewClips: Clip[] = [
+      ...videoPaths.map((filePath, i) => {
+        const fileName = filePath.split(/[\\/]/).pop() || filePath
+        const parsed = parseClipName(fileName)
+        return {
+          id: generateId(),
+          fileName,
+          filePath,
+          displayName: parsed.displayName,
+          author: parsed.author,
+          duration: 0,
+          hasInternalSubtitles: false,
+          audioTrackCount: 1,
+          scored: false,
+          order: clips.length + i,
+        }
+      }),
+      ...folderVideos.map((v, i) => {
+        const parsed = parseClipName(v.file_name)
+        return {
+          id: generateId(),
+          fileName: v.file_name,
+          filePath: v.file_path,
+          displayName: parsed.displayName,
+          author: parsed.author,
+          duration: 0,
+          hasInternalSubtitles: false,
+          audioTrackCount: 1,
+          scored: false,
+          order: clips.length + videoPaths.length + i,
+        }
+      }),
+    ]
+
+    if (allNewClips.length > 0) {
+      setClips([...clips, ...allNewClips])
+      markDirty()
+    }
+  }, [clips, setClips, markDirty, isVideoFile])
+
+  // Listen for Tauri file drop events
+  useEffect(() => {
+    let unlistenDrop: (() => void) | null = null
+    let unlistenHover: (() => void) | null = null
+    let unlistenCancel: (() => void) | null = null
+
+    listen<string[]>('tauri://file-drop', (event) => {
+      setIsDragOver(false)
+      dragHoverTsRef.current = 0
+      if (event.payload && event.payload.length > 0) {
+        handleFileDrop(event.payload)
+      }
+    }).then((fn) => { unlistenDrop = fn })
+
+    listen('tauri://file-drop-hover', () => {
+      dragHoverTsRef.current = Date.now()
+      setIsDragOver(true)
+    }).then((fn) => { unlistenHover = fn })
+
+    listen('tauri://file-drop-cancelled', () => {
+      setIsDragOver(false)
+      dragHoverTsRef.current = 0
+    }).then((fn) => { unlistenCancel = fn })
+
+    const forceReset = () => {
+      setIsDragOver(false)
+      dragHoverTsRef.current = 0
+    }
+    const watchdog = window.setInterval(() => {
+      if (!dragHoverTsRef.current) return
+      if (Date.now() - dragHoverTsRef.current > 1000) {
+        forceReset()
+      }
+    }, 250)
+    window.addEventListener('blur', forceReset)
+    window.addEventListener('mouseleave', forceReset)
+    window.addEventListener('dragend', forceReset)
+    window.addEventListener('drop', forceReset)
+
+    return () => {
+      if (unlistenDrop) unlistenDrop()
+      if (unlistenHover) unlistenHover()
+      if (unlistenCancel) unlistenCancel()
+      window.clearInterval(watchdog)
+      window.removeEventListener('blur', forceReset)
+      window.removeEventListener('mouseleave', forceReset)
+      window.removeEventListener('dragend', forceReset)
+      window.removeEventListener('drop', forceReset)
+    }
+  }, [handleFileDrop])
 
   const openClipContextMenu = useCallback((clipId: string, x: number, y: number) => {
     const width = 210
-    const height = 46
+    const height = 184
     const paddedX = Math.max(8, Math.min(x, window.innerWidth - width - 8))
     const paddedY = Math.max(8, Math.min(y, window.innerHeight - height - 8))
     setContextMenu({ clipId, x: paddedX, y: paddedY })
@@ -62,6 +184,25 @@ export default function SpreadsheetInterface() {
     document.addEventListener('mousedown', handleClick)
     return () => document.removeEventListener('mousedown', handleClick)
   }, [contextMenu])
+
+  // Close scoring panel on click outside
+  useEffect(() => {
+    if (!scoringCategory) return
+    const handleClick = (e: MouseEvent) => {
+      if (scoringPanelRef.current && !scoringPanelRef.current.contains(e.target as Node)) {
+        setScoringCategory(null)
+      }
+    }
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setScoringCategory(null)
+    }
+    document.addEventListener('mousedown', handleClick)
+    document.addEventListener('keydown', handleEsc)
+    return () => {
+      document.removeEventListener('mousedown', handleClick)
+      document.removeEventListener('keydown', handleEsc)
+    }
+  }, [scoringCategory])
 
   const criteriaCount = currentBareme?.criteria.length ?? 0
 
@@ -92,11 +233,21 @@ export default function SpreadsheetInterface() {
     return groups
   }, [currentBareme])
 
+  const currentClip = clips[currentClipIndex]
+  const currentNote = currentClip ? getNoteForClip(currentClip.id) : undefined
+  const allClipsScored = clips.length > 0 && clips.every((clip) => clip.scored)
+  const hideTotalsSetting = Boolean(currentProject?.settings.hideTotals)
+  const hideTotalsUntilAllScored = Boolean(currentProject?.settings.hideFinalScoreUntilEnd) && !allClipsScored
+  const shouldHideTotals = hideTotalsSetting || hideTotalsUntilAllScored
+  const canSortByScore = !shouldHideTotals
+  const effectiveSortMode: SortMode =
+    sortMode === 'score' && !canSortByScore ? 'folder' : sortMode
+
   const sortedClips = useMemo(() => {
     const base = [...clips]
     const originalIndex = new Map(clips.map((clip, index) => [clip.id, index]))
 
-    if (sortMode === 'alpha') {
+    if (effectiveSortMode === 'alpha') {
       base.sort((a, b) => {
         const labelA = getClipPrimaryLabel(a)
         const labelB = getClipPrimaryLabel(b)
@@ -107,7 +258,7 @@ export default function SpreadsheetInterface() {
       return base
     }
 
-    if (sortMode === 'score') {
+    if (effectiveSortMode === 'score' && canSortByScore) {
       base.sort((a, b) => {
         const scoreA = getScoreForClip(a.id)
         const scoreB = getScoreForClip(b.id)
@@ -125,7 +276,7 @@ export default function SpreadsheetInterface() {
       return (originalIndex.get(a.id) ?? 0) - (originalIndex.get(b.id) ?? 0)
     })
     return base
-  }, [clips, sortMode, getScoreForClip])
+  }, [clips, effectiveSortMode, getScoreForClip, canSortByScore])
 
   const focusCell = useCallback(
     (clipIdx: number, critIdx: number) => {
@@ -154,6 +305,28 @@ export default function SpreadsheetInterface() {
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent, clipIdx: number, critIdx: number) => {
+      const shortcut = normalizeShortcutFromEvent(e.nativeEvent)
+      if (shortcut === shortcutBindings.notesNextField) {
+        e.preventDefault()
+        focusCell(clipIdx, critIdx + 1)
+        return
+      }
+      if (shortcut === shortcutBindings.notesPrevField) {
+        e.preventDefault()
+        focusCell(clipIdx, critIdx - 1)
+        return
+      }
+      if (shortcut === shortcutBindings.notesFieldDown) {
+        e.preventDefault()
+        focusCell(clipIdx + 1, critIdx)
+        return
+      }
+      if (shortcut === shortcutBindings.notesFieldUp) {
+        e.preventDefault()
+        focusCell(clipIdx - 1, critIdx)
+        return
+      }
+
       if (e.key === 'Tab' && !e.shiftKey) {
         e.preventDefault()
         if (critIdx < criteriaCount - 1) focusCell(clipIdx, critIdx + 1)
@@ -185,7 +358,7 @@ export default function SpreadsheetInterface() {
         focusCell(clipIdx + 1, critIdx)
       }
     },
-    [focusCell, sortedClips.length, criteriaCount],
+    [focusCell, sortedClips.length, criteriaCount, shortcutBindings],
   )
 
   const handleChange = useCallback(
@@ -198,29 +371,15 @@ export default function SpreadsheetInterface() {
     [updateCriterion, markDirty],
   )
 
-  const handleBlur = useCallback(
-    (clipId: string) => {
-      if (!currentBareme) return
-      const note = getNoteForClip(clipId)
-      if (note) {
-        const clip = clips.find((c) => c.id === clipId)
-        const allFilled = currentBareme.criteria.every((c) => {
-          if (!c.required) return true
-          const score = note.scores[c.id]
-          return (
-            score &&
-            score.isValid &&
-            score.value !== '' &&
-            score.value !== undefined
-          )
-        })
-        if (allFilled && clip && !clip.scored) {
-          markClipScored(clipId)
-        }
-      }
-    },
-    [currentBareme, getNoteForClip, clips, markClipScored],
-  )
+  const openPlayerAtFront = useCallback(() => {
+    setShowPipVideo(true)
+    tauri.playerShow()
+      .then(() => tauri.playerSyncOverlay().catch(() => {}))
+      .catch(() => {})
+    setTimeout(() => {
+      tauri.playerSyncOverlay().catch(() => {})
+    }, 120)
+  }, [setShowPipVideo])
 
   const handleImportFolder = async () => {
     try {
@@ -310,32 +469,49 @@ export default function SpreadsheetInterface() {
 
   if (clips.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center h-full gap-3">
-        <p className="text-gray-500 text-sm">
-          Importez des vidéos pour commencer
-        </p>
-        <div className="flex gap-2">
-          <button
-            onClick={handleImportFolder}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary-600 hover:bg-primary-500 text-white text-sm font-medium transition-colors"
-          >
-            <FolderPlus size={16} />
-            Importer un dossier
-          </button>
-          <button
-            onClick={handleImportFiles}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg border border-primary-600 text-primary-500 hover:bg-primary-600/10 text-sm font-medium transition-colors"
-          >
-            <FilePlus size={16} />
-            Importer des fichiers
-          </button>
+      <div className={`flex flex-col items-center justify-center h-full gap-4 transition-colors ${
+        isDragOver ? 'bg-primary-600/10' : ''
+      }`}>
+        <div className={`flex flex-col items-center justify-center gap-3 p-8 rounded-xl border-2 border-dashed transition-colors ${
+          isDragOver ? 'border-primary-400 bg-primary-600/5' : 'border-gray-700'
+        }`}>
+          {isDragOver ? (
+            <>
+              <Download size={32} className="text-primary-400" />
+              <p className="text-primary-400 text-sm font-medium">
+                Déposez vos fichiers ici
+              </p>
+            </>
+          ) : (
+            <>
+              <p className="text-gray-500 text-sm">
+                Glissez-déposez des vidéos ici, ou
+              </p>
+              <div className="flex gap-2">
+                <button
+                  onClick={handleImportFolder}
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary-600 hover:bg-primary-500 text-white text-sm font-medium transition-colors"
+                >
+                  <FolderPlus size={16} />
+                  Importer un dossier
+                </button>
+                <button
+                  onClick={handleImportFiles}
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg border border-primary-600 text-primary-500 hover:bg-primary-600/10 text-sm font-medium transition-colors"
+                >
+                  <FilePlus size={16} />
+                  Importer des fichiers
+                </button>
+              </div>
+            </>
+          )}
         </div>
       </div>
     )
   }
 
-  const currentClip = clips[currentClipIndex]
-  const currentNote = currentClip ? getNoteForClip(currentClip.id) : undefined
+  const scoredClips = clips.filter((clip) => clip.scored)
+  const contextClip = contextMenu ? clips.find((clip) => clip.id === contextMenu.clipId) ?? null : null
 
   // Build flat criteria index for cell navigation
   let globalCritIdx = 0
@@ -345,13 +521,22 @@ export default function SpreadsheetInterface() {
   }
 
   return (
-    <div className="flex flex-col h-full">
+    <div className={`flex flex-col h-full ${isDragOver ? 'ring-2 ring-primary-400 ring-inset' : ''}`}>
+      {/* Drag overlay */}
+      {isDragOver && clips.length > 0 && (
+        <div className="absolute inset-0 z-40 flex items-center justify-center bg-black/40 pointer-events-none">
+          <div className="flex flex-col items-center gap-2 p-6 rounded-xl bg-surface border-2 border-dashed border-primary-400">
+            <Download size={28} className="text-primary-400" />
+            <p className="text-primary-400 text-sm font-medium">Déposez pour ajouter des vidéos</p>
+          </div>
+        </div>
+      )}
       {/* Toolbar */}
       <div className="flex items-center justify-end gap-2 px-2 py-1.5 bg-surface-dark border-b border-gray-700">
         <button
           onClick={() => {
-            const modes: SortMode[] = ['folder', 'alpha', 'score']
-            const currentIndex = modes.indexOf(sortMode)
+            const modes: SortMode[] = canSortByScore ? ['folder', 'alpha', 'score'] : ['folder', 'alpha']
+            const currentIndex = modes.indexOf(effectiveSortMode)
             const nextIndex = (currentIndex + 1) % modes.length
             setSortMode(modes[nextIndex])
           }}
@@ -360,7 +545,7 @@ export default function SpreadsheetInterface() {
         >
           <ArrowUpDown size={12} className="text-gray-500" />
           <span>
-            {sortMode === 'folder' ? 'Ordre du dossier' : sortMode === 'alpha' ? 'Alphabétique' : 'Par note'}
+            {effectiveSortMode === 'folder' ? 'Ordre du dossier' : effectiveSortMode === 'alpha' ? 'Alphabétique' : 'Par note'}
           </span>
         </button>
       </div>
@@ -387,11 +572,13 @@ export default function SpreadsheetInterface() {
                 <th
                   key={g.category}
                   colSpan={g.criteria.length}
-                  className="px-2 py-1.5 text-center text-[10px] font-bold uppercase tracking-wider border-r border-b border-gray-600"
+                  className="px-2 py-1.5 text-center text-[10px] font-bold uppercase tracking-wider border-r border-b border-gray-600 cursor-pointer select-none transition-all hover:brightness-125"
                   style={{
                     backgroundColor: withAlpha(g.color, 0.22),
                     borderColor: withAlpha(g.color, 0.35),
                   }}
+                  onClick={() => setScoringCategory(scoringCategory === g.category ? null : g.category)}
+                  title={`Cliquez pour noter "${g.category}"`}
                 >
                   <span style={{ color: g.color }}>{g.category}</span>
                   <span className="font-normal text-gray-500 ml-1">
@@ -399,15 +586,17 @@ export default function SpreadsheetInterface() {
                   </span>
                 </th>
               ))}
-              <th
-                rowSpan={2}
-                className="px-2 py-1.5 text-center text-[10px] font-bold uppercase tracking-wider border-b border-gray-700 min-w-[50px] bg-surface-dark"
-              >
-                Total
-                <div className="font-normal text-gray-500">
-                  /{currentBareme.totalPoints}
-                </div>
-              </th>
+              {!hideTotalsSetting && (
+                <th
+                  rowSpan={2}
+                  className="px-2 py-1.5 text-center text-[10px] font-bold uppercase tracking-wider border-b border-gray-700 min-w-[50px] bg-surface-dark"
+                >
+                  Total
+                  <div className="font-normal text-gray-500">
+                    /{currentBareme.totalPoints}
+                  </div>
+                </th>
+              )}
             </tr>
 
             {/* Row 2: Criteria names */}
@@ -480,7 +669,7 @@ export default function SpreadsheetInterface() {
                           ? 'bg-surface-dark'
                           : 'bg-surface'
                     }`}
-                    onDoubleClick={() => setShowPipVideo(true)}
+                    onDoubleClick={() => openPlayerAtFront()}
                     onContextMenu={(e) => {
                       e.preventDefault()
                       e.stopPropagation()
@@ -533,7 +722,6 @@ export default function SpreadsheetInterface() {
                             const originalIndex = clips.findIndex(c => c.id === clip.id)
                             if (originalIndex !== -1) setCurrentClip(originalIndex)
                           }}
-                          onBlur={() => handleBlur(clip.id)}
                           onClick={(e) => e.stopPropagation()}
                           className={`amv-soft-number w-full px-1 py-0.5 text-center rounded text-xs font-mono transition-colors focus-visible:outline-none ${
                             hasError
@@ -545,26 +733,28 @@ export default function SpreadsheetInterface() {
                     )
                   })}
 
-                  <td className="px-2 py-1 text-center font-mono font-bold text-[11px]">
-                    <span
-                      className={
-                        totalScore > 0 ? 'text-white' : 'text-gray-600'
-                      }
-                    >
-                      {totalScore}
-                    </span>
-                  </td>
+                  {!hideTotalsSetting && (
+                    <td className="px-2 py-1 text-center font-mono font-bold text-[11px]">
+                      <span
+                        className={
+                          hideTotalsUntilAllScored ? 'text-gray-600' : totalScore > 0 ? 'text-white' : 'text-gray-600'
+                        }
+                      >
+                        {hideTotalsUntilAllScored ? '-' : totalScore}
+                      </span>
+                    </td>
+                  )}
                 </tr>
               )
             })}
           </tbody>
 
           {/* Footer averages */}
-          {clips.length > 1 && !hideAverages && (
+          {clips.length > 1 && !hideAverages && !hideTotalsUntilAllScored && (
             <tfoot>
               <tr>
                 <td
-                  colSpan={2 + currentBareme.criteria.length + 1}
+                  colSpan={2 + currentBareme.criteria.length + (hideTotalsSetting ? 0 : 1)}
                   className="h-[2px] bg-gray-500"
                 />
               </tr>
@@ -579,11 +769,11 @@ export default function SpreadsheetInterface() {
                   g.criteria.map((c, i) => {
                     if (i === 0) {
                       const avg =
-                        clips.length > 0
-                          ? clips.reduce(
+                        scoredClips.length > 0
+                          ? scoredClips.reduce(
                               (s, clip) => s + getCategoryScore(clip.id, g),
                               0,
-                            ) / clips.length
+                            ) / scoredClips.length
                           : 0
                       return (
                         <td
@@ -607,16 +797,18 @@ export default function SpreadsheetInterface() {
                     return null
                   }),
                 )}
-                <td className="px-2 py-2 text-center font-mono font-bold text-[12px] text-white bg-surface-dark">
-                  {clips.length > 0
-                    ? (
-                        clips.reduce(
-                          (s, c) => s + getScoreForClip(c.id),
-                          0,
-                        ) / clips.length
-                      ).toFixed(1)
-                    : '0'}
-                </td>
+                {!hideTotalsSetting && (
+                  <td className="px-2 py-2 text-center font-mono font-bold text-[12px] text-white bg-surface-dark">
+                    {scoredClips.length > 0
+                      ? (
+                          scoredClips.reduce(
+                            (s, c) => s + getScoreForClip(c.id),
+                            0,
+                          ) / scoredClips.length
+                        ).toFixed(1)
+                      : '0'}
+                  </td>
+                )}
               </tr>
             </tfoot>
           )}
@@ -652,15 +844,30 @@ export default function SpreadsheetInterface() {
               ))}
             </span>
           </div>
-          <textarea
+          <TimecodeTextarea
             placeholder="Notes libres pour ce clip..."
             value={currentNote?.textNotes ?? ''}
-            onChange={(e) => {
-              setTextNotes(currentClip.id, e.target.value)
+            onChange={(nextValue) => {
+              setTextNotes(currentClip.id, nextValue)
               markDirty()
             }}
-            className="w-full px-2 py-1.5 text-xs bg-surface-dark border border-gray-700 rounded text-gray-300 placeholder-gray-600 focus:border-primary-500 focus:outline-none resize-y min-h-[40px]"
             rows={2}
+            textareaClassName="text-xs min-h-[40px]"
+            color="#60a5fa"
+            onTimecodeSelect={async (item) => {
+              if (!currentClip) return
+              setShowPipVideo(true)
+              await seek(item.seconds)
+              await pause()
+              const detail = {
+                clipId: currentClip.id,
+                seconds: item.seconds,
+                category: null,
+                criterionId: null,
+              }
+              window.dispatchEvent(new CustomEvent('amv:focus-note-marker', { detail }))
+              emit('main:focus-note-marker', detail).catch(() => {})
+            }}
           />
         </div>
       )}
@@ -669,9 +876,48 @@ export default function SpreadsheetInterface() {
       {contextMenu && (
         <div
           ref={contextMenuRef}
-          className="fixed z-50 bg-gray-900 border border-gray-700 rounded-lg shadow-xl py-1 min-w-[140px]"
+          className="fixed z-50 bg-gray-900 border border-gray-700 rounded-lg shadow-xl py-1 min-w-[160px]"
           style={{ left: contextMenu.x, top: contextMenu.y }}
         >
+          {contextClip && (
+            <>
+              <button
+                onClick={() => {
+                  setClipScored(contextClip.id, !contextClip.scored)
+                  setContextMenu(null)
+                }}
+                className="w-full text-left px-3 py-1.5 text-[11px] text-gray-300 hover:bg-gray-800 transition-colors"
+              >
+                {contextClip.scored ? 'Retirer "noté"' : 'Marquer comme noté'}
+              </button>
+              <div className="border-t border-gray-700 my-0.5" />
+              <button
+                onClick={() => {
+                  const index = clips.findIndex((item) => item.id === contextClip.id)
+                  if (index >= 0) setCurrentClip(index)
+                  tauri.openNotesWindow().then(() => setNotesDetached(true)).catch(() => {})
+                  setContextMenu(null)
+                }}
+                className="w-full text-left px-3 py-1.5 text-[11px] text-gray-300 hover:bg-gray-800 transition-colors"
+              >
+                Notes du clip
+              </button>
+              <div className="border-t border-gray-700 my-0.5" />
+            </>
+          )}
+          <button
+            onClick={() => {
+              const clip = clips.find((c) => c.id === contextMenu.clipId)
+              if (clip) {
+                setMediaInfoClip({ name: getClipPrimaryLabel(clip), path: clip.filePath })
+              }
+              setContextMenu(null)
+            }}
+            className="w-full text-left px-3 py-1.5 text-[11px] text-gray-300 hover:bg-gray-800 transition-colors"
+          >
+            Afficher MediaInfo
+          </button>
+          <div className="border-t border-gray-700 my-0.5" />
           <button
             onClick={() => {
               removeClip(contextMenu.clipId)
@@ -683,6 +929,158 @@ export default function SpreadsheetInterface() {
           </button>
         </div>
       )}
+
+      {/* MediaInfo panel */}
+      {mediaInfoClip && (
+        <MediaInfoPanel
+          clipName={mediaInfoClip.name}
+          filePath={mediaInfoClip.path}
+          onClose={() => setMediaInfoClip(null)}
+        />
+      )}
+
+      {/* Category scoring panel */}
+      {scoringCategory && currentClip && (() => {
+        const group = categoryGroups.find((g) => g.category === scoringCategory)
+        if (!group) return null
+        const clipNote = getNoteForClip(currentClip.id)
+        const catScore = getCategoryScore(currentClip.id, group)
+
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setScoringCategory(null)}>
+            <div
+              ref={scoringPanelRef}
+              className="w-[380px] max-h-[80vh] rounded-xl border shadow-2xl overflow-hidden flex flex-col"
+              style={{
+                backgroundColor: '#0f0f23',
+                borderColor: withAlpha(group.color, 0.35),
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Panel header */}
+              <div
+                className="px-4 py-3 flex items-center justify-between shrink-0"
+                style={{
+                  backgroundColor: withAlpha(group.color, 0.18),
+                  borderBottom: `1px solid ${withAlpha(group.color, 0.3)}`,
+                }}
+              >
+                <div>
+                  <div className="text-xs font-bold uppercase tracking-wider" style={{ color: group.color }}>
+                    {group.category}
+                  </div>
+                  <div className="text-[10px] text-gray-400 mt-0.5 truncate max-w-[200px]">
+                    {getClipPrimaryLabel(currentClip)}
+                    {currentClip.author && (
+                      <span className="text-gray-500"> — {currentClip.author}</span>
+                    )}
+                  </div>
+                </div>
+                <div className="text-right">
+                  <span className="text-lg font-bold font-mono" style={{ color: catScore > 0 ? group.color : '#6b7280' }}>
+                    {catScore}
+                  </span>
+                  <span className="text-xs text-gray-500">/{group.totalMax}</span>
+                </div>
+              </div>
+
+              {/* Criteria inputs */}
+              <div className="flex-1 overflow-y-auto p-3 space-y-2">
+                {group.criteria.map((criterion) => {
+                  const score = clipNote?.scores[criterion.id]
+                  const value = score?.value ?? ''
+                  const hasError = score && !score.isValid
+
+                  return (
+                    <div
+                      key={criterion.id}
+                      className="flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors"
+                      style={{
+                        backgroundColor: hasError ? withAlpha('#ef4444', 0.12) : withAlpha(group.color, 0.06),
+                      }}
+                    >
+                      <div className="flex-1 min-w-0">
+                        <div className="text-xs text-gray-200 truncate" title={criterion.name}>
+                          {criterion.name}
+                        </div>
+                        {criterion.description && (
+                          <div className="text-[9px] text-gray-500 truncate">
+                            {criterion.description}
+                          </div>
+                        )}
+                      </div>
+                      <input
+                        type="number"
+                        min={criterion.min}
+                        max={criterion.max}
+                        step={criterion.step || 0.5}
+                        value={value === '' ? '' : String(value)}
+                        onChange={(e) => handleChange(currentClip.id, criterion.id, e.target.value)}
+                        autoFocus={criterion.id === group.criteria[0]?.id}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === 'ArrowDown') {
+                            e.preventDefault()
+                            const idx = group.criteria.findIndex((c) => c.id === criterion.id)
+                            const nextCrit = group.criteria[idx + 1]
+                            if (nextCrit) {
+                              const nextInput = scoringPanelRef.current?.querySelector(
+                                `input[data-crit-id="${nextCrit.id}"]`,
+                              ) as HTMLInputElement | null
+                              nextInput?.focus()
+                              nextInput?.select()
+                            } else {
+                              setScoringCategory(null)
+                            }
+                          } else if (e.key === 'ArrowUp') {
+                            e.preventDefault()
+                            const idx = group.criteria.findIndex((c) => c.id === criterion.id)
+                            const prevCrit = group.criteria[idx - 1]
+                            if (prevCrit) {
+                              const prevInput = scoringPanelRef.current?.querySelector(
+                                `input[data-crit-id="${prevCrit.id}"]`,
+                              ) as HTMLInputElement | null
+                              prevInput?.focus()
+                              prevInput?.select()
+                            }
+                          } else if (e.key === 'Escape') {
+                            setScoringCategory(null)
+                          }
+                        }}
+                        data-crit-id={criterion.id}
+                        className={`amv-soft-number w-20 px-2 py-1.5 text-center text-sm rounded-lg border font-mono focus-visible:outline-none ${
+                          hasError
+                            ? 'border-accent bg-accent/10 text-accent-light'
+                            : 'text-white focus:border-primary-500'
+                        } focus:outline-none`}
+                        style={!hasError ? {
+                          borderColor: withAlpha(group.color, 0.4),
+                          backgroundColor: withAlpha(group.color, 0.1),
+                        } : undefined}
+                      />
+                      <span className="text-[10px] text-gray-500 w-7 text-right font-mono">
+                        /{criterion.max ?? 10}
+                      </span>
+                    </div>
+                  )
+                })}
+              </div>
+
+              {/* Panel footer */}
+              <div className="px-3 py-2 border-t border-gray-700 flex items-center justify-between shrink-0" style={{ background: '#1a1a2e' }}>
+                <span className="text-[10px] text-gray-500">
+                  Entrée/↓ = suivant · Échap = fermer
+                </span>
+                <button
+                  onClick={() => setScoringCategory(null)}
+                  className="px-3 py-1 text-[11px] rounded-md bg-surface-light text-gray-300 hover:text-white hover:bg-primary-600 transition-colors"
+                >
+                  Fermer
+                </button>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
     </div>
   )
 }

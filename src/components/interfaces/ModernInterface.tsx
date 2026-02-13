@@ -152,9 +152,13 @@ function CategorySection({
 
 export default function ModernInterface() {
   const { currentBareme, updateCriterion, getNoteForClip, getScoreForClip } = useNotationStore()
-  const { clips, currentClipIndex, markClipScored, markDirty } = useProjectStore()
+  const { clips, currentClipIndex, currentProject, markDirty } = useProjectStore()
   const { hideFinalScore, hideTextNotes } = useUIStore()
   const currentClip = clips[currentClipIndex]
+  const allClipsScored = clips.length > 0 && clips.every((clip) => clip.scored)
+  const hideTotalsUntilAllScored = Boolean(currentProject?.settings.hideFinalScoreUntilEnd) && !allClipsScored
+  const hideTotalsSetting = Boolean(currentProject?.settings.hideTotals)
+  const shouldHideTotals = hideFinalScore || hideTotalsSetting || hideTotalsUntilAllScored
 
   const note = currentClip ? getNoteForClip(currentClip.id) : undefined
   const totalScore = currentClip ? getScoreForClip(currentClip.id) : 0
@@ -164,12 +168,8 @@ export default function ModernInterface() {
       if (!currentClip) return
       updateCriterion(currentClip.id, criterionId, value)
       markDirty()
-      const store = useNotationStore.getState()
-      if (store.isClipComplete(currentClip.id) && !currentClip.scored) {
-        markClipScored(currentClip.id)
-      }
     },
-    [currentClip, updateCriterion, markDirty, markClipScored],
+    [currentClip, updateCriterion, markDirty],
   )
 
   const categories = useMemo(() => {
@@ -230,7 +230,7 @@ export default function ModernInterface() {
       </div>
 
       <div className="border-t border-gray-700">
-        {!hideFinalScore && (
+        {!shouldHideTotals && (
           <div className="flex items-center justify-between px-4 py-3 bg-surface">
             <span className="text-sm font-medium text-gray-300">Score total</span>
             <div className="flex items-center gap-3">

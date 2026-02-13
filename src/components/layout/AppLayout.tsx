@@ -3,12 +3,9 @@ import { AnimatePresence, motion } from 'motion/react'
 import { FilePlus, FolderOpen, Folder } from 'lucide-react'
 import { emit, listen } from '@tauri-apps/api/event'
 import Header from './Header'
-import Sidebar from './Sidebar'
 import ContextMenu from './ContextMenu'
-import VideoPlayer from '@/components/player/VideoPlayer'
 import { FloatingVideoPlayer } from '@/components/player/FloatingVideoPlayer'
 import SpreadsheetInterface from '@/components/interfaces/SpreadsheetInterface'
-import ModernInterface from '@/components/interfaces/ModernInterface'
 import NotationInterface from '@/components/interfaces/NotationInterface'
 import ResultatsInterface from '@/components/interfaces/ResultatsInterface'
 import ExportInterface from '@/components/interfaces/ExportInterface'
@@ -25,6 +22,8 @@ import { usePlayer } from '@/hooks/usePlayer'
 import { useSaveProject } from '@/hooks/useSaveProject'
 import * as tauri from '@/services/tauri'
 import { getClipPrimaryLabel } from '@/utils/formatters'
+import { DEFAULT_SHORTCUT_BINDINGS } from '@/utils/shortcuts'
+import { buildNoteTimecodeMarkers } from '@/utils/timecodes'
 
 interface ProjectListItem {
   name: string
@@ -190,32 +189,24 @@ function WelcomeScreen() {
 }
 
 function ScoringInterface() {
-  const { currentInterface } = useUIStore()
-
   return (
     <AnimatePresence mode="wait">
       <motion.div
-        key={currentInterface}
+        key="notes"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         transition={{ duration: 0.12 }}
-        className="flex flex-col h-full"
+        className="flex flex-col h-full flex-1 min-w-0 w-full"
       >
-        {currentInterface === 'modern' && <ModernInterface />}
-        {currentInterface === 'notation' && <NotationInterface />}
+        <NotationInterface />
       </motion.div>
     </AnimatePresence>
   )
 }
 
 function NotationTabContent() {
-  const {
-    currentInterface,
-    sidebarCollapsed,
-  } = useUIStore()
-
-  const isNotationMode = currentInterface === 'notation'
+  const { currentInterface } = useUIStore()
   const isSpreadsheetMode = currentInterface === 'spreadsheet'
 
   if (isSpreadsheetMode) {
@@ -230,45 +221,15 @@ function NotationTabContent() {
 
   return (
     <div className="flex flex-1 overflow-hidden">
-      {/* Sidebar - hidden in notation mode or when collapsed */}
-      {!isNotationMode && !sidebarCollapsed && (
-        <div className="hidden lg:flex">
-          <Sidebar />
-        </div>
-      )}
-
-      {/* Main content */}
-      <div
-        className={`flex flex-1 overflow-hidden ${
-          isNotationMode ? 'flex-col lg:flex-row' : 'flex-col xl:flex-row'
-        }`}
-      >
-        {isNotationMode ? (
-          <>
-            <div className="flex flex-col flex-1 p-2 gap-1 overflow-hidden min-h-[38vh]">
-              <VideoPlayer />
-            </div>
-            <div className="flex flex-col w-full lg:w-80 border-t lg:border-t-0 lg:border-l border-gray-700 overflow-hidden">
-              <ScoringInterface />
-            </div>
-          </>
-        ) : (
-          <>
-            <div className="flex flex-col w-full xl:w-1/2 p-2 gap-1 overflow-hidden min-h-[34vh]">
-              <VideoPlayer />
-            </div>
-            <div className="flex flex-col w-full xl:w-1/2 border-t xl:border-t-0 xl:border-l border-gray-700 overflow-hidden">
-              <ScoringInterface />
-            </div>
-          </>
-        )}
-      </div>
+      <ScoringInterface />
     </div>
   )
 }
 
 export default function AppLayout() {
   const { currentProject, clips, currentClipIndex, nextClip, previousClip } = useProjectStore()
+  const currentBareme = useNotationStore((state) => state.currentBareme)
+  const notes = useNotationStore((state) => state.notes)
   const {
     currentTab,
     switchTab,
@@ -284,16 +245,40 @@ export default function AppLayout() {
     resetZoom,
     setShowProjectModal,
     shortcutBindings,
+    isNotesDetached,
+    setNotesDetached,
   } = useUIStore()
-  const { togglePause, seekRelative, toggleFullscreen, exitFullscreen, pause } = usePlayer()
+  const { togglePause, seekRelative, toggleFullscreen, exitFullscreen, pause, frameStep, frameBackStep, screenshot } = usePlayer()
   const isPlayerLoaded = usePlayerStore((state) => state.isLoaded)
   const isFullscreen = usePlayerStore((state) => state.isFullscreen)
   const isDetached = usePlayerStore((state) => state.isDetached)
   const { save, saveAs } = useSaveProject()
   const undoLastChange = useNotationStore((state) => state.undoLastChange)
   const [showSettings, setShowSettings] = useState(false)
+  const allClipsScored = clips.length > 0 && clips.every((clip) => clip.scored)
+  const lockResultsUntilScored = Boolean(currentProject?.settings.hideFinalScoreUntilEnd) && !allClipsScored
 
   useAutoSave()
+
+  useEffect(() => {
+    if (!lockResultsUntilScored) return
+    if (currentTab === 'resultats' || currentTab === 'export') {
+      switchTab('notation')
+    }
+  }, [lockResultsUntilScored, currentTab, switchTab])
+
+  // Load persisted user settings on mount
+  useEffect(() => {
+    tauri.loadUserSettings().then((data) => {
+      if (data && typeof data === 'object') {
+        const settings = data as Record<string, unknown>
+        if (settings.shortcutBindings && typeof settings.shortcutBindings === 'object') {
+          const merged = { ...DEFAULT_SHORTCUT_BINDINGS, ...(settings.shortcutBindings as Record<string, string>) }
+          useUIStore.setState({ shortcutBindings: merged })
+        }
+      }
+    }).catch(() => {})
+  }, [])
 
   // Emit clip info to overlay window when fullscreen
   const emitClipInfo = useCallback(() => {
@@ -306,17 +291,47 @@ export default function AppLayout() {
     }).catch(() => {})
   }, [])
 
+  const emitOverlayMarkers = useCallback(() => {
+    const { clips: allClips, currentClipIndex: idx } = useProjectStore.getState()
+    const clip = allClips[idx] ?? null
+    const bareme = useNotationStore.getState().currentBareme
+    const note = clip ? useNotationStore.getState().getNoteForClip(clip.id) : null
+    const markers = buildNoteTimecodeMarkers(note, bareme).slice(0, 120).map((marker) => ({
+      key: marker.key,
+      raw: marker.raw,
+      seconds: marker.seconds,
+      color: marker.color,
+      previewText: marker.previewText,
+      source: marker.source,
+      category: marker.category ?? null,
+      criterionId: marker.criterionId ?? null,
+    }))
+
+    emit('main:overlay-markers', {
+      clipId: clip?.id ?? null,
+      markers,
+    }).catch(() => {})
+  }, [])
+
   useEffect(() => {
     if (isFullscreen || isDetached) {
       emitClipInfo()
+      emitOverlayMarkers()
     }
-  }, [isFullscreen, isDetached, currentClipIndex, clips.length, emitClipInfo])
+  }, [isFullscreen, isDetached, currentClipIndex, clips.length, emitClipInfo, emitOverlayMarkers])
+
+  useEffect(() => {
+    if (!(isFullscreen || isDetached)) return
+    emitOverlayMarkers()
+  }, [isFullscreen, isDetached, currentClipIndex, notes, currentBareme, emitOverlayMarkers])
 
   // Listen for overlay commands (next/prev clip)
   useEffect(() => {
     let unlistenNext: (() => void) | null = null
     let unlistenPrev: (() => void) | null = null
     let unlistenRequest: (() => void) | null = null
+    let unlistenMarkersRequest: (() => void) | null = null
+    let unlistenFocusNote: (() => void) | null = null
     let unlistenClose: (() => void) | null = null
 
     listen('overlay:next-clip', () => {
@@ -331,6 +346,40 @@ export default function AppLayout() {
       emitClipInfo()
     }).then(fn => { unlistenRequest = fn })
 
+    listen('overlay:request-note-markers', () => {
+      emitOverlayMarkers()
+    }).then(fn => { unlistenMarkersRequest = fn })
+
+    listen<{
+      clipId?: string
+      seconds?: number
+      category?: string | null
+      criterionId?: string | null
+      source?: string | null
+      raw?: string | null
+    }>('overlay:focus-note-marker', (event) => {
+      const clipId = event.payload?.clipId
+      if (!clipId) return
+
+      const projectStore = useProjectStore.getState()
+      const targetIndex = projectStore.clips.findIndex((clip) => clip.id === clipId)
+      if (targetIndex >= 0 && targetIndex !== projectStore.currentClipIndex) {
+        projectStore.setCurrentClip(targetIndex)
+      }
+
+      const detail = {
+        clipId,
+        seconds: Number(event.payload?.seconds ?? 0),
+        category: event.payload?.category ?? null,
+        criterionId: event.payload?.criterionId ?? null,
+        source: event.payload?.source ?? null,
+        raw: event.payload?.raw ?? null,
+      }
+
+      window.dispatchEvent(new CustomEvent('amv:focus-note-marker', { detail }))
+      emit('main:focus-note-marker', detail).catch(() => {})
+    }).then(fn => { unlistenFocusNote = fn })
+
     listen('overlay:close-player', () => {
       useUIStore.getState().setShowPipVideo(false)
       tauri.playerHide().catch(() => {})
@@ -340,9 +389,124 @@ export default function AppLayout() {
       if (unlistenNext) unlistenNext()
       if (unlistenPrev) unlistenPrev()
       if (unlistenRequest) unlistenRequest()
+      if (unlistenMarkersRequest) unlistenMarkersRequest()
+      if (unlistenFocusNote) unlistenFocusNote()
       if (unlistenClose) unlistenClose()
     }
-  }, [emitClipInfo])
+  }, [emitClipInfo, emitOverlayMarkers])
+
+  // --- Notes window cross-window events ---
+  const emitNotesClipData = useCallback(() => {
+    const { clips: allClips, currentClipIndex: idx } = useProjectStore.getState()
+    const clip = allClips[idx] ?? null
+    const bareme = useNotationStore.getState().currentBareme
+    const note = clip ? useNotationStore.getState().getNoteForClip(clip.id) : null
+    emit('main:clip-data', { clip, bareme, note, clipIndex: idx, totalClips: allClips.length }).catch(() => {})
+  }, [])
+
+  useEffect(() => {
+    const unlisteners: (() => void)[] = []
+
+    listen('notes:request-data', () => {
+      emitNotesClipData()
+    }).then((fn) => unlisteners.push(fn))
+
+    listen<{ clipId: string; criterionId: string; value: number | string }>('notes:criterion-updated', (event) => {
+      const { clipId, criterionId, value } = event.payload
+      useNotationStore.getState().updateCriterion(clipId, criterionId, value as number)
+      useProjectStore.getState().markDirty()
+    }).then((fn) => unlisteners.push(fn))
+
+    listen<{ clipId: string; text: string }>('notes:text-notes-updated', (event) => {
+      const { clipId, text } = event.payload
+      useNotationStore.getState().setTextNotes(clipId, text)
+      useProjectStore.getState().markDirty()
+    }).then((fn) => unlisteners.push(fn))
+
+    listen<{ clipId: string; category: string; text: string }>('notes:category-note-updated', (event) => {
+      const { clipId, category, text } = event.payload
+      useNotationStore.getState().setCategoryNote(clipId, category, text)
+      useProjectStore.getState().markDirty()
+    }).then((fn) => unlisteners.push(fn))
+
+    listen<{ direction: string }>('notes:navigate-clip', (event) => {
+      if (event.payload.direction === 'next') {
+        useProjectStore.getState().nextClip()
+      } else {
+        useProjectStore.getState().previousClip()
+      }
+    }).then((fn) => unlisteners.push(fn))
+
+    listen('notes:open-player', () => {
+      useUIStore.getState().setShowPipVideo(true)
+      tauri.playerShow().catch(() => {})
+    }).then((fn) => unlisteners.push(fn))
+
+    listen<{
+      clipId?: string
+      seconds?: number
+      category?: string | null
+      criterionId?: string | null
+    }>('notes:timecode-jump', (event) => {
+      const clipId = event.payload?.clipId
+      const seconds = Number(event.payload?.seconds ?? NaN)
+      if (!clipId || !Number.isFinite(seconds) || seconds < 0) return
+
+      const store = useProjectStore.getState()
+      const index = store.clips.findIndex((clip) => clip.id === clipId)
+      if (index < 0) return
+      const clip = store.clips[index]
+      if (!clip?.filePath) return
+
+      if (store.currentClipIndex !== index) {
+        store.setCurrentClip(index)
+      }
+      useUIStore.getState().setShowPipVideo(true)
+
+      const goToTimecode = async () => {
+        const playerState = usePlayerStore.getState()
+        if (!playerState.isLoaded || playerState.currentFilePath !== clip.filePath) {
+          playerState.setLoaded(false)
+          await tauri.playerLoad(clip.filePath)
+          playerState.setLoaded(true, clip.filePath)
+          await tauri.playerShow().catch(() => {})
+        }
+        await tauri.playerSeek(seconds).catch(() => {})
+        await tauri.playerPause().catch(() => {})
+      }
+
+      goToTimecode().catch(() => {})
+
+      const detail = {
+        clipId,
+        seconds,
+        category: event.payload?.category ?? null,
+        criterionId: event.payload?.criterionId ?? null,
+      }
+      window.dispatchEvent(new CustomEvent('amv:focus-note-marker', { detail }))
+      emit('main:focus-note-marker', detail).catch(() => {})
+    }).then((fn) => unlisteners.push(fn))
+
+    listen('notes:close', () => {
+      setNotesDetached(false)
+    }).then((fn) => unlisteners.push(fn))
+
+    return () => unlisteners.forEach((fn) => fn())
+  }, [emitNotesClipData, setNotesDetached])
+
+  // Send clip data to notes window when clip changes
+  useEffect(() => {
+    if (!isNotesDetached) return
+    emitNotesClipData()
+  }, [isNotesDetached, currentClipIndex, clips.length, notes, emitNotesClipData])
+
+  useEffect(() => {
+    if (!isNotesDetached) return
+    const clip = clips[currentClipIndex]
+    if (!clip) return
+    const note = useNotationStore.getState().getNoteForClip(clip.id) ?? null
+    emit('main:note-updated', { note }).catch(() => {})
+  }, [isNotesDetached, clips, currentClipIndex, notes])
 
   // Load clips during fullscreen or detached player window
   useEffect(() => {
@@ -414,12 +578,18 @@ export default function AppLayout() {
     map[shortcutBindings.nextClip] = nextClip
     map[shortcutBindings.prevClip] = previousClip
     map[shortcutBindings.tabNotation] = () => switchTab('notation')
-    map[shortcutBindings.tabResultats] = () => switchTab('resultats')
-    map[shortcutBindings.tabExport] = () => switchTab('export')
+    map[shortcutBindings.tabResultats] = () => {
+      if (!lockResultsUntilScored) switchTab('resultats')
+    }
+    map[shortcutBindings.tabExport] = () => {
+      if (!lockResultsUntilScored) switchTab('export')
+    }
     map[shortcutBindings.undo] = () => {
       undoLastChange()
       useProjectStore.getState().markDirty()
     }
+    map[shortcutBindings.frameForward] = frameStep
+    map[shortcutBindings.frameBack] = frameBackStep
     return map
   }, [
     shortcutBindings,
@@ -428,7 +598,10 @@ export default function AppLayout() {
     nextClip,
     previousClip,
     switchTab,
+    lockResultsUntilScored,
     undoLastChange,
+    frameStep,
+    frameBackStep,
   ])
 
   const globalShortcuts = useMemo(() => {
@@ -442,6 +615,7 @@ export default function AppLayout() {
     map[shortcutBindings.exitFullscreen] = handleEscapeFullscreen
     map[shortcutBindings.newProject] = () => setShowProjectModal(true)
     map[shortcutBindings.openProject] = () => { handleCtrlO() }
+    map[shortcutBindings.screenshot] = screenshot
     return map
   }, [
     shortcutBindings,
@@ -454,6 +628,7 @@ export default function AppLayout() {
     handleEscapeFullscreen,
     setShowProjectModal,
     handleCtrlO,
+    screenshot,
   ])
 
   useKeyboardShortcuts(regularShortcuts, globalShortcuts)
@@ -523,12 +698,7 @@ export default function AppLayout() {
       return
     }
 
-    const shouldShowPlayer =
-      currentTab === 'notation'
-        ? currentInterface === 'spreadsheet'
-          ? showPipVideo
-          : true
-        : false
+    const shouldShowPlayer = currentTab === 'notation' ? showPipVideo : false
 
     if (shouldShowPlayer) {
       tauri.playerShow().catch(() => {})

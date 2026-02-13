@@ -104,6 +104,68 @@ export async function playerSyncOverlay(): Promise<void> {
   await invoke('player_sync_overlay')
 }
 
+export async function playerFrameStep(): Promise<void> {
+  await invoke('player_frame_step')
+}
+
+export async function playerFrameBackStep(): Promise<void> {
+  await invoke('player_frame_back_step')
+}
+
+export async function playerScreenshot(path: string): Promise<void> {
+  await invoke('player_screenshot', { path })
+}
+
+export async function playerGetFramePreview(path: string | null, seconds: number, width?: number): Promise<string> {
+  return await invoke('player_get_frame_preview', { path, seconds, width })
+}
+
+export interface MediaInfo {
+  width: number
+  height: number
+  video_codec: string
+  audio_codec: string
+  file_size: number
+  video_bitrate: number
+  audio_bitrate: number
+  fps: number
+  sample_rate: number
+  channels: number
+  format_name: string
+  duration: number
+  format_long_name: string
+  overall_bitrate: number
+  video_profile: string
+  pixel_format: string
+  color_space: string
+  color_primaries: string
+  color_transfer: string
+  video_bit_depth: number
+  audio_channel_layout: string
+  audio_language: string
+  audio_track_count: number
+  video_track_count: number
+  subtitle_track_count: number
+  video_frame_count: number
+  sample_aspect_ratio: string
+  display_aspect_ratio: string
+}
+
+export async function playerGetMediaInfo(path?: string): Promise<MediaInfo> {
+  return await invoke('player_get_media_info', { path })
+}
+
+export interface AudioLevels {
+  left_db: number
+  right_db: number
+  overall_db: number
+  available: boolean
+}
+
+export async function playerGetAudioLevels(): Promise<AudioLevels> {
+  return await invoke('player_get_audio_levels')
+}
+
 // --- Project Commands ---
 
 export async function saveProjectFile(data: unknown, filePath: string): Promise<void> {
@@ -189,6 +251,32 @@ export async function openJsonDialog(): Promise<string | null> {
 export async function saveJsonDialog(defaultName?: string): Promise<string | null> {
   const result = await save({
     filters: [{ name: 'JSON', extensions: ['json'] }],
+    defaultPath: defaultName,
+  })
+  return result
+}
+
+export async function saveUserSettings(data: unknown): Promise<void> {
+  await invoke('save_user_settings', { data })
+}
+
+export async function loadUserSettings(): Promise<unknown> {
+  return await invoke('load_user_settings')
+}
+
+// --- Window Commands ---
+
+export async function openNotesWindow(): Promise<void> {
+  await invoke('open_notes_window')
+}
+
+export async function closeNotesWindow(): Promise<void> {
+  await invoke('close_notes_window')
+}
+
+export async function saveScreenshotDialog(defaultName?: string): Promise<string | null> {
+  const result = await save({
+    filters: [{ name: 'Image PNG', extensions: ['png'] }],
     defaultPath: defaultName,
   })
   return result

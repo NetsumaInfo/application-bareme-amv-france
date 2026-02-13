@@ -19,6 +19,14 @@ export type ShortcutAction =
   | 'zoomOut'
   | 'resetZoom'
   | 'undo'
+  | 'frameForward'
+  | 'frameBack'
+  | 'screenshot'
+  | 'insertTimecode'
+  | 'notesPrevField'
+  | 'notesNextField'
+  | 'notesFieldUp'
+  | 'notesFieldDown'
 
 export interface ShortcutDefinition {
   action: ShortcutAction
@@ -47,6 +55,14 @@ export const SHORTCUT_DEFINITIONS: ShortcutDefinition[] = [
   { action: 'zoomOut', label: 'Zoom -', defaultShortcut: 'ctrl+-' },
   { action: 'resetZoom', label: 'Réinitialiser le zoom', defaultShortcut: 'ctrl+0' },
   { action: 'undo', label: 'Annuler (Undo)', defaultShortcut: 'ctrl+z' },
+  { action: 'frameForward', label: 'Image suivante', defaultShortcut: '.' },
+  { action: 'frameBack', label: 'Image précédente', defaultShortcut: ',' },
+  { action: 'screenshot', label: "Capture d'écran", defaultShortcut: 'ctrl+shift+s' },
+  { action: 'insertTimecode', label: 'Insérer timecode dans les notes', defaultShortcut: 'ctrl+t' },
+  { action: 'notesPrevField', label: 'Champ précédent (notes)', defaultShortcut: 'ctrl+arrowleft' },
+  { action: 'notesNextField', label: 'Champ suivant (notes)', defaultShortcut: 'ctrl+arrowright' },
+  { action: 'notesFieldUp', label: 'Champ au-dessus (notes)', defaultShortcut: 'ctrl+arrowup' },
+  { action: 'notesFieldDown', label: 'Champ en-dessous (notes)', defaultShortcut: 'ctrl+arrowdown' },
 ]
 
 export const DEFAULT_SHORTCUT_BINDINGS = SHORTCUT_DEFINITIONS.reduce<Record<ShortcutAction, string>>(

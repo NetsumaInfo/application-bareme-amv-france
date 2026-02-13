@@ -25,6 +25,7 @@ export interface Bareme {
   name: string
   description?: string
   isOfficial: boolean
+  hideTotalsUntilAllScored?: boolean
   criteria: Criterion[]
   categoryColors?: Record<string, string>
   totalPoints: number
@@ -37,6 +38,7 @@ export const OFFICIAL_BAREME: Bareme = {
   name: 'Barème Officiel AMV',
   description: 'Barème standard pour les compétitions AMV (Level Up 2025)',
   isOfficial: true,
+  hideTotalsUntilAllScored: true,
   totalPoints: 50,
   createdAt: new Date().toISOString(),
   updatedAt: new Date().toISOString(),

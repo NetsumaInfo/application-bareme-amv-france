@@ -1,9 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Upload, Users, ArrowUpDown } from 'lucide-react'
+import { emit } from '@tauri-apps/api/event'
 import { useNotationStore } from '@/store/useNotationStore'
 import { useProjectStore } from '@/store/useProjectStore'
 import { useUIStore } from '@/store/useUIStore'
+import { usePlayerStore } from '@/store/usePlayerStore'
 import * as tauri from '@/services/tauri'
+import TimecodeTextarea from '@/components/notes/TimecodeTextarea'
 import { getClipPrimaryLabel, getClipSecondaryLabel } from '@/utils/formatters'
 import { withAlpha } from '@/utils/colors'
 import {
@@ -232,8 +235,7 @@ export default function ResultatsInterface() {
   const notes = useNotationStore((state) => state.notes)
   const updateCriterion = useNotationStore((state) => state.updateCriterion)
   const setTextNotes = useNotationStore((state) => state.setTextNotes)
-  const isClipComplete = useNotationStore((state) => state.isClipComplete)
-  const { switchTab, switchInterface, setShowPipVideo, hideTextNotes } = useUIStore()
+  const { switchTab, switchInterface, setShowPipVideo, hideTextNotes, setNotesDetached } = useUIStore()
 
   const {
     currentProject,
@@ -241,10 +243,14 @@ export default function ResultatsInterface() {
     importedJudges,
     setImportedJudges,
     markDirty,
-    markClipScored,
+    setClipScored,
     setCurrentClip,
     removeClip,
   } = useProjectStore()
+  const allClipsScored = clips.length > 0 && clips.every((clip) => clip.scored)
+  const hideTotalsSetting = Boolean(currentProject?.settings.hideTotals)
+  const hideTotalsUntilAllScored = Boolean(currentProject?.settings.hideFinalScoreUntilEnd) && !allClipsScored
+  const canSortByScore = !hideTotalsSetting && !hideTotalsUntilAllScored
 
   const [importing, setImporting] = useState(false)
   const [sortMode, setSortMode] = useState<SortMode>('folder')
@@ -254,6 +260,8 @@ export default function ResultatsInterface() {
   const [clipContextMenu, setClipContextMenu] = useState<{ clipId: string; x: number; y: number } | null>(null)
   const memberContextMenuRef = useRef<HTMLDivElement | null>(null)
   const clipContextMenuRef = useRef<HTMLDivElement | null>(null)
+  const effectiveSortMode: SortMode =
+    sortMode === 'score' && !canSortByScore ? 'folder' : sortMode
 
   const categoryGroups = useMemo(
     () => (currentBareme ? buildCategoryGroups(currentBareme) : []),
@@ -285,7 +293,7 @@ export default function ResultatsInterface() {
     const base = [...clips]
     const originalIndex = new Map(clips.map((clip, index) => [clip.id, index]))
 
-    if (sortMode === 'alpha') {
+    if (effectiveSortMode === 'alpha') {
       base.sort((a, b) => {
         const labelA = getClipPrimaryLabel(a)
         const labelB = getClipPrimaryLabel(b)
@@ -296,7 +304,7 @@ export default function ResultatsInterface() {
       return base
     }
 
-    if (sortMode === 'score') {
+    if (effectiveSortMode === 'score' && canSortByScore) {
       base.sort((a, b) => {
         const scoreA = getClipAverageTotal(a.id)
         const scoreB = getClipAverageTotal(b.id)
@@ -313,7 +321,7 @@ export default function ResultatsInterface() {
       return (originalIndex.get(a.id) ?? 0) - (originalIndex.get(b.id) ?? 0)
     })
     return base
-  }, [clips, collator, sortMode, getClipAverageTotal])
+  }, [clips, collator, effectiveSortMode, getClipAverageTotal, canSortByScore])
 
   useEffect(() => {
     if (!selectedClipId || !sortedClips.some((clip) => clip.id === selectedClipId)) {
@@ -378,6 +386,52 @@ export default function ResultatsInterface() {
     setShowPipVideo(true)
     switchInterface('spreadsheet')
     switchTab('notation')
+    tauri.playerShow()
+      .then(() => tauri.playerSyncOverlay().catch(() => {}))
+      .catch(() => {})
+    setTimeout(() => {
+      tauri.playerSyncOverlay().catch(() => {})
+    }, 120)
+  }, [clips, setCurrentClip, setShowPipVideo, switchInterface, switchTab])
+
+  const jumpToTimecodeInNotation = useCallback(async (
+    clipId: string,
+    seconds: number,
+    payload?: { category?: string | null; criterionId?: string | null },
+  ) => {
+    if (!Number.isFinite(seconds) || seconds < 0) return
+    const index = clips.findIndex((clip) => clip.id === clipId)
+    if (index < 0) return
+    const clip = clips[index]
+    if (!clip?.filePath) return
+
+    setCurrentClip(index)
+    setShowPipVideo(true)
+    switchInterface('spreadsheet')
+    switchTab('notation')
+
+    const playerState = usePlayerStore.getState()
+    try {
+      if (!playerState.isLoaded || playerState.currentFilePath !== clip.filePath) {
+        playerState.setLoaded(false)
+        await tauri.playerLoad(clip.filePath)
+        playerState.setLoaded(true, clip.filePath)
+      }
+      await tauri.playerShow().catch(() => {})
+      await tauri.playerSeek(seconds)
+      await tauri.playerPause().catch(() => {})
+    } catch (error) {
+      console.error('Failed to jump to timecode from results:', error)
+    }
+
+    const detail = {
+      clipId,
+      seconds,
+      category: payload?.category ?? null,
+      criterionId: payload?.criterionId ?? null,
+    }
+    window.dispatchEvent(new CustomEvent('amv:focus-note-marker', { detail }))
+    emit('main:focus-note-marker', detail).catch(() => {})
   }, [clips, setCurrentClip, setShowPipVideo, switchInterface, switchTab])
 
   const handleImportJudgeJson = async () => {
@@ -395,11 +449,18 @@ export default function ResultatsInterface() {
         return
       }
 
+      const matchedCount = Object.keys(normalized.notes).length
+      const totalClips = clips.length
+
       const next = importedJudges.filter(
         (judge) => judge.judgeName.toLowerCase() !== normalized.judgeName.toLowerCase(),
       )
       next.push(normalized)
       setImportedJudges(next)
+
+      if (matchedCount < totalClips) {
+        alert(`Import réussi : ${normalized.judgeName}\n${matchedCount}/${totalClips} clips appariés.`)
+      }
     } catch (e) {
       console.error('Import judge JSON failed:', e)
       alert(`Erreur d'import: ${e}`)
@@ -438,10 +499,6 @@ export default function ResultatsInterface() {
         updateCriterion(clipId, criterion.id, nextByCriterion[criterion.id] ?? 0)
       }
       markDirty()
-      const clip = clips.find((item) => item.id === clipId)
-      if (clip && !clip.scored && isClipComplete(clipId)) {
-        markClipScored(clipId)
-      }
       return
     }
 
@@ -533,14 +590,14 @@ export default function ResultatsInterface() {
 
         <button
           onClick={() => {
-            const modes: SortMode[] = ['folder', 'alpha', 'score']
-            const idx = modes.indexOf(sortMode)
+            const modes: SortMode[] = canSortByScore ? ['folder', 'alpha', 'score'] : ['folder', 'alpha']
+            const idx = modes.indexOf(effectiveSortMode)
             setSortMode(modes[(idx + 1) % modes.length])
           }}
           className="flex items-center gap-1.5 pl-2 pr-2 py-1 rounded border border-gray-700 bg-surface text-[11px] text-gray-300 hover:border-primary-500 hover:bg-surface-light transition-colors"
         >
           <ArrowUpDown size={12} className="text-gray-500" />
-          <span>{sortMode === 'folder' ? 'Ordre du dossier' : sortMode === 'alpha' ? 'Alphabétique' : 'Par moyenne'}</span>
+          <span>{effectiveSortMode === 'folder' ? 'Ordre du dossier' : effectiveSortMode === 'alpha' ? 'Alphabétique' : 'Par moyenne'}</span>
         </button>
 
         {currentJudge && (
@@ -597,13 +654,15 @@ export default function ResultatsInterface() {
                 </th>
               ))}
 
-              <th
-                colSpan={judges.length + 1}
-                className="px-2 py-1.5 text-center text-[10px] font-bold uppercase tracking-wider border-r border-b border-gray-700 min-w-[90px] bg-surface-dark"
-              >
-                Total
-                <div className="text-gray-500 font-normal">/{currentBareme.totalPoints}</div>
-              </th>
+              {canSortByScore && (
+                <th
+                  colSpan={judges.length + 1}
+                  className="px-2 py-1.5 text-center text-[10px] font-bold uppercase tracking-wider border-r border-b border-gray-700 min-w-[90px] bg-surface-dark"
+                >
+                  Total
+                  <div className="text-gray-500 font-normal">/{currentBareme.totalPoints}</div>
+                </th>
+              )}
             </tr>
             <tr>
               {categoryGroups.map((group) =>
@@ -622,7 +681,7 @@ export default function ResultatsInterface() {
                 )),
               )}
 
-              {judges.map((judge) => (
+              {canSortByScore && judges.map((judge) => (
                 <th
                   key={`total-${judge.key}`}
                   className="px-1 py-1 text-center text-[9px] border-r border-b border-gray-700 bg-surface-dark"
@@ -632,9 +691,11 @@ export default function ResultatsInterface() {
                   </span>
                 </th>
               ))}
-              <th className="px-1 py-1 text-center text-[9px] text-gray-500 border-r border-b border-gray-700 bg-surface-dark">
-                Moy.
-              </th>
+              {canSortByScore && (
+                <th className="px-1 py-1 text-center text-[9px] text-gray-500 border-r border-b border-gray-700 bg-surface-dark">
+                  Moy.
+                </th>
+              )}
             </tr>
           </thead>
 
@@ -666,7 +727,7 @@ export default function ResultatsInterface() {
                     event.preventDefault()
                     event.stopPropagation()
                     const width = 210
-                    const height = 46
+                    const height = 152
                     const x = Math.max(8, Math.min(event.clientX, window.innerWidth - width - 8))
                     const y = Math.max(8, Math.min(event.clientY, window.innerHeight - height - 8))
                     setClipContextMenu({ clipId: row.clip.id, x, y })
@@ -725,7 +786,7 @@ export default function ResultatsInterface() {
                   }),
                 )}
 
-                {row.judgeTotals.map((score, judgeIdx) => (
+                {canSortByScore && row.judgeTotals.map((score, judgeIdx) => (
                   <td
                     key={`${row.clip.id}-total-${judges[judgeIdx].key}`}
                     className={`px-2 py-1 text-center border-r border-gray-800 font-mono ${
@@ -736,9 +797,11 @@ export default function ResultatsInterface() {
                   </td>
                 ))}
 
-                <td className="px-2 py-1 text-center border-r border-gray-700 font-mono font-bold text-white">
-                  {row.averageTotal.toFixed(1)}
-                </td>
+                {canSortByScore && (
+                  <td className="px-2 py-1 text-center border-r border-gray-700 font-mono font-bold text-white">
+                    {row.averageTotal.toFixed(1)}
+                  </td>
+                )}
                 </tr>
               )
             })}
@@ -764,20 +827,36 @@ export default function ResultatsInterface() {
                     </span>
                   </div>
                   {judge.isCurrentJudge ? (
-                    <textarea
+                    <TimecodeTextarea
                       value={noteText}
-                      onChange={(event) => {
-                        setTextNotes(selectedClip.id, event.target.value)
+                      onChange={(nextValue) => {
+                        setTextNotes(selectedClip.id, nextValue)
                         markDirty()
                       }}
-                      className="w-full px-2 py-1 text-[11px] bg-surface border border-gray-700 rounded text-gray-300 placeholder-gray-600 focus:border-primary-500 focus:outline-none resize-y min-h-[52px]"
-                      rows={2}
+                      onTimecodeSelect={(item) => {
+                        jumpToTimecodeInNotation(selectedClip.id, item.seconds)
+                      }}
+                      color="#60a5fa"
+                      textareaClassName="min-h-[52px]"
                       placeholder="Notes libres..."
                     />
                   ) : (
-                    <p className="text-[11px] text-gray-300 min-h-[52px] whitespace-pre-wrap">
-                      {noteText || 'Aucune note'}
-                    </p>
+                    noteText.trim().length > 0 ? (
+                      <TimecodeTextarea
+                        value={noteText}
+                        onChange={() => {}}
+                        readOnly
+                        onTimecodeSelect={(item) => {
+                          jumpToTimecodeInNotation(selectedClip.id, item.seconds)
+                        }}
+                        color="#94a3b8"
+                        textareaClassName="min-h-[52px]"
+                      />
+                    ) : (
+                      <p className="text-[11px] text-gray-300 min-h-[52px] whitespace-pre-wrap">
+                        Aucune note
+                      </p>
+                    )
                   )}
                 </div>
               )
@@ -807,6 +886,36 @@ export default function ResultatsInterface() {
           className="fixed z-[90] bg-gray-900 border border-gray-700 rounded-lg shadow-xl py-1 min-w-[210px]"
           style={{ left: clipContextMenu.x, top: clipContextMenu.y }}
         >
+          {(() => {
+            const clip = clips.find((item) => item.id === clipContextMenu.clipId)
+            if (!clip) return null
+            return (
+              <>
+                <button
+                  onClick={() => {
+                    setClipScored(clip.id, !clip.scored)
+                    setClipContextMenu(null)
+                  }}
+                  className="w-full text-left px-3 py-1.5 text-[11px] text-gray-300 hover:bg-gray-800 transition-colors"
+                >
+                  {clip.scored ? 'Retirer "noté"' : 'Marquer comme noté'}
+                </button>
+                <div className="border-t border-gray-700 my-0.5" />
+                <button
+                  onClick={() => {
+                    const index = clips.findIndex((item) => item.id === clip.id)
+                    if (index >= 0) setCurrentClip(index)
+                    tauri.openNotesWindow().then(() => setNotesDetached(true)).catch(() => {})
+                    setClipContextMenu(null)
+                  }}
+                  className="w-full text-left px-3 py-1.5 text-[11px] text-gray-300 hover:bg-gray-800 transition-colors"
+                >
+                  Notes du clip
+                </button>
+                <div className="border-t border-gray-700 my-0.5" />
+              </>
+            )
+          })()}
           <button
             onClick={() => {
               removeClip(clipContextMenu.clipId)

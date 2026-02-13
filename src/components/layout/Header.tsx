@@ -8,7 +8,7 @@ import InterfaceSwitcher from '@/components/interfaces/InterfaceSwitcher'
 
 function BaremeSelector() {
   const { currentBareme, availableBaremes, setBareme } = useNotationStore()
-  const { updateProject } = useProjectStore()
+  const { updateProject, updateSettings } = useProjectStore()
   const { setShowBaremeEditor } = useUIStore()
   const [open, setOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
@@ -27,6 +27,7 @@ function BaremeSelector() {
     if (!bareme) return
     setBareme(bareme)
     updateProject({ baremeId: bareme.id })
+    updateSettings({ hideFinalScoreUntilEnd: Boolean(bareme.hideTotalsUntilAllScored) })
     setOpen(false)
   }
 

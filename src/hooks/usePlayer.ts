@@ -112,6 +112,28 @@ export function usePlayer() {
     await setFullscreen(false)
   }, [setFullscreen])
 
+  const frameStep = useCallback(async () => {
+    try {
+      await tauri.playerFrameStep()
+    } catch { /* ignore */ }
+  }, [])
+
+  const frameBackStep = useCallback(async () => {
+    try {
+      await tauri.playerFrameBackStep()
+    } catch { /* ignore */ }
+  }, [])
+
+  const screenshot = useCallback(async () => {
+    try {
+      const { clips: allClips, currentClipIndex: idx } = useProjectStore.getState()
+      const clip = allClips[idx]
+      const defaultName = clip ? `${clip.displayName}_screenshot.png` : 'screenshot.png'
+      const path = await tauri.saveScreenshotDialog(defaultName)
+      if (path) await tauri.playerScreenshot(path)
+    } catch { /* ignore */ }
+  }, [])
+
   return {
     isPlaying,
     currentTime,
@@ -137,5 +159,8 @@ export function usePlayer() {
     setFullscreen,
     exitFullscreen,
     toggleFullscreen,
+    frameStep,
+    frameBackStep,
+    screenshot,
   }
 }

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { X, Table, LayoutGrid, Maximize2 } from 'lucide-react'
+import { X, Table, Maximize2 } from 'lucide-react'
 import { useProjectStore } from '@/store/useProjectStore'
 import { useNotationStore } from '@/store/useNotationStore'
 import { useUIStore } from '@/store/useUIStore'
@@ -38,8 +38,7 @@ type Tab = 'general' | 'notation' | 'raccourcis'
 
 const INTERFACE_OPTIONS: { mode: InterfaceMode; label: string; icon: typeof Table }[] = [
   { mode: 'spreadsheet', label: 'Tableur', icon: Table },
-  { mode: 'modern', label: 'Moderne', icon: LayoutGrid },
-  { mode: 'notation', label: 'Notation', icon: Maximize2 },
+  { mode: 'notation', label: 'Notes', icon: Maximize2 },
 ]
 
 export default function SettingsPanel({ onClose }: { onClose: () => void }) {
@@ -52,6 +51,8 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
     toggleAverages,
     hideTextNotes,
     toggleTextNotes,
+    showAudioDb,
+    toggleAudioDb,
     setShowBaremeEditor,
     currentInterface,
     switchInterface,
@@ -167,7 +168,7 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                 <label className="text-xs font-medium text-gray-400 mb-2 block">
                   Interface de notation
                 </label>
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-2 gap-2">
                   {INTERFACE_OPTIONS.map(({ mode, label, icon: Icon }) => (
                     <button
                       key={mode}
@@ -333,6 +334,24 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                 <div className="flex items-center justify-between">
                   <div>
                     <span className="text-sm text-gray-300 block">
+                      Bloquer les résultats jusqu'à tout noter
+                    </span>
+                    <span className="text-[10px] text-gray-500">
+                      Cache les totaux et les onglets Résultat/Export tant que des clips ne sont pas marqués notés
+                    </span>
+                  </div>
+                  <Toggle
+                    checked={settings?.hideFinalScoreUntilEnd ?? false}
+                    onChange={() =>
+                      updateSettings({
+                        hideFinalScoreUntilEnd: !(settings?.hideFinalScoreUntilEnd ?? false),
+                      })
+                    }
+                  />
+                </div>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="text-sm text-gray-300 block">
                       Masquer les scores
                     </span>
                     <span className="text-[10px] text-gray-500">
@@ -340,6 +359,24 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                     </span>
                   </div>
                   <Toggle checked={hideFinalScore} onChange={toggleFinalScore} />
+                </div>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="text-sm text-gray-300 block">
+                      Masquer les totaux
+                    </span>
+                    <span className="text-[10px] text-gray-500">
+                      Cache la colonne Total et désactive le tri par note
+                    </span>
+                  </div>
+                  <Toggle
+                    checked={Boolean(settings?.hideTotals)}
+                    onChange={() =>
+                      updateSettings({
+                        hideTotals: !(settings?.hideTotals ?? false),
+                      })
+                    }
+                  />
                 </div>
                 <div className="flex items-center justify-between">
                   <div>
@@ -362,6 +399,17 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                     </span>
                   </div>
                   <Toggle checked={hideTextNotes} onChange={toggleTextNotes} />
+                </div>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="text-sm text-gray-300 block">
+                      Afficher dB audio L/R
+                    </span>
+                    <span className="text-[10px] text-gray-500">
+                      Affiche un niveau audio gauche/droite sur le lecteur
+                    </span>
+                  </div>
+                  <Toggle checked={showAudioDb} onChange={toggleAudioDb} />
                 </div>
               </div>
             </>

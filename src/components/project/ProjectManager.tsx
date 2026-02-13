@@ -191,6 +191,51 @@ export default function ProjectManager() {
     }
   }
 
+  const handleRelocateVideos = async () => {
+    setOpen(false)
+    if (!currentProject || clips.length === 0) return
+
+    try {
+      const folderPath = await tauri.openFolderDialog()
+      if (!folderPath) return
+
+      const videos = await tauri.scanVideoFolder(folderPath)
+      if (videos.length === 0) {
+        alert('Aucune vidéo trouvée dans ce dossier.')
+        return
+      }
+
+      const pathByFileName = new Map<string, string>()
+      for (const video of videos) {
+        const key = video.file_name.trim().toLowerCase()
+        if (!pathByFileName.has(key)) {
+          pathByFileName.set(key, video.file_path)
+        }
+      }
+
+      let matched = 0
+      const updatedClips = clips.map((clip) => {
+        const key = clip.fileName.trim().toLowerCase()
+        const nextPath = pathByFileName.get(key)
+        if (!nextPath || nextPath === clip.filePath) return clip
+        matched += 1
+        return { ...clip, filePath: nextPath }
+      })
+
+      if (matched === 0) {
+        alert('Aucun fichier correspondant trouvé pour relocaliser les vidéos.')
+        return
+      }
+
+      setClips(updatedClips)
+      updateProject({ clipsFolderPath: folderPath })
+      alert(`Relocalisation terminée: ${matched}/${clips.length} vidéo(s) mises à jour.`)
+    } catch (e) {
+      console.error('Failed to relocate videos:', e)
+      alert(`Erreur lors de la relocalisation: ${e}`)
+    }
+  }
+
   const handleExport = async () => {
     setOpen(false)
     if (!currentProject) return
@@ -286,6 +331,11 @@ export default function ProjectManager() {
                 icon={<FilePlus size={13} />}
                 label="Importer des fichiers..."
                 onClick={handleImportFiles}
+              />
+              <MenuItem
+                icon={<FolderOpen size={13} />}
+                label="Relocaliser les vidéos..."
+                onClick={handleRelocateVideos}
               />
               <div className="border-t border-gray-700 my-1" />
               <MenuItem

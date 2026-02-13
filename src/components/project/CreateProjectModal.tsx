@@ -9,7 +9,7 @@ import * as tauri from '@/services/tauri'
 
 export default function CreateProjectModal() {
   const { showProjectModal, setShowProjectModal, setShowBaremeEditor } = useUIStore()
-  const { createProject } = useProjectStore()
+  const { createProject, updateSettings } = useProjectStore()
   const { availableBaremes, setBareme } = useNotationStore()
 
   const {
@@ -31,7 +31,10 @@ export default function CreateProjectModal() {
   const onSubmit = async (data: CreateProjectFormData) => {
     createProject(data.name, data.judgeName, data.baremeId)
     const bareme = availableBaremes.find((b) => b.id === data.baremeId)
-    if (bareme) setBareme(bareme)
+    if (bareme) {
+      setBareme(bareme)
+      updateSettings({ hideFinalScoreUntilEnd: Boolean(bareme.hideTotalsUntilAllScored) })
+    }
     reset()
     setShowProjectModal(false)
 

@@ -1,5 +1,5 @@
 # AMV Notation
-![Version](https://img.shields.io/badge/version-v0.2.1-2563eb)
+![Version](https://img.shields.io/badge/version-v0.3-2563eb)
 
 Application desktop de notation pour concours AMV (Anime Music Video).
 
@@ -12,18 +12,52 @@ Application desktop de notation pour concours AMV (Anime Music Video).
 
 ## Fonctionnalités
 
+### Lecteur vidéo
+
 - Lecture vidéo intégrée (mpv embarqué via fenêtre Win32)
-- Plein écran vidéo avec overlay de contrôle
-- 3 interfaces de notation: **Tableur**, **Moderne**, **Notation**
-- Onglets dédiés: **Résultat** et **Export**
-- Barèmes personnalisables (catégories, critères, coefficients)
-- Projets JSON (création, sauvegarde, ouverture, récents)
-- Import de clips depuis un dossier
-- Import de notation juge (`JE.json`) dans l'onglet Résultat
-- Exports distincts:
+- Plein écran vidéo avec overlay de contrôle auto-masquable
+- Mode Picture-in-Picture (PiP) avec lecteur flottant redimensionnable
+- Avance/retour image par image
+- Sélecteur de piste audio (multi-pistes)
+- Sélecteur de sous-titres
+- VU-mètre audio temps réel (niveaux dB gauche/droite)
+- Panneau MediaInfo détaillé (résolution, codec, FPS, bitrate, espace colorimétrique, etc.)
+- Capture d'écran du lecteur
+
+### Notation
+
+- 3 interfaces de notation interchangeables: **Tableur**, **Moderne**, **Notation**
+- Barèmes personnalisables (catégories, critères, coefficients, couleurs par catégorie)
+- Notes par critère avec commentaires textuels
+- Notes par catégorie et notes globales
+- Système de timecodes dans les notes (détection automatique, chips cliquables, seek instantané)
+- Fenêtre de notes détachée (multi-écran) synchronisée en temps réel
+- Annuler (Undo) sur les notes
+
+### Résultats et exports
+
+- Onglet **Résultat**: tableau récapitulatif par clip et par juge
+- Import de notations de juges externes (`JE.json`)
+- Onglet **Export**: exports multiples
   - **Exporter projet (JSON)**: projet complet (clips, notes, config)
-  - **Exporter notation (JE.json)**: uniquement les notes du juge pour partage/intégration
+  - **Exporter notation (JE.json)**: uniquement les notes du juge pour partage
+  - Export en **PNG** et **PDF** du tableau des résultats
+
+### Gestion de projet
+
+- Création de projets avec assistant
+- Sauvegarde/ouverture de projets (`.json`)
+- Projets récents
+- Import de clips vidéo depuis un dossier
 - Sauvegarde automatique configurable
+- Indicateur de progression
+
+### Interface
+
+- Menu contextuel (clic droit) avec actions rapides
+- Raccourcis clavier entièrement personnalisables (28 actions configurables)
+- Zoom de l'interface (Ctrl+=/Ctrl+-/Ctrl+0)
+- Thème sombre moderne
 
 ## Prérequis
 
@@ -71,20 +105,35 @@ npm run build
 npm run tauri build
 ```
 
-## Raccourcis clavier (lecteur)
+## Raccourcis clavier
 
-- `Espace`: lecture/pause
-- `←` / `→`: reculer/avancer de 5s
-- `Shift+←` / `Shift+→`: reculer/avancer de 30s
-- `N` / `P`: clip suivant / précédent
-- `F11`: bascule plein écran
-- `Esc`: quitter le plein écran
+| Action | Raccourci par défaut |
+|--------|---------------------|
+| Lecture / Pause | `Espace` |
+| Reculer 5s | `←` |
+| Avancer 5s | `→` |
+| Reculer 30s | `Shift+←` |
+| Avancer 30s | `Shift+→` |
+| Image suivante | `.` |
+| Image précédente | `,` |
+| Clip suivant | `N` |
+| Clip précédent | `P` |
+| Plein écran | `F11` |
+| Quitter plein écran | `Échap` |
+| Sauvegarder | `Ctrl+S` |
+| Sauvegarder sous | `Ctrl+Alt+S` |
+| Nouveau projet | `Ctrl+N` |
+| Ouvrir un projet | `Ctrl+O` |
+| Onglet Notation | `Ctrl+1` |
+| Onglet Résultat | `Ctrl+2` |
+| Onglet Export | `Ctrl+3` |
+| Zoom + / - / Reset | `Ctrl+=` / `Ctrl+-` / `Ctrl+0` |
+| Annuler (Undo) | `Ctrl+Z` |
+| Capture d'écran | `Ctrl+Shift+S` |
+| Insérer timecode | `Ctrl+T` |
+| Navigation champs notes | `Ctrl+Flèches` |
 
-## Plein écran et overlay
-
-- En mode plein écran, l'app utilise une fenêtre overlay dédiée au-dessus du rendu mpv.
-- Les contrôles (play/pause, seek, volume, navigation clip, quitter plein écran) apparaissent au mouvement de souris puis se masquent après inactivité.
-- Le bouton quitter et `Esc` déclenchent une sortie explicite du plein écran (pas un toggle ambigu).
+Tous les raccourcis sont personnalisables dans les paramètres.
 
 ## Dépannage rapide
 
@@ -92,23 +141,29 @@ npm run tauri build
 - **Comportement plein écran incohérent après update Rust**: fermer totalement l'app puis relancer `npm run tauri dev`.
 - **Commandes non prises en compte**: vérifier que la fenêtre overlay est bien au premier plan en plein écran.
 
-## Architecture (résumé)
+## Architecture
 
 ```text
 src/                    Frontend React
   components/
-    layout/             AppLayout, Header, Sidebar
-    player/             VideoPlayer, PlayerControls, FloatingVideoPlayer, FullscreenOverlay
-    interfaces/         SpreadsheetInterface, ModernInterface, NotationInterface, ResultatsInterface, ExportInterface
-    project/            ProjectManager, CreateProjectModal, VideoList
+    layout/             AppLayout, Header, Sidebar, ContextMenu
+    player/             VideoPlayer, PlayerControls, FloatingVideoPlayer,
+                        FullscreenOverlay, AudioDbMeter, MediaInfoPanel,
+                        AudioTrackSelector, SubtitleSelector
+    interfaces/         SpreadsheetInterface, ModernInterface, NotationInterface,
+                        ResultatsInterface, ExportInterface, InterfaceSwitcher
+    notes/              DetachedNotesWindow, TimecodeChipList, TimecodeTextarea,
+                        InlineTimecodeText
+    project/            ProjectManager, CreateProjectModal, VideoList,
+                        ProgressIndicator
     settings/           SettingsPanel
     scoring/            BaremeEditor
-  store/                Zustand stores
-  hooks/                usePlayer, useAutoSave, useKeyboardShortcuts
+  store/                usePlayerStore, useProjectStore, useNotationStore, useUIStore
+  hooks/                usePlayer, useAutoSave, useKeyboardShortcuts, useSaveProject
   services/             tauri.ts (wrappers invoke)
-  types/                Types TypeScript
+  types/                Types TypeScript (project, player, notation, bareme)
   schemas/              Schémas Zod
-  utils/                Helpers (formatage, score, etc.)
+  utils/                scoring, formatters, shortcuts, timecodes, results, colors
 
 src-tauri/src/          Backend Rust
   main.rs               setup Tauri + init mpv + création overlay

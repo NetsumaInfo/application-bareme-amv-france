@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AMV Notation - Notes</title>
+    <style>
+      html, body {
+        margin: 0;
+        background: #0f0f23;
+        color: #e0e0e0;
+        font-family: 'Inter', system-ui, -apple-system, sans-serif;
+        overflow: hidden;
+      }
+      #root {
+        width: 100%;
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+      }
+      * { box-sizing: border-box; }
+      ::-webkit-scrollbar { width: 6px; }
+      ::-webkit-scrollbar-track { background: #1a1a2e; }
+      ::-webkit-scrollbar-thumb { background: #3b3b5c; border-radius: 3px; }
+      .amv-soft-number { color-scheme: dark; }
+      .amv-soft-number::-webkit-outer-spin-button,
+      .amv-soft-number::-webkit-inner-spin-button {
+        opacity: 0.7;
+        filter: saturate(0.75) hue-rotate(170deg) brightness(0.9);
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root">
+      <div style="flex:1;display:flex;align-items:center;justify-content:center;color:#6b7280;font-size:13px">
+        Chargement...
+      </div>
+    </div>
+    <script>
+      (function () {
+        function showError(message) {
+          var root = document.getElementById('root');
+          if (!root) return;
+          root.innerHTML = '<div style="padding:16px;color:#e0e0e0;background:#0f0f23;min-height:100vh;font-family:monospace;">'
+            + '<div style="color:#ff6b81;font-size:13px;margin-bottom:8px;">Erreur NotesWindow</div>'
+            + '<pre style="white-space:pre-wrap;font-size:11px;color:#fda4af;">' + String(message || 'Erreur inconnue') + '</pre>'
+            + '</div>';
+          document.body.style.background = '#0f0f23';
+        }
+
+        window.addEventListener('error', function (event) {
+          showError(event && (event.error && event.error.stack || event.message));
+        });
+        window.addEventListener('unhandledrejection', function (event) {
+          var reason = event && event.reason;
+          showError(reason && (reason.stack || reason.message) || String(reason));
+        });
+      })();
+    </script>
+    <script type="module" src="/src/notes-entry.tsx"></script>
+  </body>
+</html>
