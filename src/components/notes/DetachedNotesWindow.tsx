@@ -350,7 +350,7 @@ export default function DetachedNotesWindow() {
       loading: true,
     })
 
-    const image = await tauri.playerGetFramePreview(clip.filePath, params.seconds, 320).catch(() => null)
+    const image = await tauri.playerGetFramePreview(clip.filePath, params.seconds, 236).catch(() => null)
     if (hoverRequestRef.current !== requestId) return
     if (image) {
       framePreviewCacheRef.current.set(cacheKey, image)

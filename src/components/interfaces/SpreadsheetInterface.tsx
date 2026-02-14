@@ -55,6 +55,21 @@ export default function SpreadsheetInterface() {
   const [scoringCategory, setScoringCategory] = useState<string | null>(null)
   const scoringPanelRef = useRef<HTMLDivElement | null>(null)
   const dragHoverTsRef = useRef(0)
+  const framePreviewCacheRef = useRef<Map<string, string>>(new Map())
+  const hoverRequestRef = useRef(0)
+  const [framePreview, setFramePreview] = useState<{
+    visible: boolean
+    left: number
+    top: number
+    image: string | null
+    loading: boolean
+  }>({
+    visible: false,
+    left: 0,
+    top: 0,
+    image: null,
+    loading: false,
+  })
 
   const isVideoFile = useCallback((path: string) => {
     const ext = path.split('.').pop()?.toLowerCase() ?? ''
@@ -243,6 +258,52 @@ export default function SpreadsheetInterface() {
   const effectiveSortMode: SortMode =
     sortMode === 'score' && !canSortByScore ? 'folder' : sortMode
 
+  const hideFramePreview = useCallback(() => {
+    setFramePreview((prev) => ({ ...prev, visible: false }))
+  }, [])
+
+  const showFramePreview = useCallback(async (params: { seconds: number; anchorRect: DOMRect }) => {
+    if (!currentClip?.filePath) return
+
+    const left = Math.min(window.innerWidth - 250, Math.max(12, params.anchorRect.left))
+    const top = Math.max(12, params.anchorRect.top - 186)
+    const cacheKey = `${currentClip.filePath}|${params.seconds.toFixed(3)}`
+    const requestId = ++hoverRequestRef.current
+
+    const cached = framePreviewCacheRef.current.get(cacheKey)
+    if (cached) {
+      setFramePreview({
+        visible: true,
+        left,
+        top,
+        image: cached,
+        loading: false,
+      })
+      return
+    }
+
+    setFramePreview({
+      visible: true,
+      left,
+      top,
+      image: null,
+      loading: true,
+    })
+
+    const image = await tauri.playerGetFramePreview(currentClip.filePath, params.seconds, 236).catch(() => null)
+    if (hoverRequestRef.current !== requestId) return
+    if (image) {
+      framePreviewCacheRef.current.set(cacheKey, image)
+    }
+    setFramePreview({
+      visible: true,
+      left,
+      top,
+      image,
+      loading: false,
+    })
+  }, [currentClip])
+
   const sortedClips = useMemo(() => {
     const base = [...clips]
     const originalIndex = new Map(clips.map((clip, index) => [clip.id, index]))
@@ -374,10 +435,10 @@ export default function SpreadsheetInterface() {
   const openPlayerAtFront = useCallback(() => {
     setShowPipVideo(true)
     tauri.playerShow()
-      .then(() => tauri.playerSyncOverlay().catch(() => {}))
-      .catch(() => {})
+      .then(() => tauri.playerSyncOverlay().catch(() => { }))
+      .catch(() => { })
     setTimeout(() => {
-      tauri.playerSyncOverlay().catch(() => {})
+      tauri.playerSyncOverlay().catch(() => { })
     }, 120)
   }, [setShowPipVideo])
 
@@ -469,12 +530,10 @@ export default function SpreadsheetInterface() {
 
   if (clips.length === 0) {
     return (
-      <div className={`flex flex-col items-center justify-center h-full gap-4 transition-colors ${
-        isDragOver ? 'bg-primary-600/10' : ''
-      }`}>
-        <div className={`flex flex-col items-center justify-center gap-3 p-8 rounded-xl border-2 border-dashed transition-colors ${
-          isDragOver ? 'border-primary-400 bg-primary-600/5' : 'border-gray-700'
+      <div className={`flex flex-col items-center justify-center h-full gap-4 transition-colors ${isDragOver ? 'bg-primary-600/10' : ''
         }`}>
+        <div className={`flex flex-col items-center justify-center gap-3 p-8 rounded-xl border-2 border-dashed transition-colors ${isDragOver ? 'border-primary-400 bg-primary-600/5' : 'border-gray-700'
+          }`}>
           {isDragOver ? (
             <>
               <Download size={32} className="text-primary-400" />
@@ -632,13 +691,12 @@ export default function SpreadsheetInterface() {
                 <tr
                   key={clip.id}
                   ref={(el) => { if (el) rowRefs.current.set(clipIdx, el) }}
-                  className={`transition-colors cursor-pointer ${
-                    isActive
+                  className={`transition-colors cursor-pointer ${isActive
                       ? 'bg-primary-600/15'
                       : clipIdx % 2 === 0
                         ? 'bg-surface-dark/30'
                         : 'bg-transparent'
-                  } hover:bg-primary-600/10`}
+                    } hover:bg-primary-600/10`}
                   onClick={() => {
                     const originalIndex = clips.findIndex(c => c.id === clip.id)
                     if (originalIndex !== -1) setCurrentClip(originalIndex)
@@ -650,25 +708,23 @@ export default function SpreadsheetInterface() {
                   }}
                 >
                   <td
-                    className={`px-2 py-1 text-center font-mono text-[10px] text-gray-500 border-r border-gray-800 sticky left-0 z-10 ${
-                      isActive
+                    className={`px-2 py-1 text-center font-mono text-[10px] text-gray-500 border-r border-gray-800 sticky left-0 z-10 ${isActive
                         ? 'bg-primary-900/30'
                         : clipIdx % 2 === 0
                           ? 'bg-surface-dark'
                           : 'bg-surface'
-                    }`}
+                      }`}
                   >
                     {clipIdx + 1}
                   </td>
 
                   <td
-                    className={`px-2 py-1 border-r border-gray-800 sticky left-7 z-10 group/clip ${
-                      isActive
+                    className={`px-2 py-1 border-r border-gray-800 sticky left-7 z-10 group/clip ${isActive
                         ? 'bg-primary-900/30'
                         : clipIdx % 2 === 0
                           ? 'bg-surface-dark'
                           : 'bg-surface'
-                    }`}
+                      }`}
                     onDoubleClick={() => openPlayerAtFront()}
                     onContextMenu={(e) => {
                       e.preventDefault()
@@ -723,11 +779,10 @@ export default function SpreadsheetInterface() {
                             if (originalIndex !== -1) setCurrentClip(originalIndex)
                           }}
                           onClick={(e) => e.stopPropagation()}
-                          className={`amv-soft-number w-full px-1 py-0.5 text-center rounded text-xs font-mono transition-colors focus-visible:outline-none ${
-                            hasError
+                          className={`amv-soft-number w-full px-1 py-0.5 text-center rounded text-xs font-mono transition-colors focus-visible:outline-none ${hasError
                               ? 'border border-accent bg-accent/10 text-accent-light'
                               : 'border border-transparent bg-transparent text-white hover:bg-surface-light/50 focus:border-primary-500 focus:bg-surface-dark'
-                          } focus:outline-none`}
+                            } focus:outline-none`}
                         />
                       </td>
                     )
@@ -771,9 +826,9 @@ export default function SpreadsheetInterface() {
                       const avg =
                         scoredClips.length > 0
                           ? scoredClips.reduce(
-                              (s, clip) => s + getCategoryScore(clip.id, g),
-                              0,
-                            ) / scoredClips.length
+                            (s, clip) => s + getCategoryScore(clip.id, g),
+                            0,
+                          ) / scoredClips.length
                           : 0
                       return (
                         <td
@@ -801,11 +856,11 @@ export default function SpreadsheetInterface() {
                   <td className="px-2 py-2 text-center font-mono font-bold text-[12px] text-white bg-surface-dark">
                     {scoredClips.length > 0
                       ? (
-                          scoredClips.reduce(
-                            (s, c) => s + getScoreForClip(c.id),
-                            0,
-                          ) / scoredClips.length
-                        ).toFixed(1)
+                        scoredClips.reduce(
+                          (s, c) => s + getScoreForClip(c.id),
+                          0,
+                        ) / scoredClips.length
+                      ).toFixed(1)
                       : '0'}
                   </td>
                 )}
@@ -866,9 +921,37 @@ export default function SpreadsheetInterface() {
                 criterionId: null,
               }
               window.dispatchEvent(new CustomEvent('amv:focus-note-marker', { detail }))
-              emit('main:focus-note-marker', detail).catch(() => {})
+              emit('main:focus-note-marker', detail).catch(() => { })
             }}
+            onTimecodeHover={({ item, anchorRect }) => {
+              showFramePreview({
+                seconds: item.seconds,
+                anchorRect,
+              }).catch(() => { })
+            }}
+            onTimecodeLeave={hideFramePreview}
           />
+        </div>
+      )}
+
+      {framePreview.visible && (
+        <div
+          className="fixed z-[120] pointer-events-none rounded-lg border border-gray-600 bg-surface shadow-2xl overflow-hidden"
+          style={{ left: framePreview.left, top: framePreview.top, width: 236 }}
+        >
+          <div className="h-[132px] bg-black flex items-center justify-center">
+            {framePreview.loading ? (
+              <span className="text-[10px] text-gray-500">Chargement frame...</span>
+            ) : framePreview.image ? (
+              <img
+                src={framePreview.image}
+                alt="Frame preview"
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <span className="text-[10px] text-gray-500">Preview indisponible</span>
+            )}
+          </div>
         </div>
       )}
 
@@ -895,7 +978,7 @@ export default function SpreadsheetInterface() {
                 onClick={() => {
                   const index = clips.findIndex((item) => item.id === contextClip.id)
                   if (index >= 0) setCurrentClip(index)
-                  tauri.openNotesWindow().then(() => setNotesDetached(true)).catch(() => {})
+                  tauri.openNotesWindow().then(() => setNotesDetached(true)).catch(() => { })
                   setContextMenu(null)
                 }}
                 className="w-full text-left px-3 py-1.5 text-[11px] text-gray-300 hover:bg-gray-800 transition-colors"
@@ -1047,11 +1130,10 @@ export default function SpreadsheetInterface() {
                           }
                         }}
                         data-crit-id={criterion.id}
-                        className={`amv-soft-number w-20 px-2 py-1.5 text-center text-sm rounded-lg border font-mono focus-visible:outline-none ${
-                          hasError
+                        className={`amv-soft-number w-20 px-2 py-1.5 text-center text-sm rounded-lg border font-mono focus-visible:outline-none ${hasError
                             ? 'border-accent bg-accent/10 text-accent-light'
                             : 'text-white focus:border-primary-500'
-                        } focus:outline-none`}
+                          } focus:outline-none`}
                         style={!hasError ? {
                           borderColor: withAlpha(group.color, 0.4),
                           backgroundColor: withAlpha(group.color, 0.1),

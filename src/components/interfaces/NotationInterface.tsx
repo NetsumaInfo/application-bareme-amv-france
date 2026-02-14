@@ -255,7 +255,7 @@ export default function NotationInterface() {
       loading: true,
     })
 
-    const image = await tauri.playerGetFramePreview(currentClip.filePath, params.seconds, 320).catch(() => null)
+    const image = await tauri.playerGetFramePreview(currentClip.filePath, params.seconds, 236).catch(() => null)
     if (hoverRequestRef.current !== requestId) return
     if (image) {
       framePreviewCacheRef.current.set(cacheKey, image)
