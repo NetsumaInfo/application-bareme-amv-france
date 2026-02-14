@@ -1,5 +1,5 @@
 # AMV Notation
-![Version](https://img.shields.io/badge/version-v0.3-2563eb)
+![Version](https://img.shields.io/badge/version-v0.3.1-2563eb)
 
 Application desktop de notation pour concours AMV (Anime Music Video).
 
@@ -22,7 +22,14 @@ Application desktop de notation pour concours AMV (Anime Music Video).
 - Sélecteur de sous-titres
 - VU-mètre audio temps réel (niveaux dB gauche/droite)
 - Panneau MediaInfo détaillé (résolution, codec, FPS, bitrate, espace colorimétrique, etc.)
+- Preview FFmpeg avec cache LRU intégré
 - Capture d'écran du lecteur
+
+### Performance
+
+- Cache LRU pour les previews vidéo (240 entrées) et media info (96 entrées)
+- Processus ffmpeg/ffprobe optimisés (threads limités, fenêtre console masquée)
+- ffmpeg, ffprobe et libmpv-2.dll bundlés dans l'installeur
 
 ### Notation
 
