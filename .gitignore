@@ -37,3 +37,7 @@ Thumbs.db
 # mpv DLLs (user must download and place libmpv-2.dll in project root)
 *.dll
 mpv-dev-*/
+
+# Bundled binaries in resources (too large for git, must be provided locally)
+src-tauri/resources/windows/*.exe
+src-tauri/resources/windows/*.dll

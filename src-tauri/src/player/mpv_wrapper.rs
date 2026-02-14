@@ -534,7 +534,7 @@ impl MpvPlayer {
             parse_str(stream.and_then(|s| s.get(field)))
         }
 
-        let mut child = Command::new("ffprobe")
+        let mut child = Command::new(super::commands::resolve_tool("ffprobe.exe"))
             .args([
                 "-v",
                 "error",
