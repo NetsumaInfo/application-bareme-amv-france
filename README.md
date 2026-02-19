@@ -87,7 +87,7 @@ Application desktop de notation pour concours AMV (Anime Music Video).
 ### Installation de `libmpv-2.dll`
 
 1. Télécharger `libmpv-2.dll`:
-   [libmpv-2.dll](https://cdn.discordapp.com/attachments/1227985261682757735/1470540545041502238/libmpv-2.dll?ex=698bab1b&is=698a599b&hm=7c60b7be993d6873c34c12cbaf2e1548b5ba33c45256cb4d2ebc2c0eba942206&)
+   [libmpv-2.dll](https://drive.google.com/file/d/1N9cjXoVZ0kdbPBiYO4hL9DEYJ0IxKBDy/view?usp=sharing)
 2. Copier le fichier dans le dossier racine du projet:
    `s:\projet_app\app bareme amv\libmpv-2.dll`
 
