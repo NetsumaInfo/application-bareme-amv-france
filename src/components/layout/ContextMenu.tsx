@@ -9,11 +9,11 @@ import {
   Upload,
   Image,
   FileText,
-  Play,
 } from 'lucide-react'
 import { useUIStore } from '@/store/useUIStore'
 import { useProjectStore } from '@/store/useProjectStore'
 import type { InterfaceMode, AppTab } from '@/types/notation'
+import { formatShortcutDisplay } from '@/utils/shortcuts'
 
 interface ContextMenuProps {
   x: number
@@ -31,6 +31,7 @@ interface MenuItem {
   onClick?: () => void
   separator?: boolean
   active?: boolean
+  shortcut?: string
 }
 
 export default function ContextMenu({
@@ -50,8 +51,9 @@ export default function ContextMenu({
     switchInterface,
     showPipVideo,
     setShowPipVideo,
+    shortcutBindings,
   } = useUIStore()
-  const { nextClip, previousClip } = useProjectStore()
+  const { nextClip, previousClip, currentProject, updateSettings } = useProjectStore()
 
   useEffect(() => {
     const handleClick = () => onClose()
@@ -81,22 +83,24 @@ export default function ContextMenu({
       onClick: () => { switchInterface('notation' as InterfaceMode); onClose() },
       active: currentInterface === 'notation',
     })
+    items.push({
+      label: 'Vue mixte',
+      icon: Table,
+      onClick: () => { switchInterface('dual' as InterfaceMode); onClose() },
+      active: currentInterface === 'dual',
+    })
     items.push({ separator: true, label: '' })
     items.push({
       label: 'Clip suivant',
       icon: ChevronRight,
       onClick: () => { nextClip(); onClose() },
+      shortcut: 'N',
     })
     items.push({
       label: 'Clip précédent',
       icon: ChevronLeft,
       onClick: () => { previousClip(); onClose() },
-    })
-    items.push({ separator: true, label: '' })
-    items.push({
-      label: 'Lire ce clip',
-      icon: Play,
-      onClick: () => { onClose() },
+      shortcut: 'P',
     })
     items.push({ separator: true, label: '' })
     items.push({
@@ -104,6 +108,17 @@ export default function ContextMenu({
       icon: MonitorPlay,
       onClick: () => { setShowPipVideo(!showPipVideo); onClose() },
     })
+    if (currentProject) {
+      items.push({
+        label: currentProject.settings.showMiniatures ? 'Masquer miniatures' : 'Afficher miniatures',
+        icon: Image,
+        onClick: () => {
+          updateSettings({ showMiniatures: !currentProject.settings.showMiniatures })
+          onClose()
+        },
+        shortcut: formatShortcutDisplay(shortcutBindings.toggleMiniatures),
+      })
+    }
     if (onImportVideos) {
       items.push({
         label: 'Importer des vidéos',
@@ -171,6 +186,7 @@ export default function ContextMenu({
           <button
             key={item.label}
             onClick={item.onClick}
+            title={item.shortcut ? `${item.label} (${item.shortcut})` : item.label}
             className={`w-full flex items-center gap-2 px-3 py-1.5 text-xs transition-colors ${
               item.active
                 ? 'text-primary-400 bg-primary-600/10'
@@ -178,7 +194,8 @@ export default function ContextMenu({
             }`}
           >
             {item.icon && <item.icon size={13} />}
-            {item.label}
+            <span className="flex-1 text-left">{item.label}</span>
+            {item.shortcut && <span className="text-[10px] text-gray-500">{item.shortcut}</span>}
           </button>
         )
       })}

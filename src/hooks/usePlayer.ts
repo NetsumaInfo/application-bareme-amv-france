@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef } from 'react'
 import { usePlayerStore } from '@/store/usePlayerStore'
 import { useProjectStore } from '@/store/useProjectStore'
 import * as tauri from '@/services/tauri'
+import { buildScreenshotName } from '@/utils/screenshot'
 
 export function usePlayer() {
   const {
@@ -128,7 +129,7 @@ export function usePlayer() {
     try {
       const { clips: allClips, currentClipIndex: idx } = useProjectStore.getState()
       const clip = allClips[idx]
-      const defaultName = clip ? `${clip.displayName}_screenshot.png` : 'screenshot.png'
+      const defaultName = buildScreenshotName('video', clip ? clip.displayName : undefined)
       const path = await tauri.saveScreenshotDialog(defaultName)
       if (path) await tauri.playerScreenshot(path)
     } catch { /* ignore */ }

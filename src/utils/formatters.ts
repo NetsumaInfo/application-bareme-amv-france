@@ -11,6 +11,22 @@ export function formatTime(seconds: number): string {
   return `${mins}:${secs.toString().padStart(2, '0')}`
 }
 
+export function formatPreciseTimecode(seconds: number): string {
+  if (!Number.isFinite(seconds) || seconds < 0) return '0:00.000'
+
+  const totalMilliseconds = Math.round(seconds * 1000)
+  const hrs = Math.floor(totalMilliseconds / 3_600_000)
+  const mins = Math.floor((totalMilliseconds % 3_600_000) / 60_000)
+  const secs = Math.floor((totalMilliseconds % 60_000) / 1000)
+  const millis = totalMilliseconds % 1000
+
+  const timePart = hrs > 0
+    ? `${hrs}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
+    : `${mins}:${secs.toString().padStart(2, '0')}`
+
+  return `${timePart}.${millis.toString().padStart(3, '0')}`
+}
+
 export function formatScore(score: number, maxScore: number): string {
   return `${score}/${maxScore}`
 }

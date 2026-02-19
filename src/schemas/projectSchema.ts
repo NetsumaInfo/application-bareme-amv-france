@@ -6,6 +6,9 @@ export const projectSettingsSchema = z.object({
   defaultPlaybackSpeed: z.number().min(0.25).max(4),
   defaultVolume: z.number().min(0).max(100),
   hideFinalScoreUntilEnd: z.boolean(),
+  hideTotals: z.boolean().default(false),
+  showMiniatures: z.boolean().default(false),
+  thumbnailDefaultTimeSec: z.number().min(0).max(600).default(10),
 })
 
 export const clipSchema = z.object({

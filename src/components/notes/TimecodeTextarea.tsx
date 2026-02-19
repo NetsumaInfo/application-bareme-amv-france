@@ -10,6 +10,7 @@ interface TimecodeTextareaProps {
   placeholder?: string
   rows?: number
   color?: string
+  fpsHint?: number
   className?: string
   textareaClassName?: string
   style?: React.CSSProperties
@@ -27,6 +28,7 @@ export default function TimecodeTextarea({
   placeholder,
   rows = 2,
   color = '#60a5fa',
+  fpsHint,
   className = '',
   textareaClassName = '',
   style,
@@ -37,7 +39,7 @@ export default function TimecodeTextarea({
   const [scrollTop, setScrollTop] = useState(0)
   const [scrollLeft, setScrollLeft] = useState(0)
   const innerRef = useRef<HTMLTextAreaElement | null>(null)
-  const timecodes = useMemo(() => extractTimecodesFromText(value), [value])
+  const timecodes = useMemo(() => extractTimecodesFromText(value, undefined, fpsHint), [value, fpsHint])
 
   const setTextareaRef = useCallback((el: HTMLTextAreaElement | null) => {
     innerRef.current = el

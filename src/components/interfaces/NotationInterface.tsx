@@ -1,20 +1,21 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { ChevronLeft, ChevronRight, Clock3, ExternalLink } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Clock3, ExternalLink, Play } from 'lucide-react'
 import { emit } from '@tauri-apps/api/event'
 import { useNotationStore } from '@/store/useNotationStore'
 import { useProjectStore } from '@/store/useProjectStore'
 import { useUIStore } from '@/store/useUIStore'
 import { usePlayer } from '@/hooks/usePlayer'
-import { getClipPrimaryLabel, getClipSecondaryLabel, formatTime } from '@/utils/formatters'
+import { getClipPrimaryLabel, getClipSecondaryLabel, formatPreciseTimecode } from '@/utils/formatters'
 import { CATEGORY_COLOR_PRESETS, sanitizeColor, withAlpha } from '@/utils/colors'
 import { normalizeShortcutFromEvent } from '@/utils/shortcuts'
+import { snapToFrameSeconds } from '@/utils/timecodes'
 import TimecodeTextarea from '@/components/notes/TimecodeTextarea'
 import * as tauri from '@/services/tauri'
 
 export default function NotationInterface() {
-  const { currentBareme, updateCriterion, setCategoryNote, setTextNotes, getNoteForClip, getScoreForClip } = useNotationStore()
+  const { currentBareme, updateCriterion, setCategoryNote, setCriterionNote, setTextNotes, getNoteForClip, getScoreForClip } = useNotationStore()
   const { clips, currentClipIndex, nextClip, previousClip, currentProject, markDirty } = useProjectStore()
-  const { hideFinalScore, hideTextNotes, setShowPipVideo, isNotesDetached, setNotesDetached, shortcutBindings } = useUIStore()
+  const { hideFinalScore, hideTextNotes, setShowPipVideo, isNotesDetached, shortcutBindings } = useUIStore()
   const { seek, pause } = usePlayer()
 
   const currentClip = clips[currentClipIndex]
@@ -22,6 +23,7 @@ export default function NotationInterface() {
   const totalScore = currentClip ? getScoreForClip(currentClip.id) : 0
 
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null)
+  const [clipFps, setClipFps] = useState<number | null>(null)
   const [framePreview, setFramePreview] = useState<{
     visible: boolean
     left: number
@@ -37,6 +39,8 @@ export default function NotationInterface() {
   })
 
   const inputRefs = useRef<Map<string, HTMLInputElement>>(new Map())
+  const navGuardRef = useRef(0)
+  const [expandedCriterionNotes, setExpandedCriterionNotes] = useState<Record<string, boolean>>({})
   const categoryTextareaRefs = useRef<Map<string, HTMLTextAreaElement>>(new Map())
   const globalTextareaRef = useRef<HTMLTextAreaElement | null>(null)
   const activeNoteFieldRef = useRef<{ kind: 'category' | 'global'; category?: string } | null>(null)
@@ -66,6 +70,30 @@ export default function NotationInterface() {
       totalMax: criteria.reduce((sum, c) => sum + (c.max ?? 10), 0),
     }))
   }, [currentBareme])
+
+  useEffect(() => {
+    let active = true
+    if (!currentClip?.filePath) {
+      return () => {
+        active = false
+      }
+    }
+
+    tauri.playerGetMediaInfo(currentClip.filePath)
+      .then((info) => {
+        if (!active) return
+        const fps = Number(info?.fps)
+        setClipFps(Number.isFinite(fps) && fps > 0 ? fps : null)
+      })
+      .catch(() => {
+        if (!active) return
+        setClipFps(null)
+      })
+
+    return () => {
+      active = false
+    }
+  }, [currentClip?.id, currentClip?.filePath])
 
   const flatCriteria = useMemo(
     () => categories.flatMap((group) => group.criteria),
@@ -142,6 +170,17 @@ export default function NotationInterface() {
     }, 120)
   }, [setShowPipVideo])
 
+  const navigateClip = useCallback((direction: 'next' | 'prev') => {
+    const now = Date.now()
+    if (now - navGuardRef.current < 420) return
+    navGuardRef.current = now
+    if (direction === 'next') {
+      nextClip()
+    } else {
+      previousClip()
+    }
+  }, [nextClip, previousClip])
+
   const jumpToTimecode = useCallback(async (seconds: number, payload?: { category?: string; criterionId?: string }) => {
     if (!currentClip || !Number.isFinite(seconds) || seconds < 0) return
     openPlayerAtFront()
@@ -179,7 +218,8 @@ export default function NotationInterface() {
 
     const status = await tauri.playerGetStatus().catch(() => null)
     if (!status) return
-    const timecode = formatTime(status.current_time)
+    const preciseSeconds = snapToFrameSeconds(status.current_time, clipFps)
+    const timecode = formatPreciseTimecode(preciseSeconds)
 
     if (target.kind === 'global') {
       const textarea = globalTextareaRef.current
@@ -205,7 +245,7 @@ export default function NotationInterface() {
       textarea.focus()
       textarea.setSelectionRange(caret, caret)
     })
-  }, [currentClip, insertTextAtCursor, markDirty, setCategoryNote, setTextNotes])
+  }, [clipFps, currentClip, insertTextAtCursor, markDirty, setCategoryNote, setTextNotes])
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -216,10 +256,8 @@ export default function NotationInterface() {
         insertCurrentTimecode().catch(() => {})
       }
     }
-    window.addEventListener('keydown', onKeyDown, true)
     document.addEventListener('keydown', onKeyDown, true)
     return () => {
-      window.removeEventListener('keydown', onKeyDown, true)
       document.removeEventListener('keydown', onKeyDown, true)
     }
   }, [insertCurrentTimecode, shortcutBindings])
@@ -327,7 +365,7 @@ export default function NotationInterface() {
     <div className="flex flex-col w-full h-full text-gray-200" style={{ background: '#0f0f23' }}>
       <div className="flex items-center justify-between px-3 py-2 border-b border-gray-700 shrink-0" style={{ background: '#1a1a2e' }}>
         <button
-          onClick={previousClip}
+          onClick={() => navigateClip('prev')}
           disabled={currentClipIndex === 0}
           className="p-1 rounded hover:bg-surface-light text-gray-400 hover:text-white disabled:opacity-30 transition-colors"
         >
@@ -338,32 +376,34 @@ export default function NotationInterface() {
           onDoubleClick={openPlayerAtFront}
           title="Double clic pour ouvrir le lecteur"
         >
-          <div className="text-xs font-medium text-white truncate">
-            {getClipPrimaryLabel(currentClip)}
-          </div>
-          {getClipSecondaryLabel(currentClip) && (
-            <div className="text-[10px] text-primary-400 truncate">{getClipSecondaryLabel(currentClip)}</div>
-          )}
-          <div className="text-[10px] text-gray-500">
-            {currentClipIndex + 1} / {clips.length}
+          <div className="flex items-center justify-center gap-2 min-w-0 text-[11px] leading-none">
+            <button
+              onClick={(event) => {
+                event.stopPropagation()
+                openPlayerAtFront()
+              }}
+              className="p-0.5 rounded hover:bg-surface-light text-gray-400 hover:text-white transition-colors shrink-0"
+              title="Ouvrir la vidéo"
+            >
+              <Play size={13} />
+            </button>
+            <span className="font-semibold text-white truncate max-w-[40%]">
+              {getClipPrimaryLabel(currentClip)}
+            </span>
+            {getClipSecondaryLabel(currentClip) && (
+              <>
+                <span className="text-gray-600">-</span>
+                <span className="text-primary-400 truncate max-w-[32%]">{getClipSecondaryLabel(currentClip)}</span>
+              </>
+            )}
+            <span className="text-gray-500 shrink-0">
+              {currentClipIndex + 1}/{clips.length}
+            </span>
           </div>
         </div>
         <div className="flex items-center gap-1">
           <button
-            onClick={() => {
-              setNotesDetached(true)
-              tauri.openNotesWindow().catch((err) => {
-                console.error(err)
-                setNotesDetached(false)
-              })
-            }}
-            className="p-1 rounded hover:bg-surface-light text-gray-400 hover:text-white transition-colors"
-            title="Detacher les notes"
-          >
-            <ExternalLink size={14} />
-          </button>
-          <button
-            onClick={nextClip}
+            onClick={() => navigateClip('next')}
             disabled={currentClipIndex >= clips.length - 1}
             className="p-1 rounded hover:bg-surface-light text-gray-400 hover:text-white disabled:opacity-30 transition-colors"
           >
@@ -372,17 +412,15 @@ export default function NotationInterface() {
         </div>
       </div>
 
-      <div className="flex items-center justify-between px-3 py-1.5 border-b border-gray-700/50 shrink-0" style={{ background: '#12122a' }}>
-        <span className="text-[10px] text-gray-500 uppercase tracking-wider">Score total</span>
-        {!shouldHideTotals ? (
+      {!shouldHideTotals && (
+        <div className="flex items-center justify-between px-3 py-1.5 border-b border-gray-700/50 shrink-0" style={{ background: '#12122a' }}>
+          <span className="text-[10px] text-gray-500 uppercase tracking-wider">Score total</span>
           <span className="text-sm font-bold text-white">
             {totalScore}
             <span className="text-xs text-gray-400 font-normal">/{currentBareme.totalPoints}</span>
           </span>
-        ) : (
-          <span className="text-sm font-bold text-gray-600">-</span>
-        )}
-      </div>
+        </div>
+      )}
 
       <div className="flex-1 overflow-y-auto py-1">
         {categories.map(({ category, criteria, color, totalMax }) => {
@@ -405,10 +443,16 @@ export default function NotationInterface() {
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-xs font-mono font-bold" style={{ color: catScore > 0 ? color : '#6b7280' }}>
-                    {catScore}
-                  </span>
-                  <span className="text-[10px] text-gray-500">/{totalMax}</span>
+                  {!shouldHideTotals ? (
+                    <>
+                      <span className="text-xs font-mono font-bold" style={{ color: catScore > 0 ? color : '#6b7280' }}>
+                        {catScore}
+                      </span>
+                      <span className="text-[10px] text-gray-500">/{totalMax}</span>
+                    </>
+                  ) : (
+                    <span className="text-xs font-mono font-bold text-gray-600">-</span>
+                  )}
                   <span
                     className="text-[10px] transition-transform"
                     style={{
@@ -428,47 +472,107 @@ export default function NotationInterface() {
                     const score = note?.scores[criterion.id]
                     const value = score?.value ?? ''
                     const hasError = score && !score.isValid
+                    const criterionNoteValue = note?.criterionNotes?.[criterion.id] ?? ''
+                    const isCriterionNoteExpanded = Boolean(expandedCriterionNotes[criterion.id])
 
                     return (
-                      <div
-                        key={criterion.id}
-                        className="flex items-center gap-2 px-3 py-2 rounded-md transition-colors"
-                        style={{
-                          backgroundColor: hasError ? withAlpha('#ef4444', 0.12) : withAlpha(color, 0.07),
-                        }}
-                      >
-                        <div className="flex-1 min-w-0">
-                          <span className="text-xs text-gray-200 truncate block" title={criterion.name}>
-                            {criterion.name}
-                          </span>
-                          {criterion.description && (
-                            <span className="text-[9px] text-gray-500 truncate block">
-                              {criterion.description}
-                            </span>
-                          )}
-                        </div>
-                        <input
-                          ref={(el) => {
-                            if (el) inputRefs.current.set(criterion.id, el)
+                      <div key={criterion.id} className="space-y-1">
+                        <div
+                          className="flex items-center gap-2 px-3 py-2 rounded-md transition-colors"
+                          style={{
+                            backgroundColor: hasError ? withAlpha('#ef4444', 0.12) : withAlpha(color, 0.07),
                           }}
-                          type="number"
-                          min={criterion.min}
-                          max={criterion.max}
-                          step={criterion.step || 0.5}
-                          value={value === '' ? '' : String(value)}
-                          onChange={(e) => handleValueChange(criterion.id, e.target.value === '' ? '' : Number(e.target.value))}
-                          onKeyDown={(e) => handleKeyDown(e, flatIndex)}
-                          className={`amv-soft-number w-16 px-2 py-1 text-center text-sm rounded-md border font-mono focus-visible:outline-none ${
-                            hasError
-                              ? 'border-accent bg-accent/10 text-accent-light'
-                              : 'text-white focus:border-primary-500'
-                          } focus:outline-none`}
-                          style={!hasError ? {
-                            borderColor: withAlpha(color, 0.42),
-                            backgroundColor: withAlpha(color, 0.1),
-                          } : undefined}
-                        />
-                        <span className="text-[10px] text-gray-500 w-7 text-right font-mono">/{criterion.max ?? 10}</span>
+                        >
+                          <div className="flex-1 min-w-0">
+                            <span className="text-xs text-gray-200 truncate block" title={criterion.name}>
+                              {criterion.name}
+                            </span>
+                            {criterion.description && (
+                              <span className="text-[9px] text-gray-500 truncate block">
+                                {criterion.description}
+                              </span>
+                            )}
+                          </div>
+                          <input
+                            ref={(el) => {
+                              if (el) inputRefs.current.set(criterion.id, el)
+                            }}
+                            type="number"
+                            min={criterion.min}
+                            max={criterion.max}
+                            step={criterion.step || 0.5}
+                            value={value === '' ? '' : String(value)}
+                            onChange={(e) => handleValueChange(criterion.id, e.target.value === '' ? '' : Number(e.target.value))}
+                            onKeyDown={(e) => handleKeyDown(e, flatIndex)}
+                            className={`amv-soft-number w-16 px-2 py-1 text-center text-sm rounded-md border font-mono focus-visible:outline-none ${
+                              hasError
+                                ? 'border-accent bg-accent/10 text-accent-light'
+                                : 'text-white focus:border-primary-500'
+                            } focus:outline-none`}
+                            style={!hasError ? {
+                              borderColor: withAlpha(color, 0.42),
+                              backgroundColor: withAlpha(color, 0.1),
+                            } : undefined}
+                          />
+                          <span className="text-[10px] text-gray-500 w-7 text-right font-mono">/{criterion.max ?? 10}</span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setExpandedCriterionNotes((prev) => ({
+                                ...prev,
+                                [criterion.id]: !prev[criterion.id],
+                              }))
+                            }}
+                            className="ml-1 px-1 text-[10px] leading-none text-gray-400 hover:text-white transition-colors bg-transparent"
+                            style={{ background: 'transparent' }}
+                            title={isCriterionNoteExpanded ? 'Refermer la note' : 'Ouvrir la note'}
+                          >
+                            {isCriterionNoteExpanded ? '▲' : '▼'}
+                          </button>
+                        </div>
+                        {isCriterionNoteExpanded ? (
+                          <TimecodeTextarea
+                            placeholder={`Note "${criterion.name}"...`}
+                            value={criterionNoteValue}
+                            onChange={(nextValue) => {
+                              if (!currentClip) return
+                              setCriterionNote(currentClip.id, criterion.id, nextValue)
+                              markDirty()
+                            }}
+                            textareaClassName="min-h-[30px]"
+                            style={{
+                              backgroundColor: withAlpha(color, 0.045),
+                              borderColor: withAlpha(color, 0.15),
+                            }}
+                            color={color}
+                            fpsHint={clipFps ?? undefined}
+                            onTimecodeSelect={(item) => {
+                              jumpToTimecode(item.seconds, { category, criterionId: criterion.id })
+                            }}
+                            onTimecodeHover={({ item, anchorRect }) => {
+                              showFramePreview({
+                                seconds: item.seconds,
+                                anchorRect,
+                              }).catch(() => {})
+                            }}
+                            onTimecodeLeave={hideFramePreview}
+                          />
+                        ) : criterionNoteValue.trim() ? (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setExpandedCriterionNotes((prev) => ({
+                                ...prev,
+                                [criterion.id]: true,
+                              }))
+                            }}
+                            className="w-full text-left px-2.5 py-1 rounded-md text-[10px] text-gray-400 border border-gray-700 hover:text-gray-200 hover:border-gray-500 transition-colors truncate"
+                            style={{ backgroundColor: withAlpha(color, 0.04) }}
+                            title={criterionNoteValue}
+                          >
+                            {criterionNoteValue.replace(/\s+/g, ' ').slice(0, 96)}
+                          </button>
+                        ) : null}
                       </div>
                     )
                   })}
@@ -495,6 +599,7 @@ export default function NotationInterface() {
                       borderColor: withAlpha(color, 0.2),
                     }}
                     color={color}
+                    fpsHint={clipFps ?? undefined}
                     onTimecodeSelect={(item) => {
                       jumpToTimecode(item.seconds, { category })
                     }}
@@ -544,6 +649,7 @@ export default function NotationInterface() {
               }}
               textareaClassName="min-h-[36px]"
               color="#60a5fa"
+              fpsHint={clipFps ?? undefined}
               onTimecodeSelect={(item) => {
                 jumpToTimecode(item.seconds)
               }}

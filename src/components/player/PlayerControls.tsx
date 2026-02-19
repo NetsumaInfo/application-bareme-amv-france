@@ -1,5 +1,5 @@
 import { useCallback, useMemo } from 'react'
-import { Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, Maximize2, Minimize2, ChevronLeft, ChevronRight, Camera } from 'lucide-react'
+import { Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, Maximize2, Minimize2, ChevronLeft, ChevronRight, Camera, ImagePlus } from 'lucide-react'
 import { emit } from '@tauri-apps/api/event'
 import { usePlayer } from '@/hooks/usePlayer'
 import { usePlayerStore } from '@/store/usePlayerStore'
@@ -8,6 +8,7 @@ import { useNotationStore } from '@/store/useNotationStore'
 import { useProjectStore } from '@/store/useProjectStore'
 import { formatTime } from '@/utils/formatters'
 import { buildNoteTimecodeMarkers, type NoteTimecodeMarker } from '@/utils/timecodes'
+import * as tauri from '@/services/tauri'
 import SubtitleSelector from './SubtitleSelector'
 import AudioTrackSelector from './AudioTrackSelector'
 import AudioDbMeter from './AudioDbMeter'
@@ -40,9 +41,10 @@ export default function PlayerControls({ compact }: PlayerControlsProps) {
   const setShowPipVideo = useUIStore((s) => s.setShowPipVideo)
   const currentBareme = useNotationStore((s) => s.currentBareme)
   const notes = useNotationStore((s) => s.notes)
-  const { clips, currentClipIndex } = useProjectStore()
+  const { clips, currentClipIndex, currentProject, setClipThumbnailTime } = useProjectStore()
   const currentClip = clips[currentClipIndex]
   const currentNote = currentClip ? notes[currentClip.id] : undefined
+  const miniaturesEnabled = Boolean(currentProject?.settings.showMiniatures)
 
   const noteMarkers = useMemo(() => {
     if (!currentClip || !currentBareme || duration <= 0) return []
@@ -67,6 +69,14 @@ export default function PlayerControls({ compact }: PlayerControlsProps) {
     window.dispatchEvent(new CustomEvent('amv:focus-note-marker', { detail: payload }))
     emit('main:focus-note-marker', payload).catch(() => {})
   }, [currentClip, isLoaded, pause, seek, setShowPipVideo])
+
+  const handleSetMiniatureFrame = useCallback(async () => {
+    if (!currentClip) return
+    const status = await tauri.playerGetStatus().catch(() => null)
+    const seconds = Number(status?.current_time)
+    if (!Number.isFinite(seconds) || seconds < 0) return
+    setClipThumbnailTime(currentClip.id, seconds)
+  }, [currentClip, setClipThumbnailTime])
 
   if (compact) {
     return (
@@ -254,6 +264,19 @@ export default function PlayerControls({ compact }: PlayerControlsProps) {
           >
             <Camera size={14} />
           </button>
+
+          {miniaturesEnabled && (
+            <button
+              onClick={() => {
+                handleSetMiniatureFrame().catch(() => {})
+              }}
+              className="p-1 rounded hover:bg-surface-light text-gray-400 hover:text-white transition-colors"
+              disabled={!isLoaded}
+              title="Définir la frame miniature (Ctrl+Shift+M)"
+            >
+              <ImagePlus size={14} />
+            </button>
+          )}
 
           {/* Fullscreen */}
           <button

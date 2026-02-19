@@ -123,7 +123,7 @@ fn media_info_cache_key(path: &str) -> String {
 
 fn frame_preview_cache_key(path: &str, seconds: f64, width: u32) -> String {
     let tick = if seconds.is_finite() {
-        (seconds.max(0.0) * 100.0).round() as i64
+        (seconds.max(0.0) * 1000.0).round() as i64
     } else {
         0
     };
@@ -415,13 +415,14 @@ fn probe_frame_preview_with_ffmpeg(path: &str, seconds: f64, width: u32) -> Resu
     let ffmpeg_bin = resolve_tool("ffmpeg.exe");
     let mut command = Command::new(&ffmpeg_bin);
     configure_hidden_process(&mut command);
-    let output = command
+    let mut child = command
         .args([
             "-hide_banner",
             "-loglevel",
             "error",
+            "-nostdin",
             "-threads",
-            "2",
+            "1",
             "-ss",
             &seek,
             "-i",
@@ -443,8 +444,31 @@ fn probe_frame_preview_with_ffmpeg(path: &str, seconds: f64, width: u32) -> Resu
         ])
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
-        .output()
+        .spawn()
         .map_err(|e| format!("ffmpeg indisponible ({}): {}", ffmpeg_bin.display(), e))?;
+
+    let timeout = Duration::from_millis(3500);
+    let start = Instant::now();
+    loop {
+        match child.try_wait() {
+            Ok(Some(_)) => break,
+            Ok(None) => {
+                if start.elapsed() >= timeout {
+                    let _ = child.kill();
+                    let _ = child.wait();
+                    return Err("ffmpeg timeout (3.5s)".to_string());
+                }
+                std::thread::sleep(Duration::from_millis(20));
+            }
+            Err(e) => {
+                return Err(format!("ffmpeg wait failed: {}", e));
+            }
+        }
+    }
+
+    let output = child
+        .wait_with_output()
+        .map_err(|e| format!("ffmpeg output failed: {}", e))?;
 
     if !output.status.success() {
         let err = String::from_utf8_lossy(&output.stderr).trim().to_string();
@@ -898,7 +922,7 @@ pub fn player_get_media_info(
 }
 
 #[tauri::command]
-pub fn player_get_frame_preview(
+pub async fn player_get_frame_preview(
     state: State<'_, AppState>,
     path: Option<String>,
     seconds: f64,
@@ -921,24 +945,23 @@ pub fn player_get_frame_preview(
     if let Some(cached) = get_frame_preview_cached(&normalized_path, seconds, safe_width) {
         return Ok(cached);
     }
-    let (tx, rx) = mpsc::channel();
-
-    std::thread::spawn(move || {
-        let result = match probe_frame_preview_with_ffmpeg(&normalized_path, seconds, safe_width) {
+    let probe_path = normalized_path.clone();
+    let result = tauri::async_runtime::spawn_blocking(move || {
+        match probe_frame_preview_with_ffmpeg(&probe_path, seconds, safe_width) {
             Ok(image) => Ok(image),
-            Err(ffmpeg_err) => probe_frame_preview_with_mpv(&normalized_path, seconds)
+            Err(ffmpeg_err) => probe_frame_preview_with_mpv(&probe_path, seconds)
                 .map_err(|mpv_err| format!("ffmpeg: {}; mpv: {}", ffmpeg_err, mpv_err)),
-        };
-        let _ = tx.send(result);
-    });
+        }
+    })
+    .await
+    .map_err(|join_error| format!("Preview task failed: {}", join_error))?;
 
-    match rx.recv_timeout(Duration::from_millis(12000)) {
-        Ok(Ok(image)) => {
+    match result {
+        Ok(image) => {
             put_frame_preview_cache(target_path.trim(), seconds, safe_width, image.clone());
             Ok(image)
         }
-        Ok(Err(error)) => Err(error),
-        Err(_) => Err("Preview frame trop lent (timeout 12s)".to_string()),
+        Err(error) => Err(error),
     }
 }
 

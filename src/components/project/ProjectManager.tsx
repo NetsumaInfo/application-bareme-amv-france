@@ -6,7 +6,6 @@ import {
   FileDown,
   FolderPlus,
   ChevronDown,
-  Menu,
 } from 'lucide-react'
 import { useProjectStore } from '@/store/useProjectStore'
 import { useNotationStore } from '@/store/useNotationStore'
@@ -293,10 +292,9 @@ export default function ProjectManager() {
     <div className="relative" ref={menuRef}>
       <button
         onClick={() => setOpen(!open)}
-        className="flex items-center gap-1 px-2 py-1.5 text-xs rounded hover:bg-surface-light text-gray-300 hover:text-white transition-colors"
+        className="flex items-center px-2 py-1.5 text-xs rounded hover:bg-surface-light text-gray-300 hover:text-white transition-colors"
         title="Menu fichier"
       >
-        <Menu size={14} />
         <span className="hidden sm:inline">Fichier</span>
         <ChevronDown
           size={10}

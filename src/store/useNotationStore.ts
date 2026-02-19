@@ -1,9 +1,10 @@
 import { create } from 'zustand'
 import type { Note, CriterionScore } from '@/types/notation'
-import type { Bareme } from '@/types/bareme'
+import type { Bareme, Criterion } from '@/types/bareme'
 import type { NoteData, CriterionScoreData } from '@/types/project'
 import { OFFICIAL_BAREME } from '@/types/bareme'
 import { validateCriterionValue, calculateScore, isNoteComplete } from '@/utils/scoring'
+import * as tauri from '@/services/tauri'
 
 interface NotationStore {
   notes: Record<string, Note>
@@ -14,6 +15,7 @@ interface NotationStore {
   setBareme: (bareme: Bareme) => void
   addBareme: (bareme: Bareme) => void
   removeBareme: (baremeId: string) => void
+  loadCustomBaremes: (items: unknown[]) => void
   updateCriterion: (clipId: string, criterionId: string, value: number | string | boolean) => void
   setTextNotes: (clipId: string, text: string) => void
   setCriterionNote: (clipId: string, criterionId: string, text: string) => void
@@ -81,6 +83,97 @@ function pushHistory(
   return [...history, snapshot].slice(-100)
 }
 
+const CRITERION_TYPES = new Set(['numeric', 'slider', 'boolean', 'select', 'text'] as const)
+
+function asRecord(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === 'object' ? (value as Record<string, unknown>) : null
+}
+
+function toNumber(value: unknown): number | undefined {
+  const n = Number(value)
+  return Number.isFinite(n) ? n : undefined
+}
+
+function parseCriterion(raw: unknown, index: number): Criterion | null {
+  const row = asRecord(raw)
+  if (!row) return null
+  const name = typeof row.name === 'string' ? row.name.trim() : ''
+  if (!name) return null
+
+  const rawType = typeof row.type === 'string' ? row.type : 'numeric'
+  const type = CRITERION_TYPES.has(rawType as Criterion['type'])
+    ? (rawType as Criterion['type'])
+    : 'numeric'
+
+  const min = toNumber(row.min)
+  const max = toNumber(row.max)
+  const step = toNumber(row.step)
+  const required = typeof row.required === 'boolean' ? row.required : true
+  const description = typeof row.description === 'string' ? row.description : undefined
+  const category = typeof row.category === 'string' && row.category.trim() ? row.category.trim() : undefined
+  const options = Array.isArray(row.options)
+    ? row.options.map((v) => String(v)).filter(Boolean)
+    : undefined
+
+  return {
+    id: typeof row.id === 'string' && row.id.trim() ? row.id : `criterion-${index + 1}`,
+    name,
+    description,
+    type,
+    min,
+    max,
+    step: step && step > 0 ? step : 0.5,
+    options: options && options.length > 0 ? options : undefined,
+    required,
+    category,
+  }
+}
+
+function parseBareme(raw: unknown): Bareme | null {
+  const row = asRecord(raw)
+  if (!row) return null
+  const id = typeof row.id === 'string' ? row.id.trim() : ''
+  const name = typeof row.name === 'string' ? row.name.trim() : ''
+  if (!id || !name) return null
+
+  const criteriaRaw = Array.isArray(row.criteria) ? row.criteria : []
+  const criteria = criteriaRaw
+    .map((criterion, idx) => parseCriterion(criterion, idx))
+    .filter((criterion): criterion is Criterion => Boolean(criterion))
+  if (criteria.length === 0) return null
+
+  const colorMap: Record<string, string> = {}
+  const rawColors = asRecord(row.categoryColors)
+  if (rawColors) {
+    for (const [key, value] of Object.entries(rawColors)) {
+      if (!key.trim()) continue
+      if (typeof value === 'string' && value.trim()) {
+        colorMap[key] = value
+      }
+    }
+  }
+
+  const fallbackTotal = criteria.reduce(
+    (sum, criterion) => sum + (Number.isFinite(criterion.max) ? Number(criterion.max) : 0),
+    0,
+  )
+  const totalPoints = toNumber(row.totalPoints) ?? fallbackTotal
+  const now = new Date().toISOString()
+
+  return {
+    id,
+    name,
+    description: typeof row.description === 'string' && row.description.trim() ? row.description : undefined,
+    isOfficial: false,
+    hideTotalsUntilAllScored: Boolean(row.hideTotalsUntilAllScored),
+    criteria,
+    categoryColors: Object.keys(colorMap).length > 0 ? colorMap : undefined,
+    totalPoints: totalPoints > 0 ? totalPoints : fallbackTotal,
+    createdAt: typeof row.createdAt === 'string' ? row.createdAt : now,
+    updatedAt: typeof row.updatedAt === 'string' ? row.updatedAt : now,
+  }
+}
+
 export const useNotationStore = create<NotationStore>((set, get) => ({
   notes: {},
   history: [],
@@ -101,12 +194,42 @@ export const useNotationStore = create<NotationStore>((set, get) => ({
     } else {
       set({ availableBaremes: [...availableBaremes, bareme] })
     }
+    if (!bareme.isOfficial) {
+      tauri.saveBareme(bareme, bareme.id).catch(() => {})
+    }
   },
 
   removeBareme: (baremeId: string) => {
-    const { availableBaremes } = get()
+    const { availableBaremes, currentBareme } = get()
+    const shouldDeleteFile = availableBaremes.some((b) => b.id === baremeId && !b.isOfficial)
+    const nextAvailable = availableBaremes.filter((b) => b.id !== baremeId || b.isOfficial)
     set({
-      availableBaremes: availableBaremes.filter((b) => b.id !== baremeId || b.isOfficial),
+      availableBaremes: nextAvailable,
+      currentBareme: currentBareme?.id === baremeId ? OFFICIAL_BAREME : currentBareme,
+    })
+    if (shouldDeleteFile) {
+      tauri.deleteBareme(baremeId).catch(() => {})
+    }
+  },
+
+  loadCustomBaremes: (items: unknown[]) => {
+    const customBaremes = items
+      .map((item) => parseBareme(item))
+      .filter((bareme): bareme is Bareme => Boolean(bareme))
+      .filter((bareme) => bareme.id !== OFFICIAL_BAREME.id)
+
+    const unique = new Map<string, Bareme>()
+    for (const bareme of customBaremes) {
+      unique.set(bareme.id, bareme)
+    }
+
+    const nextAvailable = [OFFICIAL_BAREME, ...Array.from(unique.values())]
+    const currentId = get().currentBareme?.id
+    const nextCurrent = nextAvailable.find((bareme) => bareme.id === currentId) || OFFICIAL_BAREME
+
+    set({
+      availableBaremes: nextAvailable,
+      currentBareme: nextCurrent,
     })
   },
 

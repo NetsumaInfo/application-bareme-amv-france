@@ -39,6 +39,7 @@ type Tab = 'general' | 'notation' | 'raccourcis'
 const INTERFACE_OPTIONS: { mode: InterfaceMode; label: string; icon: typeof Table }[] = [
   { mode: 'spreadsheet', label: 'Tableur', icon: Table },
   { mode: 'notation', label: 'Notes', icon: Maximize2 },
+  { mode: 'dual', label: 'Tableur + Notes', icon: Table },
 ]
 
 export default function SettingsPanel({ onClose }: { onClose: () => void }) {
@@ -51,8 +52,6 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
     toggleAverages,
     hideTextNotes,
     toggleTextNotes,
-    showAudioDb,
-    toggleAudioDb,
     setShowBaremeEditor,
     currentInterface,
     switchInterface,
@@ -168,7 +167,7 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                 <label className="text-xs font-medium text-gray-400 mb-2 block">
                   Interface de notation
                 </label>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-3 gap-2">
                   {INTERFACE_OPTIONS.map(({ mode, label, icon: Icon }) => (
                     <button
                       key={mode}
@@ -392,6 +391,51 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                 <div className="flex items-center justify-between">
                   <div>
                     <span className="text-sm text-gray-300 block">
+                      Afficher miniatures des clips
+                    </span>
+                    <span className="text-[10px] text-gray-500">
+                      Affiche une image du clip sous le pseudo dans le tableur
+                    </span>
+                  </div>
+                  <Toggle
+                    checked={Boolean(settings?.showMiniatures)}
+                    onChange={() =>
+                      updateSettings({
+                        showMiniatures: !(settings?.showMiniatures ?? false),
+                      })
+                    }
+                  />
+                </div>
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-sm text-gray-300 block">
+                      Frame miniature par défaut
+                    </span>
+                    <span className="text-[10px] text-gray-500">
+                      secondes
+                    </span>
+                  </div>
+                  <input
+                    type="number"
+                    min={0}
+                    max={600}
+                    step={0.1}
+                    value={settings?.thumbnailDefaultTimeSec ?? 10}
+                    onChange={(e) => {
+                      const raw = Number(e.target.value)
+                      if (!Number.isFinite(raw)) return
+                      const clamped = Math.max(0, Math.min(600, raw))
+                      updateSettings({ thumbnailDefaultTimeSec: clamped })
+                    }}
+                    className="w-full px-3 py-2 bg-surface-dark border border-gray-700 rounded-lg text-sm text-white placeholder-gray-500 focus:border-primary-500 focus:outline-none"
+                  />
+                  <p className="text-[10px] text-gray-500 mt-1">
+                    Utilisée si aucune frame manuelle n'est définie pour le clip.
+                  </p>
+                </div>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="text-sm text-gray-300 block">
                       Masquer la prise de notes
                     </span>
                     <span className="text-[10px] text-gray-500">
@@ -399,17 +443,6 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                     </span>
                   </div>
                   <Toggle checked={hideTextNotes} onChange={toggleTextNotes} />
-                </div>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <span className="text-sm text-gray-300 block">
-                      Afficher dB audio L/R
-                    </span>
-                    <span className="text-[10px] text-gray-500">
-                      Affiche un niveau audio gauche/droite sur le lecteur
-                    </span>
-                  </div>
-                  <Toggle checked={showAudioDb} onChange={toggleAudioDb} />
                 </div>
               </div>
             </>

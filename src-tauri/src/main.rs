@@ -244,8 +244,12 @@ fn main() {
             project::manager::load_project,
             project::manager::export_json,
             project::manager::get_default_projects_folder,
+            project::manager::get_default_baremes_folder,
             project::manager::list_projects_in_folder,
             project::manager::ensure_directory_exists,
+            project::manager::save_bareme,
+            project::manager::delete_bareme,
+            project::manager::load_baremes,
             project::manager::save_user_settings,
             project::manager::load_user_settings,
             // Window commands

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { X, Plus, Trash2, Upload, Download, ArrowUp, ArrowDown, Copy } from 'lucide-react'
 import { useNotationStore } from '@/store/useNotationStore'
 import { useUIStore } from '@/store/useUIStore'
@@ -182,8 +182,6 @@ export default function BaremeEditor() {
     return CATEGORY_COLOR_PRESETS[idx >= 0 ? idx % CATEGORY_COLOR_PRESETS.length : 0]
   }
 
-  if (!showBaremeEditor) return null
-
   const resetForm = () => {
     setEditingBareme(null)
     setName('')
@@ -207,6 +205,35 @@ export default function BaremeEditor() {
     setHideTotalsUntilAllScored(false)
     setMode('edit')
   }
+
+  useEffect(() => {
+    const openCreate = () => {
+      setShowBaremeEditor(true)
+      setEditingBareme(null)
+      setName('')
+      setDescription('')
+      setCriteria([emptyCriterion()])
+      setCategoryColors({})
+      setGlobalStep(0.5)
+      setHideTotalsUntilAllScored(false)
+      setError('')
+      setMode('edit')
+    }
+    const openList = () => {
+      setShowBaremeEditor(true)
+      setMode('list')
+    }
+
+    window.addEventListener('amv:bareme-open-create', openCreate)
+    window.addEventListener('amv:bareme-open-list', openList)
+
+    return () => {
+      window.removeEventListener('amv:bareme-open-create', openCreate)
+      window.removeEventListener('amv:bareme-open-list', openList)
+    }
+  }, [setShowBaremeEditor])
+
+  if (!showBaremeEditor) return null
 
   const startEdit = (bareme: Bareme) => {
     setEditingBareme(bareme)
@@ -654,36 +681,9 @@ export default function BaremeEditor() {
 
               <div className="flex items-center justify-between">
                 <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Critères</span>
-                <div className="flex items-center gap-2">
-                  {!readOnly && (
-                    <>
-                      <div className="flex items-center gap-1">
-                        <input
-                          type="number"
-                          min={0.1}
-                          step={0.1}
-                          value={globalStep}
-                          onChange={(e) => setGlobalStep(Number(e.target.value))}
-                          className="w-16 px-2 py-1 rounded border border-gray-700 bg-surface text-xs text-white text-center focus:border-primary-500 focus:outline-none"
-                          title="Pas global"
-                        />
-                        <button
-                          onClick={applyGlobalStep}
-                          className="px-2 py-1 text-xs rounded border border-gray-700 text-gray-300 hover:text-white hover:border-primary-500 transition-colors"
-                        >
-                          Appliquer partout
-                        </button>
-                      </div>
-                      <button
-                        onClick={addCriterion}
-                        className="flex items-center gap-1.5 text-xs text-primary-400 hover:text-primary-300 transition-colors"
-                      >
-                        <Plus size={13} />
-                        Ajouter un critère
-                      </button>
-                    </>
-                  )}
-                </div>
+                <span className="text-[11px] text-gray-500">
+                  Barre d’actions fixe en bas
+                </span>
               </div>
 
               <div className="flex flex-col gap-2">
@@ -857,6 +857,40 @@ export default function BaremeEditor() {
             </div>
           )}
         </div>
+
+        {mode === 'edit' && !readOnly && (
+          <div className="px-5 py-2.5 border-t border-gray-700 bg-surface/95 supports-[backdrop-filter]:bg-surface/80">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <span className="text-[11px] text-gray-400">Actions rapides</span>
+              <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1">
+                  <input
+                    type="number"
+                    min={0.1}
+                    step={0.1}
+                    value={globalStep}
+                    onChange={(e) => setGlobalStep(Number(e.target.value))}
+                    className="w-16 px-2 py-1 rounded border border-gray-700 bg-surface text-xs text-white text-center focus:border-primary-500 focus:outline-none"
+                    title="Pas global"
+                  />
+                  <button
+                    onClick={applyGlobalStep}
+                    className="px-2 py-1 text-xs rounded border border-gray-700 text-gray-300 hover:text-white hover:border-primary-500 transition-colors"
+                  >
+                    Appliquer partout
+                  </button>
+                </div>
+                <button
+                  onClick={addCriterion}
+                  className="flex items-center gap-1.5 px-2.5 py-1 text-xs rounded border border-primary-500/40 text-primary-300 hover:text-primary-200 hover:border-primary-400 transition-colors"
+                >
+                  <Plus size={13} />
+                  Ajouter un critère
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className="flex justify-end gap-2 px-5 py-3 border-t border-gray-700">
           {mode === 'edit' ? (

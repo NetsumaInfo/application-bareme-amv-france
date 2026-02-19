@@ -12,6 +12,18 @@ import type {
 import { DEFAULT_PROJECT_SETTINGS } from '@/types/project'
 import { generateId, parseClipName } from '@/utils/formatters'
 
+const NAV_THROTTLE_MS = 240
+let lastClipNavAt = 0
+
+function isClipNavThrottled() {
+  const now = Date.now()
+  if (now - lastClipNavAt < NAV_THROTTLE_MS) {
+    return true
+  }
+  lastClipNavAt = now
+  return false
+}
+
 interface ProjectStore {
   currentProject: Project | null
   clips: Clip[]
@@ -24,6 +36,7 @@ interface ProjectStore {
   updateProject: (updates: Partial<Project>) => void
   updateSettings: (settings: Partial<ProjectSettings>) => void
   setClips: (clips: Clip[]) => void
+  setClipThumbnailTime: (clipId: string, seconds: number | null) => void
   setCurrentClip: (index: number) => void
   nextClip: () => void
   previousClip: () => void
@@ -76,6 +89,16 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
       const n = Number(value)
       return Number.isFinite(n) ? n : fallback
     }
+    const clampedThumbnailDefaultTime = Math.max(
+      0,
+      Math.min(
+        600,
+        numberOr(
+          rawSettings.thumbnailDefaultTimeSec ?? rawSettings.thumbnail_default_time_sec,
+          DEFAULT_PROJECT_SETTINGS.thumbnailDefaultTimeSec,
+        ),
+      ),
+    )
 
     const normalizedProject: Project = {
       id: (rawProject.id as string) || generateId(),
@@ -132,6 +155,13 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
             : typeof rawSettings.hide_totals === 'boolean'
               ? rawSettings.hide_totals
               : DEFAULT_PROJECT_SETTINGS.hideTotals,
+        showMiniatures:
+          typeof rawSettings.showMiniatures === 'boolean'
+            ? rawSettings.showMiniatures
+            : typeof rawSettings.show_miniatures === 'boolean'
+              ? rawSettings.show_miniatures
+              : DEFAULT_PROJECT_SETTINGS.showMiniatures,
+        thumbnailDefaultTimeSec: clampedThumbnailDefaultTime,
       },
       filePath:
         (rawProject.filePath as string | undefined) ||
@@ -146,6 +176,10 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
         (rawClip.file_name as string) ||
         ''
       const parsed = parseClipName(fileName)
+      const maybeThumbnailTime = Number(rawClip.thumbnailTime ?? rawClip.thumbnail_time)
+      const thumbnailTime = Number.isFinite(maybeThumbnailTime) && maybeThumbnailTime >= 0
+        ? maybeThumbnailTime
+        : undefined
 
       return {
         id: (rawClip.id as string) || generateId(),
@@ -164,6 +198,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
           Math.max(1, Number(rawClip.audioTrackCount ?? rawClip.audio_track_count ?? 1) || 1),
         scored: Boolean(rawClip.scored),
         order: numberOr(rawClip.order, index),
+        thumbnailTime,
       }
     })
 
@@ -257,6 +292,24 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
     set({ clips, isDirty: true })
   },
 
+  setClipThumbnailTime: (clipId: string, seconds: number | null) => {
+    const normalized = seconds === null ? null : Number(seconds)
+    const safeSeconds = normalized === null
+      ? null
+      : (Number.isFinite(normalized) && normalized >= 0 ? Math.round(normalized * 1000) / 1000 : null)
+
+    set((state) => ({
+      clips: state.clips.map((clip) => {
+        if (clip.id !== clipId) return clip
+        if (safeSeconds === null) {
+          return { ...clip, thumbnailTime: undefined }
+        }
+        return { ...clip, thumbnailTime: safeSeconds }
+      }),
+      isDirty: true,
+    }))
+  },
+
   setCurrentClip: (index: number) => {
     const { clips } = get()
     if (index >= 0 && index < clips.length) {
@@ -265,6 +318,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
   },
 
   nextClip: () => {
+    if (isClipNavThrottled()) return
     const { currentClipIndex, clips } = get()
     if (currentClipIndex < clips.length - 1) {
       set({ currentClipIndex: currentClipIndex + 1 })
@@ -272,6 +326,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
   },
 
   previousClip: () => {
+    if (isClipNavThrottled()) return
     const { currentClipIndex } = get()
     if (currentClipIndex > 0) {
       set({ currentClipIndex: currentClipIndex - 1 })

@@ -21,6 +21,7 @@ export interface Clip {
   audioTrackCount: number
   scored: boolean
   order: number
+  thumbnailTime?: number
 }
 
 export interface ProjectSettings {
@@ -30,6 +31,8 @@ export interface ProjectSettings {
   defaultVolume: number
   hideFinalScoreUntilEnd: boolean
   hideTotals: boolean
+  showMiniatures: boolean
+  thumbnailDefaultTimeSec: number
 }
 
 export interface ProjectData {
@@ -81,4 +84,6 @@ export const DEFAULT_PROJECT_SETTINGS: ProjectSettings = {
   defaultVolume: 80,
   hideFinalScoreUntilEnd: false,
   hideTotals: false,
+  showMiniatures: false,
+  thumbnailDefaultTimeSec: 10,
 }

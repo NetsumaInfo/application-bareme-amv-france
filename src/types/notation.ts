@@ -16,5 +16,5 @@ export interface Note {
   scoredAt?: string
 }
 
-export type InterfaceMode = 'spreadsheet' | 'modern' | 'notation'
+export type InterfaceMode = 'spreadsheet' | 'modern' | 'notation' | 'dual'
 export type AppTab = 'notation' | 'resultats' | 'export'

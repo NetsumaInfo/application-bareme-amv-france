@@ -7,14 +7,7 @@ import * as tauri from '@/services/tauri'
 type ZoomMode = 'fixed' | 'navigable'
 
 function readAudioDbPref(): boolean {
-  if (typeof window === 'undefined') return false
-  return window.localStorage.getItem('amv.showAudioDb') === '1'
-}
-
-function writeAudioDbPref(show: boolean): void {
-  if (typeof window === 'undefined') return
-  window.localStorage.setItem('amv.showAudioDb', show ? '1' : '0')
-  window.dispatchEvent(new CustomEvent('amv:audio-db-changed', { detail: show }))
+  return false
 }
 
 function normalizeInterfaceMode(mode: InterfaceMode): InterfaceMode {
@@ -81,12 +74,7 @@ export const useUIStore = create<UIStore>((set) => ({
   toggleFinalScore: () => set((s) => ({ hideFinalScore: !s.hideFinalScore })),
   toggleAverages: () => set((s) => ({ hideAverages: !s.hideAverages })),
   toggleTextNotes: () => set((s) => ({ hideTextNotes: !s.hideTextNotes })),
-  toggleAudioDb: () =>
-    set((s) => {
-      const next = !s.showAudioDb
-      writeAudioDbPref(next)
-      return { showAudioDb: next }
-    }),
+  toggleAudioDb: () => set({ showAudioDb: false }),
   toggleSidebar: () => set((s) => ({ sidebarCollapsed: !s.sidebarCollapsed })),
   setShowProjectModal: (show) => set({ showProjectModal: show }),
   setShowBaremeEditor: (show) => set({ showBaremeEditor: show }),

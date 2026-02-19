@@ -22,6 +22,8 @@ export type ShortcutAction =
   | 'frameForward'
   | 'frameBack'
   | 'screenshot'
+  | 'toggleMiniatures'
+  | 'setMiniatureFrame'
   | 'insertTimecode'
   | 'notesPrevField'
   | 'notesNextField'
@@ -58,6 +60,8 @@ export const SHORTCUT_DEFINITIONS: ShortcutDefinition[] = [
   { action: 'frameForward', label: 'Image suivante', defaultShortcut: '.' },
   { action: 'frameBack', label: 'Image précédente', defaultShortcut: ',' },
   { action: 'screenshot', label: "Capture d'écran", defaultShortcut: 'ctrl+shift+s' },
+  { action: 'toggleMiniatures', label: 'Activer / masquer miniatures', defaultShortcut: 'ctrl+m' },
+  { action: 'setMiniatureFrame', label: 'Définir frame miniature', defaultShortcut: 'ctrl+shift+m' },
   { action: 'insertTimecode', label: 'Insérer timecode dans les notes', defaultShortcut: 'ctrl+t' },
   { action: 'notesPrevField', label: 'Champ précédent (notes)', defaultShortcut: 'ctrl+arrowleft' },
   { action: 'notesNextField', label: 'Champ suivant (notes)', defaultShortcut: 'ctrl+arrowright' },
@@ -84,13 +88,56 @@ function normalizeKeyToken(rawKey: string): string | null {
   return key
 }
 
+function normalizeKeyTokenFromCode(rawCode: string): string | null {
+  if (!rawCode) return null
+
+  if (rawCode.startsWith('Key') && rawCode.length === 4) {
+    return rawCode.slice(3).toLowerCase()
+  }
+  if (rawCode.startsWith('Digit') && rawCode.length === 6) {
+    return rawCode.slice(5)
+  }
+  if (/^F\d{1,2}$/i.test(rawCode)) {
+    return rawCode.toLowerCase()
+  }
+
+  switch (rawCode) {
+    case 'Space':
+      return 'space'
+    case 'Escape':
+      return 'escape'
+    case 'ArrowLeft':
+      return 'arrowleft'
+    case 'ArrowRight':
+      return 'arrowright'
+    case 'ArrowUp':
+      return 'arrowup'
+    case 'ArrowDown':
+      return 'arrowdown'
+    case 'Minus':
+    case 'NumpadSubtract':
+      return '-'
+    case 'Equal':
+    case 'NumpadAdd':
+      return '='
+    case 'Comma':
+      return ','
+    case 'Period':
+    case 'NumpadDecimal':
+      return '.'
+    default:
+      return null
+  }
+}
+
 export function normalizeShortcutFromEvent(event: KeyboardEvent): string | null {
-  const key = normalizeKeyToken(event.key)
+  const key = normalizeKeyTokenFromCode(event.code) ?? normalizeKeyToken(event.key)
   if (!key) return null
 
+  const isPlusKey = event.code === 'Equal' || event.code === 'NumpadAdd' || event.key === '+'
   let shortcut = ''
   if (event.ctrlKey) shortcut += 'ctrl+'
-  if (event.shiftKey) shortcut += 'shift+'
+  if (event.shiftKey && !isPlusKey) shortcut += 'shift+'
   if (event.altKey) shortcut += 'alt+'
   if (event.metaKey) shortcut += 'meta+'
   shortcut += key
@@ -102,6 +149,7 @@ const DISPLAY_TOKEN_MAP: Record<string, string> = {
   shift: 'Shift',
   alt: 'Alt',
   meta: 'Meta',
+  '=': '+',
   arrowleft: '←',
   arrowright: '→',
   arrowup: '↑',

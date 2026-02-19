@@ -206,12 +206,28 @@ export async function getDefaultProjectsFolder(): Promise<string> {
   return await invoke('get_default_projects_folder')
 }
 
+export async function getDefaultBaremesFolder(): Promise<string> {
+  return await invoke('get_default_baremes_folder')
+}
+
 export async function listProjectsInFolder(folderPath: string): Promise<ProjectSummary[]> {
   return await invoke('list_projects_in_folder', { folderPath })
 }
 
 export async function ensureDirectoryExists(path: string): Promise<void> {
   await invoke('ensure_directory_exists', { path })
+}
+
+export async function saveBareme(data: unknown, baremeId: string): Promise<void> {
+  await invoke('save_bareme', { data, baremeId })
+}
+
+export async function deleteBareme(baremeId: string): Promise<void> {
+  await invoke('delete_bareme', { baremeId })
+}
+
+export async function loadBaremes(): Promise<unknown[]> {
+  return await invoke('load_baremes')
 }
 
 // --- Dialog Helpers ---

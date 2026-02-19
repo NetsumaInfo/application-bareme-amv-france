@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import { FilePlus, FolderOpen, Folder } from 'lucide-react'
 import { emit, listen } from '@tauri-apps/api/event'
@@ -22,8 +22,9 @@ import { usePlayer } from '@/hooks/usePlayer'
 import { useSaveProject } from '@/hooks/useSaveProject'
 import * as tauri from '@/services/tauri'
 import { getClipPrimaryLabel } from '@/utils/formatters'
-import { DEFAULT_SHORTCUT_BINDINGS } from '@/utils/shortcuts'
+import { DEFAULT_SHORTCUT_BINDINGS, normalizeShortcutFromEvent } from '@/utils/shortcuts'
 import { buildNoteTimecodeMarkers } from '@/utils/timecodes'
+import { buildScreenshotName, captureElementToPngFile } from '@/utils/screenshot'
 
 interface ProjectListItem {
   name: string
@@ -207,7 +208,8 @@ function ScoringInterface() {
 
 function NotationTabContent() {
   const { currentInterface } = useUIStore()
-  const isSpreadsheetMode = currentInterface === 'spreadsheet'
+  const isSpreadsheetMode =
+    currentInterface === 'spreadsheet' || currentInterface === 'dual'
 
   if (isSpreadsheetMode) {
     return (
@@ -227,9 +229,10 @@ function NotationTabContent() {
 }
 
 export default function AppLayout() {
-  const { currentProject, clips, currentClipIndex, nextClip, previousClip } = useProjectStore()
+  const { currentProject, clips, currentClipIndex } = useProjectStore()
   const currentBareme = useNotationStore((state) => state.currentBareme)
   const notes = useNotationStore((state) => state.notes)
+  const loadCustomBaremes = useNotationStore((state) => state.loadCustomBaremes)
   const {
     currentTab,
     switchTab,
@@ -240,6 +243,7 @@ export default function AppLayout() {
     showBaremeEditor,
     zoomLevel,
     zoomMode,
+    hideFinalScore,
     zoomIn,
     zoomOut,
     resetZoom,
@@ -248,17 +252,113 @@ export default function AppLayout() {
     isNotesDetached,
     setNotesDetached,
   } = useUIStore()
-  const { togglePause, seekRelative, toggleFullscreen, exitFullscreen, pause, frameStep, frameBackStep, screenshot } = usePlayer()
+  const { togglePause, seekRelative, toggleFullscreen, exitFullscreen, pause, frameStep, frameBackStep } = usePlayer()
   const isPlayerLoaded = usePlayerStore((state) => state.isLoaded)
   const isFullscreen = usePlayerStore((state) => state.isFullscreen)
   const isDetached = usePlayerStore((state) => state.isDetached)
   const { save, saveAs } = useSaveProject()
   const undoLastChange = useNotationStore((state) => state.undoLastChange)
   const [showSettings, setShowSettings] = useState(false)
+  const appRootRef = useRef<HTMLDivElement | null>(null)
+  const notesAutoDetachedRef = useRef(false)
+  const overlayFpsHintRef = useRef<number | undefined>(undefined)
+  const notesNavigateGuardRef = useRef(0)
+  const shortcutClipNavGuardRef = useRef(0)
   const allClipsScored = clips.length > 0 && clips.every((clip) => clip.scored)
   const lockResultsUntilScored = Boolean(currentProject?.settings.hideFinalScoreUntilEnd) && !allClipsScored
 
+  const canHandleClipNavFromTarget = useCallback((target: EventTarget | null) => {
+    const element = target as HTMLElement | null
+    if (!element) return true
+    if (element.tagName === 'TEXTAREA' || element.isContentEditable) return false
+    if (element.tagName === 'INPUT') {
+      const input = element as HTMLInputElement
+      const type = (input.type || 'text').toLowerCase()
+      // Keep N/P available in numeric grids, but don't hijack text typing
+      if (type === 'number' || type === 'range') return true
+      return false
+    }
+    return true
+  }, [])
+
+  const toggleMiniatures = useCallback(() => {
+    const store = useProjectStore.getState()
+    const project = store.currentProject
+    if (!project) return
+    store.updateSettings({
+      showMiniatures: !project.settings.showMiniatures,
+    })
+  }, [])
+
+  const setCurrentClipMiniatureFrame = useCallback(async () => {
+    const store = useProjectStore.getState()
+    const project = store.currentProject
+    const clip = store.clips[store.currentClipIndex]
+    if (!project || !clip) return
+
+    if (!project.settings.showMiniatures) {
+      store.updateSettings({ showMiniatures: true })
+    }
+
+    const status = await tauri.playerGetStatus().catch(() => null)
+    const seconds = Number(status?.current_time)
+    if (!Number.isFinite(seconds) || seconds < 0) return
+    store.setClipThumbnailTime(clip.id, seconds)
+  }, [])
+
   useAutoSave()
+
+  useEffect(() => {
+    let active = true
+    const clip = clips[currentClipIndex]
+    if (!clip?.filePath) {
+      overlayFpsHintRef.current = undefined
+      return () => {
+        active = false
+      }
+    }
+
+    tauri.playerGetMediaInfo(clip.filePath)
+      .then((info) => {
+        if (!active) return
+        const fps = Number(info?.fps)
+        overlayFpsHintRef.current = Number.isFinite(fps) && fps > 0 ? fps : undefined
+      })
+      .catch(() => {
+        if (!active) return
+        overlayFpsHintRef.current = undefined
+      })
+
+    return () => {
+      active = false
+    }
+  }, [clips, currentClipIndex])
+
+  useEffect(() => {
+    const shouldAutoDetachNotes =
+      Boolean(currentProject) &&
+      currentTab === 'notation' &&
+      currentInterface === 'dual'
+
+    if (!shouldAutoDetachNotes) {
+      if (notesAutoDetachedRef.current) {
+        notesAutoDetachedRef.current = false
+        setNotesDetached(false)
+        tauri.closeNotesWindow().catch(() => {})
+      }
+      return
+    }
+
+    notesAutoDetachedRef.current = true
+    if (isNotesDetached) {
+      tauri.openNotesWindow().catch(() => {})
+      return
+    }
+
+    tauri.openNotesWindow()
+      .then(() => setNotesDetached(true))
+      .catch(() => {})
+  }, [currentProject, currentTab, currentInterface, isNotesDetached, setNotesDetached])
 
   useEffect(() => {
     if (!lockResultsUntilScored) return
@@ -268,6 +368,16 @@ export default function AppLayout() {
   }, [lockResultsUntilScored, currentTab, switchTab])
 
   // Load persisted user settings on mount
+  useEffect(() => {
+    tauri.loadBaremes()
+      .then((items) => {
+        if (Array.isArray(items)) {
+          loadCustomBaremes(items)
+        }
+      })
+      .catch(() => {})
+  }, [loadCustomBaremes])
+
   useEffect(() => {
     tauri.loadUserSettings().then((data) => {
       if (data && typeof data === 'object') {
@@ -282,12 +392,13 @@ export default function AppLayout() {
 
   // Emit clip info to overlay window when fullscreen
   const emitClipInfo = useCallback(() => {
-    const { clips: allClips, currentClipIndex: idx } = useProjectStore.getState()
+    const { clips: allClips, currentClipIndex: idx, currentProject: project } = useProjectStore.getState()
     const clip = allClips[idx]
     emit('main:clip-changed', {
       name: clip ? getClipPrimaryLabel(clip) : '',
       index: idx,
       total: allClips.length,
+      miniaturesEnabled: project?.settings.showMiniatures ?? false,
     }).catch(() => {})
   }, [])
 
@@ -296,7 +407,7 @@ export default function AppLayout() {
     const clip = allClips[idx] ?? null
     const bareme = useNotationStore.getState().currentBareme
     const note = clip ? useNotationStore.getState().getNoteForClip(clip.id) : null
-    const markers = buildNoteTimecodeMarkers(note, bareme).slice(0, 120).map((marker) => ({
+    const markers = buildNoteTimecodeMarkers(note, bareme, undefined, overlayFpsHintRef.current).slice(0, 120).map((marker) => ({
       key: marker.key,
       raw: marker.raw,
       seconds: marker.seconds,
@@ -318,7 +429,15 @@ export default function AppLayout() {
       emitClipInfo()
       emitOverlayMarkers()
     }
-  }, [isFullscreen, isDetached, currentClipIndex, clips.length, emitClipInfo, emitOverlayMarkers])
+  }, [
+    isFullscreen,
+    isDetached,
+    currentClipIndex,
+    clips.length,
+    currentProject?.settings.showMiniatures,
+    emitClipInfo,
+    emitOverlayMarkers,
+  ])
 
   useEffect(() => {
     if (!(isFullscreen || isDetached)) return
@@ -327,28 +446,44 @@ export default function AppLayout() {
 
   // Listen for overlay commands (next/prev clip)
   useEffect(() => {
+    let disposed = false
     let unlistenNext: (() => void) | null = null
     let unlistenPrev: (() => void) | null = null
     let unlistenRequest: (() => void) | null = null
     let unlistenMarkersRequest: (() => void) | null = null
     let unlistenFocusNote: (() => void) | null = null
     let unlistenClose: (() => void) | null = null
+    let unlistenUndo: (() => void) | null = null
+    let unlistenSetMiniature: (() => void) | null = null
+    let unlistenToggleMiniatures: (() => void) | null = null
 
     listen('overlay:next-clip', () => {
       useProjectStore.getState().nextClip()
-    }).then(fn => { unlistenNext = fn })
+    }).then((fn) => {
+      if (disposed) fn()
+      else unlistenNext = fn
+    })
 
     listen('overlay:prev-clip', () => {
       useProjectStore.getState().previousClip()
-    }).then(fn => { unlistenPrev = fn })
+    }).then((fn) => {
+      if (disposed) fn()
+      else unlistenPrev = fn
+    })
 
     listen('overlay:request-clip-info', () => {
       emitClipInfo()
-    }).then(fn => { unlistenRequest = fn })
+    }).then((fn) => {
+      if (disposed) fn()
+      else unlistenRequest = fn
+    })
 
     listen('overlay:request-note-markers', () => {
       emitOverlayMarkers()
-    }).then(fn => { unlistenMarkersRequest = fn })
+    }).then((fn) => {
+      if (disposed) fn()
+      else unlistenMarkersRequest = fn
+    })
 
     listen<{
       clipId?: string
@@ -378,69 +513,178 @@ export default function AppLayout() {
 
       window.dispatchEvent(new CustomEvent('amv:focus-note-marker', { detail }))
       emit('main:focus-note-marker', detail).catch(() => {})
-    }).then(fn => { unlistenFocusNote = fn })
+    }).then((fn) => {
+      if (disposed) fn()
+      else unlistenFocusNote = fn
+    })
 
     listen('overlay:close-player', () => {
       useUIStore.getState().setShowPipVideo(false)
       tauri.playerHide().catch(() => {})
-    }).then(fn => { unlistenClose = fn })
+    }).then((fn) => {
+      if (disposed) fn()
+      else unlistenClose = fn
+    })
+
+    listen('overlay:undo', () => {
+      undoLastChange()
+      useProjectStore.getState().markDirty()
+    }).then((fn) => {
+      if (disposed) fn()
+      else unlistenUndo = fn
+    })
+
+    listen('overlay:set-miniature-frame', () => {
+      setCurrentClipMiniatureFrame().catch(() => {})
+    }).then((fn) => {
+      if (disposed) fn()
+      else unlistenSetMiniature = fn
+    })
+
+    listen('overlay:toggle-miniatures', () => {
+      toggleMiniatures()
+    }).then((fn) => {
+      if (disposed) fn()
+      else unlistenToggleMiniatures = fn
+    })
 
     return () => {
+      disposed = true
       if (unlistenNext) unlistenNext()
       if (unlistenPrev) unlistenPrev()
       if (unlistenRequest) unlistenRequest()
       if (unlistenMarkersRequest) unlistenMarkersRequest()
       if (unlistenFocusNote) unlistenFocusNote()
       if (unlistenClose) unlistenClose()
+      if (unlistenUndo) unlistenUndo()
+      if (unlistenSetMiniature) unlistenSetMiniature()
+      if (unlistenToggleMiniatures) unlistenToggleMiniatures()
     }
-  }, [emitClipInfo, emitOverlayMarkers])
+  }, [emitClipInfo, emitOverlayMarkers, setCurrentClipMiniatureFrame, toggleMiniatures, undoLastChange])
+
+  // Ensure clip navigation shortcuts (N/P) work from notation grids too
+  useEffect(() => {
+    const handleClipNavigationShortcut = (event: KeyboardEvent) => {
+      const shortcut = normalizeShortcutFromEvent(event)
+      if (!shortcut) return
+      const isNext = shortcut === shortcutBindings.nextClip
+      const isPrev = shortcut === shortcutBindings.prevClip
+      if (!isNext && !isPrev) return
+      if (!canHandleClipNavFromTarget(event.target)) return
+      if (event.repeat) return
+
+      const now = Date.now()
+      if (now - shortcutClipNavGuardRef.current < 240) return
+      shortcutClipNavGuardRef.current = now
+
+      event.preventDefault()
+      event.stopPropagation()
+      if (isNext) {
+        useProjectStore.getState().nextClip()
+      } else {
+        useProjectStore.getState().previousClip()
+      }
+    }
+
+    document.addEventListener('keydown', handleClipNavigationShortcut, true)
+    return () => {
+      document.removeEventListener('keydown', handleClipNavigationShortcut, true)
+    }
+  }, [canHandleClipNavFromTarget, shortcutBindings.nextClip, shortcutBindings.prevClip])
 
   // --- Notes window cross-window events ---
   const emitNotesClipData = useCallback(() => {
-    const { clips: allClips, currentClipIndex: idx } = useProjectStore.getState()
+    const projectStore = useProjectStore.getState()
+    const { clips: allClips, currentClipIndex: idx, currentProject: project } = projectStore
     const clip = allClips[idx] ?? null
     const bareme = useNotationStore.getState().currentBareme
     const note = clip ? useNotationStore.getState().getNoteForClip(clip.id) : null
-    emit('main:clip-data', { clip, bareme, note, clipIndex: idx, totalClips: allClips.length }).catch(() => {})
+    const allClipsScored = allClips.length > 0 && allClips.every((item) => item.scored)
+    const hideTotalsSetting = Boolean(project?.settings.hideTotals)
+    const hideTotalsUntilAllScored = Boolean(project?.settings.hideFinalScoreUntilEnd) && !allClipsScored
+    const hideTotals = Boolean(useUIStore.getState().hideFinalScore) || hideTotalsSetting || hideTotalsUntilAllScored
+    emit('main:clip-data', { clip, bareme, note, clipIndex: idx, totalClips: allClips.length, hideTotals }).catch(() => {})
   }, [])
 
   useEffect(() => {
+    let disposed = false
     const unlisteners: (() => void)[] = []
+    const pushUnlisten = (fn: () => void) => {
+      if (disposed) {
+        fn()
+        return
+      }
+      unlisteners.push(fn)
+    }
 
     listen('notes:request-data', () => {
       emitNotesClipData()
-    }).then((fn) => unlisteners.push(fn))
+    }).then(pushUnlisten)
 
     listen<{ clipId: string; criterionId: string; value: number | string }>('notes:criterion-updated', (event) => {
       const { clipId, criterionId, value } = event.payload
       useNotationStore.getState().updateCriterion(clipId, criterionId, value as number)
       useProjectStore.getState().markDirty()
-    }).then((fn) => unlisteners.push(fn))
+    }).then(pushUnlisten)
 
     listen<{ clipId: string; text: string }>('notes:text-notes-updated', (event) => {
       const { clipId, text } = event.payload
       useNotationStore.getState().setTextNotes(clipId, text)
       useProjectStore.getState().markDirty()
-    }).then((fn) => unlisteners.push(fn))
+    }).then(pushUnlisten)
 
     listen<{ clipId: string; category: string; text: string }>('notes:category-note-updated', (event) => {
       const { clipId, category, text } = event.payload
       useNotationStore.getState().setCategoryNote(clipId, category, text)
       useProjectStore.getState().markDirty()
-    }).then((fn) => unlisteners.push(fn))
+    }).then(pushUnlisten)
 
-    listen<{ direction: string }>('notes:navigate-clip', (event) => {
-      if (event.payload.direction === 'next') {
-        useProjectStore.getState().nextClip()
-      } else {
-        useProjectStore.getState().previousClip()
+    listen<{ clipId: string; criterionId: string; text: string }>('notes:criterion-note-updated', (event) => {
+      const { clipId, criterionId, text } = event.payload
+      useNotationStore.getState().setCriterionNote(clipId, criterionId, text)
+      useProjectStore.getState().markDirty()
+    }).then(pushUnlisten)
+
+    listen<{ direction?: 'next' | 'prev'; fromClipId?: string; targetIndex?: number }>('notes:navigate-clip', (event) => {
+      const now = Date.now()
+      if (now - notesNavigateGuardRef.current < 420) return
+      notesNavigateGuardRef.current = now
+      const store = useProjectStore.getState()
+      const currentId = store.clips[store.currentClipIndex]?.id
+
+      if (event.payload.fromClipId && currentId && event.payload.fromClipId !== currentId) {
+        return
       }
-    }).then((fn) => unlisteners.push(fn))
+
+      const explicitTarget = Number(event.payload.targetIndex)
+      const hasExplicitTarget = Number.isInteger(explicitTarget)
+      const delta = event.payload.direction === 'prev' ? -1 : 1
+      const targetIndex = hasExplicitTarget
+        ? Math.max(0, Math.min(store.clips.length - 1, explicitTarget))
+        : Math.max(0, Math.min(store.clips.length - 1, store.currentClipIndex + delta))
+
+      if (targetIndex !== store.currentClipIndex) {
+        store.setCurrentClip(targetIndex)
+      }
+    }).then(pushUnlisten)
+
+    listen('notes:undo', () => {
+      undoLastChange()
+      useProjectStore.getState().markDirty()
+    }).then(pushUnlisten)
 
     listen('notes:open-player', () => {
       useUIStore.getState().setShowPipVideo(true)
       tauri.playerShow().catch(() => {})
-    }).then((fn) => unlisteners.push(fn))
+    }).then(pushUnlisten)
+
+    listen('notes:set-miniature-frame', () => {
+      setCurrentClipMiniatureFrame().catch(() => {})
+    }).then(pushUnlisten)
+
+    listen('notes:toggle-miniatures', () => {
+      toggleMiniatures()
+    }).then(pushUnlisten)
 
     listen<{
       clipId?: string
@@ -485,20 +729,36 @@ export default function AppLayout() {
       }
       window.dispatchEvent(new CustomEvent('amv:focus-note-marker', { detail }))
       emit('main:focus-note-marker', detail).catch(() => {})
-    }).then((fn) => unlisteners.push(fn))
+    }).then(pushUnlisten)
 
     listen('notes:close', () => {
-      setNotesDetached(false)
-    }).then((fn) => unlisteners.push(fn))
+      const ui = useUIStore.getState()
+      ui.setNotesDetached(false)
+      if (ui.currentInterface === 'dual') {
+        ui.switchInterface('spreadsheet')
+      }
+    }).then(pushUnlisten)
 
-    return () => unlisteners.forEach((fn) => fn())
-  }, [emitNotesClipData, setNotesDetached])
+    return () => {
+      disposed = true
+      unlisteners.forEach((fn) => fn())
+    }
+  }, [emitNotesClipData, setCurrentClipMiniatureFrame, toggleMiniatures, undoLastChange])
 
   // Send clip data to notes window when clip changes
   useEffect(() => {
     if (!isNotesDetached) return
     emitNotesClipData()
-  }, [isNotesDetached, currentClipIndex, clips.length, notes, emitNotesClipData])
+  }, [
+    isNotesDetached,
+    currentClipIndex,
+    clips.length,
+    notes,
+    emitNotesClipData,
+    currentProject?.settings.hideTotals,
+    currentProject?.settings.hideFinalScoreUntilEnd,
+    hideFinalScore,
+  ])
 
   useEffect(() => {
     if (!isNotesDetached) return
@@ -575,18 +835,12 @@ export default function AppLayout() {
     map[shortcutBindings.seekBack] = () => seekRelative(-5)
     map[shortcutBindings.seekForwardLong] = () => seekRelative(30)
     map[shortcutBindings.seekBackLong] = () => seekRelative(-30)
-    map[shortcutBindings.nextClip] = nextClip
-    map[shortcutBindings.prevClip] = previousClip
     map[shortcutBindings.tabNotation] = () => switchTab('notation')
     map[shortcutBindings.tabResultats] = () => {
       if (!lockResultsUntilScored) switchTab('resultats')
     }
     map[shortcutBindings.tabExport] = () => {
       if (!lockResultsUntilScored) switchTab('export')
-    }
-    map[shortcutBindings.undo] = () => {
-      undoLastChange()
-      useProjectStore.getState().markDirty()
     }
     map[shortcutBindings.frameForward] = frameStep
     map[shortcutBindings.frameBack] = frameBackStep
@@ -595,11 +849,8 @@ export default function AppLayout() {
     shortcutBindings,
     togglePause,
     seekRelative,
-    nextClip,
-    previousClip,
     switchTab,
     lockResultsUntilScored,
-    undoLastChange,
     frameStep,
     frameBackStep,
   ])
@@ -615,7 +866,40 @@ export default function AppLayout() {
     map[shortcutBindings.exitFullscreen] = handleEscapeFullscreen
     map[shortcutBindings.newProject] = () => setShowProjectModal(true)
     map[shortcutBindings.openProject] = () => { handleCtrlO() }
-    map[shortcutBindings.screenshot] = screenshot
+    map[shortcutBindings.toggleMiniatures] = toggleMiniatures
+    map[shortcutBindings.setMiniatureFrame] = () => {
+      setCurrentClipMiniatureFrame().catch(() => {})
+    }
+    map[shortcutBindings.screenshot] = () => {
+      if (appRootRef.current) {
+        if (currentTab === 'resultats') {
+          captureElementToPngFile(appRootRef.current, buildScreenshotName('resultats-page'))
+            .catch(() => {})
+          return
+        }
+        if (currentTab === 'export') {
+          captureElementToPngFile(appRootRef.current, buildScreenshotName('export-page'))
+            .catch(() => {})
+          return
+        }
+        if (currentTab === 'notation' && currentInterface === 'notation') {
+          captureElementToPngFile(appRootRef.current, buildScreenshotName('notation-page'))
+            .catch(() => {})
+          return
+        }
+        if (currentTab === 'notation') {
+          captureElementToPngFile(appRootRef.current, buildScreenshotName('tableur-page'))
+            .catch(() => {})
+          return
+        }
+      }
+      captureElementToPngFile(document.documentElement, buildScreenshotName('app-page'))
+        .catch(() => {})
+    }
+    map[shortcutBindings.undo] = () => {
+      undoLastChange()
+      useProjectStore.getState().markDirty()
+    }
     return map
   }, [
     shortcutBindings,
@@ -628,7 +912,11 @@ export default function AppLayout() {
     handleEscapeFullscreen,
     setShowProjectModal,
     handleCtrlO,
-    screenshot,
+    toggleMiniatures,
+    setCurrentClipMiniatureFrame,
+    undoLastChange,
+    currentTab,
+    currentInterface,
   ])
 
   useKeyboardShortcuts(regularShortcuts, globalShortcuts)
@@ -796,6 +1084,7 @@ export default function AppLayout() {
 
   return (
     <div
+      ref={appRootRef}
       className={`flex flex-col h-screen w-full bg-surface-dark text-gray-200 ${zoomOverflow}`}
       style={zoomStyle}
       onContextMenu={currentProject && currentTab === 'notation' ? handleContextMenu : undefined}
@@ -824,7 +1113,7 @@ export default function AppLayout() {
         <SettingsPanel onClose={() => setShowSettings(false)} />
       )}
 
-      {currentProject && currentTab === 'notation' && currentInterface === 'spreadsheet' && showPipVideo && !isDetached && (
+      {currentProject && currentTab === 'notation' && (currentInterface === 'spreadsheet' || currentInterface === 'dual') && showPipVideo && !isDetached && (
         <FloatingVideoPlayer onClose={() => setShowPipVideo(false)} />
       )}
     </div>

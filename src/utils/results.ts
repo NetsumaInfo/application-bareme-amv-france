@@ -87,6 +87,30 @@ export function getCategoryScore(
   return Math.round(total * 100) / 100
 }
 
+export function hasAnyCriterionScore(
+  note: NoteLike | undefined,
+  criteria: Criterion[],
+): boolean {
+  if (!note) return false
+
+  for (const criterion of criteria) {
+    const score = note.scores[criterion.id]
+    if (!score) continue
+    if (score.isValid === false) continue
+
+    if (typeof score.value === 'boolean') {
+      return true
+    }
+
+    const value = Number(score.value)
+    if (Number.isFinite(value)) {
+      return true
+    }
+  }
+
+  return false
+}
+
 export function getNoteTotal(note: NoteLike | undefined, bareme: Bareme): number {
   const total = bareme.criteria.reduce(
     (sum, criterion) => sum + getCriterionNumericScore(note, criterion),

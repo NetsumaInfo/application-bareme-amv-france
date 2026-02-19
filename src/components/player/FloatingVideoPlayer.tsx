@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useCallback, useState, useMemo } from 'react'
 import { emit } from '@tauri-apps/api/event'
-import { Play, Pause, SkipForward, SkipBack, Volume2, VolumeX, Maximize2, Minimize2, X } from 'lucide-react'
+import { Play, Pause, SkipForward, SkipBack, Volume2, VolumeX, Maximize2, Minimize2, X, ImagePlus } from 'lucide-react'
 import { usePlayerStore } from '@/store/usePlayerStore'
 import { useNotationStore } from '@/store/useNotationStore'
 import { useProjectStore } from '@/store/useProjectStore'
@@ -48,6 +48,8 @@ export function FloatingVideoPlayer({ onClose }: FloatingVideoPlayerProps) {
   const isDetached = usePlayerStore((state) => state.isDetached)
   const clips = useProjectStore((state) => state.clips)
   const currentClipIndex = useProjectStore((state) => state.currentClipIndex)
+  const currentProject = useProjectStore((state) => state.currentProject)
+  const setClipThumbnailTime = useProjectStore((state) => state.setClipThumbnailTime)
   const currentClip = clips[currentClipIndex]
   const currentBareme = useNotationStore((state) => state.currentBareme)
   const notes = useNotationStore((state) => state.notes)
@@ -57,6 +59,15 @@ export function FloatingVideoPlayer({ onClose }: FloatingVideoPlayerProps) {
     if (!currentClip || !currentBareme || duration <= 0) return []
     return buildNoteTimecodeMarkers(currentNote, currentBareme, duration).slice(0, 90)
   }, [currentClip, currentBareme, currentNote, duration])
+  const miniaturesEnabled = Boolean(currentProject?.settings.showMiniatures)
+
+  const handleSetMiniatureFrame = useCallback(async () => {
+    if (!currentClip) return
+    const status = await tauri.playerGetStatus().catch(() => null)
+    const seconds = Number(status?.current_time)
+    if (!Number.isFinite(seconds) || seconds < 0) return
+    setClipThumbnailTime(currentClip.id, seconds)
+  }, [currentClip, setClipThumbnailTime])
 
   const handleMarkerJump = useCallback(async (marker: NoteTimecodeMarker) => {
     if (!currentClip || !isLoaded) return
@@ -408,6 +419,18 @@ export function FloatingVideoPlayer({ onClose }: FloatingVideoPlayerProps) {
             <Maximize2 size={14} className="text-gray-300" />
           )}
         </button>
+        {miniaturesEnabled && (
+          <button
+            onClick={() => {
+              handleSetMiniatureFrame().catch(() => {})
+            }}
+            className="flex items-center justify-center w-6 h-6 rounded hover:bg-gray-700 transition-colors"
+            title="Définir la frame miniature"
+            disabled={!isLoaded}
+          >
+            <ImagePlus size={14} className="text-gray-300" />
+          </button>
+        )}
         </div>
       </div>
     </div>

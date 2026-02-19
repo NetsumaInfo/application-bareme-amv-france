@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 use serde::{Deserialize, Serialize};
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct ProjectData {
@@ -138,6 +138,92 @@ pub fn list_projects_in_folder(folder_path: String) -> Result<Vec<ProjectSummary
 #[tauri::command]
 pub fn ensure_directory_exists(path: String) -> Result<(), String> {
     fs::create_dir_all(&path).map_err(|e| e.to_string())
+}
+
+fn get_app_root_folder() -> Result<PathBuf, String> {
+    let docs = dirs::document_dir().ok_or("Cannot find Documents folder")?;
+    let folder = docs.join("AMV Notation");
+    fs::create_dir_all(&folder).map_err(|e| e.to_string())?;
+    Ok(folder)
+}
+
+fn get_baremes_folder_path() -> Result<PathBuf, String> {
+    let folder = get_app_root_folder()?.join("Projets").join("Baremes");
+    fs::create_dir_all(&folder).map_err(|e| e.to_string())?;
+    Ok(folder)
+}
+
+fn sanitize_bareme_file_name(id: &str) -> String {
+    let trimmed = id.trim();
+    if trimmed.is_empty() {
+        return "bareme".to_string();
+    }
+
+    let mut out = String::with_capacity(trimmed.len());
+    for ch in trimmed.chars() {
+        if ch.is_ascii_alphanumeric() || ch == '-' || ch == '_' {
+            out.push(ch);
+        } else {
+            out.push('_');
+        }
+    }
+    if out.is_empty() {
+        "bareme".to_string()
+    } else {
+        out
+    }
+}
+
+#[tauri::command]
+pub fn get_default_baremes_folder() -> Result<String, String> {
+    let folder = get_baremes_folder_path()?;
+    Ok(folder.to_string_lossy().to_string())
+}
+
+#[tauri::command]
+pub fn save_bareme(data: serde_json::Value, bareme_id: String) -> Result<(), String> {
+    let folder = get_baremes_folder_path()?;
+    let name = sanitize_bareme_file_name(&bareme_id);
+    let path = folder.join(format!("{}.json", name));
+    let json = serde_json::to_string_pretty(&data).map_err(|e| e.to_string())?;
+    fs::write(&path, json).map_err(|e| format!("Failed to save bareme: {}", e))
+}
+
+#[tauri::command]
+pub fn delete_bareme(bareme_id: String) -> Result<(), String> {
+    let folder = get_baremes_folder_path()?;
+    let name = sanitize_bareme_file_name(&bareme_id);
+    let path = folder.join(format!("{}.json", name));
+    if path.exists() {
+        fs::remove_file(path).map_err(|e| format!("Failed to delete bareme: {}", e))?;
+    }
+    Ok(())
+}
+
+#[tauri::command]
+pub fn load_baremes() -> Result<Vec<serde_json::Value>, String> {
+    let folder = get_baremes_folder_path()?;
+    let mut baremes = Vec::new();
+
+    let entries = fs::read_dir(folder).map_err(|e| format!("Failed to read baremes folder: {}", e))?;
+    for entry in entries.flatten() {
+        let path = entry.path();
+        if path.extension().and_then(|e| e.to_str()) != Some("json") {
+            continue;
+        }
+
+        let content = match fs::read_to_string(&path) {
+            Ok(v) => v,
+            Err(_) => continue,
+        };
+        let parsed = match serde_json::from_str::<serde_json::Value>(&content) {
+            Ok(v) => v,
+            Err(_) => continue,
+        };
+        baremes.push(parsed);
+    }
+
+    Ok(baremes)
 }
 
 // --- User settings persistence ---

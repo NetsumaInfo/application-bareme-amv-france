@@ -1,5 +1,5 @@
 import { useRef, useCallback, useMemo, useState, useEffect } from 'react'
-import { FolderPlus, FilePlus, ArrowUpDown, Download } from 'lucide-react'
+import { FolderPlus, FilePlus, Download } from 'lucide-react'
 import { emit, listen } from '@tauri-apps/api/event'
 import MediaInfoPanel from '@/components/player/MediaInfoPanel'
 import TimecodeTextarea from '@/components/notes/TimecodeTextarea'
@@ -8,9 +8,10 @@ import { useProjectStore } from '@/store/useProjectStore'
 import { useUIStore } from '@/store/useUIStore'
 import { usePlayer } from '@/hooks/usePlayer'
 import * as tauri from '@/services/tauri'
-import { generateId, parseClipName, getClipPrimaryLabel, getClipSecondaryLabel } from '@/utils/formatters'
+import { generateId, parseClipName, getClipPrimaryLabel, getClipSecondaryLabel, formatPreciseTimecode } from '@/utils/formatters'
 import { CATEGORY_COLOR_PRESETS, sanitizeColor, withAlpha } from '@/utils/colors'
 import { normalizeShortcutFromEvent } from '@/utils/shortcuts'
+import { snapToFrameSeconds } from '@/utils/timecodes'
 import type { Clip } from '@/types/project'
 import type { Criterion } from '@/types/bareme'
 
@@ -21,8 +22,177 @@ interface CategoryGroup {
   color: string
 }
 
-type SortMode = 'folder' | 'alpha' | 'score'
 const VIDEO_EXTENSIONS = ['mp4', 'mkv', 'avi', 'mov', 'webm', 'flv', 'm4v', 'wmv', 'mpg', 'mpeg', 'ts', 'vob', 'ogv', 'amv']
+const MINIATURE_WIDTH = 164
+const miniaturePreviewCache = new Map<string, string>()
+const MINIATURE_CACHE_LIMIT = 400
+const MINIATURE_MAX_CONCURRENCY = 1
+const miniatureInflightRequests = new Map<string, Promise<string | null>>()
+const miniatureQueue: Array<() => void> = []
+let miniatureQueueRunning = 0
+
+function putMiniatureInCache(key: string, value: string) {
+  miniaturePreviewCache.set(key, value)
+  if (miniaturePreviewCache.size <= MINIATURE_CACHE_LIMIT) return
+  const oldestKey = miniaturePreviewCache.keys().next().value
+  if (oldestKey) {
+    miniaturePreviewCache.delete(oldestKey)
+  }
+}
+
+function runMiniatureQueue() {
+  while (miniatureQueueRunning < MINIATURE_MAX_CONCURRENCY && miniatureQueue.length > 0) {
+    const task = miniatureQueue.shift()
+    if (!task) break
+    miniatureQueueRunning += 1
+    task()
+  }
+}
+
+function enqueueMiniaturePreviewRequest(key: string, path: string, seconds: number): Promise<string | null> {
+  const inflight = miniatureInflightRequests.get(key)
+  if (inflight) return inflight
+
+  const promise = new Promise<string | null>((resolve) => {
+    miniatureQueue.push(() => {
+      tauri.playerGetFramePreview(path, seconds, MINIATURE_WIDTH)
+        .then((result) => {
+          resolve(result || null)
+        })
+        .catch(() => {
+          resolve(null)
+        })
+        .finally(() => {
+          miniatureQueueRunning = Math.max(0, miniatureQueueRunning - 1)
+          miniatureInflightRequests.delete(key)
+          setTimeout(runMiniatureQueue, 0)
+        })
+    })
+    runMiniatureQueue()
+  })
+
+  miniatureInflightRequests.set(key, promise)
+  return promise
+}
+
+function resolveMiniatureSeconds(clip: Clip, defaultSeconds: number): number {
+  const safeDefault = Number.isFinite(defaultSeconds) && defaultSeconds >= 0 ? defaultSeconds : 10
+  if (typeof clip.thumbnailTime === 'number' && Number.isFinite(clip.thumbnailTime) && clip.thumbnailTime >= 0) {
+    return clip.thumbnailTime
+  }
+  if (typeof clip.duration === 'number' && clip.duration > 0) {
+    return Math.max(0, Math.min(clip.duration - 0.1, safeDefault))
+  }
+  return safeDefault
+}
+
+function ClipMiniaturePreview({
+  clip,
+  enabled,
+  defaultSeconds,
+}: {
+  clip: Clip
+  enabled: boolean
+  defaultSeconds: number
+}) {
+  const [imageState, setImageState] = useState<{ key: string; value: string | null }>({
+    key: '',
+    value: null,
+  })
+  const [statusState, setStatusState] = useState<{ key: string; loading: boolean; failed: boolean }>({
+    key: '',
+    loading: false,
+    failed: false,
+  })
+  const containerRef = useRef<HTMLDivElement | null>(null)
+  const [isVisible, setIsVisible] = useState(false)
+
+  const seconds = resolveMiniatureSeconds(clip, defaultSeconds)
+  const cacheKey = `${clip.filePath}|${seconds.toFixed(3)}|${MINIATURE_WIDTH}`
+  const cachedImage = miniaturePreviewCache.get(cacheKey) ?? null
+  const image = imageState.key === cacheKey ? imageState.value : null
+  const loading = statusState.key === cacheKey ? statusState.loading : false
+  const failed = statusState.key === cacheKey ? statusState.failed : false
+  const resolvedImage = cachedImage ?? image
+
+  useEffect(() => {
+    const node = containerRef.current
+    if (!enabled || !node) return
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0]
+        setIsVisible(Boolean(entry?.isIntersecting))
+      },
+      {
+        root: null,
+        threshold: 0.01,
+      },
+    )
+    observer.observe(node)
+    return () => observer.disconnect()
+  }, [enabled, cacheKey])
+
+  useEffect(() => {
+    if (!enabled || !clip.filePath || !isVisible) return
+
+    if (miniaturePreviewCache.has(cacheKey)) return
+
+    let active = true
+    queueMicrotask(() => {
+      if (!active) return
+      setImageState({ key: cacheKey, value: null })
+      setStatusState({ key: cacheKey, loading: true, failed: false })
+    })
+    enqueueMiniaturePreviewRequest(cacheKey, clip.filePath, seconds)
+      .then((result) => {
+        if (!active) return
+        if (!result) {
+          setImageState({ key: cacheKey, value: null })
+          setStatusState({ key: cacheKey, loading: false, failed: true })
+          return
+        }
+        putMiniatureInCache(cacheKey, result)
+        setImageState({ key: cacheKey, value: result })
+        setStatusState({ key: cacheKey, loading: false, failed: false })
+      })
+      .catch(() => {
+        if (!active) return
+        setImageState({ key: cacheKey, value: null })
+        setStatusState({ key: cacheKey, loading: false, failed: true })
+      })
+
+    return () => {
+      active = false
+    }
+  }, [cacheKey, clip.filePath, enabled, isVisible, seconds])
+
+  if (!enabled) return null
+
+  return (
+    <div
+      ref={containerRef}
+      className="mt-1 w-[82px] h-[46px] rounded-md overflow-hidden border border-gray-700 bg-black/60 pointer-events-none select-none"
+    >
+      {resolvedImage ? (
+        <img
+          src={resolvedImage}
+          alt={`Miniature ${clip.displayName}`}
+          className="w-full h-full object-cover pointer-events-none select-none"
+          draggable={false}
+          onDragStart={(event) => {
+            event.preventDefault()
+          }}
+          loading="lazy"
+        />
+      ) : (
+        <div className="w-full h-full flex items-center justify-center text-[8px] text-gray-500">
+          {loading ? 'Frame...' : failed ? 'No frame' : 'Miniature'}
+        </div>
+      )}
+    </div>
+  )
+}
 
 export default function SpreadsheetInterface() {
   const {
@@ -40,14 +210,16 @@ export default function SpreadsheetInterface() {
     setClips,
     currentProject,
     updateProject,
+    updateSettings,
     setClipScored,
+    setClipThumbnailTime,
     markDirty,
     removeClip,
   } = useProjectStore()
   const { setShowPipVideo, hideAverages, hideTextNotes, setNotesDetached, shortcutBindings } = useUIStore()
   const cellRefs = useRef<Map<string, HTMLInputElement>>(new Map())
   const rowRefs = useRef<Map<number, HTMLTableRowElement>>(new Map())
-  const [sortMode, setSortMode] = useState<SortMode>('folder')
+  const notesTextareaRef = useRef<HTMLTextAreaElement | null>(null)
   const [contextMenu, setContextMenu] = useState<{ clipId: string; x: number; y: number } | null>(null)
   const contextMenuRef = useRef<HTMLDivElement | null>(null)
   const [mediaInfoClip, setMediaInfoClip] = useState<{ name: string; path: string } | null>(null)
@@ -55,6 +227,7 @@ export default function SpreadsheetInterface() {
   const [scoringCategory, setScoringCategory] = useState<string | null>(null)
   const scoringPanelRef = useRef<HTMLDivElement | null>(null)
   const dragHoverTsRef = useRef(0)
+  const [clipFps, setClipFps] = useState<number | null>(null)
   const framePreviewCacheRef = useRef<Map<string, string>>(new Map())
   const hoverRequestRef = useRef(0)
   const [framePreview, setFramePreview] = useState<{
@@ -183,7 +356,7 @@ export default function SpreadsheetInterface() {
 
   const openClipContextMenu = useCallback((clipId: string, x: number, y: number) => {
     const width = 210
-    const height = 184
+    const height = 248
     const paddedX = Math.max(8, Math.min(x, window.innerWidth - width - 8))
     const paddedY = Math.max(8, Math.min(y, window.innerHeight - height - 8))
     setContextMenu({ clipId, x: paddedX, y: paddedY })
@@ -253,10 +426,17 @@ export default function SpreadsheetInterface() {
   const allClipsScored = clips.length > 0 && clips.every((clip) => clip.scored)
   const hideTotalsSetting = Boolean(currentProject?.settings.hideTotals)
   const hideTotalsUntilAllScored = Boolean(currentProject?.settings.hideFinalScoreUntilEnd) && !allClipsScored
-  const shouldHideTotals = hideTotalsSetting || hideTotalsUntilAllScored
-  const canSortByScore = !shouldHideTotals
-  const effectiveSortMode: SortMode =
-    sortMode === 'score' && !canSortByScore ? 'folder' : sortMode
+  const showMiniatures = Boolean(currentProject?.settings.showMiniatures)
+
+  const setMiniatureFromCurrentFrame = useCallback(async (clipId: string) => {
+    if (!currentProject?.settings.showMiniatures) {
+      updateSettings({ showMiniatures: true })
+    }
+    const status = await tauri.playerGetStatus().catch(() => null)
+    const seconds = Number(status?.current_time)
+    if (!Number.isFinite(seconds) || seconds < 0) return
+    setClipThumbnailTime(clipId, seconds)
+  }, [currentProject?.settings.showMiniatures, setClipThumbnailTime, updateSettings])
 
   const hideFramePreview = useCallback(() => {
     setFramePreview((prev) => ({ ...prev, visible: false }))
@@ -304,40 +484,42 @@ export default function SpreadsheetInterface() {
     })
   }, [currentClip])
 
+  useEffect(() => {
+    let active = true
+    if (!currentClip?.filePath) {
+      return () => {
+        active = false
+      }
+    }
+
+    tauri.playerGetMediaInfo(currentClip.filePath)
+      .then((info) => {
+        if (!active) return
+        const fps = Number(info?.fps)
+        setClipFps(Number.isFinite(fps) && fps > 0 ? fps : null)
+      })
+      .catch(() => {
+        if (!active) return
+        setClipFps(null)
+      })
+
+    return () => {
+      active = false
+    }
+  }, [currentClip?.id, currentClip?.filePath])
+
   const sortedClips = useMemo(() => {
     const base = [...clips]
     const originalIndex = new Map(clips.map((clip, index) => [clip.id, index]))
-
-    if (effectiveSortMode === 'alpha') {
-      base.sort((a, b) => {
-        const labelA = getClipPrimaryLabel(a)
-        const labelB = getClipPrimaryLabel(b)
-        const cmp = labelA.localeCompare(labelB, 'fr', { sensitivity: 'base' })
-        if (cmp !== 0) return cmp
-        return (originalIndex.get(a.id) ?? 0) - (originalIndex.get(b.id) ?? 0)
-      })
-      return base
-    }
-
-    if (effectiveSortMode === 'score' && canSortByScore) {
-      base.sort((a, b) => {
-        const scoreA = getScoreForClip(a.id)
-        const scoreB = getScoreForClip(b.id)
-        if (scoreB !== scoreA) return scoreB - scoreA
-        return (originalIndex.get(a.id) ?? 0) - (originalIndex.get(b.id) ?? 0)
-      })
-      return base
-    }
-
-    // folder mode (default)
     base.sort((a, b) => {
-      const orderA = Number.isFinite(a.order) ? a.order : (originalIndex.get(a.id) ?? 0)
-      const orderB = Number.isFinite(b.order) ? b.order : (originalIndex.get(b.id) ?? 0)
-      if (orderA !== orderB) return orderA - orderB
+      const labelA = getClipPrimaryLabel(a)
+      const labelB = getClipPrimaryLabel(b)
+      const cmp = labelA.localeCompare(labelB, 'fr', { sensitivity: 'base' })
+      if (cmp !== 0) return cmp
       return (originalIndex.get(a.id) ?? 0) - (originalIndex.get(b.id) ?? 0)
     })
     return base
-  }, [clips, effectiveSortMode, getScoreForClip, canSortByScore])
+  }, [clips])
 
   const focusCell = useCallback(
     (clipIdx: number, critIdx: number) => {
@@ -432,6 +614,52 @@ export default function SpreadsheetInterface() {
     [updateCriterion, markDirty],
   )
 
+  const insertTextAtCursor = useCallback((textarea: HTMLTextAreaElement, insertion: string) => {
+    const start = textarea.selectionStart ?? textarea.value.length
+    const end = textarea.selectionEnd ?? start
+    const value = textarea.value
+    const before = value.slice(0, start)
+    const after = value.slice(end)
+    const needsSpaceBefore = before.length > 0 && !/\s$/.test(before)
+    const needsSpaceAfter = after.length > 0 && !/^\s/.test(after)
+    const insert = `${needsSpaceBefore ? ' ' : ''}${insertion}${needsSpaceAfter ? ' ' : ''}`
+    const nextValue = `${before}${insert}${after}`
+    const caret = before.length + insert.length
+    return { nextValue, caret }
+  }, [])
+
+  const insertCurrentTimecode = useCallback(async () => {
+    if (!currentClip) return
+    const textarea = notesTextareaRef.current
+    if (!textarea) return
+
+    const status = await tauri.playerGetStatus().catch(() => null)
+    if (!status) return
+    const preciseSeconds = snapToFrameSeconds(status.current_time, clipFps ?? undefined)
+    const timecode = formatPreciseTimecode(preciseSeconds)
+    const { nextValue, caret } = insertTextAtCursor(textarea, timecode)
+    setTextNotes(currentClip.id, nextValue)
+    markDirty()
+    requestAnimationFrame(() => {
+      textarea.focus()
+      textarea.setSelectionRange(caret, caret)
+    })
+  }, [clipFps, currentClip, insertTextAtCursor, markDirty, setTextNotes])
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      const shortcut = normalizeShortcutFromEvent(event)
+      if (!shortcut || shortcut !== shortcutBindings.insertTimecode) return
+      event.preventDefault()
+      event.stopPropagation()
+      insertCurrentTimecode().catch(() => { })
+    }
+    document.addEventListener('keydown', onKeyDown, true)
+    return () => {
+      document.removeEventListener('keydown', onKeyDown, true)
+    }
+  }, [insertCurrentTimecode, shortcutBindings])
+
   const openPlayerAtFront = useCallback(() => {
     setShowPipVideo(true)
     tauri.playerShow()
@@ -520,6 +748,41 @@ export default function SpreadsheetInterface() {
     [getNoteForClip],
   )
 
+  const hasAnyScoreInGroup = useCallback(
+    (clipId: string, group: CategoryGroup): boolean => {
+      const note = getNoteForClip(clipId)
+      if (!note) return false
+      for (const criterion of group.criteria) {
+        const score = note.scores[criterion.id]
+        if (!score) continue
+        if (score.isValid === false) continue
+        if (typeof score.value === 'boolean') return true
+        const value = Number(score.value)
+        if (Number.isFinite(value)) return true
+      }
+      return false
+    },
+    [getNoteForClip],
+  )
+
+  const hasAnyScoreInBareme = useCallback(
+    (clipId: string): boolean => {
+      if (!currentBareme) return false
+      const note = getNoteForClip(clipId)
+      if (!note) return false
+      for (const criterion of currentBareme.criteria) {
+        const score = note.scores[criterion.id]
+        if (!score) continue
+        if (score.isValid === false) continue
+        if (typeof score.value === 'boolean') return true
+        const value = Number(score.value)
+        if (Number.isFinite(value)) return true
+      }
+      return false
+    },
+    [currentBareme, getNoteForClip],
+  )
+
   if (!currentBareme) {
     return (
       <div className="flex items-center justify-center h-full text-gray-500 text-sm">
@@ -590,25 +853,6 @@ export default function SpreadsheetInterface() {
           </div>
         </div>
       )}
-      {/* Toolbar */}
-      <div className="flex items-center justify-end gap-2 px-2 py-1.5 bg-surface-dark border-b border-gray-700">
-        <button
-          onClick={() => {
-            const modes: SortMode[] = canSortByScore ? ['folder', 'alpha', 'score'] : ['folder', 'alpha']
-            const currentIndex = modes.indexOf(effectiveSortMode)
-            const nextIndex = (currentIndex + 1) % modes.length
-            setSortMode(modes[nextIndex])
-          }}
-          className="flex items-center gap-1.5 px-2 py-1 rounded border border-gray-700 bg-surface text-[11px] text-gray-300 hover:border-primary-500 hover:bg-surface-light transition-colors"
-          title="Changer le mode de tri"
-        >
-          <ArrowUpDown size={12} className="text-gray-500" />
-          <span>
-            {effectiveSortMode === 'folder' ? 'Ordre du dossier' : effectiveSortMode === 'alpha' ? 'Alphabétique' : 'Par note'}
-          </span>
-        </button>
-      </div>
-
       {/* Table */}
       <div className="flex-1 overflow-auto">
         <table className="w-full border-collapse text-xs">
@@ -733,9 +977,11 @@ export default function SpreadsheetInterface() {
                     }}
                   >
                     <div className="flex items-center gap-1 min-w-0">
-                      {clip.scored && (
-                        <span className="w-1.5 h-1.5 rounded-full bg-green-500 shrink-0" />
-                      )}
+                      <span className="w-2 flex items-center justify-center shrink-0">
+                        <span
+                          className={`w-1.5 h-1.5 rounded-full ${clip.scored ? 'bg-green-500 opacity-100' : 'opacity-0'}`}
+                        />
+                      </span>
                       <div className="truncate flex flex-col min-w-0 leading-tight flex-1">
                         <span className="truncate text-primary-300 text-[11px] font-semibold">
                           {getClipPrimaryLabel(clip)}
@@ -744,6 +990,13 @@ export default function SpreadsheetInterface() {
                           <span className="truncate text-[9px] text-gray-500">
                             {getClipSecondaryLabel(clip)}
                           </span>
+                        )}
+                        {showMiniatures && (
+                          <ClipMiniaturePreview
+                            clip={clip}
+                            enabled={showMiniatures}
+                            defaultSeconds={currentProject?.settings.thumbnailDefaultTimeSec ?? 10}
+                          />
                         )}
                       </div>
                     </div>
@@ -823,13 +1076,12 @@ export default function SpreadsheetInterface() {
                 {categoryGroups.map((g) =>
                   g.criteria.map((c, i) => {
                     if (i === 0) {
-                      const avg =
-                        scoredClips.length > 0
-                          ? scoredClips.reduce(
-                            (s, clip) => s + getCategoryScore(clip.id, g),
-                            0,
-                          ) / scoredClips.length
-                          : 0
+                      const values = scoredClips
+                        .filter((clip) => hasAnyScoreInGroup(clip.id, g))
+                        .map((clip) => getCategoryScore(clip.id, g))
+                      const avg = values.length > 0
+                        ? values.reduce((sum, value) => sum + value, 0) / values.length
+                        : 0
                       return (
                         <td
                           key={`avg-${c.id}`}
@@ -854,14 +1106,16 @@ export default function SpreadsheetInterface() {
                 )}
                 {!hideTotalsSetting && (
                   <td className="px-2 py-2 text-center font-mono font-bold text-[12px] text-white bg-surface-dark">
-                    {scoredClips.length > 0
-                      ? (
-                        scoredClips.reduce(
-                          (s, c) => s + getScoreForClip(c.id),
-                          0,
-                        ) / scoredClips.length
+                    {(() => {
+                      const values = scoredClips
+                        .filter((clip) => hasAnyScoreInBareme(clip.id))
+                        .map((clip) => getScoreForClip(clip.id))
+                      return (values.length > 0
+                        ? values.reduce((sum, value) => sum + value, 0) / values.length
+                        : 0
                       ).toFixed(1)
-                      : '0'}
+                    })()
+                    }
                   </td>
                 )}
               </tr>
@@ -884,7 +1138,7 @@ export default function SpreadsheetInterface() {
               </span>
               {getClipSecondaryLabel(currentClip) && (
                 <span className="text-gray-500 ml-1">
-                  ({getClipSecondaryLabel(currentClip)})
+                  - {getClipSecondaryLabel(currentClip)}
                 </span>
               )}
             </span>
@@ -909,6 +1163,7 @@ export default function SpreadsheetInterface() {
             rows={2}
             textareaClassName="text-xs min-h-[40px]"
             color="#60a5fa"
+            fpsHint={clipFps ?? undefined}
             onTimecodeSelect={async (item) => {
               if (!currentClip) return
               setShowPipVideo(true)
@@ -930,6 +1185,9 @@ export default function SpreadsheetInterface() {
               }).catch(() => { })
             }}
             onTimecodeLeave={hideFramePreview}
+            textareaRef={(el) => {
+              notesTextareaRef.current = el
+            }}
           />
         </div>
       )}
@@ -985,9 +1243,42 @@ export default function SpreadsheetInterface() {
               >
                 Notes du clip
               </button>
+              {showMiniatures && currentClip?.id === contextClip.id && (
+                <>
+                  <div className="border-t border-gray-700 my-0.5" />
+                  <button
+                    onClick={() => {
+                      setMiniatureFromCurrentFrame(contextClip.id).catch(() => { })
+                      setContextMenu(null)
+                    }}
+                    className="w-full text-left px-3 py-1.5 text-[11px] text-gray-300 hover:bg-gray-800 transition-colors"
+                  >
+                    Définir miniature (frame courante)
+                  </button>
+                  <button
+                    onClick={() => {
+                      setClipThumbnailTime(contextClip.id, null)
+                      setContextMenu(null)
+                    }}
+                    className="w-full text-left px-3 py-1.5 text-[11px] text-gray-300 hover:bg-gray-800 transition-colors"
+                  >
+                    Réinitialiser miniature
+                  </button>
+                </>
+              )}
               <div className="border-t border-gray-700 my-0.5" />
             </>
           )}
+          <button
+            onClick={() => {
+              updateSettings({ showMiniatures: !showMiniatures })
+              setContextMenu(null)
+            }}
+            className="w-full text-left px-3 py-1.5 text-[11px] text-gray-300 hover:bg-gray-800 transition-colors"
+          >
+            {showMiniatures ? 'Masquer miniatures' : 'Afficher miniatures'}
+          </button>
+          <div className="border-t border-gray-700 my-0.5" />
           <button
             onClick={() => {
               const clip = clips.find((c) => c.id === contextMenu.clipId)

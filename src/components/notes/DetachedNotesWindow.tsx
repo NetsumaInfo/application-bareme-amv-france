@@ -1,9 +1,11 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { emit, listen } from '@tauri-apps/api/event'
-import { ChevronLeft, ChevronRight, Clock3 } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Clock3, Play } from 'lucide-react'
 import { CATEGORY_COLOR_PRESETS, sanitizeColor, withAlpha } from '@/utils/colors'
-import { formatTime } from '@/utils/formatters'
+import { formatPreciseTimecode } from '@/utils/formatters'
 import { DEFAULT_SHORTCUT_BINDINGS, normalizeShortcutFromEvent } from '@/utils/shortcuts'
+import { snapToFrameSeconds } from '@/utils/timecodes'
+import { buildScreenshotName, captureElementToPngFile } from '@/utils/screenshot'
 import { useUIStore } from '@/store/useUIStore'
 import TimecodeTextarea from '@/components/notes/TimecodeTextarea'
 import type { Clip } from '@/types/project'
@@ -17,20 +19,29 @@ interface ClipPayload {
   note: Note | null
   clipIndex: number
   totalClips: number
+  hideTotals?: boolean
 }
 
 export default function DetachedNotesWindow() {
   const shortcutBindings = useUIStore((state) => state.shortcutBindings)
   const [clipData, setClipData] = useState<ClipPayload | null>(null)
   const [localNote, setLocalNote] = useState<Note | null>(null)
+  const [clipFps, setClipFps] = useState<number | null>(null)
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null)
   const textDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const categoryDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const criterionDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const pendingTextNoteRef = useRef<string | null>(null)
+  const pendingCategoryNoteRef = useRef<{ category: string; text: string } | null>(null)
+  const pendingCriterionNoteRef = useRef<{ criterionId: string; text: string } | null>(null)
   const inputRefs = useRef<Map<string, HTMLInputElement>>(new Map())
+  const navGuardRef = useRef(0)
+  const [expandedCriterionNotes, setExpandedCriterionNotes] = useState<Record<string, boolean>>({})
   const categoryTextareaRefs = useRef<Map<string, HTMLTextAreaElement>>(new Map())
   const globalTextareaRef = useRef<HTMLTextAreaElement | null>(null)
   const activeNoteFieldRef = useRef<{ kind: 'category' | 'global'; category?: string } | null>(null)
   const clipRef = useRef<Clip | null>(null)
+  const clipDataRef = useRef<ClipPayload | null>(null)
   const baremeRef = useRef<Bareme | null>(null)
   const framePreviewCacheRef = useRef<Map<string, string>>(new Map())
   const hoverRequestRef = useRef(0)
@@ -50,11 +61,40 @@ export default function DetachedNotesWindow() {
 
   const clip = clipData?.clip ?? null
   const bareme = clipData?.bareme ?? null
+  const shouldHideTotals = Boolean(clipData?.hideTotals)
 
   useEffect(() => {
     clipRef.current = clip
     baremeRef.current = bareme
   }, [clip, bareme])
+
+  useEffect(() => {
+    clipDataRef.current = clipData
+  }, [clipData])
+
+  useEffect(() => {
+    let active = true
+    if (!clip?.filePath) {
+      return () => {
+        active = false
+      }
+    }
+
+    tauri.playerGetMediaInfo(clip.filePath)
+      .then((info) => {
+        if (!active) return
+        const fps = Number(info?.fps)
+        setClipFps(Number.isFinite(fps) && fps > 0 ? fps : null)
+      })
+      .catch(() => {
+        if (!active) return
+        setClipFps(null)
+      })
+
+    return () => {
+      active = false
+    }
+  }, [clip?.id, clip?.filePath])
 
   // Set dark background immediately
   useEffect(() => {
@@ -64,6 +104,19 @@ export default function DetachedNotesWindow() {
     return () => {
       if (textDebounceRef.current) clearTimeout(textDebounceRef.current)
       if (categoryDebounceRef.current) clearTimeout(categoryDebounceRef.current)
+      if (criterionDebounceRef.current) clearTimeout(criterionDebounceRef.current)
+    }
+  }, [])
+
+  useEffect(() => {
+    const notifyClose = () => {
+      emit('notes:close').catch(() => {})
+    }
+    window.addEventListener('beforeunload', notifyClose)
+    window.addEventListener('unload', notifyClose)
+    return () => {
+      window.removeEventListener('beforeunload', notifyClose)
+      window.removeEventListener('unload', notifyClose)
     }
   }, [])
 
@@ -206,9 +259,11 @@ export default function DetachedNotesWindow() {
       if (!clip) return
 
       setLocalNote((prev) => prev ? { ...prev, textNotes: text } : prev)
+      pendingTextNoteRef.current = text
 
       if (textDebounceRef.current) clearTimeout(textDebounceRef.current)
       textDebounceRef.current = setTimeout(() => {
+        pendingTextNoteRef.current = null
         emit('notes:text-notes-updated', {
           clipId: clip.id,
           text,
@@ -229,12 +284,40 @@ export default function DetachedNotesWindow() {
           [category]: text,
         },
       } : prev)
+      pendingCategoryNoteRef.current = { category, text }
 
       if (categoryDebounceRef.current) clearTimeout(categoryDebounceRef.current)
       categoryDebounceRef.current = setTimeout(() => {
+        pendingCategoryNoteRef.current = null
         emit('notes:category-note-updated', {
           clipId: clip.id,
           category,
+          text,
+        }).catch(() => {})
+      }, 250)
+    },
+    [clip],
+  )
+
+  const handleCriterionNoteChange = useCallback(
+    (criterionId: string, text: string) => {
+      if (!clip) return
+
+      setLocalNote((prev) => prev ? {
+        ...prev,
+        criterionNotes: {
+          ...(prev.criterionNotes || {}),
+          [criterionId]: text,
+        },
+      } : prev)
+      pendingCriterionNoteRef.current = { criterionId, text }
+
+      if (criterionDebounceRef.current) clearTimeout(criterionDebounceRef.current)
+      criterionDebounceRef.current = setTimeout(() => {
+        pendingCriterionNoteRef.current = null
+        emit('notes:criterion-note-updated', {
+          clipId: clip.id,
+          criterionId,
           text,
         }).catch(() => {})
       }, 250)
@@ -250,6 +333,49 @@ export default function DetachedNotesWindow() {
       category: payload?.category ?? null,
       criterionId: payload?.criterionId ?? null,
     }).catch(() => {})
+  }, [clip])
+
+  const flushPendingNoteUpdates = useCallback(() => {
+    if (!clip) return
+
+    if (textDebounceRef.current) {
+      clearTimeout(textDebounceRef.current)
+      textDebounceRef.current = null
+    }
+    if (categoryDebounceRef.current) {
+      clearTimeout(categoryDebounceRef.current)
+      categoryDebounceRef.current = null
+    }
+    if (criterionDebounceRef.current) {
+      clearTimeout(criterionDebounceRef.current)
+      criterionDebounceRef.current = null
+    }
+
+    if (pendingTextNoteRef.current !== null) {
+      emit('notes:text-notes-updated', {
+        clipId: clip.id,
+        text: pendingTextNoteRef.current,
+      }).catch(() => {})
+      pendingTextNoteRef.current = null
+    }
+
+    if (pendingCategoryNoteRef.current) {
+      emit('notes:category-note-updated', {
+        clipId: clip.id,
+        category: pendingCategoryNoteRef.current.category,
+        text: pendingCategoryNoteRef.current.text,
+      }).catch(() => {})
+      pendingCategoryNoteRef.current = null
+    }
+
+    if (pendingCriterionNoteRef.current) {
+      emit('notes:criterion-note-updated', {
+        clipId: clip.id,
+        criterionId: pendingCriterionNoteRef.current.criterionId,
+        text: pendingCriterionNoteRef.current.text,
+      }).catch(() => {})
+      pendingCriterionNoteRef.current = null
+    }
   }, [clip])
 
   const insertTextAtCursor = useCallback((textarea: HTMLTextAreaElement, insertion: string) => {
@@ -273,7 +399,8 @@ export default function DetachedNotesWindow() {
 
     const status = await tauri.playerGetStatus().catch(() => null)
     if (!status) return
-    const timecode = formatTime(status.current_time)
+    const preciseSeconds = snapToFrameSeconds(status.current_time, clipFps)
+    const timecode = formatPreciseTimecode(preciseSeconds)
 
     if (target.kind === 'global') {
       const textarea = globalTextareaRef.current
@@ -297,24 +424,140 @@ export default function DetachedNotesWindow() {
       textarea.focus()
       textarea.setSelectionRange(caret, caret)
     })
-  }, [clip, handleCategoryNoteChange, handleTextChange, insertTextAtCursor])
+  }, [clip, clipFps, handleCategoryNoteChange, handleTextChange, insertTextAtCursor])
 
   useEffect(() => {
-    const onKeyDown = (event: KeyboardEvent) => {
+    const onKeyDown = async (event: KeyboardEvent) => {
       const shortcut = normalizeShortcutFromEvent(event)
-      if (shortcut && shortcut === shortcutBindings.insertTimecode) {
+      if (!shortcut) return
+
+      if (
+        event.repeat &&
+        (shortcut === shortcutBindings.nextClip || shortcut === shortcutBindings.prevClip)
+      ) {
+        return
+      }
+
+      const target = event.target as HTMLElement | null
+      const isTyping = Boolean(
+        target &&
+        (target.tagName === 'INPUT' ||
+          target.tagName === 'TEXTAREA' ||
+          target.tagName === 'SELECT' ||
+          target.isContentEditable),
+      )
+
+      if (shortcut === shortcutBindings.insertTimecode) {
         event.preventDefault()
         event.stopPropagation()
         insertCurrentTimecode().catch(() => {})
+        return
+      }
+
+      if (shortcut === shortcutBindings.undo) {
+        event.preventDefault()
+        event.stopPropagation()
+        flushPendingNoteUpdates()
+        emit('notes:undo').catch(() => {})
+        return
+      }
+
+      if (isTyping) return
+
+      switch (shortcut) {
+        case shortcutBindings.togglePause:
+          event.preventDefault()
+          tauri.playerTogglePause().catch(() => {})
+          break
+        case shortcutBindings.seekBack:
+          event.preventDefault()
+          tauri.playerSeekRelative(-5).catch(() => {})
+          break
+        case shortcutBindings.seekForward:
+          event.preventDefault()
+          tauri.playerSeekRelative(5).catch(() => {})
+          break
+        case shortcutBindings.seekBackLong:
+          event.preventDefault()
+          tauri.playerSeekRelative(-30).catch(() => {})
+          break
+        case shortcutBindings.seekForwardLong:
+          event.preventDefault()
+          tauri.playerSeekRelative(30).catch(() => {})
+          break
+        case shortcutBindings.nextClip:
+          event.preventDefault()
+          {
+            const payload = clipDataRef.current
+            if (!payload) break
+            const targetIndex = Math.max(0, Math.min(payload.totalClips - 1, payload.clipIndex + 1))
+            if (targetIndex !== payload.clipIndex) {
+              emit('notes:navigate-clip', {
+                direction: 'next',
+                fromClipId: clipRef.current?.id,
+                targetIndex,
+              }).catch(() => {})
+            }
+          }
+          break
+        case shortcutBindings.prevClip:
+          event.preventDefault()
+          {
+            const payload = clipDataRef.current
+            if (!payload) break
+            const targetIndex = Math.max(0, Math.min(payload.totalClips - 1, payload.clipIndex - 1))
+            if (targetIndex !== payload.clipIndex) {
+              emit('notes:navigate-clip', {
+                direction: 'prev',
+                fromClipId: clipRef.current?.id,
+                targetIndex,
+              }).catch(() => {})
+            }
+          }
+          break
+        case shortcutBindings.fullscreen:
+          event.preventDefault()
+          tauri.playerSetFullscreen(true).catch(() => {})
+          break
+        case shortcutBindings.exitFullscreen:
+          event.preventDefault()
+          tauri.playerSetFullscreen(false).catch(() => {})
+          break
+        case shortcutBindings.frameForward:
+          event.preventDefault()
+          tauri.playerFrameStep().catch(() => {})
+          break
+        case shortcutBindings.frameBack:
+          event.preventDefault()
+          tauri.playerFrameBackStep().catch(() => {})
+          break
+        case shortcutBindings.screenshot:
+          event.preventDefault()
+          {
+            const notesRoot = document.getElementById('root') as HTMLElement | null
+            await captureElementToPngFile(
+              notesRoot ?? document.documentElement,
+              buildScreenshotName('notes-window', clipRef.current?.displayName),
+            ).catch(() => {})
+          }
+          break
+        case shortcutBindings.toggleMiniatures:
+          event.preventDefault()
+          emit('notes:toggle-miniatures').catch(() => {})
+          break
+        case shortcutBindings.setMiniatureFrame:
+          event.preventDefault()
+          emit('notes:set-miniature-frame').catch(() => {})
+          break
+        default:
+          break
       }
     }
-    window.addEventListener('keydown', onKeyDown, true)
     document.addEventListener('keydown', onKeyDown, true)
     return () => {
-      window.removeEventListener('keydown', onKeyDown, true)
       document.removeEventListener('keydown', onKeyDown, true)
     }
-  }, [insertCurrentTimecode, shortcutBindings])
+  }, [flushPendingNoteUpdates, insertCurrentTimecode, shortcutBindings])
 
   const hideFramePreview = useCallback(() => {
     setFramePreview((prev) => ({ ...prev, visible: false }))
@@ -404,8 +647,17 @@ export default function DetachedNotesWindow() {
   )
 
   const handleNavigate = useCallback((direction: 'prev' | 'next') => {
-    emit('notes:navigate-clip', { direction }).catch(() => {})
-  }, [])
+    const now = Date.now()
+    if (now - navGuardRef.current < 420) return
+    navGuardRef.current = now
+    flushPendingNoteUpdates()
+    const payload = clipDataRef.current
+    if (!payload) return
+    const delta = direction === 'next' ? 1 : -1
+    const targetIndex = Math.max(0, Math.min(payload.totalClips - 1, payload.clipIndex + delta))
+    if (targetIndex === payload.clipIndex) return
+    emit('notes:navigate-clip', { direction, fromClipId: clipRef.current?.id, targetIndex }).catch(() => {})
+  }, [flushPendingNoteUpdates])
 
   const getCategoryScore = useCallback((cat: { criteria: Criterion[] }): number => {
     if (!localNote) return 0
@@ -467,14 +719,29 @@ export default function DetachedNotesWindow() {
           }}
           title="Double clic pour ouvrir le lecteur"
         >
-          <div className="text-xs font-medium text-white truncate">
-            {clip.displayName}
-          </div>
-          {clip.author && (
-            <div className="text-[10px] text-primary-400 truncate">{clip.author}</div>
-          )}
-          <div className="text-[10px] text-gray-500">
-            {clipData.clipIndex + 1} / {clipData.totalClips}
+          <div className="flex items-center justify-center gap-2 min-w-0 text-[11px] leading-none">
+            <button
+              onClick={(event) => {
+                event.stopPropagation()
+                emit('notes:open-player').catch(() => {})
+              }}
+              className="p-0.5 rounded hover:bg-surface-light text-gray-400 hover:text-white transition-colors shrink-0"
+              title="Ouvrir la vidéo"
+            >
+              <Play size={13} />
+            </button>
+            <span className="font-semibold text-white truncate max-w-[38%]">
+              {clip.displayName}
+            </span>
+            {clip.author && (
+              <>
+                <span className="text-gray-600">-</span>
+                <span className="text-primary-400 truncate max-w-[32%]">{clip.author}</span>
+              </>
+            )}
+            <span className="text-gray-500 shrink-0">
+              {clipData.clipIndex + 1}/{clipData.totalClips}
+            </span>
           </div>
         </div>
         <button
@@ -487,13 +754,15 @@ export default function DetachedNotesWindow() {
       </div>
 
       {/* Score total en haut */}
-      <div className="flex items-center justify-between px-3 py-1.5 border-b border-gray-700/50 shrink-0" style={{ background: '#12122a' }}>
-        <span className="text-[10px] text-gray-500 uppercase tracking-wider">Score total</span>
-        <span className="text-sm font-bold text-white">
-          {totalScore}
-          <span className="text-xs text-gray-400 font-normal">/{bareme.totalPoints}</span>
-        </span>
-      </div>
+      {!shouldHideTotals && (
+        <div className="flex items-center justify-between px-3 py-1.5 border-b border-gray-700/50 shrink-0" style={{ background: '#12122a' }}>
+          <span className="text-[10px] text-gray-500 uppercase tracking-wider">Score total</span>
+          <span className="text-sm font-bold text-white">
+            {totalScore}
+            <span className="text-xs text-gray-400 font-normal">/{bareme.totalPoints}</span>
+          </span>
+        </div>
+      )}
 
       {/* Categories - accordion style, click to expand */}
       <div className="flex-1 overflow-y-auto py-1">
@@ -521,10 +790,16 @@ export default function DetachedNotesWindow() {
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-xs font-mono font-bold" style={{ color: catScore > 0 ? color : '#6b7280' }}>
-                    {catScore}
-                  </span>
-                  <span className="text-[10px] text-gray-500">/{totalMax}</span>
+                  {!shouldHideTotals ? (
+                    <>
+                      <span className="text-xs font-mono font-bold" style={{ color: catScore > 0 ? color : '#6b7280' }}>
+                        {catScore}
+                      </span>
+                      <span className="text-[10px] text-gray-500">/{totalMax}</span>
+                    </>
+                  ) : (
+                    <span className="text-xs font-mono font-bold text-gray-600">-</span>
+                  )}
                   <span
                     className="text-[10px] transition-transform"
                     style={{
@@ -545,45 +820,101 @@ export default function DetachedNotesWindow() {
                     const score = localNote?.scores[criterion.id]
                     const value = score?.value ?? ''
                     const hasError = score && !score.isValid
+                    const criterionNoteValue = localNote?.criterionNotes?.[criterion.id] ?? ''
+                    const isCriterionNoteExpanded = Boolean(expandedCriterionNotes[criterion.id])
 
                     return (
-                      <div
-                        key={criterion.id}
-                        className="flex items-center gap-2 px-3 py-2 rounded-md transition-colors"
-                        style={{
-                          backgroundColor: hasError ? withAlpha('#ef4444', 0.12) : withAlpha(color, 0.07),
-                        }}
-                      >
-                        <div className="flex-1 min-w-0">
-                          <span className="text-xs text-gray-200 truncate block" title={criterion.name}>
-                            {criterion.name}
-                          </span>
-                          {criterion.description && (
-                            <span className="text-[9px] text-gray-500 truncate block">
-                              {criterion.description}
+                      <div key={criterion.id} className="space-y-1">
+                        <div
+                          className="flex items-center gap-2 px-3 py-2 rounded-md transition-colors"
+                          style={{
+                            backgroundColor: hasError ? withAlpha('#ef4444', 0.12) : withAlpha(color, 0.07),
+                          }}
+                        >
+                          <div className="flex-1 min-w-0">
+                            <span className="text-xs text-gray-200 truncate block" title={criterion.name}>
+                              {criterion.name}
                             </span>
-                          )}
+                            {criterion.description && (
+                              <span className="text-[9px] text-gray-500 truncate block">
+                                {criterion.description}
+                              </span>
+                            )}
+                          </div>
+                          <input
+                            ref={(el) => { if (el) inputRefs.current.set(criterion.id, el) }}
+                            type="number"
+                            min={criterion.min}
+                            max={criterion.max}
+                            step={criterion.step || 0.5}
+                            value={value === '' ? '' : String(value)}
+                            onChange={(e) => handleValueChange(criterion.id, e.target.value === '' ? '' : Number(e.target.value))}
+                            onKeyDown={(e) => handleKeyDown(e, flatIndex)}
+                            className={`amv-soft-number w-16 px-2 py-1 text-center text-sm rounded-md border font-mono focus-visible:outline-none ${
+                              hasError
+                                ? 'border-accent bg-accent/10 text-accent-light'
+                                : 'text-white focus:border-primary-500'
+                            } focus:outline-none`}
+                            style={!hasError ? {
+                              borderColor: withAlpha(color, 0.42),
+                              backgroundColor: withAlpha(color, 0.1),
+                            } : undefined}
+                          />
+                          <span className="text-[10px] text-gray-500 w-7 text-right font-mono">/{criterion.max ?? 10}</span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setExpandedCriterionNotes((prev) => ({
+                                ...prev,
+                                [criterion.id]: !prev[criterion.id],
+                              }))
+                            }}
+                            className="ml-1 px-1 text-[10px] leading-none text-gray-400 hover:text-white transition-colors bg-transparent"
+                            style={{ background: 'transparent' }}
+                            title={isCriterionNoteExpanded ? 'Refermer la note' : 'Ouvrir la note'}
+                          >
+                            {isCriterionNoteExpanded ? '▲' : '▼'}
+                          </button>
                         </div>
-                        <input
-                          ref={(el) => { if (el) inputRefs.current.set(criterion.id, el) }}
-                          type="number"
-                          min={criterion.min}
-                          max={criterion.max}
-                          step={criterion.step || 0.5}
-                          value={value === '' ? '' : String(value)}
-                          onChange={(e) => handleValueChange(criterion.id, e.target.value === '' ? '' : Number(e.target.value))}
-                          onKeyDown={(e) => handleKeyDown(e, flatIndex)}
-                          className={`amv-soft-number w-16 px-2 py-1 text-center text-sm rounded-md border font-mono focus-visible:outline-none ${
-                            hasError
-                              ? 'border-accent bg-accent/10 text-accent-light'
-                              : 'text-white focus:border-primary-500'
-                          } focus:outline-none`}
-                          style={!hasError ? {
-                            borderColor: withAlpha(color, 0.42),
-                            backgroundColor: withAlpha(color, 0.1),
-                          } : undefined}
-                        />
-                        <span className="text-[10px] text-gray-500 w-7 text-right font-mono">/{criterion.max ?? 10}</span>
+                        {isCriterionNoteExpanded ? (
+                          <TimecodeTextarea
+                            placeholder={`Note "${criterion.name}"...`}
+                            value={criterionNoteValue}
+                            onChange={(nextValue) => handleCriterionNoteChange(criterion.id, nextValue)}
+                            textareaClassName="min-h-[30px]"
+                            style={{
+                              backgroundColor: withAlpha(color, 0.045),
+                              borderColor: withAlpha(color, 0.15),
+                            }}
+                            color={color}
+                            fpsHint={clipFps ?? undefined}
+                            onTimecodeSelect={(item) => {
+                              handleTimecodeJump(item.seconds, { category, criterionId: criterion.id })
+                            }}
+                            onTimecodeHover={({ item, anchorRect }) => {
+                              showFramePreview({
+                                seconds: item.seconds,
+                                anchorRect,
+                              }).catch(() => {})
+                            }}
+                            onTimecodeLeave={hideFramePreview}
+                          />
+                        ) : criterionNoteValue.trim() ? (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setExpandedCriterionNotes((prev) => ({
+                                ...prev,
+                                [criterion.id]: true,
+                              }))
+                            }}
+                            className="w-full text-left px-2.5 py-1 rounded-md text-[10px] text-gray-400 border border-gray-700 hover:text-gray-200 hover:border-gray-500 transition-colors truncate"
+                            style={{ backgroundColor: withAlpha(color, 0.04) }}
+                            title={criterionNoteValue}
+                          >
+                            {criterionNoteValue.replace(/\s+/g, ' ').slice(0, 96)}
+                          </button>
+                        ) : null}
                       </div>
                     )
                   })}
@@ -607,6 +938,7 @@ export default function DetachedNotesWindow() {
                       borderColor: withAlpha(color, 0.2),
                     }}
                     color={color}
+                    fpsHint={clipFps ?? undefined}
                     onTimecodeSelect={(item) => {
                       handleTimecodeJump(item.seconds, { category })
                     }}
@@ -652,6 +984,7 @@ export default function DetachedNotesWindow() {
             }}
             textareaClassName="min-h-[36px]"
             color="#60a5fa"
+            fpsHint={clipFps ?? undefined}
             onTimecodeSelect={(item) => {
               handleTimecodeJump(item.seconds)
             }}

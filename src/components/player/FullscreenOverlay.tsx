@@ -1,21 +1,23 @@
 import { useState, useEffect, useRef, useCallback, useMemo, type ChangeEvent } from 'react'
 import {
   Play, Pause, SkipBack, SkipForward,
-  Volume2, VolumeX, Minimize2, Maximize2, X,
+  Volume2, VolumeX, Minimize2, Maximize2, X, ImagePlus,
   ChevronLeft, ChevronRight,
   Subtitles, Headphones,
 } from 'lucide-react'
 import * as tauri from '@/services/tauri'
-import { formatTime } from '@/utils/formatters'
+import { formatPreciseTimecode, formatTime } from '@/utils/formatters'
 import { emit, listen } from '@tauri-apps/api/event'
 import { appWindow } from '@tauri-apps/api/window'
 import type { TrackItem } from '@/services/tauri'
+import { DEFAULT_SHORTCUT_BINDINGS, normalizeShortcutFromEvent, type ShortcutAction } from '@/utils/shortcuts'
 import AudioDbMeter from './AudioDbMeter'
 
 interface ClipInfo {
   name: string
   index: number
   total: number
+  miniaturesEnabled?: boolean
 }
 
 interface OverlayTimecodeMarker {
@@ -30,6 +32,9 @@ interface OverlayTimecodeMarker {
 }
 
 export default function FullscreenOverlay() {
+  const [shortcutBindings, setShortcutBindings] = useState<Record<ShortcutAction, string>>({
+    ...DEFAULT_SHORTCUT_BINDINGS,
+  })
   const [showControls, setShowControls] = useState(true)
   const [isPlayerFullscreen, setIsPlayerFullscreen] = useState(false)
   const [isPlaying, setIsPlaying] = useState(false)
@@ -52,10 +57,7 @@ export default function FullscreenOverlay() {
   const [currentAudioId, setCurrentAudioId] = useState<number | null>(null)
   const [subMenuOpen, setSubMenuOpen] = useState(false)
   const [audioMenuOpen, setAudioMenuOpen] = useState(false)
-  const [showAudioDb, setShowAudioDb] = useState(() => {
-    if (typeof window === 'undefined') return false
-    return window.localStorage.getItem('amv.showAudioDb') === '1'
-  })
+  const [showAudioDb] = useState(false)
   const [viewport, setViewport] = useState({
     width: typeof window !== 'undefined' ? window.innerWidth : 1280,
     height: typeof window !== 'undefined' ? window.innerHeight : 720,
@@ -64,6 +66,21 @@ export default function FullscreenOverlay() {
   const audioRef = useRef<HTMLDivElement | null>(null)
   const compactControls = viewport.width < 760 || viewport.height < 430
   const tinyControls = viewport.width < 620 || viewport.height < 360
+
+  useEffect(() => {
+    tauri.loadUserSettings()
+      .then((data) => {
+        if (!data || typeof data !== 'object') return
+        const settings = data as Record<string, unknown>
+        const rawBindings = settings.shortcutBindings
+        if (!rawBindings || typeof rawBindings !== 'object') return
+        setShortcutBindings({
+          ...DEFAULT_SHORTCUT_BINDINGS,
+          ...(rawBindings as Record<ShortcutAction, string>),
+        })
+      })
+      .catch(() => {})
+  }, [])
 
   useEffect(() => {
     const updateViewport = () => {
@@ -138,7 +155,6 @@ export default function FullscreenOverlay() {
         setCurrentTime(status.current_time)
         setDuration(status.duration)
         setIsPlayerFullscreen(fullscreen)
-        setShowAudioDb(window.localStorage.getItem('amv.showAudioDb') === '1')
         if (fullscreen && !wasFullscreenRef.current) {
           setShowControls(true)
         }
@@ -150,14 +166,6 @@ export default function FullscreenOverlay() {
     const interval = setInterval(poll, 250)
     poll()
     return () => clearInterval(interval)
-  }, [])
-
-  useEffect(() => {
-    const onStorage = () => {
-      setShowAudioDb(window.localStorage.getItem('amv.showAudioDb') === '1')
-    }
-    window.addEventListener('storage', onStorage)
-    return () => window.removeEventListener('storage', onStorage)
   }, [])
 
   // Listen for clip info from main window
@@ -231,67 +239,144 @@ export default function FullscreenOverlay() {
 
   // Keyboard shortcuts
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      switch (e.key) {
-        case 'Escape':
-        case 'Esc':
-        case 'F11':
-          e.preventDefault()
-          e.stopPropagation()
-          tauri.playerSetFullscreen(false).catch(() => {})
-          break
-        case ' ':
-          e.preventDefault()
-          e.stopPropagation()
-          tauri.playerTogglePause().catch(() => {})
-          resetHideTimer()
-          break
-        case 'ArrowRight':
-          e.preventDefault()
-          e.stopPropagation()
-          tauri.playerSeekRelative(e.shiftKey ? 30 : 5).catch(() => {})
-          resetHideTimer()
-          break
-        case 'ArrowLeft':
-          e.preventDefault()
-          e.stopPropagation()
-          tauri.playerSeekRelative(e.shiftKey ? -30 : -5).catch(() => {})
-          resetHideTimer()
-          break
-        case 'n':
-        case 'N':
-          e.preventDefault()
-          e.stopPropagation()
-          emit('overlay:next-clip').catch(() => {})
-          resetHideTimer()
-          break
-        case 'p':
-        case 'P':
-          e.preventDefault()
-          e.stopPropagation()
-          emit('overlay:prev-clip').catch(() => {})
-          resetHideTimer()
-          break
+    const handleKeyDown = async (e: KeyboardEvent) => {
+      const shortcut = normalizeShortcutFromEvent(e)
+      if (!shortcut) return
+
+      if (
+        e.repeat &&
+        (shortcut === shortcutBindings.nextClip || shortcut === shortcutBindings.prevClip)
+      ) {
+        return
       }
-    }
-    const handleKeyUp = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' || e.key === 'Esc' || e.key === 'F11') {
+
+      if (shortcut === shortcutBindings.exitFullscreen || shortcut === shortcutBindings.fullscreen) {
         e.preventDefault()
         e.stopPropagation()
-        tauri.playerSetFullscreen(false).catch(() => {})
+        if (shortcut === shortcutBindings.exitFullscreen) {
+          tauri.playerSetFullscreen(false).catch(() => {})
+        } else {
+          tauri.playerSetFullscreen(!isPlayerFullscreen).catch(() => {})
+        }
+        resetHideTimer()
+        return
+      }
+
+      if (shortcut === shortcutBindings.togglePause) {
+        e.preventDefault()
+        e.stopPropagation()
+        tauri.playerTogglePause().catch(() => {})
+        resetHideTimer()
+        return
+      }
+
+      if (shortcut === shortcutBindings.seekForward) {
+        e.preventDefault()
+        e.stopPropagation()
+        tauri.playerSeekRelative(5).catch(() => {})
+        resetHideTimer()
+        return
+      }
+
+      if (shortcut === shortcutBindings.seekBack) {
+        e.preventDefault()
+        e.stopPropagation()
+        tauri.playerSeekRelative(-5).catch(() => {})
+        resetHideTimer()
+        return
+      }
+
+      if (shortcut === shortcutBindings.seekForwardLong) {
+        e.preventDefault()
+        e.stopPropagation()
+        tauri.playerSeekRelative(30).catch(() => {})
+        resetHideTimer()
+        return
+      }
+
+      if (shortcut === shortcutBindings.seekBackLong) {
+        e.preventDefault()
+        e.stopPropagation()
+        tauri.playerSeekRelative(-30).catch(() => {})
+        resetHideTimer()
+        return
+      }
+
+      if (shortcut === shortcutBindings.nextClip) {
+        e.preventDefault()
+        e.stopPropagation()
+        emit('overlay:next-clip').catch(() => {})
+        resetHideTimer()
+        return
+      }
+
+      if (shortcut === shortcutBindings.prevClip) {
+        e.preventDefault()
+        e.stopPropagation()
+        emit('overlay:prev-clip').catch(() => {})
+        resetHideTimer()
+        return
+      }
+
+      if (shortcut === shortcutBindings.frameForward) {
+        e.preventDefault()
+        e.stopPropagation()
+        tauri.playerFrameStep().catch(() => {})
+        resetHideTimer()
+        return
+      }
+
+      if (shortcut === shortcutBindings.frameBack) {
+        e.preventDefault()
+        e.stopPropagation()
+        tauri.playerFrameBackStep().catch(() => {})
+        resetHideTimer()
+        return
+      }
+
+      if (shortcut === shortcutBindings.screenshot) {
+        e.preventDefault()
+        e.stopPropagation()
+        const status = await tauri.playerGetStatus().catch(() => null)
+        const stamp = status
+          ? formatPreciseTimecode(status.current_time).replace(/[:.]/g, '-')
+          : 'frame'
+        const safeName = (clipInfo.name || 'clip').replace(/[^\w-]+/g, '_')
+        const path = await tauri.saveScreenshotDialog(`${safeName}-${stamp}.png`).catch(() => null)
+        if (path) {
+          await tauri.playerScreenshot(path).catch(() => {})
+        }
+        resetHideTimer()
+        return
+      }
+
+      if (shortcut === shortcutBindings.toggleMiniatures) {
+        e.preventDefault()
+        e.stopPropagation()
+        emit('overlay:toggle-miniatures').catch(() => {})
+        resetHideTimer()
+        return
+      }
+
+      if (shortcut === shortcutBindings.setMiniatureFrame) {
+        e.preventDefault()
+        e.stopPropagation()
+        emit('overlay:set-miniature-frame').catch(() => {})
+        resetHideTimer()
+        return
+      }
+
+      if (shortcut === shortcutBindings.undo) {
+        e.preventDefault()
+        e.stopPropagation()
+        emit('overlay:undo').catch(() => {})
       }
     }
-    window.addEventListener('keydown', handleKeyDown, true)
     document.addEventListener('keydown', handleKeyDown, true)
-    window.addEventListener('keyup', handleKeyUp, true)
-    document.addEventListener('keyup', handleKeyUp, true)
     return () => {
-      window.removeEventListener('keydown', handleKeyDown, true)
       document.removeEventListener('keydown', handleKeyDown, true)
-      window.removeEventListener('keyup', handleKeyUp, true)
-      document.removeEventListener('keyup', handleKeyUp, true)
     }
-  }, [resetHideTimer])
+  }, [clipInfo.name, isPlayerFullscreen, resetHideTimer, shortcutBindings])
 
   const handleTogglePause = () => {
     tauri.playerTogglePause().catch(() => {})
@@ -657,6 +742,19 @@ export default function FullscreenOverlay() {
             </div>
 
             {/* Fullscreen toggle */}
+            {clipInfo.miniaturesEnabled && (
+              <button
+                onClick={() => {
+                  emit('overlay:set-miniature-frame').catch(() => {})
+                  resetHideTimer()
+                }}
+                className={`${compactControls ? 'p-1.5' : 'p-2.5'} rounded-full hover:bg-white/20 text-white/80 hover:text-white transition-colors`}
+                title="Définir la frame miniature"
+              >
+                <ImagePlus size={compactControls ? 16 : 22} />
+              </button>
+            )}
+
             <button
               onClick={isPlayerFullscreen ? handleExitFullscreen : handleToggleFullscreen}
               className={`${compactControls ? 'p-1.5 ml-1' : 'p-2.5 ml-2'} rounded-full hover:bg-white/20 text-white/80 hover:text-white transition-colors`}

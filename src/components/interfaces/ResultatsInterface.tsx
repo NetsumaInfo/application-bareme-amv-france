@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Upload, Users, ArrowUpDown } from 'lucide-react'
+import { Upload, Users } from 'lucide-react'
 import { emit } from '@tauri-apps/api/event'
 import { useNotationStore } from '@/store/useNotationStore'
 import { useProjectStore } from '@/store/useProjectStore'
@@ -15,12 +15,13 @@ import {
   getCategoryScore,
   getNoteTotal,
   getCriterionNumericScore,
+  hasAnyCriterionScore,
   type NoteLike,
 } from '@/utils/results'
 import type { ImportedJudgeData, ImportedJudgeNote, ImportedJudgeCriterionScore } from '@/types/project'
 import type { Criterion } from '@/types/bareme'
 
-type SortMode = 'folder' | 'alpha' | 'score'
+type SortMode = 'folder' | 'score'
 
 function normalizeImportedJudge(
   raw: unknown,
@@ -253,9 +254,10 @@ export default function ResultatsInterface() {
   const canSortByScore = !hideTotalsSetting && !hideTotalsUntilAllScored
 
   const [importing, setImporting] = useState(false)
-  const [sortMode, setSortMode] = useState<SortMode>('folder')
+  const sortMode: SortMode = 'score'
   const [draftCells, setDraftCells] = useState<Record<string, string>>({})
   const [selectedClipId, setSelectedClipId] = useState<string | null>(null)
+  const [selectedClipFps, setSelectedClipFps] = useState<number | null>(null)
   const [memberContextMenu, setMemberContextMenu] = useState<{ index: number; x: number; y: number } | null>(null)
   const [clipContextMenu, setClipContextMenu] = useState<{ clipId: string; x: number; y: number } | null>(null)
   const memberContextMenuRef = useRef<HTMLDivElement | null>(null)
@@ -274,16 +276,16 @@ export default function ResultatsInterface() {
   )
 
   const currentJudge = judges.find((judge) => judge.isCurrentJudge)
-  const collator = useMemo(
-    () => new Intl.Collator('fr', { sensitivity: 'base', numeric: true, ignorePunctuation: true }),
-    [],
-  )
 
   const getClipAverageTotal = useCallback((clipId: string) => {
     if (!currentBareme) return 0
-    const totals = judges.map((judge) =>
-      getNoteTotal(judge.notes[clipId] as NoteLike | undefined, currentBareme),
-    )
+    const totals = judges
+      .map((judge) => {
+        const note = judge.notes[clipId] as NoteLike | undefined
+        if (!hasAnyCriterionScore(note, currentBareme.criteria)) return null
+        return getNoteTotal(note, currentBareme)
+      })
+      .filter((value): value is number => value !== null)
     return totals.length > 0
       ? totals.reduce((sum, v) => sum + v, 0) / totals.length
       : 0
@@ -292,17 +294,6 @@ export default function ResultatsInterface() {
   const sortedClips = useMemo(() => {
     const base = [...clips]
     const originalIndex = new Map(clips.map((clip, index) => [clip.id, index]))
-
-    if (effectiveSortMode === 'alpha') {
-      base.sort((a, b) => {
-        const labelA = getClipPrimaryLabel(a)
-        const labelB = getClipPrimaryLabel(b)
-        const cmp = collator.compare(labelA, labelB)
-        if (cmp !== 0) return cmp
-        return (originalIndex.get(a.id) ?? 0) - (originalIndex.get(b.id) ?? 0)
-      })
-      return base
-    }
 
     if (effectiveSortMode === 'score' && canSortByScore) {
       base.sort((a, b) => {
@@ -321,7 +312,7 @@ export default function ResultatsInterface() {
       return (originalIndex.get(a.id) ?? 0) - (originalIndex.get(b.id) ?? 0)
     })
     return base
-  }, [clips, collator, effectiveSortMode, getClipAverageTotal, canSortByScore])
+  }, [clips, effectiveSortMode, getClipAverageTotal, canSortByScore])
 
   useEffect(() => {
     if (!selectedClipId || !sortedClips.some((clip) => clip.id === selectedClipId)) {
@@ -363,11 +354,19 @@ export default function ResultatsInterface() {
         )
       }
 
-      const judgeTotals = judges.map((judge) =>
-        getNoteTotal(judge.notes[clip.id] as NoteLike | undefined, currentBareme),
-      )
-      const averageTotal = judgeTotals.length > 0
-        ? Math.round((judgeTotals.reduce((sum, value) => sum + value, 0) / judgeTotals.length) * 100) / 100
+      const judgeTotals = judges.map((judge) => {
+        const note = judge.notes[clip.id] as NoteLike | undefined
+        return getNoteTotal(note, currentBareme)
+      })
+      const nonEmptyTotals = judges
+        .map((judge) => {
+          const note = judge.notes[clip.id] as NoteLike | undefined
+          if (!hasAnyCriterionScore(note, currentBareme.criteria)) return null
+          return getNoteTotal(note, currentBareme)
+        })
+        .filter((value): value is number => value !== null)
+      const averageTotal = nonEmptyTotals.length > 0
+        ? Math.round((nonEmptyTotals.reduce((sum, value) => sum + value, 0) / nonEmptyTotals.length) * 100) / 100
         : 0
 
       return {
@@ -553,6 +552,32 @@ export default function ResultatsInterface() {
     })
   }
 
+  const selectedClip = sortedClips.find((clip) => clip.id === selectedClipId) ?? sortedClips[0]
+
+  useEffect(() => {
+    let active = true
+    if (!selectedClip?.filePath) {
+      return () => {
+        active = false
+      }
+    }
+
+    tauri.playerGetMediaInfo(selectedClip.filePath)
+      .then((info) => {
+        if (!active) return
+        const fps = Number(info?.fps)
+        setSelectedClipFps(Number.isFinite(fps) && fps > 0 ? fps : null)
+      })
+      .catch(() => {
+        if (!active) return
+        setSelectedClipFps(null)
+      })
+
+    return () => {
+      active = false
+    }
+  }, [selectedClip?.id, selectedClip?.filePath])
+
   if (!currentBareme) {
     return (
       <div className="flex items-center justify-center h-full text-gray-500 text-sm">
@@ -568,8 +593,6 @@ export default function ResultatsInterface() {
       </div>
     )
   }
-
-  const selectedClip = sortedClips.find((clip) => clip.id === selectedClipId) ?? sortedClips[0]
 
   return (
     <div className="flex flex-col h-full p-3 gap-3">
@@ -587,18 +610,6 @@ export default function ResultatsInterface() {
           <Users size={13} />
           {judges.length} juge{judges.length > 1 ? 's' : ''}
         </div>
-
-        <button
-          onClick={() => {
-            const modes: SortMode[] = canSortByScore ? ['folder', 'alpha', 'score'] : ['folder', 'alpha']
-            const idx = modes.indexOf(effectiveSortMode)
-            setSortMode(modes[(idx + 1) % modes.length])
-          }}
-          className="flex items-center gap-1.5 pl-2 pr-2 py-1 rounded border border-gray-700 bg-surface text-[11px] text-gray-300 hover:border-primary-500 hover:bg-surface-light transition-colors"
-        >
-          <ArrowUpDown size={12} className="text-gray-500" />
-          <span>{effectiveSortMode === 'folder' ? 'Ordre du dossier' : effectiveSortMode === 'alpha' ? 'Alphabétique' : 'Par moyenne'}</span>
-        </button>
 
         {currentJudge && (
           <span className="inline-flex items-center gap-1 text-[11px] px-2 py-1 rounded border border-primary-500/40 bg-primary-600/10 text-primary-300">
@@ -837,6 +848,7 @@ export default function ResultatsInterface() {
                         jumpToTimecodeInNotation(selectedClip.id, item.seconds)
                       }}
                       color="#60a5fa"
+                      fpsHint={selectedClipFps ?? undefined}
                       textareaClassName="min-h-[52px]"
                       placeholder="Notes libres..."
                     />
@@ -850,6 +862,7 @@ export default function ResultatsInterface() {
                           jumpToTimecodeInNotation(selectedClip.id, item.seconds)
                         }}
                         color="#94a3b8"
+                        fpsHint={selectedClipFps ?? undefined}
                         textareaClassName="min-h-[52px]"
                       />
                     ) : (

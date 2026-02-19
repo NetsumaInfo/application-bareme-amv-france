@@ -1,5 +1,5 @@
 # AMV Notation
-![Version](https://img.shields.io/badge/version-v0.3.1-2563eb)
+![Version](https://img.shields.io/badge/version-v0.4.0-2563eb)
 
 Application desktop de notation pour concours AMV (Anime Music Video).
 
@@ -25,16 +25,19 @@ Application desktop de notation pour concours AMV (Anime Music Video).
 - Preview FFmpeg avec cache LRU intégré
 - Capture d'écran du lecteur
 
-### Performance
+### Miniatures vidéo
 
-- Cache LRU pour les previews vidéo (240 entrées) et media info (96 entrées)
-- Processus ffmpeg/ffprobe optimisés (threads limités, fenêtre console masquée)
-- ffmpeg, ffprobe et libmpv-2.dll bundlés dans l'installeur
+- Miniatures (thumbnails) des clips dans la liste de clips
+- Frame de miniature personnalisable par clip (Ctrl+Shift+M)
+- Chargement asynchrone avec file d'attente concurrente
+- Activation/désactivation via raccourci (Ctrl+M) ou paramètres
+- Frame par défaut configurable dans les paramètres
 
 ### Notation
 
-- 2 vues de notation interchangeables: **Tableur** et **Notes**
+- 3 modes de notation: **Tableur**, **Notes** et **Dual** (vue combinée)
 - Barèmes personnalisables (catégories, critères, coefficients, couleurs par catégorie)
+- Éditeur de barème avec options déroulantes et événements d'ouverture rapide
 - Notes par critère avec commentaires textuels
 - Notes par catégorie et notes globales
 - Système de timecodes dans les notes (détection automatique, chips cliquables, seek instantané)
@@ -62,9 +65,18 @@ Application desktop de notation pour concours AMV (Anime Music Video).
 ### Interface
 
 - Menu contextuel (clic droit) avec actions rapides
-- Raccourcis clavier entièrement personnalisables (28 actions configurables)
+- Raccourcis clavier entièrement personnalisables (30 actions configurables)
+- Gestion améliorée du clavier via `event.code` (compatibilité layouts)
 - Zoom de l'interface (Ctrl+=/Ctrl+-/Ctrl+0)
 - Thème sombre moderne
+- Throttle de navigation entre clips (anti-spam)
+
+### Performance
+
+- Cache LRU pour les previews vidéo (240 entrées) et media info (96 entrées)
+- Processus ffmpeg/ffprobe optimisés (threads limités, fenêtre console masquée)
+- ffmpeg, ffprobe et libmpv-2.dll bundlés dans l'installeur
+- File d'attente concurrente pour le chargement des miniatures
 
 ## Prérequis
 
@@ -138,6 +150,8 @@ npm run tauri build
 | Annuler (Undo) | `Ctrl+Z` |
 | Capture d'écran | `Ctrl+Shift+S` |
 | Insérer timecode | `Ctrl+T` |
+| Activer miniatures | `Ctrl+M` |
+| Définir frame miniature | `Ctrl+Shift+M` |
 | Navigation champs notes | `Ctrl+Flèches` |
 
 Tous les raccourcis sont personnalisables dans les paramètres.
@@ -170,7 +184,8 @@ src/                    Frontend React
   services/             tauri.ts (wrappers invoke)
   types/                Types TypeScript (project, player, notation, bareme)
   schemas/              Schémas Zod
-  utils/                scoring, formatters, shortcuts, timecodes, results, colors
+  utils/                scoring, formatters, shortcuts, timecodes, results, colors,
+                        screenshot
 
 src-tauri/src/          Backend Rust
   main.rs               setup Tauri + init mpv + création overlay

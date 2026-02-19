@@ -86,7 +86,7 @@ export default function CreateProjectModal() {
             <input
               {...register('name')}
               type="text"
-              placeholder="ex: Concours AMV 2026"
+              placeholder="ex: Concours Japan Expo"
               className="w-full px-3 py-2 bg-surface-dark border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:border-primary-500 focus:outline-none text-sm"
               autoFocus
             />
@@ -102,7 +102,7 @@ export default function CreateProjectModal() {
             <input
               {...register('judgeName')}
               type="text"
-              placeholder="ex: Redrum"
+              placeholder="ex: Netsuma"
               className="w-full px-3 py-2 bg-surface-dark border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:border-primary-500 focus:outline-none text-sm"
             />
             {errors.judgeName && (

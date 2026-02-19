@@ -5,6 +5,74 @@ import { useNotationStore } from '@/store/useNotationStore'
 import { useUIStore } from '@/store/useUIStore'
 import ProjectManager from '@/components/project/ProjectManager'
 import InterfaceSwitcher from '@/components/interfaces/InterfaceSwitcher'
+import type { InterfaceMode } from '@/types/notation'
+
+function hasSpreadsheetView(mode: InterfaceMode): boolean {
+  return mode === 'spreadsheet' || mode === 'dual'
+}
+
+function hasNotationView(mode: InterfaceMode): boolean {
+  return mode === 'notation' || mode === 'dual'
+}
+
+function NotationModeSwitcher() {
+  const { currentTab, currentInterface, switchInterface } = useUIStore()
+  if (currentTab !== 'notation') return null
+
+  const spreadsheetActive = hasSpreadsheetView(currentInterface)
+  const notationActive = hasNotationView(currentInterface)
+
+  const toggleSpreadsheet = () => {
+    if (spreadsheetActive && !notationActive) return
+    if (spreadsheetActive && notationActive) {
+      switchInterface('notation')
+      return
+    }
+    if (!spreadsheetActive && notationActive) {
+      switchInterface('dual')
+      return
+    }
+    switchInterface('spreadsheet')
+  }
+
+  const toggleNotation = () => {
+    if (notationActive && !spreadsheetActive) return
+    if (notationActive && spreadsheetActive) {
+      switchInterface('spreadsheet')
+      return
+    }
+    if (!notationActive && spreadsheetActive) {
+      switchInterface('dual')
+      return
+    }
+    switchInterface('notation')
+  }
+
+  return (
+    <div className="flex items-center bg-surface-dark rounded-lg p-0.5 gap-0.5 border border-gray-700/70">
+      <button
+        onClick={toggleSpreadsheet}
+        className={`px-3 py-1 text-xs rounded-md transition-all ${
+          spreadsheetActive
+            ? 'bg-primary-600 text-white shadow-sm'
+            : 'text-gray-400 hover:text-white hover:bg-surface-light'
+        }`}
+      >
+        Tableur
+      </button>
+      <button
+        onClick={toggleNotation}
+        className={`px-3 py-1 text-xs rounded-md transition-all ${
+          notationActive
+            ? 'bg-primary-600 text-white shadow-sm'
+            : 'text-gray-400 hover:text-white hover:bg-surface-light'
+        }`}
+      >
+        Notation
+      </button>
+    </div>
+  )
+}
 
 function BaremeSelector() {
   const { currentBareme, availableBaremes, setBareme } = useNotationStore()
@@ -77,6 +145,7 @@ function BaremeSelector() {
               onClick={() => {
                 setOpen(false)
                 setShowBaremeEditor(true)
+                window.dispatchEvent(new CustomEvent('amv:bareme-open-list'))
               }}
               className="w-full text-left px-3 py-1.5 text-xs text-gray-400 hover:text-white hover:bg-surface-light transition-colors flex items-center gap-2"
             >
@@ -87,6 +156,7 @@ function BaremeSelector() {
               onClick={() => {
                 setOpen(false)
                 setShowBaremeEditor(true)
+                window.dispatchEvent(new CustomEvent('amv:bareme-open-create'))
               }}
               className="w-full text-left px-3 py-1.5 text-xs text-primary-400 hover:text-primary-300 hover:bg-surface-light transition-colors flex items-center gap-2"
             >
@@ -148,17 +218,20 @@ export default function Header({
         )}
       </div>
 
-      {/* Center: Interface switcher */}
+      {/* Mode: Tableur / Notation */}
       {currentProject && (
         <div className="order-3 w-full flex justify-center sm:order-none sm:w-auto sm:flex-1 sm:justify-center">
-          <InterfaceSwitcher />
+          <div className="flex items-center gap-2">
+            <NotationModeSwitcher />
+            <InterfaceSwitcher />
+          </div>
         </div>
       )}
 
       {/* Right: Barème + File menu + Settings */}
       <div className="flex items-center gap-1 ml-auto">
         {currentProject && <BaremeSelector />}
-        <ProjectManager />
+        {currentProject && <ProjectManager />}
         {currentProject && (
           <button
             onClick={onOpenSettings}

@@ -30,6 +30,7 @@ export function useAutoSave() {
     if (!currentProject?.settings.autoSave || !isDirty) return
 
     const interval = (currentProject.settings.autoSaveInterval || 30) * 1000
+    const saveDelay = Math.min(interval, 2500)
 
     if (saveTimeoutRef.current) {
       clearTimeout(saveTimeoutRef.current)
@@ -37,7 +38,7 @@ export function useAutoSave() {
 
     saveTimeoutRef.current = setTimeout(() => {
       void doSaveRef.current()
-    }, interval)
+    }, saveDelay)
 
     return () => {
       if (saveTimeoutRef.current) {
