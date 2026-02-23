@@ -53,7 +53,8 @@ export default function ContextMenu({
     setShowPipVideo,
     shortcutBindings,
   } = useUIStore()
-  const { nextClip, previousClip, currentProject, updateSettings } = useProjectStore()
+  const { nextClip, previousClip, currentProject, updateSettings, clips, currentClipIndex } = useProjectStore()
+  const hasCurrentClipVideo = Boolean(clips[currentClipIndex]?.filePath)
 
   useEffect(() => {
     const handleClick = () => onClose()
@@ -104,9 +105,11 @@ export default function ContextMenu({
     })
     items.push({ separator: true, label: '' })
     items.push({
-      label: showPipVideo ? 'Masquer la vidéo PiP' : 'Afficher la vidéo PiP',
+      label: hasCurrentClipVideo
+        ? (showPipVideo ? 'Masquer la vidéo PiP' : 'Afficher la vidéo PiP')
+        : 'Vidéo PiP indisponible (pas de média)',
       icon: MonitorPlay,
-      onClick: () => { setShowPipVideo(!showPipVideo); onClose() },
+      onClick: hasCurrentClipVideo ? () => { setShowPipVideo(!showPipVideo); onClose() } : undefined,
     })
     if (currentProject) {
       items.push({
@@ -188,10 +191,13 @@ export default function ContextMenu({
             onClick={item.onClick}
             title={item.shortcut ? `${item.label} (${item.shortcut})` : item.label}
             className={`w-full flex items-center gap-2 px-3 py-1.5 text-xs transition-colors ${
-              item.active
+              !item.onClick
+                ? 'text-gray-600 cursor-not-allowed'
+                : item.active
                 ? 'text-primary-400 bg-primary-600/10'
                 : 'text-gray-300 hover:bg-surface-light hover:text-white'
             }`}
+            disabled={!item.onClick}
           >
             {item.icon && <item.icon size={13} />}
             <span className="flex-1 text-left">{item.label}</span>

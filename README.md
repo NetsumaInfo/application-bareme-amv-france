@@ -167,32 +167,80 @@ Tous les raccourcis sont personnalisables dans les paramètres.
 ```text
 src/                    Frontend React
   components/
-    layout/             AppLayout, Header, Sidebar, ContextMenu
-    player/             VideoPlayer, PlayerControls, FloatingVideoPlayer,
+    layout/             AppLayout, AppMainContent, AppFloatingLayers,
+                        Header, ContextMenu, BaremeSelector,
+                        NotationModeSwitcher, NotationTabContent,
+                        WelcomeScreen
+      hooks/            Hooks layout (useLayoutState, etc.)
+    player/             VideoPlayer, PlayerControls, PlayerMainControls,
+                        PlayerSeekBar, FloatingVideoPlayer,
                         FullscreenOverlay, AudioDbMeter, MediaInfoPanel,
                         AudioTrackSelector, SubtitleSelector
-    interfaces/         SpreadsheetInterface, ModernInterface, NotationInterface,
-                        ResultatsInterface, ExportInterface, InterfaceSwitcher
-    notes/              DetachedNotesWindow, TimecodeChipList, TimecodeTextarea,
-                        InlineTimecodeText
+      floating/         Composants lecteur flottant
+      hooks/            Hooks lecteur (usePlayerResize, etc.)
+      mediaInfo/        Composants panneau MediaInfo
+      overlay/          Composants overlay plein écran
+    interfaces/         SpreadsheetInterface, ModernInterface,
+                        NotationInterface, ResultatsInterface,
+                        ExportInterface, InterfaceSwitcher
+      spreadsheet/      Sous-composants tableur
+      modern/           Sous-composants vue moderne
+      notation/         Sous-composants vue notes
+      resultats/        Sous-composants résultats
+      export/           Sous-composants export
+    notes/              DetachedNotesWindow, DetachedNotesHeader,
+                        DetachedFramePreview, DetachedNotesLoading,
+                        TimecodeChipList, TimecodeTextarea,
+                        InlineTimecodeText, insertTextAtCursor
+      detached/         Sous-composants fenêtre détachée
     project/            ProjectManager, CreateProjectModal, VideoList,
                         ProgressIndicator
-    settings/           SettingsPanel
-    scoring/            BaremeEditor
-  store/                usePlayerStore, useProjectStore, useNotationStore, useUIStore
+                        useProjectFileActions, useProjectMenuActions,
+                        useProjectVideoActions
+    settings/           SettingsPanel, SettingsGeneralTab,
+                        SettingsNotationTab, SettingsShortcutsTab,
+                        SettingsToggle, settingsPanelConfig
+    scoring/            BaremeEditor, baremeEditorUtils
+      bareme/           Sous-composants éditeur de barème
+  store/                usePlayerStore, useProjectStore, useNotationStore,
+                        useUIStore
+                        notationStoreBaremeActions, notationStoreNoteActions,
+                        notationStoreStateUpdates, notationStoreUtils
+                        projectStoreClipActions, projectStoreNormalization,
+                        projectStoreProjectActions
   hooks/                usePlayer, useAutoSave, useKeyboardShortcuts, useSaveProject
   services/             tauri.ts (wrappers invoke)
+    tauri_api/          API Tauri modulaire
   types/                Types TypeScript (project, player, notation, bareme)
   schemas/              Schémas Zod
-  utils/                scoring, formatters, shortcuts, timecodes, results, colors,
-                        screenshot
+  utils/                scoring, formatters, shortcuts, timecodes, results,
+                        colors, screenshot, clipImport, clipImportTokens,
+                        clipOrder, manualClipParser
 
 src-tauri/src/          Backend Rust
   main.rs               setup Tauri + init mpv + création overlay
   state.rs              AppState
-  player/               mpv_ffi, mpv_wrapper, mpv_window, commands
-  project/              save/load/export JSON
-  video/                scan de dossiers vidéos
+  app_windows.rs        Gestion fenêtres applicatives
+  player/
+    mod.rs              Module player
+    bootstrap.rs        Initialisation mpv
+    commands/           Commandes Tauri (modulaire)
+    mpv_ffi.rs          Bindings FFI mpv
+    mpv_wrapper.rs      Wrapper haut niveau mpv
+    mpv_wrapper_media.rs    Media info wrapper
+    mpv_wrapper_properties.rs  Propriétés mpv
+    mpv_probe.rs        Probe media (ffprobe, mediainfo)
+      mpv_probe/        Sous-modules probe
+    mpv_window.rs       Gestion fenêtre mpv
+    mpv_window_geometry.rs  Géométrie fenêtre
+    mpv_window_mode.rs  Modes fenêtre (PiP, fullscreen)
+    mpv_window_state.rs État fenêtre
+    mpv_win32.rs        Intégration Win32
+    mpv_types.rs        Types mpv
+  project/
+    manager.rs          Gestion projet
+    manager/            Sous-modules manager
+  video/                Scan de dossiers vidéos
 ```
 
 ## Formats vidéo supportés

@@ -1,10 +1,12 @@
 import { create } from 'zustand'
+import { emit } from '@tauri-apps/api/event'
 import type { InterfaceMode, AppTab } from '@/types/notation'
 import type { ShortcutAction } from '@/utils/shortcuts'
 import { DEFAULT_SHORTCUT_BINDINGS } from '@/utils/shortcuts'
 import * as tauri from '@/services/tauri'
 
 type ZoomMode = 'fixed' | 'navigable'
+const AUDIO_DB_UPDATED_EVENT = 'ui:audio-db-updated'
 
 function readAudioDbPref(): boolean {
   return false
@@ -12,6 +14,27 @@ function readAudioDbPref(): boolean {
 
 function normalizeInterfaceMode(mode: InterfaceMode): InterfaceMode {
   return mode === 'modern' ? 'notation' : mode
+}
+
+interface PersistedUiSettings {
+  shortcutBindings?: Record<ShortcutAction, string>
+  showAudioDb?: boolean
+}
+
+async function persistUserSettingsPatch(patch: PersistedUiSettings) {
+  try {
+    const existing = await tauri.loadUserSettings().catch(() => null)
+    const base = existing && typeof existing === 'object'
+      ? (existing as Record<string, unknown>)
+      : {}
+    await tauri.saveUserSettings({ ...base, ...patch })
+  } catch {
+    // Ignore persistence failures to keep UI responsive.
+  }
+}
+
+function broadcastAudioDbSetting(enabled: boolean) {
+  emit(AUDIO_DB_UPDATED_EVENT, { enabled }).catch(() => {})
 }
 
 interface UIStore {
@@ -74,7 +97,13 @@ export const useUIStore = create<UIStore>((set) => ({
   toggleFinalScore: () => set((s) => ({ hideFinalScore: !s.hideFinalScore })),
   toggleAverages: () => set((s) => ({ hideAverages: !s.hideAverages })),
   toggleTextNotes: () => set((s) => ({ hideTextNotes: !s.hideTextNotes })),
-  toggleAudioDb: () => set({ showAudioDb: false }),
+  toggleAudioDb: () =>
+    set((state) => {
+      const next = !state.showAudioDb
+      persistUserSettingsPatch({ showAudioDb: next }).catch(() => {})
+      broadcastAudioDbSetting(next)
+      return { showAudioDb: next }
+    }),
   toggleSidebar: () => set((s) => ({ sidebarCollapsed: !s.sidebarCollapsed })),
   setShowProjectModal: (show) => set({ showProjectModal: show }),
   setShowBaremeEditor: (show) => set({ showBaremeEditor: show }),
@@ -85,11 +114,11 @@ export const useUIStore = create<UIStore>((set) => ({
   setShortcut: (action, shortcut) =>
     set((state) => {
       const next = { ...state.shortcutBindings, [action]: shortcut }
-      tauri.saveUserSettings({ shortcutBindings: next }).catch(() => {})
+      persistUserSettingsPatch({ shortcutBindings: next }).catch(() => {})
       return { shortcutBindings: next }
     }),
   resetShortcuts: () => {
-    tauri.saveUserSettings({ shortcutBindings: { ...DEFAULT_SHORTCUT_BINDINGS } }).catch(() => {})
+    persistUserSettingsPatch({ shortcutBindings: { ...DEFAULT_SHORTCUT_BINDINGS } }).catch(() => {})
     set({ shortcutBindings: { ...DEFAULT_SHORTCUT_BINDINGS } })
   },
   setNotesDetached: (detached) => set({ isNotesDetached: detached }),

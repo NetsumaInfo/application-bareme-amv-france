@@ -32,6 +32,7 @@ export interface ProjectSettings {
   hideFinalScoreUntilEnd: boolean
   hideTotals: boolean
   showMiniatures: boolean
+  showAddRowButton: boolean
   thumbnailDefaultTimeSec: number
 }
 
@@ -85,5 +86,6 @@ export const DEFAULT_PROJECT_SETTINGS: ProjectSettings = {
   hideFinalScoreUntilEnd: false,
   hideTotals: false,
   showMiniatures: false,
+  showAddRowButton: false,
   thumbnailDefaultTimeSec: 10,
 }

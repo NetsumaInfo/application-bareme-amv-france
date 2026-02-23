@@ -6,23 +6,21 @@ import type {
   ProjectData,
   NoteData,
   ImportedJudgeData,
-  ImportedJudgeNote,
-  ImportedJudgeCriterionScore,
 } from '@/types/project'
-import { DEFAULT_PROJECT_SETTINGS } from '@/types/project'
-import { generateId, parseClipName } from '@/utils/formatters'
-
-const NAV_THROTTLE_MS = 240
-let lastClipNavAt = 0
-
-function isClipNavThrottled() {
-  const now = Date.now()
-  if (now - lastClipNavAt < NAV_THROTTLE_MS) {
-    return true
-  }
-  lastClipNavAt = now
-  return false
-}
+import { getSortedClipIndices } from '@/utils/clipOrder'
+import { normalizeProjectDataInput } from '@/store/projectStoreNormalization'
+import {
+  normalizeThumbnailTime,
+  removeClipAndAdjustSelection,
+  updateClipScoredState,
+  updateClipThumbnail,
+} from '@/store/projectStoreClipActions'
+import {
+  buildProjectDataPayload,
+  createProjectEntity,
+  mergeProjectSettings,
+  mergeProjectUpdates,
+} from '@/store/projectStoreProjectActions'
 
 interface ProjectStore {
   currentProject: Project | null
@@ -61,17 +59,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
   isDirty: false,
 
   createProject: (name: string, judgeName: string, baremeId: string) => {
-    const now = new Date().toISOString()
-    const project: Project = {
-      id: generateId(),
-      name,
-      judgeName,
-      createdAt: now,
-      updatedAt: now,
-      baremeId,
-      clipsFolderPath: '',
-      settings: { ...DEFAULT_PROJECT_SETTINGS },
-    }
+    const project = createProjectEntity(name, judgeName, baremeId)
     set({
       currentProject: project,
       clips: [],
@@ -82,181 +70,11 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
   },
 
   setProjectFromData: (data: ProjectData) => {
-    const now = new Date().toISOString()
-    const rawProject = (data.project ?? {}) as unknown as Record<string, unknown>
-    const rawSettings = (rawProject.settings ?? {}) as Record<string, unknown>
-    const numberOr = (value: unknown, fallback: number) => {
-      const n = Number(value)
-      return Number.isFinite(n) ? n : fallback
-    }
-    const clampedThumbnailDefaultTime = Math.max(
-      0,
-      Math.min(
-        600,
-        numberOr(
-          rawSettings.thumbnailDefaultTimeSec ?? rawSettings.thumbnail_default_time_sec,
-          DEFAULT_PROJECT_SETTINGS.thumbnailDefaultTimeSec,
-        ),
-      ),
-    )
-
-    const normalizedProject: Project = {
-      id: (rawProject.id as string) || generateId(),
-      name: (rawProject.name as string) || 'Projet AMV',
-      judgeName:
-        (rawProject.judgeName as string) ||
-        (rawProject.judge_name as string) ||
-        '',
-      createdAt:
-        (rawProject.createdAt as string) ||
-        (rawProject.created_at as string) ||
-        now,
-      updatedAt:
-        (rawProject.updatedAt as string) ||
-        (rawProject.updated_at as string) ||
-        now,
-      baremeId:
-        (rawProject.baremeId as string) ||
-        (rawProject.bareme_id as string) ||
-        data.baremeId ||
-        '',
-      clipsFolderPath:
-        (rawProject.clipsFolderPath as string) ||
-        (rawProject.clips_folder_path as string) ||
-        '',
-      settings: {
-        autoSave:
-          typeof rawSettings.autoSave === 'boolean'
-            ? rawSettings.autoSave
-            : typeof rawSettings.auto_save === 'boolean'
-              ? rawSettings.auto_save
-              : DEFAULT_PROJECT_SETTINGS.autoSave,
-        autoSaveInterval: numberOr(
-          rawSettings.autoSaveInterval ?? rawSettings.auto_save_interval,
-          DEFAULT_PROJECT_SETTINGS.autoSaveInterval,
-        ),
-        defaultPlaybackSpeed: numberOr(
-          rawSettings.defaultPlaybackSpeed ?? rawSettings.default_playback_speed,
-          DEFAULT_PROJECT_SETTINGS.defaultPlaybackSpeed,
-        ),
-        defaultVolume: numberOr(
-          rawSettings.defaultVolume ?? rawSettings.default_volume,
-          DEFAULT_PROJECT_SETTINGS.defaultVolume,
-        ),
-        hideFinalScoreUntilEnd:
-          typeof rawSettings.hideFinalScoreUntilEnd === 'boolean'
-            ? rawSettings.hideFinalScoreUntilEnd
-            : typeof rawSettings.hide_final_score_until_end === 'boolean'
-              ? rawSettings.hide_final_score_until_end
-              : DEFAULT_PROJECT_SETTINGS.hideFinalScoreUntilEnd,
-        hideTotals:
-          typeof rawSettings.hideTotals === 'boolean'
-            ? rawSettings.hideTotals
-            : typeof rawSettings.hide_totals === 'boolean'
-              ? rawSettings.hide_totals
-              : DEFAULT_PROJECT_SETTINGS.hideTotals,
-        showMiniatures:
-          typeof rawSettings.showMiniatures === 'boolean'
-            ? rawSettings.showMiniatures
-            : typeof rawSettings.show_miniatures === 'boolean'
-              ? rawSettings.show_miniatures
-              : DEFAULT_PROJECT_SETTINGS.showMiniatures,
-        thumbnailDefaultTimeSec: clampedThumbnailDefaultTime,
-      },
-      filePath:
-        (rawProject.filePath as string | undefined) ||
-        (rawProject.file_path as string | undefined),
-    }
-
-    const rawClips = Array.isArray(data.clips) ? data.clips : []
-    const clips = rawClips.map((clip, index) => {
-      const rawClip = clip as unknown as Record<string, unknown>
-      const fileName =
-        (rawClip.fileName as string) ||
-        (rawClip.file_name as string) ||
-        ''
-      const parsed = parseClipName(fileName)
-      const maybeThumbnailTime = Number(rawClip.thumbnailTime ?? rawClip.thumbnail_time)
-      const thumbnailTime = Number.isFinite(maybeThumbnailTime) && maybeThumbnailTime >= 0
-        ? maybeThumbnailTime
-        : undefined
-
-      return {
-        id: (rawClip.id as string) || generateId(),
-        fileName,
-        filePath:
-          (rawClip.filePath as string) ||
-          (rawClip.file_path as string) ||
-          '',
-        displayName: (rawClip.displayName as string) || parsed.displayName,
-        author: (rawClip.author as string | undefined) || parsed.author,
-        duration: numberOr(rawClip.duration, 0),
-        hasInternalSubtitles: Boolean(
-          rawClip.hasInternalSubtitles ?? rawClip.has_internal_subtitles ?? false,
-        ),
-        audioTrackCount:
-          Math.max(1, Number(rawClip.audioTrackCount ?? rawClip.audio_track_count ?? 1) || 1),
-        scored: Boolean(rawClip.scored),
-        order: numberOr(rawClip.order, index),
-        thumbnailTime,
-      }
-    })
-
-    const rawImportedJudges = Array.isArray((data as unknown as Record<string, unknown>).importedJudges)
-      ? (data as unknown as Record<string, unknown>).importedJudges
-      : Array.isArray((data as unknown as Record<string, unknown>).imported_judges)
-        ? (data as unknown as Record<string, unknown>).imported_judges
-        : []
-
-    const toImportedJudges = (input: unknown[]): ImportedJudgeData[] =>
-      input
-        .map((item) => {
-          const row = item as Record<string, unknown>
-          const judgeName = typeof row.judgeName === 'string'
-            ? row.judgeName
-            : typeof row.judge_name === 'string'
-              ? row.judge_name
-              : ''
-          if (!judgeName.trim()) return null
-
-          const notesRaw = (row.notes as Record<string, unknown> | undefined) ?? {}
-          const notes: Record<string, ImportedJudgeNote> = {}
-
-          for (const [clipId, noteValue] of Object.entries(notesRaw)) {
-            const noteRow = noteValue as Record<string, unknown>
-            const scoresRaw = (noteRow.scores as Record<string, unknown> | undefined) ?? {}
-            const scores: Record<string, ImportedJudgeCriterionScore> = {}
-
-            for (const [criterionId, scoreValue] of Object.entries(scoresRaw)) {
-              const scoreRow = scoreValue as Record<string, unknown>
-              scores[criterionId] = {
-                value: (scoreRow.value as number | string | boolean) ?? 0,
-                isValid: scoreRow.isValid !== false,
-              }
-            }
-
-            const parsedFinalScore = Number(noteRow.finalScore)
-            const textNotes = typeof noteRow.textNotes === 'string'
-              ? noteRow.textNotes
-              : typeof noteRow.text_notes === 'string'
-                ? noteRow.text_notes
-                : undefined
-            notes[clipId] = Number.isFinite(parsedFinalScore)
-              ? { scores, finalScore: parsedFinalScore, textNotes }
-              : { scores, textNotes }
-          }
-
-          return {
-            judgeName: judgeName.trim(),
-            notes,
-          }
-        })
-        .filter((judge): judge is ImportedJudgeData => judge !== null)
-
+    const { project, clips, importedJudges } = normalizeProjectDataInput(data)
     set({
-      currentProject: normalizedProject,
+      currentProject: project,
       clips,
-      importedJudges: toImportedJudges(rawImportedJudges as unknown[]),
+      importedJudges,
       currentClipIndex: 0,
       isDirty: false,
     })
@@ -266,11 +84,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
     const current = get().currentProject
     if (!current) return
     set({
-      currentProject: {
-        ...current,
-        ...updates,
-        updatedAt: new Date().toISOString(),
-      },
+      currentProject: mergeProjectUpdates(current, updates),
       isDirty: true,
     })
   },
@@ -279,11 +93,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
     const current = get().currentProject
     if (!current) return
     set({
-      currentProject: {
-        ...current,
-        settings: { ...current.settings, ...settings },
-        updatedAt: new Date().toISOString(),
-      },
+      currentProject: mergeProjectSettings(current, settings),
       isDirty: true,
     })
   },
@@ -293,19 +103,10 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
   },
 
   setClipThumbnailTime: (clipId: string, seconds: number | null) => {
-    const normalized = seconds === null ? null : Number(seconds)
-    const safeSeconds = normalized === null
-      ? null
-      : (Number.isFinite(normalized) && normalized >= 0 ? Math.round(normalized * 1000) / 1000 : null)
+    const safeSeconds = normalizeThumbnailTime(seconds)
 
     set((state) => ({
-      clips: state.clips.map((clip) => {
-        if (clip.id !== clipId) return clip
-        if (safeSeconds === null) {
-          return { ...clip, thumbnailTime: undefined }
-        }
-        return { ...clip, thumbnailTime: safeSeconds }
-      }),
+      clips: updateClipThumbnail(state.clips, clipId, safeSeconds),
       isDirty: true,
     }))
   },
@@ -318,25 +119,39 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
   },
 
   nextClip: () => {
-    if (isClipNavThrottled()) return
     const { currentClipIndex, clips } = get()
-    if (currentClipIndex < clips.length - 1) {
-      set({ currentClipIndex: currentClipIndex + 1 })
+    if (clips.length <= 1) return
+    const sortedIndices = getSortedClipIndices(clips)
+    const currentSortedIndex = sortedIndices.indexOf(currentClipIndex)
+    if (currentSortedIndex < 0) return
+
+    const nextSortedIndex = Math.min(sortedIndices.length - 1, currentSortedIndex + 1)
+    if (nextSortedIndex === currentSortedIndex) return
+    const nextIndex = sortedIndices[nextSortedIndex]
+    if (nextIndex >= 0 && nextIndex !== currentClipIndex) {
+      set({ currentClipIndex: nextIndex })
     }
   },
 
   previousClip: () => {
-    if (isClipNavThrottled()) return
-    const { currentClipIndex } = get()
-    if (currentClipIndex > 0) {
-      set({ currentClipIndex: currentClipIndex - 1 })
+    const { currentClipIndex, clips } = get()
+    if (clips.length <= 1) return
+    const sortedIndices = getSortedClipIndices(clips)
+    const currentSortedIndex = sortedIndices.indexOf(currentClipIndex)
+    if (currentSortedIndex < 0) return
+
+    const prevSortedIndex = Math.max(0, currentSortedIndex - 1)
+    if (prevSortedIndex === currentSortedIndex) return
+    const prevIndex = sortedIndices[prevSortedIndex]
+    if (prevIndex >= 0 && prevIndex !== currentClipIndex) {
+      set({ currentClipIndex: prevIndex })
     }
   },
 
   markClipScored: (clipId: string) => {
     const { clips } = get()
     set({
-      clips: clips.map((c) => (c.id === clipId ? { ...c, scored: true } : c)),
+      clips: updateClipScoredState(clips, clipId, true),
       isDirty: true,
     })
   },
@@ -344,23 +159,15 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
   setClipScored: (clipId: string, scored: boolean) => {
     const { clips } = get()
     set({
-      clips: clips.map((c) => (c.id === clipId ? { ...c, scored } : c)),
+      clips: updateClipScoredState(clips, clipId, scored),
       isDirty: true,
     })
   },
 
   removeClip: (clipId: string) => {
     const { clips, currentClipIndex } = get()
-    const newClips = clips.filter((c) => c.id !== clipId)
-    const removedIndex = clips.findIndex((c) => c.id === clipId)
-    let newIndex = currentClipIndex
-    if (removedIndex <= currentClipIndex && currentClipIndex > 0) {
-      newIndex = Math.min(currentClipIndex - 1, newClips.length - 1)
-    }
-    if (newIndex >= newClips.length) {
-      newIndex = Math.max(0, newClips.length - 1)
-    }
-    set({ clips: newClips, currentClipIndex: newIndex, isDirty: true })
+    const nextState = removeClipAndAdjustSelection(clips, currentClipIndex, clipId)
+    set({ ...nextState, isDirty: true })
   },
 
   addImportedJudge: (judge) =>
@@ -395,14 +202,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
   getProjectData: (notes: Record<string, NoteData>): ProjectData | null => {
     const { currentProject, clips, importedJudges } = get()
     if (!currentProject) return null
-    return {
-      version: '1.0',
-      project: currentProject,
-      baremeId: currentProject.baremeId,
-      clips,
-      notes,
-      importedJudges,
-    }
+    return buildProjectDataPayload(currentProject, clips, notes, importedJudges)
   },
 
   reset: () => {

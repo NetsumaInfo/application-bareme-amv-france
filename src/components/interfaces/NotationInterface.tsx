@@ -1,16 +1,17 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { ChevronLeft, ChevronRight, Clock3, ExternalLink, Play } from 'lucide-react'
-import { emit } from '@tauri-apps/api/event'
+import { useRef, useState } from 'react'
+import { ExternalLink } from 'lucide-react'
 import { useNotationStore } from '@/store/useNotationStore'
 import { useProjectStore } from '@/store/useProjectStore'
 import { useUIStore } from '@/store/useUIStore'
 import { usePlayer } from '@/hooks/usePlayer'
-import { getClipPrimaryLabel, getClipSecondaryLabel, formatPreciseTimecode } from '@/utils/formatters'
-import { CATEGORY_COLOR_PRESETS, sanitizeColor, withAlpha } from '@/utils/colors'
-import { normalizeShortcutFromEvent } from '@/utils/shortcuts'
-import { snapToFrameSeconds } from '@/utils/timecodes'
-import TimecodeTextarea from '@/components/notes/TimecodeTextarea'
-import * as tauri from '@/services/tauri'
+import { DetachedFramePreview } from '@/components/notes/DetachedFramePreview'
+import { useDetachedFramePreview } from '@/components/notes/detached/useDetachedFramePreview'
+import { useDetachedClipFps } from '@/components/notes/detached/useDetachedClipFps'
+import { NotationClipHeader } from '@/components/interfaces/notation/NotationClipHeader'
+import { NotationCategoriesAccordion } from '@/components/interfaces/notation/NotationCategoriesAccordion'
+import { NotationNotesFooter } from '@/components/interfaces/notation/NotationNotesFooter'
+import { useNotationCategories } from '@/components/interfaces/notation/useNotationCategories'
+import { useNotationInteractions } from '@/components/interfaces/notation/useNotationInteractions'
 
 export default function NotationInterface() {
   const { currentBareme, updateCriterion, setCategoryNote, setCriterionNote, setTextNotes, getNoteForClip, getScoreForClip } = useNotationStore()
@@ -23,323 +24,59 @@ export default function NotationInterface() {
   const totalScore = currentClip ? getScoreForClip(currentClip.id) : 0
 
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null)
-  const [clipFps, setClipFps] = useState<number | null>(null)
-  const [framePreview, setFramePreview] = useState<{
-    visible: boolean
-    left: number
-    top: number
-    image: string | null
-    loading: boolean
-  }>({
-    visible: false,
-    left: 0,
-    top: 0,
-    image: null,
-    loading: false,
-  })
+  const clipFps = useDetachedClipFps(currentClip ?? null)
+  const { framePreview, hideFramePreview, showFramePreview } = useDetachedFramePreview(currentClip?.filePath)
 
   const inputRefs = useRef<Map<string, HTMLInputElement>>(new Map())
-  const navGuardRef = useRef(0)
   const [expandedCriterionNotes, setExpandedCriterionNotes] = useState<Record<string, boolean>>({})
   const categoryTextareaRefs = useRef<Map<string, HTMLTextAreaElement>>(new Map())
   const globalTextareaRef = useRef<HTMLTextAreaElement | null>(null)
   const activeNoteFieldRef = useRef<{ kind: 'category' | 'global'; category?: string } | null>(null)
-  const framePreviewCacheRef = useRef<Map<string, string>>(new Map())
-  const hoverRequestRef = useRef(0)
 
   const allClipsScored = clips.length > 0 && clips.every((clip) => clip.scored)
   const hideTotalsUntilAllScored = Boolean(currentProject?.settings.hideFinalScoreUntilEnd) && !allClipsScored
   const hideTotalsSetting = Boolean(currentProject?.settings.hideTotals)
   const shouldHideTotals = hideFinalScore || hideTotalsSetting || hideTotalsUntilAllScored
 
-  const categories = useMemo(() => {
-    if (!currentBareme) return []
-    const map = new Map<string, typeof currentBareme.criteria>()
-    for (const criterion of currentBareme.criteria) {
-      const category = criterion.category || 'General'
-      if (!map.has(category)) map.set(category, [])
-      map.get(category)!.push(criterion)
-    }
-    return Array.from(map.entries()).map(([category, criteria], index) => ({
-      category,
-      criteria,
-      color: sanitizeColor(
-        currentBareme.categoryColors?.[category],
-        CATEGORY_COLOR_PRESETS[index % CATEGORY_COLOR_PRESETS.length],
-      ),
-      totalMax: criteria.reduce((sum, c) => sum + (c.max ?? 10), 0),
-    }))
-  }, [currentBareme])
+  const {
+    categories,
+    flatCriteria,
+    effectiveExpandedCategory,
+    getCategoryScore,
+  } = useNotationCategories({
+    currentBareme,
+    note,
+    expandedCategory,
+  })
 
-  useEffect(() => {
-    let active = true
-    if (!currentClip?.filePath) {
-      return () => {
-        active = false
-      }
-    }
-
-    tauri.playerGetMediaInfo(currentClip.filePath)
-      .then((info) => {
-        if (!active) return
-        const fps = Number(info?.fps)
-        setClipFps(Number.isFinite(fps) && fps > 0 ? fps : null)
-      })
-      .catch(() => {
-        if (!active) return
-        setClipFps(null)
-      })
-
-    return () => {
-      active = false
-    }
-  }, [currentClip?.id, currentClip?.filePath])
-
-  const flatCriteria = useMemo(
-    () => categories.flatMap((group) => group.criteria),
-    [categories],
-  )
-
-  const effectiveExpandedCategory = useMemo(() => {
-    if (expandedCategory && categories.some((item) => item.category === expandedCategory)) {
-      return expandedCategory
-    }
-    return categories[0]?.category ?? null
-  }, [categories, expandedCategory])
-
-  const getCategoryScore = useCallback((cat: { criteria: typeof flatCriteria }): number => {
-    if (!note) return 0
-    let total = 0
-    for (const c of cat.criteria) {
-      const score = note.scores[c.id]
-      if (score && score.isValid && typeof score.value === 'number') {
-        total += score.value
-      }
-    }
-    return Math.round(total * 100) / 100
-  }, [note])
-
-  const handleValueChange = useCallback((criterionId: string, value: number | string) => {
-    if (!currentClip) return
-    const numValue = value === '' ? '' : Number(value)
-    if (typeof numValue === 'number' && isNaN(numValue)) return
-    updateCriterion(currentClip.id, criterionId, numValue as number)
-    markDirty()
-  }, [currentClip, updateCriterion, markDirty])
-
-  const moveFocus = useCallback((fromIndex: number, direction: 'prev' | 'next') => {
-    const targetIndex = direction === 'next' ? fromIndex + 1 : fromIndex - 1
-    if (targetIndex < 0 || targetIndex >= flatCriteria.length) return
-    const targetId = flatCriteria[targetIndex].id
-    const input = inputRefs.current.get(targetId)
-    if (input) {
-      input.focus()
-      input.select()
-    }
-  }, [flatCriteria])
-
-  const handleKeyDown = useCallback((e: React.KeyboardEvent, index: number) => {
-    const shortcut = normalizeShortcutFromEvent(e.nativeEvent)
-    if (shortcut === shortcutBindings.notesNextField || shortcut === shortcutBindings.notesFieldDown) {
-      e.preventDefault()
-      moveFocus(index, 'next')
-      return
-    }
-    if (shortcut === shortcutBindings.notesPrevField || shortcut === shortcutBindings.notesFieldUp) {
-      e.preventDefault()
-      moveFocus(index, 'prev')
-      return
-    }
-
-    if (e.key === 'ArrowDown' || e.key === 'Enter') {
-      e.preventDefault()
-      moveFocus(index, 'next')
-    } else if (e.key === 'ArrowUp') {
-      e.preventDefault()
-      moveFocus(index, 'prev')
-    }
-  }, [moveFocus, shortcutBindings])
-
-  const openPlayerAtFront = useCallback(() => {
-    setShowPipVideo(true)
-    tauri.playerShow()
-      .then(() => tauri.playerSyncOverlay().catch(() => {}))
-      .catch(() => {})
-    setTimeout(() => {
-      tauri.playerSyncOverlay().catch(() => {})
-    }, 120)
-  }, [setShowPipVideo])
-
-  const navigateClip = useCallback((direction: 'next' | 'prev') => {
-    const now = Date.now()
-    if (now - navGuardRef.current < 420) return
-    navGuardRef.current = now
-    if (direction === 'next') {
-      nextClip()
-    } else {
-      previousClip()
-    }
-  }, [nextClip, previousClip])
-
-  const jumpToTimecode = useCallback(async (seconds: number, payload?: { category?: string; criterionId?: string }) => {
-    if (!currentClip || !Number.isFinite(seconds) || seconds < 0) return
-    openPlayerAtFront()
-    await seek(seconds)
-    await pause()
-
-    const detail = {
-      clipId: currentClip.id,
-      seconds,
-      category: payload?.category ?? null,
-      criterionId: payload?.criterionId ?? null,
-    }
-    window.dispatchEvent(new CustomEvent('amv:focus-note-marker', { detail }))
-    emit('main:focus-note-marker', detail).catch(() => {})
-  }, [currentClip, openPlayerAtFront, pause, seek])
-
-  const insertTextAtCursor = useCallback((textarea: HTMLTextAreaElement, insertion: string) => {
-    const start = textarea.selectionStart ?? textarea.value.length
-    const end = textarea.selectionEnd ?? start
-    const value = textarea.value
-    const before = value.slice(0, start)
-    const after = value.slice(end)
-    const needsSpaceBefore = before.length > 0 && !/\s$/.test(before)
-    const needsSpaceAfter = after.length > 0 && !/^\s/.test(after)
-    const insert = `${needsSpaceBefore ? ' ' : ''}${insertion}${needsSpaceAfter ? ' ' : ''}`
-    const nextValue = `${before}${insert}${after}`
-    const caret = before.length + insert.length
-    return { nextValue, caret }
-  }, [])
-
-  const insertCurrentTimecode = useCallback(async () => {
-    if (!currentClip) return
-    const target = activeNoteFieldRef.current
-    if (!target) return
-
-    const status = await tauri.playerGetStatus().catch(() => null)
-    if (!status) return
-    const preciseSeconds = snapToFrameSeconds(status.current_time, clipFps)
-    const timecode = formatPreciseTimecode(preciseSeconds)
-
-    if (target.kind === 'global') {
-      const textarea = globalTextareaRef.current
-      if (!textarea) return
-      const { nextValue, caret } = insertTextAtCursor(textarea, timecode)
-      setTextNotes(currentClip.id, nextValue)
-      markDirty()
-      requestAnimationFrame(() => {
-        textarea.focus()
-        textarea.setSelectionRange(caret, caret)
-      })
-      return
-    }
-
-    const category = target.category
-    if (!category) return
-    const textarea = categoryTextareaRefs.current.get(category)
-    if (!textarea) return
-    const { nextValue, caret } = insertTextAtCursor(textarea, timecode)
-    setCategoryNote(currentClip.id, category, nextValue)
-    markDirty()
-    requestAnimationFrame(() => {
-      textarea.focus()
-      textarea.setSelectionRange(caret, caret)
-    })
-  }, [clipFps, currentClip, insertTextAtCursor, markDirty, setCategoryNote, setTextNotes])
-
-  useEffect(() => {
-    const onKeyDown = (event: KeyboardEvent) => {
-      const shortcut = normalizeShortcutFromEvent(event)
-      if (shortcut && shortcut === shortcutBindings.insertTimecode) {
-        event.preventDefault()
-        event.stopPropagation()
-        insertCurrentTimecode().catch(() => {})
-      }
-    }
-    document.addEventListener('keydown', onKeyDown, true)
-    return () => {
-      document.removeEventListener('keydown', onKeyDown, true)
-    }
-  }, [insertCurrentTimecode, shortcutBindings])
-
-  const hideFramePreview = useCallback(() => {
-    setFramePreview((prev) => ({ ...prev, visible: false }))
-  }, [])
-
-  const showFramePreview = useCallback(async (params: { seconds: number; anchorRect: DOMRect }) => {
-    if (!currentClip?.filePath) return
-    const left = Math.min(window.innerWidth - 250, Math.max(12, params.anchorRect.left))
-    const top = Math.max(12, params.anchorRect.top - 186)
-    const cacheKey = `${currentClip.filePath}|${params.seconds.toFixed(3)}`
-    const requestId = ++hoverRequestRef.current
-
-    const cached = framePreviewCacheRef.current.get(cacheKey)
-    if (cached) {
-      setFramePreview({
-        visible: true,
-        left,
-        top,
-        image: cached,
-        loading: false,
-      })
-      return
-    }
-
-    setFramePreview({
-      visible: true,
-      left,
-      top,
-      image: null,
-      loading: true,
-    })
-
-    const image = await tauri.playerGetFramePreview(currentClip.filePath, params.seconds, 236).catch(() => null)
-    if (hoverRequestRef.current !== requestId) return
-    if (image) {
-      framePreviewCacheRef.current.set(cacheKey, image)
-    }
-    setFramePreview({
-      visible: true,
-      left,
-      top,
-      image,
-      loading: false,
-    })
-  }, [currentClip])
-
-  useEffect(() => {
-    const onFocusMarker = (event: Event) => {
-      const custom = event as CustomEvent<{
-        clipId?: string
-        category?: string | null
-        criterionId?: string | null
-      }>
-      if (!currentClip) return
-      if (!custom.detail?.clipId || custom.detail.clipId !== currentClip.id) return
-
-      let targetCategory = custom.detail.category ?? null
-      if (!targetCategory && custom.detail.criterionId) {
-        targetCategory = currentBareme?.criteria.find((criterion) => criterion.id === custom.detail.criterionId)?.category ?? null
-      }
-
-      if (targetCategory) {
-        setExpandedCategory(targetCategory)
-        setTimeout(() => {
-          categoryTextareaRefs.current.get(targetCategory || '')?.focus()
-        }, 40)
-        return
-      }
-
-      setTimeout(() => {
-        globalTextareaRef.current?.focus()
-      }, 40)
-    }
-
-    window.addEventListener('amv:focus-note-marker', onFocusMarker as EventListener)
-    return () => {
-      window.removeEventListener('amv:focus-note-marker', onFocusMarker as EventListener)
-    }
-  }, [currentBareme?.criteria, currentClip])
+  const {
+    handleValueChange,
+    handleKeyDown,
+    openPlayerAtFront,
+    navigateClip,
+    jumpToTimecode,
+    insertCurrentTimecode,
+  } = useNotationInteractions({
+    currentClip,
+    currentBareme,
+    flatCriteria,
+    clipFps,
+    shortcutBindings,
+    inputRefs,
+    categoryTextareaRefs,
+    globalTextareaRef,
+    activeNoteFieldRef,
+    updateCriterion,
+    markDirty,
+    nextClip,
+    previousClip,
+    setShowPipVideo,
+    seek,
+    pause,
+    setTextNotes,
+    setCategoryNote,
+    setExpandedCategory,
+  })
 
   if (!currentBareme || !currentClip) {
     return (
@@ -363,328 +100,86 @@ export default function NotationInterface() {
 
   return (
     <div className="flex flex-col w-full h-full text-gray-200" style={{ background: '#0f0f23' }}>
-      <div className="flex items-center justify-between px-3 py-2 border-b border-gray-700 shrink-0" style={{ background: '#1a1a2e' }}>
-        <button
-          onClick={() => navigateClip('prev')}
-          disabled={currentClipIndex === 0}
-          className="p-1 rounded hover:bg-surface-light text-gray-400 hover:text-white disabled:opacity-30 transition-colors"
-        >
-          <ChevronLeft size={16} />
-        </button>
-        <div
-          className="text-center min-w-0 flex-1 px-2"
-          onDoubleClick={openPlayerAtFront}
-          title="Double clic pour ouvrir le lecteur"
-        >
-          <div className="flex items-center justify-center gap-2 min-w-0 text-[11px] leading-none">
-            <button
-              onClick={(event) => {
-                event.stopPropagation()
-                openPlayerAtFront()
-              }}
-              className="p-0.5 rounded hover:bg-surface-light text-gray-400 hover:text-white transition-colors shrink-0"
-              title="Ouvrir la vidéo"
-            >
-              <Play size={13} />
-            </button>
-            <span className="font-semibold text-white truncate max-w-[40%]">
-              {getClipPrimaryLabel(currentClip)}
-            </span>
-            {getClipSecondaryLabel(currentClip) && (
-              <>
-                <span className="text-gray-600">-</span>
-                <span className="text-primary-400 truncate max-w-[32%]">{getClipSecondaryLabel(currentClip)}</span>
-              </>
-            )}
-            <span className="text-gray-500 shrink-0">
-              {currentClipIndex + 1}/{clips.length}
-            </span>
-          </div>
-        </div>
-        <div className="flex items-center gap-1">
-          <button
-            onClick={() => navigateClip('next')}
-            disabled={currentClipIndex >= clips.length - 1}
-            className="p-1 rounded hover:bg-surface-light text-gray-400 hover:text-white disabled:opacity-30 transition-colors"
-          >
-            <ChevronRight size={16} />
-          </button>
-        </div>
-      </div>
+      <NotationClipHeader
+        clip={currentClip}
+        currentClipIndex={currentClipIndex}
+        totalClips={clips.length}
+        hasVideo={Boolean(currentClip.filePath)}
+        totalScore={totalScore}
+        totalPoints={currentBareme.totalPoints}
+        shouldHideTotals={shouldHideTotals}
+        onNavigate={navigateClip}
+        onOpenPlayer={openPlayerAtFront}
+      />
 
-      {!shouldHideTotals && (
-        <div className="flex items-center justify-between px-3 py-1.5 border-b border-gray-700/50 shrink-0" style={{ background: '#12122a' }}>
-          <span className="text-[10px] text-gray-500 uppercase tracking-wider">Score total</span>
-          <span className="text-sm font-bold text-white">
-            {totalScore}
-            <span className="text-xs text-gray-400 font-normal">/{currentBareme.totalPoints}</span>
-          </span>
-        </div>
-      )}
+      <NotationCategoriesAccordion
+        categories={categories}
+        effectiveExpandedCategory={effectiveExpandedCategory}
+        flatCriteria={flatCriteria}
+        note={note}
+        currentClipId={currentClip.id}
+        shouldHideTotals={shouldHideTotals}
+        clipFps={clipFps}
+        expandedCriterionNotes={expandedCriterionNotes}
+        inputRefs={inputRefs}
+        categoryTextareaRefs={categoryTextareaRefs}
+        onToggleCategory={(category, isExpanded) => setExpandedCategory(isExpanded ? null : category)}
+        onToggleCriterionNote={(criterionId) => {
+          setExpandedCriterionNotes((prev) => ({
+            ...prev,
+            [criterionId]: !prev[criterionId],
+          }))
+        }}
+        onExpandCriterionNote={(criterionId) => {
+          setExpandedCriterionNotes((prev) => ({
+            ...prev,
+            [criterionId]: true,
+          }))
+        }}
+        onValueChange={handleValueChange}
+        onKeyDown={handleKeyDown}
+        onSetCriterionNote={setCriterionNote}
+        onSetCategoryNote={setCategoryNote}
+        onSetActiveCategoryField={(category) => {
+          activeNoteFieldRef.current = { kind: 'category', category }
+        }}
+        onJumpToTimecode={(seconds, payload) => {
+          jumpToTimecode(seconds, payload).catch(() => {})
+        }}
+        onTimecodeHover={({ seconds, anchorRect }) => {
+          showFramePreview({ seconds, anchorRect }).catch(() => {})
+        }}
+        onTimecodeLeave={hideFramePreview}
+        onMarkDirty={markDirty}
+        getCategoryScore={getCategoryScore}
+      />
 
-      <div className="flex-1 overflow-y-auto py-1">
-        {categories.map(({ category, criteria, color, totalMax }) => {
-          const isExpanded = effectiveExpandedCategory === category
-          const catScore = getCategoryScore({ criteria })
+      <NotationNotesFooter
+        hidden={hideTextNotes}
+        hasVideo={Boolean(currentClip.filePath)}
+        noteText={note?.textNotes ?? ''}
+        clipFps={clipFps}
+        globalTextareaRef={globalTextareaRef}
+        onInsertTimecode={() => {
+          insertCurrentTimecode().catch(() => {})
+        }}
+        onChangeText={(nextValue) => {
+          setTextNotes(currentClip.id, nextValue)
+          markDirty()
+        }}
+        onFocus={() => {
+          activeNoteFieldRef.current = { kind: 'global' }
+        }}
+        onJumpToTimecode={(seconds) => {
+          jumpToTimecode(seconds).catch(() => {})
+        }}
+        onTimecodeHover={({ seconds, anchorRect }) => {
+          showFramePreview({ seconds, anchorRect }).catch(() => {})
+        }}
+        onTimecodeLeave={hideFramePreview}
+      />
 
-          return (
-            <div key={category} className="border-b border-gray-800/60">
-              <button
-                onClick={() => setExpandedCategory(isExpanded ? null : category)}
-                className="w-full flex items-center justify-between px-3 py-2 text-left transition-colors hover:brightness-110"
-                style={{
-                  backgroundColor: isExpanded ? withAlpha(color, 0.18) : withAlpha(color, 0.08),
-                }}
-              >
-                <div className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-sm shrink-0" style={{ backgroundColor: color }} />
-                  <span className="text-[11px] font-semibold uppercase tracking-wider" style={{ color }}>
-                    {category}
-                  </span>
-                </div>
-                <div className="flex items-center gap-2">
-                  {!shouldHideTotals ? (
-                    <>
-                      <span className="text-xs font-mono font-bold" style={{ color: catScore > 0 ? color : '#6b7280' }}>
-                        {catScore}
-                      </span>
-                      <span className="text-[10px] text-gray-500">/{totalMax}</span>
-                    </>
-                  ) : (
-                    <span className="text-xs font-mono font-bold text-gray-600">-</span>
-                  )}
-                  <span
-                    className="text-[10px] transition-transform"
-                    style={{
-                      color: withAlpha(color, 0.6),
-                      transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
-                    }}
-                  >
-                    v
-                  </span>
-                </div>
-              </button>
-
-              {isExpanded && (
-                <div className="px-2 py-1.5 space-y-1" style={{ backgroundColor: withAlpha(color, 0.04) }}>
-                  {criteria.map((criterion) => {
-                    const flatIndex = flatCriteria.findIndex((item) => item.id === criterion.id)
-                    const score = note?.scores[criterion.id]
-                    const value = score?.value ?? ''
-                    const hasError = score && !score.isValid
-                    const criterionNoteValue = note?.criterionNotes?.[criterion.id] ?? ''
-                    const isCriterionNoteExpanded = Boolean(expandedCriterionNotes[criterion.id])
-
-                    return (
-                      <div key={criterion.id} className="space-y-1">
-                        <div
-                          className="flex items-center gap-2 px-3 py-2 rounded-md transition-colors"
-                          style={{
-                            backgroundColor: hasError ? withAlpha('#ef4444', 0.12) : withAlpha(color, 0.07),
-                          }}
-                        >
-                          <div className="flex-1 min-w-0">
-                            <span className="text-xs text-gray-200 truncate block" title={criterion.name}>
-                              {criterion.name}
-                            </span>
-                            {criterion.description && (
-                              <span className="text-[9px] text-gray-500 truncate block">
-                                {criterion.description}
-                              </span>
-                            )}
-                          </div>
-                          <input
-                            ref={(el) => {
-                              if (el) inputRefs.current.set(criterion.id, el)
-                            }}
-                            type="number"
-                            min={criterion.min}
-                            max={criterion.max}
-                            step={criterion.step || 0.5}
-                            value={value === '' ? '' : String(value)}
-                            onChange={(e) => handleValueChange(criterion.id, e.target.value === '' ? '' : Number(e.target.value))}
-                            onKeyDown={(e) => handleKeyDown(e, flatIndex)}
-                            className={`amv-soft-number w-16 px-2 py-1 text-center text-sm rounded-md border font-mono focus-visible:outline-none ${
-                              hasError
-                                ? 'border-accent bg-accent/10 text-accent-light'
-                                : 'text-white focus:border-primary-500'
-                            } focus:outline-none`}
-                            style={!hasError ? {
-                              borderColor: withAlpha(color, 0.42),
-                              backgroundColor: withAlpha(color, 0.1),
-                            } : undefined}
-                          />
-                          <span className="text-[10px] text-gray-500 w-7 text-right font-mono">/{criterion.max ?? 10}</span>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setExpandedCriterionNotes((prev) => ({
-                                ...prev,
-                                [criterion.id]: !prev[criterion.id],
-                              }))
-                            }}
-                            className="ml-1 px-1 text-[10px] leading-none text-gray-400 hover:text-white transition-colors bg-transparent"
-                            style={{ background: 'transparent' }}
-                            title={isCriterionNoteExpanded ? 'Refermer la note' : 'Ouvrir la note'}
-                          >
-                            {isCriterionNoteExpanded ? '▲' : '▼'}
-                          </button>
-                        </div>
-                        {isCriterionNoteExpanded ? (
-                          <TimecodeTextarea
-                            placeholder={`Note "${criterion.name}"...`}
-                            value={criterionNoteValue}
-                            onChange={(nextValue) => {
-                              if (!currentClip) return
-                              setCriterionNote(currentClip.id, criterion.id, nextValue)
-                              markDirty()
-                            }}
-                            textareaClassName="min-h-[30px]"
-                            style={{
-                              backgroundColor: withAlpha(color, 0.045),
-                              borderColor: withAlpha(color, 0.15),
-                            }}
-                            color={color}
-                            fpsHint={clipFps ?? undefined}
-                            onTimecodeSelect={(item) => {
-                              jumpToTimecode(item.seconds, { category, criterionId: criterion.id })
-                            }}
-                            onTimecodeHover={({ item, anchorRect }) => {
-                              showFramePreview({
-                                seconds: item.seconds,
-                                anchorRect,
-                              }).catch(() => {})
-                            }}
-                            onTimecodeLeave={hideFramePreview}
-                          />
-                        ) : criterionNoteValue.trim() ? (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setExpandedCriterionNotes((prev) => ({
-                                ...prev,
-                                [criterion.id]: true,
-                              }))
-                            }}
-                            className="w-full text-left px-2.5 py-1 rounded-md text-[10px] text-gray-400 border border-gray-700 hover:text-gray-200 hover:border-gray-500 transition-colors truncate"
-                            style={{ backgroundColor: withAlpha(color, 0.04) }}
-                            title={criterionNoteValue}
-                          >
-                            {criterionNoteValue.replace(/\s+/g, ' ').slice(0, 96)}
-                          </button>
-                        ) : null}
-                      </div>
-                    )
-                  })}
-
-                  <TimecodeTextarea
-                    textareaRef={(el) => {
-                      if (el) categoryTextareaRefs.current.set(category, el)
-                      else categoryTextareaRefs.current.delete(category)
-                    }}
-                    placeholder={`Notes "${category}"...`}
-                    value={note?.categoryNotes?.[category] ?? ''}
-                    onChange={(nextValue) => {
-                      if (!currentClip) return
-                      setCategoryNote(currentClip.id, category, nextValue)
-                      markDirty()
-                    }}
-                    onFocus={() => {
-                      activeNoteFieldRef.current = { kind: 'category', category }
-                    }}
-                    className="mt-1"
-                    textareaClassName="min-h-[36px]"
-                    style={{
-                      backgroundColor: withAlpha(color, 0.05),
-                      borderColor: withAlpha(color, 0.2),
-                    }}
-                    color={color}
-                    fpsHint={clipFps ?? undefined}
-                    onTimecodeSelect={(item) => {
-                      jumpToTimecode(item.seconds, { category })
-                    }}
-                    onTimecodeHover={({ item, anchorRect }) => {
-                      showFramePreview({
-                        seconds: item.seconds,
-                        anchorRect,
-                      }).catch(() => {})
-                    }}
-                    onTimecodeLeave={hideFramePreview}
-                  />
-                </div>
-              )}
-            </div>
-          )
-        })}
-      </div>
-
-      {!hideTextNotes && (
-        <div className="border-t border-gray-700 shrink-0" style={{ background: '#1a1a2e' }}>
-          <div className="px-3 py-1.5 border-b border-gray-700/60 flex items-center justify-end">
-            <button
-              type="button"
-              onClick={() => insertCurrentTimecode().catch(() => {})}
-              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] border border-primary-500/40 bg-primary-500/10 text-primary-300 hover:bg-primary-500/20 transition-colors"
-              title="Insérer le timecode courant"
-            >
-              <Clock3 size={12} />
-              Timecode
-            </button>
-          </div>
-
-          <div className="px-3 py-2">
-            <TimecodeTextarea
-              textareaRef={(el) => {
-                globalTextareaRef.current = el
-              }}
-              placeholder="Notes generales..."
-              value={note?.textNotes ?? ''}
-              onChange={(nextValue) => {
-                if (!currentClip) return
-                setTextNotes(currentClip.id, nextValue)
-                markDirty()
-              }}
-              onFocus={() => {
-                activeNoteFieldRef.current = { kind: 'global' }
-              }}
-              textareaClassName="min-h-[36px]"
-              color="#60a5fa"
-              fpsHint={clipFps ?? undefined}
-              onTimecodeSelect={(item) => {
-                jumpToTimecode(item.seconds)
-              }}
-              onTimecodeHover={({ item, anchorRect }) => {
-                showFramePreview({
-                  seconds: item.seconds,
-                  anchorRect,
-                }).catch(() => {})
-              }}
-              onTimecodeLeave={hideFramePreview}
-            />
-          </div>
-        </div>
-      )}
-
-      {framePreview.visible && (
-        <div
-          className="fixed z-[120] pointer-events-none rounded-lg border border-gray-600 bg-surface shadow-2xl overflow-hidden"
-          style={{ left: framePreview.left, top: framePreview.top, width: 236 }}
-        >
-          <div className="h-[132px] bg-black flex items-center justify-center">
-            {framePreview.loading ? (
-              <span className="text-[10px] text-gray-500">Chargement frame...</span>
-            ) : framePreview.image ? (
-              <img
-                src={framePreview.image}
-                alt="Frame preview"
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              <span className="text-[10px] text-gray-500">Preview indisponible</span>
-            )}
-          </div>
-        </div>
-      )}
+      <DetachedFramePreview framePreview={framePreview} />
     </div>
   )
 }

@@ -1,481 +1,50 @@
-import { useState, useEffect, useRef, useCallback, useMemo, type ChangeEvent } from 'react'
-import {
-  Play, Pause, SkipBack, SkipForward,
-  Volume2, VolumeX, Minimize2, Maximize2, X, ImagePlus,
-  ChevronLeft, ChevronRight,
-  Subtitles, Headphones,
-} from 'lucide-react'
-import * as tauri from '@/services/tauri'
-import { formatPreciseTimecode, formatTime } from '@/utils/formatters'
-import { emit, listen } from '@tauri-apps/api/event'
-import { appWindow } from '@tauri-apps/api/window'
-import type { TrackItem } from '@/services/tauri'
-import { DEFAULT_SHORTCUT_BINDINGS, normalizeShortcutFromEvent, type ShortcutAction } from '@/utils/shortcuts'
-import AudioDbMeter from './AudioDbMeter'
-
-interface ClipInfo {
-  name: string
-  index: number
-  total: number
-  miniaturesEnabled?: boolean
-}
-
-interface OverlayTimecodeMarker {
-  key: string
-  raw: string
-  seconds: number
-  color: string
-  previewText?: string
-  source?: string | null
-  category?: string | null
-  criterionId?: string | null
-}
+import { emit } from '@tauri-apps/api/event'
+import { OverlayTopBar } from '@/components/player/overlay/OverlayTopBar'
+import { OverlayBottomControls } from '@/components/player/overlay/OverlayBottomControls'
+import { OverlayNoVideoState } from '@/components/player/overlay/OverlayNoVideoState'
+import { useFullscreenOverlayState } from '@/components/player/overlay/useFullscreenOverlayState'
 
 export default function FullscreenOverlay() {
-  const [shortcutBindings, setShortcutBindings] = useState<Record<ShortcutAction, string>>({
-    ...DEFAULT_SHORTCUT_BINDINGS,
-  })
-  const [showControls, setShowControls] = useState(true)
-  const [isPlayerFullscreen, setIsPlayerFullscreen] = useState(false)
-  const [isPlaying, setIsPlaying] = useState(false)
-  const [currentTime, setCurrentTime] = useState(0)
-  const [duration, setDuration] = useState(0)
-  const [volume, setVolume] = useState(80)
-  const [isMuted, setIsMuted] = useState(true)
-  const [clipInfo, setClipInfo] = useState<ClipInfo>({ name: '', index: 0, total: 0 })
-  const [noteMarkers, setNoteMarkers] = useState<OverlayTimecodeMarker[]>([])
-  const [overlayClipId, setOverlayClipId] = useState<string | null>(null)
-  const [markerTooltip, setMarkerTooltip] = useState<{ left: number; text: string } | null>(null)
-  const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const refocusTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const wasFullscreenRef = useRef(false)
-
-  // Track selection state
-  const [subtitleTracks, setSubtitleTracks] = useState<TrackItem[]>([])
-  const [audioTracks, setAudioTracks] = useState<TrackItem[]>([])
-  const [currentSubtitleId, setCurrentSubtitleId] = useState<number | null>(null)
-  const [currentAudioId, setCurrentAudioId] = useState<number | null>(null)
-  const [subMenuOpen, setSubMenuOpen] = useState(false)
-  const [audioMenuOpen, setAudioMenuOpen] = useState(false)
-  const [showAudioDb] = useState(false)
-  const [viewport, setViewport] = useState({
-    width: typeof window !== 'undefined' ? window.innerWidth : 1280,
-    height: typeof window !== 'undefined' ? window.innerHeight : 720,
-  })
-  const subRef = useRef<HTMLDivElement | null>(null)
-  const audioRef = useRef<HTMLDivElement | null>(null)
-  const compactControls = viewport.width < 760 || viewport.height < 430
-  const tinyControls = viewport.width < 620 || viewport.height < 360
-
-  useEffect(() => {
-    tauri.loadUserSettings()
-      .then((data) => {
-        if (!data || typeof data !== 'object') return
-        const settings = data as Record<string, unknown>
-        const rawBindings = settings.shortcutBindings
-        if (!rawBindings || typeof rawBindings !== 'object') return
-        setShortcutBindings({
-          ...DEFAULT_SHORTCUT_BINDINGS,
-          ...(rawBindings as Record<ShortcutAction, string>),
-        })
-      })
-      .catch(() => {})
-  }, [])
-
-  useEffect(() => {
-    const updateViewport = () => {
-      setViewport({
-        width: window.innerWidth,
-        height: window.innerHeight,
-      })
-    }
-    window.addEventListener('resize', updateViewport)
-    updateViewport()
-    return () => window.removeEventListener('resize', updateViewport)
-  }, [])
-
-  useEffect(() => {
-    const timer = setInterval(() => {
-      tauri.playerSyncOverlay().catch(() => {})
-    }, 120)
-    return () => clearInterval(timer)
-  }, [])
-
-  const refreshTracks = useCallback(() => {
-    tauri.playerGetTracks().then((tracks) => {
-      setSubtitleTracks(tracks.subtitle_tracks)
-      setAudioTracks(tracks.audio_tracks)
-
-      setCurrentAudioId((prev) => {
-        if (tracks.audio_tracks.length === 0) return null
-        if (prev !== null && tracks.audio_tracks.some((track) => track.id === prev)) {
-          return prev
-        }
-        return tracks.audio_tracks[0].id
-      })
-
-      setCurrentSubtitleId((prev) => {
-        if (prev === null) return null
-        if (tracks.subtitle_tracks.some((track) => track.id === prev)) return prev
-        return null
-      })
-    }).catch(() => {})
-  }, [])
-
-  useEffect(() => {
-    refreshTracks()
-    const interval = setInterval(refreshTracks, 1200)
-    return () => clearInterval(interval)
-  }, [refreshTracks])
-
-  // Close popups on outside click
-  useEffect(() => {
-    if (!subMenuOpen && !audioMenuOpen) return
-    const handleClick = (e: MouseEvent) => {
-      if (subMenuOpen && subRef.current && !subRef.current.contains(e.target as Node)) {
-        setSubMenuOpen(false)
-      }
-      if (audioMenuOpen && audioRef.current && !audioRef.current.contains(e.target as Node)) {
-        setAudioMenuOpen(false)
-      }
-    }
-    document.addEventListener('mousedown', handleClick)
-    return () => document.removeEventListener('mousedown', handleClick)
-  }, [subMenuOpen, audioMenuOpen])
-
-  // Poll player status
-  useEffect(() => {
-    const poll = async () => {
-      try {
-        const [status, fullscreen] = await Promise.all([
-          tauri.playerGetStatus(),
-          tauri.playerIsFullscreen().catch(() => false),
-        ])
-        setIsPlaying(status.is_playing)
-        setCurrentTime(status.current_time)
-        setDuration(status.duration)
-        setIsPlayerFullscreen(fullscreen)
-        if (fullscreen && !wasFullscreenRef.current) {
-          setShowControls(true)
-        }
-        wasFullscreenRef.current = fullscreen
-      } catch {
-        // Player not available
-      }
-    }
-    const interval = setInterval(poll, 250)
-    poll()
-    return () => clearInterval(interval)
-  }, [])
-
-  // Listen for clip info from main window
-  useEffect(() => {
-    let unlisten: (() => void) | null = null
-    let unlistenMarkers: (() => void) | null = null
-    listen<ClipInfo>('main:clip-changed', (event) => {
-      setClipInfo(event.payload)
-      refreshTracks()
-    }).then(fn => { unlisten = fn })
-
-    listen<{ clipId?: string | null; markers?: OverlayTimecodeMarker[] }>('main:overlay-markers', (event) => {
-      setOverlayClipId(event.payload?.clipId ?? null)
-      setNoteMarkers(event.payload?.markers ?? [])
-    }).then(fn => { unlistenMarkers = fn })
-
-    // Request initial clip info
-    emit('overlay:request-clip-info').catch(() => {})
-    emit('overlay:request-note-markers').catch(() => {})
-
-    return () => {
-      if (unlisten) unlisten()
-      if (unlistenMarkers) unlistenMarkers()
-    }
-  }, [refreshTracks])
-
-  // Ensure overlay window keeps keyboard focus in fullscreen mode
-  useEffect(() => {
-    if (!isPlayerFullscreen) return
-    appWindow.setFocus().catch(() => {})
-    refocusTimerRef.current = setInterval(() => {
-      appWindow.setFocus().catch(() => {})
-    }, 1500)
-    return () => {
-      if (refocusTimerRef.current) clearInterval(refocusTimerRef.current)
-    }
-  }, [isPlayerFullscreen])
-
-  // Auto-hide controls
-  const resetHideTimer = useCallback(() => {
-    if (!isPlayerFullscreen) {
-      return
-    }
-    setShowControls(true)
-    appWindow.setFocus().catch(() => {})
-    if (hideTimerRef.current) clearTimeout(hideTimerRef.current)
-    hideTimerRef.current = setTimeout(() => setShowControls(false), 3000)
-  }, [isPlayerFullscreen])
-
-  useEffect(() => {
-    if (!isPlayerFullscreen) return
-    hideTimerRef.current = setTimeout(() => setShowControls(false), 3000)
-    return () => {
-      if (hideTimerRef.current) clearTimeout(hideTimerRef.current)
-    }
-  }, [isPlayerFullscreen])
-
-  const controlsVisible = !isPlayerFullscreen || showControls
-
-  useEffect(() => {
-    const onActivity = () => resetHideTimer()
-    window.addEventListener('mousemove', onActivity, true)
-    window.addEventListener('mousedown', onActivity, true)
-    window.addEventListener('touchstart', onActivity, true)
-    return () => {
-      window.removeEventListener('mousemove', onActivity, true)
-      window.removeEventListener('mousedown', onActivity, true)
-      window.removeEventListener('touchstart', onActivity, true)
-    }
-  }, [resetHideTimer])
-
-  // Keyboard shortcuts
-  useEffect(() => {
-    const handleKeyDown = async (e: KeyboardEvent) => {
-      const shortcut = normalizeShortcutFromEvent(e)
-      if (!shortcut) return
-
-      if (
-        e.repeat &&
-        (shortcut === shortcutBindings.nextClip || shortcut === shortcutBindings.prevClip)
-      ) {
-        return
-      }
-
-      if (shortcut === shortcutBindings.exitFullscreen || shortcut === shortcutBindings.fullscreen) {
-        e.preventDefault()
-        e.stopPropagation()
-        if (shortcut === shortcutBindings.exitFullscreen) {
-          tauri.playerSetFullscreen(false).catch(() => {})
-        } else {
-          tauri.playerSetFullscreen(!isPlayerFullscreen).catch(() => {})
-        }
-        resetHideTimer()
-        return
-      }
-
-      if (shortcut === shortcutBindings.togglePause) {
-        e.preventDefault()
-        e.stopPropagation()
-        tauri.playerTogglePause().catch(() => {})
-        resetHideTimer()
-        return
-      }
-
-      if (shortcut === shortcutBindings.seekForward) {
-        e.preventDefault()
-        e.stopPropagation()
-        tauri.playerSeekRelative(5).catch(() => {})
-        resetHideTimer()
-        return
-      }
-
-      if (shortcut === shortcutBindings.seekBack) {
-        e.preventDefault()
-        e.stopPropagation()
-        tauri.playerSeekRelative(-5).catch(() => {})
-        resetHideTimer()
-        return
-      }
-
-      if (shortcut === shortcutBindings.seekForwardLong) {
-        e.preventDefault()
-        e.stopPropagation()
-        tauri.playerSeekRelative(30).catch(() => {})
-        resetHideTimer()
-        return
-      }
-
-      if (shortcut === shortcutBindings.seekBackLong) {
-        e.preventDefault()
-        e.stopPropagation()
-        tauri.playerSeekRelative(-30).catch(() => {})
-        resetHideTimer()
-        return
-      }
-
-      if (shortcut === shortcutBindings.nextClip) {
-        e.preventDefault()
-        e.stopPropagation()
-        emit('overlay:next-clip').catch(() => {})
-        resetHideTimer()
-        return
-      }
-
-      if (shortcut === shortcutBindings.prevClip) {
-        e.preventDefault()
-        e.stopPropagation()
-        emit('overlay:prev-clip').catch(() => {})
-        resetHideTimer()
-        return
-      }
-
-      if (shortcut === shortcutBindings.frameForward) {
-        e.preventDefault()
-        e.stopPropagation()
-        tauri.playerFrameStep().catch(() => {})
-        resetHideTimer()
-        return
-      }
-
-      if (shortcut === shortcutBindings.frameBack) {
-        e.preventDefault()
-        e.stopPropagation()
-        tauri.playerFrameBackStep().catch(() => {})
-        resetHideTimer()
-        return
-      }
-
-      if (shortcut === shortcutBindings.screenshot) {
-        e.preventDefault()
-        e.stopPropagation()
-        const status = await tauri.playerGetStatus().catch(() => null)
-        const stamp = status
-          ? formatPreciseTimecode(status.current_time).replace(/[:.]/g, '-')
-          : 'frame'
-        const safeName = (clipInfo.name || 'clip').replace(/[^\w-]+/g, '_')
-        const path = await tauri.saveScreenshotDialog(`${safeName}-${stamp}.png`).catch(() => null)
-        if (path) {
-          await tauri.playerScreenshot(path).catch(() => {})
-        }
-        resetHideTimer()
-        return
-      }
-
-      if (shortcut === shortcutBindings.toggleMiniatures) {
-        e.preventDefault()
-        e.stopPropagation()
-        emit('overlay:toggle-miniatures').catch(() => {})
-        resetHideTimer()
-        return
-      }
-
-      if (shortcut === shortcutBindings.setMiniatureFrame) {
-        e.preventDefault()
-        e.stopPropagation()
-        emit('overlay:set-miniature-frame').catch(() => {})
-        resetHideTimer()
-        return
-      }
-
-      if (shortcut === shortcutBindings.undo) {
-        e.preventDefault()
-        e.stopPropagation()
-        emit('overlay:undo').catch(() => {})
-      }
-    }
-    document.addEventListener('keydown', handleKeyDown, true)
-    return () => {
-      document.removeEventListener('keydown', handleKeyDown, true)
-    }
-  }, [clipInfo.name, isPlayerFullscreen, resetHideTimer, shortcutBindings])
-
-  const handleTogglePause = () => {
-    tauri.playerTogglePause().catch(() => {})
-    resetHideTimer()
-  }
-
-  const handleSeek = (e: ChangeEvent<HTMLInputElement>) => {
-    const pos = Number(e.target.value)
-    tauri.playerSeek(pos).catch(() => {})
-    setCurrentTime(pos)
-    resetHideTimer()
-  }
-
-  const handleSeekRelative = (offset: number) => {
-    tauri.playerSeekRelative(offset).catch(() => {})
-    resetHideTimer()
-  }
-
-  const handleSetVolume = (e: ChangeEvent<HTMLInputElement>) => {
-    const v = Number(e.target.value)
-    setVolume(v)
-    setIsMuted(false)
-    tauri.playerSetVolume(v).catch(() => {})
-    resetHideTimer()
-  }
-
-  const handleToggleMute = () => {
-    const next = !isMuted
-    setIsMuted(next)
-    tauri.playerSetVolume(next ? 0 : volume).catch(() => {})
-    resetHideTimer()
-  }
-
-  const handleExitFullscreen = () => {
-    tauri.playerSetFullscreen(false).catch(() => {})
-  }
-
-  const handleToggleFullscreen = () => {
-    tauri.playerSetFullscreen(!isPlayerFullscreen).catch(() => {})
-    resetHideTimer()
-  }
-
-  const handleClosePlayerWindow = () => {
-    tauri.playerSetFullscreen(false).catch(() => {})
-    tauri.playerHide().catch(() => {})
-    emit('overlay:close-player').catch(() => {})
-  }
-
-  const handleMarkerJump = (marker: OverlayTimecodeMarker) => {
-    tauri.playerSeek(marker.seconds).catch(() => {})
-    tauri.playerPause().catch(() => {})
-    setCurrentTime(marker.seconds)
-    emit('overlay:focus-note-marker', {
-      clipId: overlayClipId,
-      seconds: marker.seconds,
-      category: marker.category ?? null,
-      criterionId: marker.criterionId ?? null,
-      source: marker.source ?? null,
-      raw: marker.raw,
-    }).catch(() => {})
-    resetHideTimer()
-  }
-
-  const visibleMarkers = useMemo(() => {
-    if (!(duration > 0) || noteMarkers.length === 0) return []
-    return noteMarkers.filter((marker) => Number.isFinite(marker.seconds) && marker.seconds >= 0 && marker.seconds <= duration)
-  }, [noteMarkers, duration])
-
-  const handleNextClip = () => {
-    emit('overlay:next-clip').catch(() => {})
-    resetHideTimer()
-  }
-
-  const handlePrevClip = () => {
-    emit('overlay:prev-clip').catch(() => {})
-    resetHideTimer()
-  }
-
-  const handleSelectSubtitle = async (id: number | null) => {
-    try {
-      await tauri.playerSetSubtitleTrack(id)
-      setCurrentSubtitleId(id)
-    } catch (e) {
-      console.error('Failed to set subtitle track:', e)
-    }
-    setSubMenuOpen(false)
-    resetHideTimer()
-  }
-
-  const handleSelectAudio = async (id: number) => {
-    try {
-      await tauri.playerSetAudioTrack(id)
-      setCurrentAudioId(id)
-    } catch (e) {
-      console.error('Failed to set audio track:', e)
-    }
-    setAudioMenuOpen(false)
-    resetHideTimer()
-  }
+  const {
+    clipInfo,
+    compactControls,
+    controlsVisible,
+    currentAudioId,
+    currentSubtitleId,
+    currentTime,
+    duration,
+    isMuted,
+    isPlayerFullscreen,
+    isPlaying,
+    markerTooltip,
+    setMarkerTooltip,
+    showAudioDb,
+    subtitleTracks,
+    audioTracks,
+    subMenuOpen,
+    audioMenuOpen,
+    subRef,
+    audioRef,
+    tinyControls,
+    visibleMarkers,
+    volume,
+    setSubMenuOpen,
+    setAudioMenuOpen,
+    handleSelectSubtitle,
+    handleSelectAudio,
+    handleSeek,
+    handleMarkerJump,
+    handlePrevClip,
+    handleNextClip,
+    handleSeekRelative,
+    handleTogglePause,
+    handleToggleMute,
+    handleSetVolume,
+    handleExitFullscreen,
+    handleToggleFullscreen,
+    handleClosePlayerWindow,
+    resetHideTimer,
+  } = useFullscreenOverlayState()
 
   return (
     <div
@@ -485,288 +54,64 @@ export default function FullscreenOverlay() {
       onMouseDown={resetHideTimer}
       style={{ cursor: isPlayerFullscreen && !controlsVisible ? 'none' : 'default' }}
     >
-      {/* Top gradient with clip info */}
-      <div
-        className={`absolute top-0 left-0 right-0 ${compactControls ? 'px-3 py-2' : 'px-6 py-4'} ${
-          isPlayerFullscreen
-            ? 'bg-gradient-to-b from-black/55 via-slate-950/25 to-transparent'
-            : 'bg-slate-950/52 border-b border-white/10 backdrop-blur-[3px]'
-        } transition-opacity duration-300 ${
-          controlsVisible ? 'opacity-100' : 'opacity-0 pointer-events-none'
-        }`}
-      >
-        <div className="flex items-start justify-between gap-2">
-          <div className="min-w-0">
-            <p className={`${compactControls ? 'text-base' : 'text-lg'} text-white font-medium drop-shadow-lg truncate`}>
-              {clipInfo.name || 'Video'}
-            </p>
-            {clipInfo.total > 0 && (
-              <p className={`${compactControls ? 'text-xs' : 'text-sm'} text-gray-300 drop-shadow`}>
-                Clip {clipInfo.index + 1} / {clipInfo.total}
-              </p>
-            )}
-          </div>
-          <button
-            onClick={handleClosePlayerWindow}
-            className={`${compactControls ? 'p-1.5' : 'p-2'} rounded-full hover:bg-white/20 text-white/80 hover:text-white transition-colors shrink-0`}
-            title="Fermer le lecteur"
-          >
-            <X size={compactControls ? 14 : 18} />
-          </button>
-        </div>
-      </div>
+      <OverlayTopBar
+        clipInfo={clipInfo}
+        controlsVisible={controlsVisible}
+        compactControls={compactControls}
+        isPlayerFullscreen={isPlayerFullscreen}
+        onClose={handleClosePlayerWindow}
+      />
 
-      {/* Bottom control bar */}
-      <div
-        className={`absolute bottom-0 left-0 right-0 ${compactControls ? 'px-3 pb-2 pt-10' : 'px-6 pb-4 pt-14'} ${
-          isPlayerFullscreen
-            ? 'bg-gradient-to-t from-slate-950/80 via-slate-950/40 to-transparent'
-            : 'bg-gradient-to-t from-slate-950/88 via-slate-950/62 to-slate-950/15 border-t border-white/10 backdrop-blur-[3px]'
-        } transition-all duration-300 ${
-          controlsVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'
-        }`}
-      >
-        {/* Seek bar */}
-        <div className={`flex items-center ${compactControls ? 'gap-2 mb-2' : 'gap-3 mb-4'}`}>
-          <span className={`${compactControls ? 'text-xs w-10' : 'text-sm w-14'} text-white font-mono text-right select-none`}>
-            {formatTime(currentTime)}
-          </span>
-          <div className="relative flex-1">
-            <input
-              type="range"
-              min={0}
-              max={duration || 100}
-              step={0.1}
-              value={currentTime}
-              onChange={handleSeek}
-              className={`w-full ${compactControls ? 'h-1' : 'h-1.5'} bg-white/30 rounded-full appearance-none cursor-pointer accent-primary-500
-                [&::-webkit-slider-thumb]:appearance-none ${compactControls ? '[&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3' : '[&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4'}
-                [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-primary-500
-                [&::-webkit-slider-thumb]:shadow-lg [&::-webkit-slider-thumb]:cursor-pointer"
-              `}
-            />
-            {visibleMarkers.length > 0 && (
-              <div className="pointer-events-none absolute left-0 right-0 top-1/2 -translate-y-1/2 h-0 z-20">
-                {visibleMarkers.map((marker) => {
-                  const left = Math.max(0, Math.min(100, (marker.seconds / duration) * 100))
-                  const tooltipText = marker.previewText?.trim()
-                    ? marker.previewText
-                    : `${marker.category ?? 'Notes'}`
-                  return (
-                    <button
-                      key={marker.key}
-                      type="button"
-                      onClick={(e) => {
-                        e.preventDefault()
-                        e.stopPropagation()
-                        handleMarkerJump(marker)
-                      }}
-                      onMouseEnter={() => {
-                        setMarkerTooltip({ left, text: tooltipText })
-                      }}
-                      onMouseLeave={() => setMarkerTooltip(null)}
-                      className={`${compactControls ? 'w-2 h-2' : 'w-2.5 h-2.5'} pointer-events-auto absolute top-0 -translate-x-1/2 -translate-y-1/2 rounded-full border shadow-md hover:scale-110 transition-transform`}
-                      style={{
-                        left: `${left}%`,
-                        backgroundColor: marker.color,
-                        borderColor: 'rgba(15,23,42,0.9)',
-                      }}
-                      title={marker.previewText
-                        ? `${marker.raw} - ${marker.previewText}`
-                        : `${marker.raw} - ${marker.category ?? 'Notes globales'}`}
-                    />
-                  )
-                })}
-              </div>
-            )}
-            {markerTooltip && (
-              <div
-                className="pointer-events-none absolute -top-8 -translate-x-1/2 px-2 py-1 rounded bg-slate-900/95 border border-white/15 text-[10px] text-gray-100 whitespace-nowrap max-w-[260px] overflow-hidden text-ellipsis"
-                style={{ left: `${markerTooltip.left}%` }}
-              >
-                {markerTooltip.text}
-              </div>
-            )}
-          </div>
-          <span className={`${compactControls ? 'text-xs w-10' : 'text-sm w-14'} text-white font-mono select-none`}>
-            {formatTime(duration)}
-          </span>
-        </div>
+      {clipInfo.hasVideo === false && (
+        <OverlayNoVideoState compactControls={compactControls} />
+      )}
 
-        {/* Controls row */}
-        <div className={`flex items-center justify-between ${tinyControls ? 'gap-1' : 'gap-2'}`}>
-          <div className={`flex items-center ${compactControls ? 'gap-1' : 'gap-2'}`}>
-            {/* Previous clip */}
-            <button
-              onClick={handlePrevClip}
-              className={`${compactControls ? 'p-1.5' : 'p-2.5'} rounded-full hover:bg-white/20 text-white/80 hover:text-white transition-colors disabled:opacity-30 disabled:cursor-default`}
-              disabled={clipInfo.index <= 0}
-              title="Clip precedent (P)"
-            >
-              <ChevronLeft size={compactControls ? 18 : 24} />
-            </button>
-
-            {/* Seek -5s */}
-            <button
-              onClick={() => handleSeekRelative(-5)}
-              className={`${compactControls ? 'p-1.5' : 'p-2.5'} rounded-full hover:bg-white/20 text-white/80 hover:text-white transition-colors`}
-              title="Reculer 5s"
-            >
-              <SkipBack size={compactControls ? 16 : 22} />
-            </button>
-
-            {/* Play/Pause */}
-            <button
-              onClick={handleTogglePause}
-              className={`${compactControls ? 'p-2 mx-0.5' : 'p-3.5 mx-1'} rounded-full bg-white/20 hover:bg-white/30 text-white transition-colors`}
-              title={isPlaying ? 'Pause (Espace)' : 'Lecture (Espace)'}
-            >
-              {isPlaying ? <Pause size={compactControls ? 20 : 28} /> : <Play size={compactControls ? 20 : 28} />}
-            </button>
-
-            {/* Seek +5s */}
-            <button
-              onClick={() => handleSeekRelative(5)}
-              className={`${compactControls ? 'p-1.5' : 'p-2.5'} rounded-full hover:bg-white/20 text-white/80 hover:text-white transition-colors`}
-              title="Avancer 5s"
-            >
-              <SkipForward size={compactControls ? 16 : 22} />
-            </button>
-
-            {/* Next clip */}
-            <button
-              onClick={handleNextClip}
-              className={`${compactControls ? 'p-1.5' : 'p-2.5'} rounded-full hover:bg-white/20 text-white/80 hover:text-white transition-colors disabled:opacity-30 disabled:cursor-default`}
-              disabled={clipInfo.total > 0 && clipInfo.index >= clipInfo.total - 1}
-              title="Clip suivant (N)"
-            >
-              <ChevronRight size={compactControls ? 18 : 24} />
-            </button>
-          </div>
-
-          <div className={`flex items-center ${compactControls ? 'gap-1' : 'gap-2'}`}>
-            {/* Volume */}
-            <button
-              onClick={handleToggleMute}
-              className={`${compactControls ? 'p-1.5' : 'p-2.5'} rounded-full hover:bg-white/20 text-white/80 hover:text-white transition-colors`}
-              title={isMuted ? 'Activer le son' : 'Couper le son'}
-            >
-              {isMuted || volume === 0 ? <VolumeX size={compactControls ? 16 : 22} /> : <Volume2 size={compactControls ? 16 : 22} />}
-            </button>
-            <input
-              type="range"
-              min={0}
-              max={100}
-              value={isMuted ? 0 : volume}
-              onChange={handleSetVolume}
-              className={`${compactControls ? 'w-16 h-1' : 'w-28 h-1.5'} bg-white/30 rounded-full appearance-none cursor-pointer accent-primary-500
-                [&::-webkit-slider-thumb]:appearance-none ${compactControls ? '[&::-webkit-slider-thumb]:w-2.5 [&::-webkit-slider-thumb]:h-2.5' : '[&::-webkit-slider-thumb]:w-3.5 [&::-webkit-slider-thumb]:h-3.5'}
-                [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white
-                [&::-webkit-slider-thumb]:shadow-lg [&::-webkit-slider-thumb]:cursor-pointer"
-              `}
-            />
-
-            <AudioDbMeter enabled={showAudioDb} compact={compactControls} />
-
-            {/* Subtitles */}
-            <div ref={subRef} className="relative">
-              <button
-                onClick={() => subtitleTracks.length > 0 && setSubMenuOpen(!subMenuOpen)}
-                className={`${compactControls ? 'p-1.5' : 'p-2.5'} rounded-full hover:bg-white/20 transition-colors ${
-                  subtitleTracks.length > 0
-                    ? currentSubtitleId !== null
-                      ? 'text-primary-400'
-                      : 'text-white/80 hover:text-white'
-                    : 'text-white/30 cursor-default'
-                }`}
-                title={subtitleTracks.length > 0 ? 'Sous-titres' : 'Pas de sous-titres'}
-              >
-                <Subtitles size={compactControls ? 16 : 22} />
-              </button>
-              {subMenuOpen && subtitleTracks.length > 0 && (
-                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 min-w-[180px] bg-black/90 border border-white/20 rounded-lg shadow-xl py-1 z-50 backdrop-blur-sm">
-                  <button
-                    onClick={() => handleSelectSubtitle(null)}
-                    className={`w-full text-left px-3 py-2 text-sm hover:bg-white/10 transition-colors ${
-                      currentSubtitleId === null ? 'text-primary-400 font-medium' : 'text-white/80'
-                    }`}
-                  >
-                    Pas de sous-titres
-                  </button>
-                  {subtitleTracks.map((track) => (
-                    <button
-                      key={track.id}
-                      onClick={() => handleSelectSubtitle(track.id)}
-                      className={`w-full text-left px-3 py-2 text-sm hover:bg-white/10 transition-colors ${
-                        currentSubtitleId === track.id ? 'text-primary-400 font-medium' : 'text-white/80'
-                      }`}
-                    >
-                      {track.title || track.lang || `Piste ${track.id}`}
-                      {track.codec ? ` (${track.codec})` : ''}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Audio tracks */}
-            <div ref={audioRef} className="relative">
-              <button
-                onClick={() => audioTracks.length > 1 && setAudioMenuOpen(!audioMenuOpen)}
-                className={`${compactControls ? 'p-1.5' : 'p-2.5'} rounded-full hover:bg-white/20 transition-colors ${
-                  audioTracks.length > 1
-                    ? currentAudioId !== null && currentAudioId !== audioTracks[0]?.id
-                      ? 'text-primary-400'
-                      : 'text-white/80 hover:text-white'
-                    : 'text-white/30 cursor-default'
-                }`}
-                title={audioTracks.length > 1 ? 'Pistes audio' : 'Audio unique'}
-              >
-                <Headphones size={compactControls ? 16 : 22} />
-              </button>
-              {audioMenuOpen && audioTracks.length > 1 && (
-                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 min-w-[180px] bg-black/90 border border-white/20 rounded-lg shadow-xl py-1 z-50 backdrop-blur-sm">
-                  {audioTracks.map((track) => (
-                    <button
-                      key={track.id}
-                      onClick={() => handleSelectAudio(track.id)}
-                      className={`w-full text-left px-3 py-2 text-sm hover:bg-white/10 transition-colors ${
-                        currentAudioId === track.id ? 'text-primary-400 font-medium' : 'text-white/80'
-                      }`}
-                    >
-                      {track.title || track.lang || `Audio ${track.id}`}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Fullscreen toggle */}
-            {clipInfo.miniaturesEnabled && (
-              <button
-                onClick={() => {
-                  emit('overlay:set-miniature-frame').catch(() => {})
-                  resetHideTimer()
-                }}
-                className={`${compactControls ? 'p-1.5' : 'p-2.5'} rounded-full hover:bg-white/20 text-white/80 hover:text-white transition-colors`}
-                title="Définir la frame miniature"
-              >
-                <ImagePlus size={compactControls ? 16 : 22} />
-              </button>
-            )}
-
-            <button
-              onClick={isPlayerFullscreen ? handleExitFullscreen : handleToggleFullscreen}
-              className={`${compactControls ? 'p-1.5 ml-1' : 'p-2.5 ml-2'} rounded-full hover:bg-white/20 text-white/80 hover:text-white transition-colors`}
-              title={isPlayerFullscreen ? 'Quitter le plein ecran (Echap)' : 'Plein ecran'}
-            >
-              {isPlayerFullscreen
-                ? <Minimize2 size={compactControls ? 16 : 22} />
-                : <Maximize2 size={compactControls ? 16 : 22} />}
-            </button>
-          </div>
-        </div>
-      </div>
+      <OverlayBottomControls
+        isPlayerFullscreen={isPlayerFullscreen}
+        controlsVisible={controlsVisible}
+        compactControls={compactControls}
+        tinyControls={tinyControls}
+        currentTime={currentTime}
+        duration={duration}
+        clipInfo={clipInfo}
+        visibleMarkers={visibleMarkers}
+        markerTooltip={markerTooltip}
+        isPlaying={isPlaying}
+        volume={volume}
+        isMuted={isMuted}
+        showAudioDb={showAudioDb}
+        subtitleTracks={subtitleTracks}
+        audioTracks={audioTracks}
+        currentSubtitleId={currentSubtitleId}
+        currentAudioId={currentAudioId}
+        subMenuOpen={subMenuOpen}
+        audioMenuOpen={audioMenuOpen}
+        subRef={subRef}
+        audioRef={audioRef}
+        onSeek={handleSeek}
+        onMarkerJump={handleMarkerJump}
+        onMarkerTooltipChange={setMarkerTooltip}
+        onPrevClip={handlePrevClip}
+        onNextClip={handleNextClip}
+        onSeekRelative={handleSeekRelative}
+        onTogglePause={handleTogglePause}
+        onToggleMute={handleToggleMute}
+        onSetVolume={handleSetVolume}
+        onToggleSubMenu={() => setSubMenuOpen((prev) => !prev)}
+        onToggleAudioMenu={() => setAudioMenuOpen((prev) => !prev)}
+        onSelectSubtitle={(id) => {
+          handleSelectSubtitle(id).catch(() => {})
+        }}
+        onSelectAudio={(id) => {
+          handleSelectAudio(id).catch(() => {})
+        }}
+        onSetMiniatureFrame={() => {
+          emit('overlay:set-miniature-frame').catch(() => {})
+          resetHideTimer()
+        }}
+        onExitFullscreen={handleExitFullscreen}
+        onToggleFullscreen={handleToggleFullscreen}
+      />
     </div>
   )
 }

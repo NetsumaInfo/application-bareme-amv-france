@@ -1,235 +1,15 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Upload, Users } from 'lucide-react'
-import { emit } from '@tauri-apps/api/event'
 import { useNotationStore } from '@/store/useNotationStore'
 import { useProjectStore } from '@/store/useProjectStore'
 import { useUIStore } from '@/store/useUIStore'
-import { usePlayerStore } from '@/store/usePlayerStore'
 import * as tauri from '@/services/tauri'
-import TimecodeTextarea from '@/components/notes/TimecodeTextarea'
-import { getClipPrimaryLabel, getClipSecondaryLabel } from '@/utils/formatters'
-import { withAlpha } from '@/utils/colors'
-import {
-  buildCategoryGroups,
-  buildJudgeSources,
-  getCategoryScore,
-  getNoteTotal,
-  getCriterionNumericScore,
-  hasAnyCriterionScore,
-  type NoteLike,
-} from '@/utils/results'
-import type { ImportedJudgeData, ImportedJudgeNote, ImportedJudgeCriterionScore } from '@/types/project'
-import type { Criterion } from '@/types/bareme'
+import { ResultatsHeader } from '@/components/interfaces/resultats/ResultatsHeader'
+import { ResultatsTable } from '@/components/interfaces/resultats/ResultatsTable'
+import { ResultatsNotesPanel } from '@/components/interfaces/resultats/ResultatsNotesPanel'
+import { ResultatsContextMenus } from '@/components/interfaces/resultats/ResultatsContextMenus'
+import { useResultatsComputedData } from '@/components/interfaces/resultats/hooks/useResultatsComputedData'
+import { useResultatsInteractions } from '@/components/interfaces/resultats/hooks/useResultatsInteractions'
 
 type SortMode = 'folder' | 'score'
-
-function normalizeImportedJudge(
-  raw: unknown,
-  currentClips: { id: string; fileName: string; displayName: string; author?: string }[],
-): ImportedJudgeData | null {
-  const root = raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : null
-  if (!root) return null
-
-  const currentClipIds = new Set(currentClips.map((clip) => clip.id))
-  const clipIdByFileName = new Map(
-    currentClips.map((clip) => [clip.fileName.toLowerCase(), clip.id]),
-  )
-  const clipIdByDisplayAuthor = new Map(
-    currentClips.map((clip) => [
-      `${(clip.author || '').toLowerCase()}|${clip.displayName.toLowerCase()}`,
-      clip.id,
-    ]),
-  )
-
-  const rootProject = root.project && typeof root.project === 'object'
-    ? (root.project as Record<string, unknown>)
-    : null
-
-  const judgeName = (
-    typeof rootProject?.judgeName === 'string'
-      ? rootProject.judgeName
-      : typeof rootProject?.judge_name === 'string'
-        ? rootProject.judge_name
-        : typeof root.judgeName === 'string'
-          ? root.judgeName
-          : ''
-  ).trim()
-
-  const notesRaw = root.notes && typeof root.notes === 'object'
-    ? (root.notes as Record<string, unknown>)
-    : null
-  if (!notesRaw) return null
-
-  const importedClipsRaw = Array.isArray(root.clips) ? root.clips : []
-  const importedClipById = new Map<
-  string,
-  { fileName: string; displayName: string; author?: string }
-  >()
-  for (const importedClip of importedClipsRaw) {
-    const clipRow = importedClip && typeof importedClip === 'object'
-      ? (importedClip as Record<string, unknown>)
-      : null
-    if (!clipRow || typeof clipRow.id !== 'string') continue
-
-    importedClipById.set(clipRow.id, {
-      fileName: typeof clipRow.fileName === 'string' ? clipRow.fileName : '',
-      displayName: typeof clipRow.displayName === 'string' ? clipRow.displayName : '',
-      author: typeof clipRow.author === 'string' ? clipRow.author : undefined,
-    })
-  }
-
-  const notes: Record<string, ImportedJudgeNote> = {}
-
-  for (const [sourceClipId, noteValue] of Object.entries(notesRaw)) {
-    let targetClipId: string | undefined
-    if (currentClipIds.has(sourceClipId)) {
-      targetClipId = sourceClipId
-    } else {
-      const importedClip = importedClipById.get(sourceClipId)
-      if (importedClip) {
-        const keyFile = importedClip.fileName.toLowerCase()
-        const keyDisplayAuthor = `${(importedClip.author || '').toLowerCase()}|${importedClip.displayName.toLowerCase()}`
-        targetClipId = clipIdByFileName.get(keyFile) || clipIdByDisplayAuthor.get(keyDisplayAuthor)
-      }
-    }
-    if (!targetClipId) continue
-
-    const noteRaw = noteValue && typeof noteValue === 'object'
-      ? (noteValue as Record<string, unknown>)
-      : null
-    if (!noteRaw) continue
-
-    const scoresRaw = noteRaw.scores && typeof noteRaw.scores === 'object'
-      ? (noteRaw.scores as Record<string, unknown>)
-      : null
-    if (!scoresRaw) continue
-
-    const scores: Record<string, ImportedJudgeCriterionScore> = {}
-    for (const [criterionId, scoreValue] of Object.entries(scoresRaw)) {
-      const scoreRaw = scoreValue && typeof scoreValue === 'object'
-        ? (scoreValue as Record<string, unknown>)
-        : null
-      if (!scoreRaw) continue
-
-      const value = scoreRaw.value
-      const normalizedValue =
-        typeof value === 'number' || typeof value === 'string' || typeof value === 'boolean'
-          ? value
-          : 0
-
-      scores[criterionId] = {
-        value: normalizedValue,
-        isValid: scoreRaw.isValid !== false,
-      }
-    }
-
-    const maybeFinal = Number(noteRaw.finalScore)
-    const textNotes =
-      typeof noteRaw.textNotes === 'string'
-        ? noteRaw.textNotes
-        : typeof noteRaw.text_notes === 'string'
-          ? noteRaw.text_notes
-          : undefined
-    notes[targetClipId] = Number.isFinite(maybeFinal)
-      ? { scores, finalScore: maybeFinal, textNotes }
-      : { scores, textNotes }
-  }
-
-  if (Object.keys(notes).length === 0) return null
-
-  return {
-    judgeName: judgeName || 'Juge importe',
-    notes,
-  }
-}
-
-function getGroupStep(criteria: Criterion[]): number {
-  const steps = criteria
-    .map((criterion) => Number(criterion.step))
-    .filter((value) => Number.isFinite(value) && value > 0)
-  if (steps.length === 0) return 0.5
-  return Math.min(...steps)
-}
-
-function roundToStep(value: number, step: number): number {
-  if (!Number.isFinite(step) || step <= 0) return value
-  return Math.round(value / step) * step
-}
-
-function distributeCategoryScore(
-  criteria: Criterion[],
-  note: NoteLike | undefined,
-  targetRaw: number,
-): Record<string, number> {
-  const totalMax = criteria.reduce((sum, criterion) => sum + Number(criterion.max ?? 10), 0)
-  if (totalMax <= 0) {
-    return criteria.reduce<Record<string, number>>((acc, criterion) => {
-      acc[criterion.id] = 0
-      return acc
-    }, {})
-  }
-  const target = Math.max(0, Math.min(totalMax, Number.isFinite(targetRaw) ? targetRaw : 0))
-  const step = getGroupStep(criteria)
-
-  const currentValues = criteria.map((criterion) => getCriterionNumericScore(note, criterion))
-  const currentTotal = currentValues.reduce((sum, value) => sum + value, 0)
-
-  const values = criteria.map((criterion, index) => {
-    const max = Number(criterion.max ?? 10)
-    if (max <= 0) return 0
-
-    if (currentTotal > 0) {
-      return Math.min(max, (currentValues[index] / currentTotal) * target)
-    }
-
-    return Math.min(max, (max / totalMax) * target)
-  })
-
-  const rounded = values.map((value, index) => {
-    const max = Number(criteria[index].max ?? 10)
-    return Math.max(0, Math.min(max, roundToStep(value, step)))
-  })
-
-  let delta = target - rounded.reduce((sum, value) => sum + value, 0)
-  const minStep = step > 0 ? step : 0.5
-  let guard = 0
-  while (Math.abs(delta) >= minStep / 2 && guard < 1200) {
-    let adjusted = false
-    const direction = delta > 0 ? 1 : -1
-
-    for (let i = 0; i < criteria.length; i += 1) {
-      const max = Number(criteria[i].max ?? 10)
-      const nextValue = rounded[i] + direction * minStep
-      if (nextValue < 0 || nextValue > max) continue
-      rounded[i] = roundToStep(nextValue, minStep)
-      delta -= direction * minStep
-      adjusted = true
-      if (Math.abs(delta) < minStep / 2) break
-    }
-
-    if (!adjusted) break
-    guard += 1
-  }
-
-  return criteria.reduce<Record<string, number>>((acc, criterion, index) => {
-    acc[criterion.id] = Math.round(rounded[index] * 1000) / 1000
-    return acc
-  }, {})
-}
-
-function computeNoteTotalForBareme(
-  baremeCriteria: Criterion[],
-  note: ImportedJudgeNote | undefined,
-): number {
-  const total = baremeCriteria.reduce((sum, criterion) => {
-    const score = note?.scores[criterion.id]
-    if (!score || score.isValid === false) return sum
-    const value = Number(score.value)
-    if (!Number.isFinite(value)) return sum
-    return sum + Math.max(0, Math.min(Number(criterion.max ?? 10), value))
-  }, 0)
-  return Math.round(total * 100) / 100
-}
 
 export default function ResultatsInterface() {
   const currentBareme = useNotationStore((state) => state.currentBareme)
@@ -253,330 +33,60 @@ export default function ResultatsInterface() {
   const hideTotalsUntilAllScored = Boolean(currentProject?.settings.hideFinalScoreUntilEnd) && !allClipsScored
   const canSortByScore = !hideTotalsSetting && !hideTotalsUntilAllScored
 
-  const [importing, setImporting] = useState(false)
   const sortMode: SortMode = 'score'
-  const [draftCells, setDraftCells] = useState<Record<string, string>>({})
-  const [selectedClipId, setSelectedClipId] = useState<string | null>(null)
-  const [selectedClipFps, setSelectedClipFps] = useState<number | null>(null)
-  const [memberContextMenu, setMemberContextMenu] = useState<{ index: number; x: number; y: number } | null>(null)
-  const [clipContextMenu, setClipContextMenu] = useState<{ clipId: string; x: number; y: number } | null>(null)
-  const memberContextMenuRef = useRef<HTMLDivElement | null>(null)
-  const clipContextMenuRef = useRef<HTMLDivElement | null>(null)
-  const effectiveSortMode: SortMode =
-    sortMode === 'score' && !canSortByScore ? 'folder' : sortMode
+  const {
+    categoryGroups,
+    judges,
+    currentJudge,
+    sortedClips,
+    rows,
+  } = useResultatsComputedData({
+    currentBareme,
+    currentJudgeName: currentProject?.judgeName,
+    notes,
+    importedJudges,
+    clips,
+    sortMode,
+    canSortByScore,
+  })
 
-  const categoryGroups = useMemo(
-    () => (currentBareme ? buildCategoryGroups(currentBareme) : []),
-    [currentBareme],
-  )
-
-  const judges = useMemo(
-    () => buildJudgeSources(currentProject?.judgeName, notes, importedJudges),
-    [currentProject?.judgeName, notes, importedJudges],
-  )
-
-  const currentJudge = judges.find((judge) => judge.isCurrentJudge)
-
-  const getClipAverageTotal = useCallback((clipId: string) => {
-    if (!currentBareme) return 0
-    const totals = judges
-      .map((judge) => {
-        const note = judge.notes[clipId] as NoteLike | undefined
-        if (!hasAnyCriterionScore(note, currentBareme.criteria)) return null
-        return getNoteTotal(note, currentBareme)
-      })
-      .filter((value): value is number => value !== null)
-    return totals.length > 0
-      ? totals.reduce((sum, v) => sum + v, 0) / totals.length
-      : 0
-  }, [currentBareme, judges])
-
-  const sortedClips = useMemo(() => {
-    const base = [...clips]
-    const originalIndex = new Map(clips.map((clip, index) => [clip.id, index]))
-
-    if (effectiveSortMode === 'score' && canSortByScore) {
-      base.sort((a, b) => {
-        const scoreA = getClipAverageTotal(a.id)
-        const scoreB = getClipAverageTotal(b.id)
-        if (scoreB !== scoreA) return scoreB - scoreA
-        return (originalIndex.get(a.id) ?? 0) - (originalIndex.get(b.id) ?? 0)
-      })
-      return base
-    }
-
-    base.sort((a, b) => {
-      const orderA = Number.isFinite(a.order) ? a.order : (originalIndex.get(a.id) ?? 0)
-      const orderB = Number.isFinite(b.order) ? b.order : (originalIndex.get(b.id) ?? 0)
-      if (orderA !== orderB) return orderA - orderB
-      return (originalIndex.get(a.id) ?? 0) - (originalIndex.get(b.id) ?? 0)
-    })
-    return base
-  }, [clips, effectiveSortMode, getClipAverageTotal, canSortByScore])
-
-  useEffect(() => {
-    if (!selectedClipId || !sortedClips.some((clip) => clip.id === selectedClipId)) {
-      setSelectedClipId(sortedClips[0]?.id ?? null)
-    }
-  }, [sortedClips, selectedClipId])
-
-  useEffect(() => {
-    if (!memberContextMenu) return
-    const handleOutside = (event: MouseEvent) => {
-      const target = event.target as Node
-      if (memberContextMenuRef.current?.contains(target)) return
-      setMemberContextMenu(null)
-    }
-    document.addEventListener('mousedown', handleOutside)
-    return () => document.removeEventListener('mousedown', handleOutside)
-  }, [memberContextMenu])
-
-  useEffect(() => {
-    if (!clipContextMenu) return
-    const handleOutside = (event: MouseEvent) => {
-      const target = event.target as Node
-      if (clipContextMenuRef.current?.contains(target)) return
-      setClipContextMenu(null)
-    }
-    document.addEventListener('mousedown', handleOutside)
-    return () => document.removeEventListener('mousedown', handleOutside)
-  }, [clipContextMenu])
-
-  const rows = useMemo(() => {
-    if (!currentBareme) return []
-
-    return sortedClips.map((clip) => {
-      const categoryJudgeScores: Record<string, number[]> = {}
-
-      for (const group of categoryGroups) {
-        categoryJudgeScores[group.category] = judges.map((judge) =>
-          getCategoryScore(judge.notes[clip.id] as NoteLike | undefined, group.criteria),
-        )
-      }
-
-      const judgeTotals = judges.map((judge) => {
-        const note = judge.notes[clip.id] as NoteLike | undefined
-        return getNoteTotal(note, currentBareme)
-      })
-      const nonEmptyTotals = judges
-        .map((judge) => {
-          const note = judge.notes[clip.id] as NoteLike | undefined
-          if (!hasAnyCriterionScore(note, currentBareme.criteria)) return null
-          return getNoteTotal(note, currentBareme)
-        })
-        .filter((value): value is number => value !== null)
-      const averageTotal = nonEmptyTotals.length > 0
-        ? Math.round((nonEmptyTotals.reduce((sum, value) => sum + value, 0) / nonEmptyTotals.length) * 100) / 100
-        : 0
-
-      return {
-        clip,
-        categoryJudgeScores,
-        judgeTotals,
-        averageTotal,
-      }
-    })
-  }, [categoryGroups, currentBareme, judges, sortedClips])
-
-  const openClipInNotation = useCallback((clipId: string) => {
-    const index = clips.findIndex((clip) => clip.id === clipId)
-    if (index < 0) return
-    setCurrentClip(index)
-    setShowPipVideo(true)
-    switchInterface('spreadsheet')
-    switchTab('notation')
-    tauri.playerShow()
-      .then(() => tauri.playerSyncOverlay().catch(() => {}))
-      .catch(() => {})
-    setTimeout(() => {
-      tauri.playerSyncOverlay().catch(() => {})
-    }, 120)
-  }, [clips, setCurrentClip, setShowPipVideo, switchInterface, switchTab])
-
-  const jumpToTimecodeInNotation = useCallback(async (
-    clipId: string,
-    seconds: number,
-    payload?: { category?: string | null; criterionId?: string | null },
-  ) => {
-    if (!Number.isFinite(seconds) || seconds < 0) return
-    const index = clips.findIndex((clip) => clip.id === clipId)
-    if (index < 0) return
-    const clip = clips[index]
-    if (!clip?.filePath) return
-
-    setCurrentClip(index)
-    setShowPipVideo(true)
-    switchInterface('spreadsheet')
-    switchTab('notation')
-
-    const playerState = usePlayerStore.getState()
-    try {
-      if (!playerState.isLoaded || playerState.currentFilePath !== clip.filePath) {
-        playerState.setLoaded(false)
-        await tauri.playerLoad(clip.filePath)
-        playerState.setLoaded(true, clip.filePath)
-      }
-      await tauri.playerShow().catch(() => {})
-      await tauri.playerSeek(seconds)
-      await tauri.playerPause().catch(() => {})
-    } catch (error) {
-      console.error('Failed to jump to timecode from results:', error)
-    }
-
-    const detail = {
-      clipId,
-      seconds,
-      category: payload?.category ?? null,
-      criterionId: payload?.criterionId ?? null,
-    }
-    window.dispatchEvent(new CustomEvent('amv:focus-note-marker', { detail }))
-    emit('main:focus-note-marker', detail).catch(() => {})
-  }, [clips, setCurrentClip, setShowPipVideo, switchInterface, switchTab])
-
-  const handleImportJudgeJson = async () => {
-    if (importing || clips.length === 0) return
-    setImporting(true)
-
-    try {
-      const path = await tauri.openJsonDialog()
-      if (!path) return
-      const payload = await tauri.loadProjectFile(path)
-      const normalized = normalizeImportedJudge(payload, clips)
-
-      if (!normalized) {
-        alert('Le fichier importé ne contient pas de notes exploitables pour ce projet.')
-        return
-      }
-
-      const matchedCount = Object.keys(normalized.notes).length
-      const totalClips = clips.length
-
-      const next = importedJudges.filter(
-        (judge) => judge.judgeName.toLowerCase() !== normalized.judgeName.toLowerCase(),
-      )
-      next.push(normalized)
-      setImportedJudges(next)
-
-      if (matchedCount < totalClips) {
-        alert(`Import réussi : ${normalized.judgeName}\n${matchedCount}/${totalClips} clips appariés.`)
-      }
-    } catch (e) {
-      console.error('Import judge JSON failed:', e)
-      alert(`Erreur d'import: ${e}`)
-    } finally {
-      setImporting(false)
-    }
-  }
-
-  const removeImportedJudge = (index: number) => {
-    setImportedJudges(importedJudges.filter((_, i) => i !== index))
-    setMemberContextMenu(null)
-  }
-
-  const getCellKey = (clipId: string, category: string, judgeKey: string) =>
-    `${clipId}|${category}|${judgeKey}`
-
-  const applyCategoryValue = (
-    clipId: string,
-    category: string,
-    judgeKey: string,
-    valueRaw: number,
-  ) => {
-    if (!currentBareme) return
-
-    const group = categoryGroups.find((item) => item.category === category)
-    if (!group) return
-
-    const judge = judges.find((item) => item.key === judgeKey)
-    if (!judge) return
-
-    if (judge.isCurrentJudge) {
-      const note = notes[clipId]
-      const nextByCriterion = distributeCategoryScore(group.criteria, note, valueRaw)
-
-      for (const criterion of group.criteria) {
-        updateCriterion(clipId, criterion.id, nextByCriterion[criterion.id] ?? 0)
-      }
-      markDirty()
-      return
-    }
-
-    const importedIndex = Number(judge.key.replace('imported-', ''))
-    if (!Number.isFinite(importedIndex) || importedIndex < 0 || importedIndex >= importedJudges.length) return
-
-    const nextImported = importedJudges.map((importedJudge, idx) => {
-      if (idx !== importedIndex) return importedJudge
-
-      const previousNote = importedJudge.notes[clipId] ?? { scores: {} }
-      const nextByCriterion = distributeCategoryScore(group.criteria, previousNote, valueRaw)
-
-      const nextScores: Record<string, ImportedJudgeCriterionScore> = { ...previousNote.scores }
-      for (const criterion of group.criteria) {
-        const value = nextByCriterion[criterion.id] ?? 0
-        nextScores[criterion.id] = {
-          value,
-          isValid: true,
-        }
-      }
-
-      const nextNote: ImportedJudgeNote = {
-        ...previousNote,
-        scores: nextScores,
-      }
-      nextNote.finalScore = computeNoteTotalForBareme(currentBareme.criteria, nextNote)
-
-      return {
-        ...importedJudge,
-        notes: {
-          ...importedJudge.notes,
-          [clipId]: nextNote,
-        },
-      }
-    })
-
-    setImportedJudges(nextImported)
-  }
-
-  const commitDraftCell = (clipId: string, category: string, judgeKey: string) => {
-    const key = getCellKey(clipId, category, judgeKey)
-    const raw = draftCells[key]
-    if (raw === undefined) return
-    const numeric = Number(raw.replace(',', '.'))
-    if (Number.isFinite(numeric)) {
-      applyCategoryValue(clipId, category, judgeKey, numeric)
-    }
-    setDraftCells((prev) => {
-      const next = { ...prev }
-      delete next[key]
-      return next
-    })
-  }
-
-  const selectedClip = sortedClips.find((clip) => clip.id === selectedClipId) ?? sortedClips[0]
-
-  useEffect(() => {
-    let active = true
-    if (!selectedClip?.filePath) {
-      return () => {
-        active = false
-      }
-    }
-
-    tauri.playerGetMediaInfo(selectedClip.filePath)
-      .then((info) => {
-        if (!active) return
-        const fps = Number(info?.fps)
-        setSelectedClipFps(Number.isFinite(fps) && fps > 0 ? fps : null)
-      })
-      .catch(() => {
-        if (!active) return
-        setSelectedClipFps(null)
-      })
-
-    return () => {
-      active = false
-    }
-  }, [selectedClip?.id, selectedClip?.filePath])
+  const {
+    importing,
+    draftCells,
+    selectedClipId,
+    selectedClip,
+    selectedClipFps,
+    memberContextMenu,
+    clipContextMenu,
+    memberContextMenuRef,
+    clipContextMenuRef,
+    setSelectedClipId,
+    setMemberContextMenu,
+    setClipContextMenu,
+    setDraftCell,
+    clearDraftCell,
+    commitDraftCell,
+    getCellKey,
+    handleImportJudgeJson,
+    removeImportedJudge,
+    openClipInNotation,
+    jumpToTimecodeInNotation,
+  } = useResultatsInteractions({
+    currentBareme,
+    notes,
+    clips,
+    sortedClips,
+    judges,
+    categoryGroups,
+    importedJudges,
+    setImportedJudges,
+    updateCriterion,
+    markDirty,
+    setCurrentClip,
+    setShowPipVideo,
+    switchInterface,
+    switchTab,
+  })
 
   if (!currentBareme) {
     return (
@@ -596,350 +106,63 @@ export default function ResultatsInterface() {
 
   return (
     <div className="flex flex-col h-full p-3 gap-3">
-      <div className="flex flex-wrap items-center gap-2">
-        <button
-          onClick={handleImportJudgeJson}
-          disabled={importing}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-surface border border-gray-700 text-gray-300 hover:text-white hover:border-gray-600 transition-colors disabled:opacity-60"
-        >
-          <Upload size={13} />
-          {importing ? 'Import...' : 'Importer un JE.json'}
-        </button>
+      <ResultatsHeader
+        importing={importing}
+        judges={judges}
+        currentJudgeName={currentJudge?.judgeName}
+        importedJudges={importedJudges}
+        onImportJudgeJson={() => { handleImportJudgeJson().catch(() => {}) }}
+        onOpenMemberContextMenu={(index, x, y) => setMemberContextMenu({ index, x, y })}
+      />
 
-        <div className="flex items-center gap-1.5 text-xs text-gray-400">
-          <Users size={13} />
-          {judges.length} juge{judges.length > 1 ? 's' : ''}
-        </div>
+      <ResultatsTable
+        canSortByScore={canSortByScore}
+        currentBaremeTotalPoints={currentBareme.totalPoints}
+        categoryGroups={categoryGroups}
+        judges={judges}
+        rows={rows}
+        selectedClipId={selectedClipId}
+        draftCells={draftCells}
+        onSelectClip={setSelectedClipId}
+        onOpenClipInNotation={openClipInNotation}
+        onOpenClipContextMenu={(clipId, x, y) => setClipContextMenu({ clipId, x, y })}
+        getCellKey={getCellKey}
+        onSetDraftCell={setDraftCell}
+        onCommitDraftCell={commitDraftCell}
+        onClearDraftCell={clearDraftCell}
+      />
 
-        {currentJudge && (
-          <span className="inline-flex items-center gap-1 text-[11px] px-2 py-1 rounded border border-primary-500/40 bg-primary-600/10 text-primary-300">
-            {currentJudge.judgeName} (projet)
-          </span>
-        )}
+      <ResultatsNotesPanel
+        hidden={hideTextNotes}
+        selectedClip={selectedClip}
+        judges={judges}
+        selectedClipFps={selectedClipFps}
+        onSetCurrentJudgeText={(clipId, text) => {
+          setTextNotes(clipId, text)
+          markDirty()
+        }}
+        onJumpToTimecode={(clipId, seconds) => {
+          jumpToTimecodeInNotation(clipId, seconds).catch(() => {})
+        }}
+      />
 
-        {importedJudges.map((judge, index) => (
-          <button
-            key={`${judge.judgeName}-${index}`}
-            onContextMenu={(event) => {
-              event.preventDefault()
-              setMemberContextMenu({ index, x: event.clientX, y: event.clientY })
-            }}
-            className="inline-flex items-center gap-1 text-[11px] px-2 py-1 rounded border border-gray-700 bg-surface-dark text-gray-300 hover:border-gray-500 transition-colors"
-            title="Clic droit pour options"
-          >
-            {judge.judgeName}
-          </button>
-        ))}
-      </div>
-
-      <div className="flex-1 overflow-auto rounded-lg border border-gray-700">
-        <table className="w-full border-collapse text-xs">
-          <thead className="sticky top-0 z-10">
-            <tr>
-              <th
-                rowSpan={2}
-                className="px-2 py-1.5 text-center text-[10px] font-medium text-gray-500 border-r border-b border-gray-700 w-8 bg-surface-dark sticky left-0 z-20"
-              >
-                #
-              </th>
-              <th
-                rowSpan={2}
-                className="px-2 py-1.5 text-left text-[10px] font-medium text-gray-500 border-r border-b border-gray-700 min-w-[120px] max-w-[180px] bg-surface-dark sticky left-8 z-20"
-              >
-                Clip
-              </th>
-
-              {categoryGroups.map((group) => (
-                <th
-                  key={group.category}
-                  colSpan={judges.length}
-                  className="px-2 py-1.5 text-center text-[10px] font-bold uppercase tracking-wider border-r border-b"
-                  style={{
-                    color: group.color,
-                    backgroundColor: withAlpha(group.color, 0.16),
-                    borderColor: withAlpha(group.color, 0.3),
-                  }}
-                >
-                  {group.category}
-                  <span className="text-gray-500 font-normal ml-1">/{group.totalMax}</span>
-                </th>
-              ))}
-
-              {canSortByScore && (
-                <th
-                  colSpan={judges.length + 1}
-                  className="px-2 py-1.5 text-center text-[10px] font-bold uppercase tracking-wider border-r border-b border-gray-700 min-w-[90px] bg-surface-dark"
-                >
-                  Total
-                  <div className="text-gray-500 font-normal">/{currentBareme.totalPoints}</div>
-                </th>
-              )}
-            </tr>
-            <tr>
-              {categoryGroups.map((group) =>
-                judges.map((judge) => (
-                  <th
-                    key={`${group.category}-${judge.key}`}
-                    className="px-1 py-1 text-center text-[9px] border-r border-b border-gray-700"
-                    style={{
-                      backgroundColor: withAlpha(group.color, 0.1),
-                      color: judge.isCurrentJudge ? '#93c5fd' : '#94a3b8',
-                    }}
-                    title={judge.judgeName}
-                  >
-                    {judge.judgeName}
-                  </th>
-                )),
-              )}
-
-              {canSortByScore && judges.map((judge) => (
-                <th
-                  key={`total-${judge.key}`}
-                  className="px-1 py-1 text-center text-[9px] border-r border-b border-gray-700 bg-surface-dark"
-                >
-                  <span className={judge.isCurrentJudge ? 'text-primary-300' : 'text-gray-400'}>
-                    {judge.judgeName}
-                  </span>
-                </th>
-              ))}
-              {canSortByScore && (
-                <th className="px-1 py-1 text-center text-[9px] text-gray-500 border-r border-b border-gray-700 bg-surface-dark">
-                  Moy.
-                </th>
-              )}
-            </tr>
-          </thead>
-
-          <tbody>
-            {rows.map((row, index) => {
-              const isSelected = selectedClipId === row.clip.id
-              return (
-                <tr
-                  key={row.clip.id}
-                  onClick={() => setSelectedClipId(row.clip.id)}
-                  className={`cursor-pointer transition-colors ${
-                    isSelected
-                      ? 'bg-primary-600/12'
-                      : index % 2 === 0
-                        ? 'bg-surface-dark/20'
-                        : 'bg-transparent'
-                  } hover:bg-primary-600/8`}
-                >
-                <td className="px-2 py-1 text-center text-[10px] text-gray-500 border-r border-gray-800 sticky left-0 z-10 bg-surface-dark">
-                  {index + 1}
-                </td>
-                <td
-                  className="px-2 py-1 border-r border-gray-800 sticky left-8 z-10 bg-surface-dark max-w-[180px]"
-                  onDoubleClick={(event) => {
-                    event.stopPropagation()
-                    openClipInNotation(row.clip.id)
-                  }}
-                  onContextMenu={(event) => {
-                    event.preventDefault()
-                    event.stopPropagation()
-                    const width = 210
-                    const height = 152
-                    const x = Math.max(8, Math.min(event.clientX, window.innerWidth - width - 8))
-                    const y = Math.max(8, Math.min(event.clientY, window.innerHeight - height - 8))
-                    setClipContextMenu({ clipId: row.clip.id, x, y })
-                  }}
-                >
-                  <div className="flex flex-col min-w-0 leading-tight">
-                    <span className="truncate text-primary-300 text-[11px] font-semibold">{getClipPrimaryLabel(row.clip)}</span>
-                    {getClipSecondaryLabel(row.clip) && (
-                      <span className="truncate text-[9px] text-gray-500">{getClipSecondaryLabel(row.clip)}</span>
-                    )}
-                  </div>
-                </td>
-
-                {categoryGroups.map((group) =>
-                  judges.map((judge, judgeIdx) => {
-                    const key = getCellKey(row.clip.id, group.category, judge.key)
-                    const score = row.categoryJudgeScores[group.category][judgeIdx] ?? 0
-                    const displayed = draftCells[key] ?? score.toFixed(1)
-                    const step = getGroupStep(group.criteria)
-
-                    return (
-                      <td
-                        key={`${row.clip.id}-${group.category}-${judge.key}`}
-                        className={`px-1 py-1 text-center border-r border-gray-800 font-mono ${
-                          judge.isCurrentJudge ? 'text-primary-200' : 'text-gray-300'
-                        }`}
-                      >
-                        <input
-                          type="number"
-                          min={0}
-                          max={group.totalMax}
-                          step={step}
-                          value={displayed}
-                          onChange={(event) => {
-                            const next = event.target.value
-                            setDraftCells((prev) => ({ ...prev, [key]: next }))
-                          }}
-                          onBlur={() => commitDraftCell(row.clip.id, group.category, judge.key)}
-                          onKeyDown={(event) => {
-                            if (event.key === 'Enter') {
-                              event.preventDefault()
-                              commitDraftCell(row.clip.id, group.category, judge.key)
-                            } else if (event.key === 'Escape') {
-                              setDraftCells((prev) => {
-                                const next = { ...prev }
-                                delete next[key]
-                                return next
-                              })
-                            }
-                          }}
-                          className="amv-soft-number w-full px-1 py-0.5 rounded bg-transparent border border-transparent hover:bg-surface-light/40 focus:bg-surface-dark focus:border-primary-500 focus-visible:outline-none outline-none text-center"
-                          title={`${judge.judgeName} - ${group.category}`}
-                        />
-                      </td>
-                    )
-                  }),
-                )}
-
-                {canSortByScore && row.judgeTotals.map((score, judgeIdx) => (
-                  <td
-                    key={`${row.clip.id}-total-${judges[judgeIdx].key}`}
-                    className={`px-2 py-1 text-center border-r border-gray-800 font-mono ${
-                      judges[judgeIdx].isCurrentJudge ? 'text-primary-300 font-semibold' : 'text-gray-300'
-                    }`}
-                  >
-                    {score.toFixed(1)}
-                  </td>
-                ))}
-
-                {canSortByScore && (
-                  <td className="px-2 py-1 text-center border-r border-gray-700 font-mono font-bold text-white">
-                    {row.averageTotal.toFixed(1)}
-                  </td>
-                )}
-                </tr>
-              )
-            })}
-          </tbody>
-        </table>
-      </div>
-
-      {!hideTextNotes && selectedClip && (
-        <div className="shrink-0 border border-gray-700 rounded-lg bg-surface overflow-hidden">
-          <div className="px-3 py-2 border-b border-gray-700 text-[11px] text-gray-400">
-            Notes du clip
-            <span className="text-primary-300 ml-1">{getClipPrimaryLabel(selectedClip)}</span>
-          </div>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-2 p-2">
-            {judges.map((judge) => {
-              const judgeNote = judge.notes[selectedClip.id] as (NoteLike & { textNotes?: string }) | undefined
-              const noteText = judgeNote?.textNotes ?? ''
-              return (
-                <div key={`note-${judge.key}`} className="rounded border border-gray-700 bg-surface-dark p-2">
-                  <div className="text-[10px] text-gray-400 mb-1">
-                    <span className={judge.isCurrentJudge ? 'text-primary-300' : 'text-gray-300'}>
-                      {judge.judgeName}
-                    </span>
-                  </div>
-                  {judge.isCurrentJudge ? (
-                    <TimecodeTextarea
-                      value={noteText}
-                      onChange={(nextValue) => {
-                        setTextNotes(selectedClip.id, nextValue)
-                        markDirty()
-                      }}
-                      onTimecodeSelect={(item) => {
-                        jumpToTimecodeInNotation(selectedClip.id, item.seconds)
-                      }}
-                      color="#60a5fa"
-                      fpsHint={selectedClipFps ?? undefined}
-                      textareaClassName="min-h-[52px]"
-                      placeholder="Notes libres..."
-                    />
-                  ) : (
-                    noteText.trim().length > 0 ? (
-                      <TimecodeTextarea
-                        value={noteText}
-                        onChange={() => {}}
-                        readOnly
-                        onTimecodeSelect={(item) => {
-                          jumpToTimecodeInNotation(selectedClip.id, item.seconds)
-                        }}
-                        color="#94a3b8"
-                        fpsHint={selectedClipFps ?? undefined}
-                        textareaClassName="min-h-[52px]"
-                      />
-                    ) : (
-                      <p className="text-[11px] text-gray-300 min-h-[52px] whitespace-pre-wrap">
-                        Aucune note
-                      </p>
-                    )
-                  )}
-                </div>
-              )
-            })}
-          </div>
-        </div>
-      )}
-
-      {memberContextMenu && (
-        <div
-          ref={memberContextMenuRef}
-          className="fixed z-[90] bg-gray-900 border border-gray-700 rounded-lg shadow-xl py-1 min-w-[210px]"
-          style={{ left: memberContextMenu.x, top: memberContextMenu.y }}
-        >
-          <button
-            onClick={() => removeImportedJudge(memberContextMenu.index)}
-            className="w-full text-left px-3 py-1.5 text-[11px] text-red-400 hover:bg-gray-800 transition-colors"
-          >
-            Supprimer le membre sélectionné
-          </button>
-        </div>
-      )}
-
-      {clipContextMenu && (
-        <div
-          ref={clipContextMenuRef}
-          className="fixed z-[90] bg-gray-900 border border-gray-700 rounded-lg shadow-xl py-1 min-w-[210px]"
-          style={{ left: clipContextMenu.x, top: clipContextMenu.y }}
-        >
-          {(() => {
-            const clip = clips.find((item) => item.id === clipContextMenu.clipId)
-            if (!clip) return null
-            return (
-              <>
-                <button
-                  onClick={() => {
-                    setClipScored(clip.id, !clip.scored)
-                    setClipContextMenu(null)
-                  }}
-                  className="w-full text-left px-3 py-1.5 text-[11px] text-gray-300 hover:bg-gray-800 transition-colors"
-                >
-                  {clip.scored ? 'Retirer "noté"' : 'Marquer comme noté'}
-                </button>
-                <div className="border-t border-gray-700 my-0.5" />
-                <button
-                  onClick={() => {
-                    const index = clips.findIndex((item) => item.id === clip.id)
-                    if (index >= 0) setCurrentClip(index)
-                    tauri.openNotesWindow().then(() => setNotesDetached(true)).catch(() => {})
-                    setClipContextMenu(null)
-                  }}
-                  className="w-full text-left px-3 py-1.5 text-[11px] text-gray-300 hover:bg-gray-800 transition-colors"
-                >
-                  Notes du clip
-                </button>
-                <div className="border-t border-gray-700 my-0.5" />
-              </>
-            )
-          })()}
-          <button
-            onClick={() => {
-              removeClip(clipContextMenu.clipId)
-              setClipContextMenu(null)
-            }}
-            className="w-full text-left px-3 py-1.5 text-[11px] text-red-400 hover:bg-gray-800 transition-colors"
-          >
-            Supprimer la vidéo
-          </button>
-        </div>
-      )}
+      <ResultatsContextMenus
+        memberContextMenu={memberContextMenu}
+        clipContextMenu={clipContextMenu}
+        clips={clips}
+        memberContextMenuRef={memberContextMenuRef}
+        clipContextMenuRef={clipContextMenuRef}
+        onCloseMemberMenu={() => setMemberContextMenu(null)}
+        onCloseClipMenu={() => setClipContextMenu(null)}
+        onRemoveImportedJudge={removeImportedJudge}
+        onToggleClipScored={(clip) => setClipScored(clip.id, !clip.scored)}
+        onOpenClipNotes={(clip) => {
+          const index = clips.findIndex((item) => item.id === clip.id)
+          if (index >= 0) setCurrentClip(index)
+          tauri.openNotesWindow().then(() => setNotesDetached(true)).catch(() => {})
+        }}
+        onRemoveClip={removeClip}
+      />
     </div>
   )
 }

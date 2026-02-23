@@ -1,5 +1,5 @@
 import { useEffect, useRef, useCallback } from 'react'
-import { Film } from 'lucide-react'
+import { AlertTriangle, Film } from 'lucide-react'
 import PlayerControls from './PlayerControls'
 import { useProjectStore } from '@/store/useProjectStore'
 import { usePlayerStore } from '@/store/usePlayerStore'
@@ -52,9 +52,18 @@ export default function VideoPlayer({ compact }: VideoPlayerProps) {
 
   // Show/load/hide mpv window based on current clip
   useEffect(() => {
-    if (!currentClip?.filePath) {
+    if (!currentClip) {
+      usePlayerStore.getState().setLoaded(false)
       tauri.playerHide().catch(() => {})
-      return () => {}
+      return
+    }
+
+    if (!currentClip.filePath) {
+      usePlayerStore.getState().setLoaded(false)
+      tauri.playerPause().catch(() => {})
+      tauri.playerStop().catch(() => {})
+      updateGeometry()
+      return
     }
 
     // Check if file is already loaded (avoids restart on interface switch)
@@ -102,12 +111,15 @@ export default function VideoPlayer({ compact }: VideoPlayerProps) {
         .catch(console.error)
     }
 
+  }, [currentClip, updateGeometry])
+
+  useEffect(() => {
     return () => {
       if (!usePlayerStore.getState().isFullscreen) {
         tauri.playerHide().catch(() => {})
       }
     }
-  }, [currentClip?.filePath, updateGeometry])
+  }, [])
 
   // Periodic geometry refresh for window drag/move tracking
   useEffect(() => {
@@ -129,6 +141,13 @@ export default function VideoPlayer({ compact }: VideoPlayerProps) {
           <div className="text-center p-3">
             <Film size={compact ? 18 : 24} className="mx-auto mb-1.5 text-gray-600" />
             <p className="text-gray-500 text-[11px]">Sélectionnez un clip</p>
+          </div>
+        )}
+        {currentClip && !currentClip.filePath && (
+          <div className="text-center p-4">
+            <AlertTriangle size={compact ? 18 : 24} className="mx-auto mb-2 text-amber-400" />
+            <p className="text-gray-200 text-xs font-medium">Aucune vidéo liée</p>
+            <p className="text-gray-500 text-[11px] mt-1">Ce clip n’a pas de média associé.</p>
           </div>
         )}
       </div>
