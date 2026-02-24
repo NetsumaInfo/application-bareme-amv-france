@@ -1,12 +1,14 @@
 import type { ComponentProps, MutableRefObject } from 'react'
 import type { ClipContextMenu } from '@/components/interfaces/spreadsheet/ClipContextMenu'
 import type { Clip } from '@/types/project'
+import type { ShortcutAction } from '@/utils/shortcuts'
 
 interface UseSpreadsheetContextMenuPropsParams {
   contextMenu: { clipId: string; x: number; y: number } | null
   contextClip: Clip | null
   currentClip: Clip | undefined
   showMiniatures: boolean
+  shortcutBindings: Record<ShortcutAction, string>
   contextMenuRef: MutableRefObject<HTMLDivElement | null>
   handleToggleScored: (clip: Clip) => void
   handleOpenNotes: (clip: Clip) => void
@@ -23,6 +25,7 @@ export function buildSpreadsheetContextMenuProps({
   contextClip,
   currentClip,
   showMiniatures,
+  shortcutBindings,
   contextMenuRef,
   handleToggleScored,
   handleOpenNotes,
@@ -38,6 +41,7 @@ export function buildSpreadsheetContextMenuProps({
     contextClip,
     currentClipId: currentClip?.id,
     showMiniatures,
+    shortcutBindings,
     contextMenuRef,
     onToggleScored: handleToggleScored,
     onOpenNotes: handleOpenNotes,

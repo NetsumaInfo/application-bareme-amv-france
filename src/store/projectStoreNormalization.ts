@@ -64,9 +64,40 @@ function normalizeImportedJudges(rawImportedJudges: unknown[]): ImportedJudgeDat
           : typeof noteRow.text_notes === 'string'
             ? noteRow.text_notes
             : undefined
+        const criterionNotesRaw = noteRow.criterionNotes && typeof noteRow.criterionNotes === 'object'
+          ? (noteRow.criterionNotes as Record<string, unknown>)
+          : noteRow.criterion_notes && typeof noteRow.criterion_notes === 'object'
+            ? (noteRow.criterion_notes as Record<string, unknown>)
+            : {}
+        const criterionNotes = Object.fromEntries(
+          Object.entries(criterionNotesRaw)
+            .filter(([key, value]) => key.trim().length > 0 && typeof value === 'string')
+            .map(([key, value]) => [key, value as string]),
+        )
+        const categoryNotesRaw = noteRow.categoryNotes && typeof noteRow.categoryNotes === 'object'
+          ? (noteRow.categoryNotes as Record<string, unknown>)
+          : noteRow.category_notes && typeof noteRow.category_notes === 'object'
+            ? (noteRow.category_notes as Record<string, unknown>)
+            : {}
+        const categoryNotes = Object.fromEntries(
+          Object.entries(categoryNotesRaw)
+            .filter(([key, value]) => key.trim().length > 0 && typeof value === 'string')
+            .map(([key, value]) => [key, value as string]),
+        )
         notes[clipId] = Number.isFinite(parsedFinalScore)
-          ? { scores, finalScore: parsedFinalScore, textNotes }
-          : { scores, textNotes }
+          ? {
+              scores,
+              finalScore: parsedFinalScore,
+              textNotes,
+              criterionNotes,
+              categoryNotes,
+            }
+          : {
+              scores,
+              textNotes,
+              criterionNotes,
+              categoryNotes,
+            }
       }
 
       return {

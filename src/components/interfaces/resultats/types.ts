@@ -1,7 +1,7 @@
 import type { Clip, ImportedJudgeData } from '@/types/project'
 import type { JudgeSource, CategoryGroup } from '@/utils/results'
 
-export type ResultatsMainView = 'judge' | 'global' | 'top'
+export type ResultatsMainView = 'judge' | 'global' | 'top' | 'judgeNotes'
 export type ResultatsGlobalVariant = 'detailed' | 'category'
 
 export interface ResultatsRow {

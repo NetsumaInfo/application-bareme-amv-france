@@ -1,5 +1,6 @@
 import type { RefObject } from 'react'
 import type { Clip } from '@/types/project'
+import { formatShortcutDisplay, type ShortcutAction } from '@/utils/shortcuts'
 
 interface ContextMenuPosition {
   clipId: string
@@ -12,6 +13,7 @@ interface ClipContextMenuProps {
   contextClip: Clip | null
   currentClipId?: string
   showMiniatures: boolean
+  shortcutBindings: Record<ShortcutAction, string>
   contextMenuRef: RefObject<HTMLDivElement | null>
   onToggleScored: (clip: Clip) => void
   onOpenNotes: (clip: Clip) => void
@@ -28,6 +30,7 @@ export function ClipContextMenu({
   contextClip,
   currentClipId,
   showMiniatures,
+  shortcutBindings,
   contextMenuRef,
   onToggleScored,
   onOpenNotes,
@@ -58,9 +61,9 @@ export function ClipContextMenu({
           <div className="border-t border-gray-700 my-0.5" />
           <button
             onClick={() => onOpenNotes(contextClip)}
-            className="w-full text-left px-3 py-1.5 text-[11px] text-gray-300 hover:bg-gray-800 transition-colors"
+            className="w-full text-left px-3 py-1.5 text-[11px] text-gray-300 hover:bg-gray-800 transition-colors flex items-center gap-2"
           >
-            Notes du clip
+            <span className="flex-1 text-left">Notes du clip</span>
           </button>
           {!contextClip.filePath && (
             <button
@@ -75,9 +78,12 @@ export function ClipContextMenu({
               <div className="border-t border-gray-700 my-0.5" />
               <button
                 onClick={() => onSetMiniatureFromCurrentFrame(contextClip)}
-                className="w-full text-left px-3 py-1.5 text-[11px] text-gray-300 hover:bg-gray-800 transition-colors"
+                className="w-full text-left px-3 py-1.5 text-[11px] text-gray-300 hover:bg-gray-800 transition-colors flex items-center gap-2"
               >
-                Définir miniature (frame courante)
+                <span className="flex-1 text-left">Définir miniature (frame courante)</span>
+                <span className="text-[10px] text-gray-500">
+                  {formatShortcutDisplay(shortcutBindings.setMiniatureFrame)}
+                </span>
               </button>
               <button
                 onClick={() => onResetMiniature(contextClip)}
@@ -93,9 +99,14 @@ export function ClipContextMenu({
       {hasVideo ? (
         <button
           onClick={onToggleMiniatures}
-          className="w-full text-left px-3 py-1.5 text-[11px] text-gray-300 hover:bg-gray-800 transition-colors"
+          className="w-full text-left px-3 py-1.5 text-[11px] text-gray-300 hover:bg-gray-800 transition-colors flex items-center gap-2"
         >
-          {showMiniatures ? 'Masquer miniatures' : 'Afficher miniatures'}
+          <span className="flex-1 text-left">
+            {showMiniatures ? 'Masquer miniatures' : 'Afficher miniatures'}
+          </span>
+          <span className="text-[10px] text-gray-500">
+            {formatShortcutDisplay(shortcutBindings.toggleMiniatures)}
+          </span>
         </button>
       ) : (
         <div className="w-full text-left px-3 py-1.5 text-[11px] text-gray-600">

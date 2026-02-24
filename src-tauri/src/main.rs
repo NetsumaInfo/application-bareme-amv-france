@@ -70,6 +70,8 @@ fn main() {
             // Window commands
             app_windows::open_notes_window,
             app_windows::close_notes_window,
+            app_windows::open_resultats_judge_notes_window,
+            app_windows::close_resultats_judge_notes_window,
             // Video commands
             video::import::scan_video_folder,
         ])

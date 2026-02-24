@@ -153,6 +153,14 @@ fn probe_media_info_via_mediainfo(path: &str) -> Result<crate::player::mpv_wrapp
         video_frame_count: super::parsing::parse_json_i64(video.and_then(|v| v.get("FrameCount"))),
         sample_aspect_ratio: super::parsing::parse_json_string(video.and_then(|v| v.get("PixelAspectRatio"))),
         display_aspect_ratio: super::parsing::parse_json_string(video.and_then(|v| v.get("DisplayAspectRatio"))),
+        rotation_degrees: {
+            let raw = super::parsing::parse_json_i64(video.and_then(|v| v.get("Rotation")));
+            let mut normalized = raw % 360;
+            if normalized < 0 {
+                normalized += 360;
+            }
+            normalized
+        },
     })
 }
 

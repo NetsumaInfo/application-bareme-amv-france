@@ -30,6 +30,7 @@ pub struct MediaInfo {
     pub video_frame_count: i64,
     pub sample_aspect_ratio: String,
     pub display_aspect_ratio: String,
+    pub rotation_degrees: i64,
 }
 
 impl MediaInfo {
@@ -63,6 +64,7 @@ impl MediaInfo {
             video_frame_count: 0,
             sample_aspect_ratio: String::new(),
             display_aspect_ratio: String::new(),
+            rotation_degrees: 0,
         }
     }
 }

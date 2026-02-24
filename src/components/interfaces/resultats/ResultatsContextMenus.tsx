@@ -14,31 +14,43 @@ interface ClipMenuState extends MenuPosition {
   clipId: string
 }
 
+type EmptyMenuState = MenuPosition
+
 interface ResultatsContextMenusProps {
   memberContextMenu: MemberMenuState | null
   clipContextMenu: ClipMenuState | null
+  emptyContextMenu: EmptyMenuState | null
+  selectedClip: Clip | undefined
   clips: Clip[]
   memberContextMenuRef: MutableRefObject<HTMLDivElement | null>
   clipContextMenuRef: MutableRefObject<HTMLDivElement | null>
+  emptyContextMenuRef: MutableRefObject<HTMLDivElement | null>
   onCloseMemberMenu: () => void
   onCloseClipMenu: () => void
+  onCloseEmptyMenu: () => void
   onRemoveImportedJudge: (index: number) => void
-  onToggleClipScored: (clip: Clip) => void
-  onOpenClipNotes: (clip: Clip) => void
+  onOpenClipInNotation: (clip: Clip) => void
+  onOpenDetailedNotes: (clip: Clip) => void
+  onImportJudgeJson: () => void
   onRemoveClip: (clipId: string) => void
 }
 
 export function ResultatsContextMenus({
   memberContextMenu,
   clipContextMenu,
+  emptyContextMenu,
+  selectedClip,
   clips,
   memberContextMenuRef,
   clipContextMenuRef,
+  emptyContextMenuRef,
   onCloseMemberMenu,
   onCloseClipMenu,
+  onCloseEmptyMenu,
   onRemoveImportedJudge,
-  onToggleClipScored,
-  onOpenClipNotes,
+  onOpenClipInNotation,
+  onOpenDetailedNotes,
+  onImportJudgeJson,
   onRemoveClip,
 }: ResultatsContextMenusProps) {
   return (
@@ -72,24 +84,28 @@ export function ResultatsContextMenus({
             if (!clip) return null
             return (
               <>
+                {clip.filePath ? (
+                  <>
+                    <button
+                      onClick={() => {
+                        onOpenClipInNotation(clip)
+                        onCloseClipMenu()
+                      }}
+                      className="w-full text-left px-3 py-1.5 text-[11px] text-gray-300 hover:bg-gray-800 transition-colors"
+                    >
+                      Ouvrir le lecteur
+                    </button>
+                    <div className="border-t border-gray-700 my-0.5" />
+                  </>
+                ) : null}
                 <button
                   onClick={() => {
-                    onToggleClipScored(clip)
+                    onOpenDetailedNotes(clip)
                     onCloseClipMenu()
                   }}
                   className="w-full text-left px-3 py-1.5 text-[11px] text-gray-300 hover:bg-gray-800 transition-colors"
                 >
-                  {clip.scored ? 'Retirer "noté"' : 'Marquer comme noté'}
-                </button>
-                <div className="border-t border-gray-700 my-0.5" />
-                <button
-                  onClick={() => {
-                    onOpenClipNotes(clip)
-                    onCloseClipMenu()
-                  }}
-                  className="w-full text-left px-3 py-1.5 text-[11px] text-gray-300 hover:bg-gray-800 transition-colors"
-                >
-                  Notes du clip
+                  Notes détaillées des juges
                 </button>
                 <div className="border-t border-gray-700 my-0.5" />
               </>
@@ -102,8 +118,51 @@ export function ResultatsContextMenus({
             }}
             className="w-full text-left px-3 py-1.5 text-[11px] text-red-400 hover:bg-gray-800 transition-colors"
           >
-            Supprimer la vidéo
+            {clips.find((item) => item.id === clipContextMenu.clipId)?.filePath ? 'Supprimer la vidéo' : 'Supprimer la ligne'}
           </button>
+        </div>
+      )}
+
+      {emptyContextMenu && (
+        <div
+          ref={emptyContextMenuRef}
+          className="fixed z-[90] bg-gray-900 border border-gray-700 rounded-lg shadow-xl py-1 min-w-[230px]"
+          style={{ left: emptyContextMenu.x, top: emptyContextMenu.y }}
+        >
+          <button
+            onClick={() => {
+              onImportJudgeJson()
+              onCloseEmptyMenu()
+            }}
+            className="w-full text-left px-3 py-1.5 text-[11px] text-gray-300 hover:bg-gray-800 transition-colors"
+          >
+            Importer un JE.json
+          </button>
+          {selectedClip ? (
+            <>
+              <div className="border-t border-gray-700 my-0.5" />
+              {selectedClip.filePath ? (
+                <button
+                  onClick={() => {
+                    onOpenClipInNotation(selectedClip)
+                    onCloseEmptyMenu()
+                  }}
+                  className="w-full text-left px-3 py-1.5 text-[11px] text-gray-300 hover:bg-gray-800 transition-colors"
+                >
+                  Ouvrir le lecteur (clip sélectionné)
+                </button>
+              ) : null}
+              <button
+                onClick={() => {
+                  onOpenDetailedNotes(selectedClip)
+                  onCloseEmptyMenu()
+                }}
+                className="w-full text-left px-3 py-1.5 text-[11px] text-gray-300 hover:bg-gray-800 transition-colors"
+              >
+                Notes détaillées des juges (clip sélectionné)
+              </button>
+            </>
+          ) : null}
         </div>
       )}
     </>

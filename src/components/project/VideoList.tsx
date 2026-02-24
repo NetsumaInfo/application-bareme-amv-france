@@ -4,7 +4,8 @@ import { useProjectStore } from '@/store/useProjectStore'
 import { useNotationStore } from '@/store/useNotationStore'
 import { useUIStore } from '@/store/useUIStore'
 import * as tauri from '@/services/tauri'
-import { generateId, parseClipName, getClipPrimaryLabel, getClipSecondaryLabel } from '@/utils/formatters'
+import { getClipPrimaryLabel, getClipSecondaryLabel } from '@/utils/formatters'
+import { createClipFromVideoMeta, mergeImportedVideosWithClips } from '@/utils/clipImport'
 import type { Clip } from '@/types/project'
 
 export default function VideoList() {
@@ -32,24 +33,14 @@ export default function VideoList() {
       if (!folderPath) return
 
       const videos = await tauri.scanVideoFolder(folderPath)
-
-      const newClips: Clip[] = videos.map((v, i) => {
-        const parsed = parseClipName(v.file_name)
-        return {
-          id: generateId(),
-          fileName: v.file_name,
-          filePath: v.file_path,
-          displayName: parsed.displayName,
-          author: parsed.author,
-          duration: 0,
-          hasInternalSubtitles: false,
-          audioTrackCount: 1,
-          scored: false,
-          order: clips.length + i,
-        }
-      })
-
-      setClips([...clips, ...newClips])
+      const latestClips = useProjectStore.getState().clips
+      const importedClips: Clip[] = videos.map((video, index) =>
+        createClipFromVideoMeta(video, latestClips.length + index),
+      )
+      const merged = mergeImportedVideosWithClips(latestClips, importedClips)
+      if (merged.addedCount > 0 || merged.linkedCount > 0) {
+        setClips(merged.clips)
+      }
       if (currentProject) {
         updateProject({ clipsFolderPath: folderPath })
       }

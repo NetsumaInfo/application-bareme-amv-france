@@ -43,7 +43,7 @@ export function SettingsGeneralTab({
       </div>
 
       <div>
-        <label className="text-xs font-medium text-gray-400 mb-1 block">Nom du projet</label>
+        <label className="text-xs font-medium text-gray-400 mb-1 block">Nom du concours</label>
         <input
           value={currentProject?.name ?? ''}
           onChange={(event) => onUpdateProject({ name: event.target.value })}

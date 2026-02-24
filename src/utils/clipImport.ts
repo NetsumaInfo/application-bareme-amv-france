@@ -1,6 +1,7 @@
 import type { Clip } from '@/types/project'
 import { generateId, parseClipName } from '@/utils/formatters'
-import { findMatchingPlaceholderIndex } from '@/utils/clipImportTokens'
+import { findMatchingLinkedClipIndex, findMatchingPlaceholderIndex } from '@/utils/clipImportTokens'
+import { normalizeFilePath } from '@/utils/path'
 import {
   buildManualFileName,
   sanitizeManualPart,
@@ -80,9 +81,10 @@ export function mergeImportedVideosWithClips(
   const appendUnmatched = options?.appendUnmatched ?? true
   const current = [...existingClips]
   const matchedPlaceholderIds = new Set<string>()
+  const matchedLinkedClipIds = new Set<string>()
   const seenPaths = new Set(
     current
-      .map((clip) => clip.filePath)
+      .map((clip) => normalizeFilePath(clip.filePath))
       .filter((path) => Boolean(path)),
   )
   const queuedImports: Clip[] = []
@@ -90,7 +92,7 @@ export function mergeImportedVideosWithClips(
   let addedCount = 0
 
   for (const imported of importedClips) {
-    const importedPath = imported.filePath?.trim()
+    const importedPath = normalizeFilePath(imported.filePath)
     if (!importedPath || seenPaths.has(importedPath)) continue
     seenPaths.add(importedPath)
     queuedImports.push(imported)
@@ -112,6 +114,22 @@ export function mergeImportedVideosWithClips(
         duration: imported.duration || placeholder.duration,
         hasInternalSubtitles: imported.hasInternalSubtitles,
         audioTrackCount: imported.audioTrackCount || placeholder.audioTrackCount || 1,
+      }
+      continue
+    }
+
+    const linkedMatchIndex = findMatchingLinkedClipIndex(current, imported, matchedLinkedClipIds)
+    if (linkedMatchIndex >= 0) {
+      const linkedClip = current[linkedMatchIndex]
+      matchedLinkedClipIds.add(linkedClip.id)
+      linkedCount += 1
+      current[linkedMatchIndex] = {
+        ...linkedClip,
+        fileName: imported.fileName,
+        filePath: imported.filePath,
+        duration: imported.duration || linkedClip.duration,
+        hasInternalSubtitles: imported.hasInternalSubtitles,
+        audioTrackCount: imported.audioTrackCount || linkedClip.audioTrackCount || 1,
       }
       continue
     }

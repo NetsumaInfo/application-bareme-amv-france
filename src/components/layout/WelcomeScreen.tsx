@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback } from 'react'
 import { FilePlus, FolderOpen, Folder } from 'lucide-react'
-import { useProjectStore } from '@/store/useProjectStore'
-import { useNotationStore } from '@/store/useNotationStore'
 import { useUIStore } from '@/store/useUIStore'
 import * as tauri from '@/services/tauri'
+import { listRecentProjectPaths, rememberRecentProjectPath, setRecentProjectPaths } from '@/services/recentProjects'
+import { loadAndApplyProjectFile } from '@/services/projectSession'
 
 interface ProjectListItem {
   name: string
@@ -12,9 +12,21 @@ interface ProjectListItem {
   filePath: string
 }
 
+function mapSummaryToProjectListItem(project: tauri.ProjectSummary): ProjectListItem {
+  return {
+    name: project.name,
+    judgeName: project.judge_name,
+    updatedAt: project.updated_at,
+    filePath: project.file_path,
+  }
+}
+
+function parseIsoDate(value: string): number {
+  const parsed = Date.parse(value)
+  return Number.isFinite(parsed) ? parsed : 0
+}
+
 export function WelcomeScreen() {
-  const { setProjectFromData } = useProjectStore()
-  const { loadNotes } = useNotationStore()
   const { setShowProjectModal, setProjectsFolderPath } = useUIStore()
   const [projects, setProjects] = useState<ProjectListItem[]>([])
   const [folderPath, setFolderPath] = useState<string>('')
@@ -28,14 +40,53 @@ export function WelcomeScreen() {
         setProjectsFolderPath(folder)
 
         const list = await tauri.listProjectsInFolder(folder)
-        setProjects(
-          list.map((project) => ({
-            name: project.name,
-            judgeName: project.judge_name,
-            updatedAt: project.updated_at,
-            filePath: project.file_path,
-          })),
+        const byPath = new Map<string, ProjectListItem>(
+          list.map((project) => {
+            const mapped = mapSummaryToProjectListItem(project)
+            return [mapped.filePath, mapped] as const
+          }),
         )
+
+        const recentPaths = await listRecentProjectPaths()
+        const missingPaths = recentPaths.filter((path) => !byPath.has(path))
+
+        const loadedRecent = await Promise.all(
+          missingPaths.map(async (path) => {
+            try {
+              const data = await tauri.loadProjectFile(path) as {
+                project?: {
+                  name?: string
+                  judgeName?: string
+                  judge_name?: string
+                  updatedAt?: string
+                  updated_at?: string
+                }
+              }
+              return {
+                name: data.project?.name?.trim() || 'Sans nom',
+                judgeName: data.project?.judgeName || data.project?.judge_name || '',
+                updatedAt: data.project?.updatedAt || data.project?.updated_at || '',
+                filePath: path,
+              } satisfies ProjectListItem
+            } catch {
+              return null
+            }
+          }),
+        )
+
+        for (const recentProject of loadedRecent) {
+          if (!recentProject) continue
+          byPath.set(recentProject.filePath, recentProject)
+        }
+
+        const mergedProjects = Array.from(byPath.values()).sort(
+          (a, b) => parseIsoDate(b.updatedAt) - parseIsoDate(a.updatedAt),
+        )
+        const validRecentPaths = recentPaths.filter((path) => byPath.has(path))
+        if (validRecentPaths.length !== recentPaths.length) {
+          await setRecentProjectPaths(validRecentPaths)
+        }
+        setProjects(mergedProjects)
       } catch (error) {
         console.error('Failed to load projects:', error)
       } finally {
@@ -47,23 +98,13 @@ export function WelcomeScreen() {
 
   const openProjectFromFile = useCallback(async (filePath: string) => {
     try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const data = await tauri.loadProjectFile(filePath) as any
-
-      setProjectFromData({
-        ...data,
-        version: typeof data.version === 'string' ? data.version : '1.0',
-        project: { ...data.project, filePath },
-        baremeId: data.baremeId ?? data.project?.baremeId ?? '',
-        clips: Array.isArray(data.clips) ? data.clips : [],
-        notes: data.notes ?? {},
-      })
-      if (data.notes) loadNotes(data.notes)
+      await loadAndApplyProjectFile(filePath)
+      await rememberRecentProjectPath(filePath)
     } catch (error) {
       console.error('Failed to open project:', error)
       alert("Impossible d'ouvrir ce projet. Il a peut-être été déplacé ou supprimé.")
     }
-  }, [setProjectFromData, loadNotes])
+  }, [])
 
   const handleOpenProject = async () => {
     try {

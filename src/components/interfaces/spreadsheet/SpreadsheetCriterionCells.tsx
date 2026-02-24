@@ -14,6 +14,13 @@ interface SpreadsheetCriterionCellsProps {
   onCellChange: (clipId: string, criterionId: string, value: string) => void
   onCellKeyDown: (event: ReactKeyboardEvent, clipIdx: number, critIdx: number) => void
   onSetCurrentClip: (index: number) => void
+  onShowCriterionBubble: (params: {
+    clip: Clip
+    note: SpreadsheetNoteLike | undefined
+    criterionId: string
+    x: number
+    y: number
+  }) => void
 }
 
 export function SpreadsheetCriterionCells({
@@ -27,6 +34,7 @@ export function SpreadsheetCriterionCells({
   onCellChange,
   onCellKeyDown,
   onSetCurrentClip,
+  onShowCriterionBubble,
 }: SpreadsheetCriterionCellsProps) {
   return (
     <>
@@ -53,7 +61,26 @@ export function SpreadsheetCriterionCells({
                 const originalIndex = clips.findIndex((item) => item.id === clip.id)
                 if (originalIndex !== -1) onSetCurrentClip(originalIndex)
               }}
-              onClick={(event) => event.stopPropagation()}
+              onMouseDown={(event) => {
+                if (event.button !== 0 || !event.ctrlKey) return
+                event.preventDefault()
+                event.stopPropagation()
+                const originalIndex = clips.findIndex((item) => item.id === clip.id)
+                if (originalIndex !== -1) onSetCurrentClip(originalIndex)
+                onShowCriterionBubble({
+                  clip,
+                  note,
+                  criterionId: criterion.id,
+                  x: event.clientX,
+                  y: event.clientY,
+                })
+              }}
+              onClick={(event) => {
+                if (event.ctrlKey) {
+                  event.preventDefault()
+                }
+                event.stopPropagation()
+              }}
               className={`amv-soft-number w-full px-1 py-0.5 text-center rounded text-xs font-mono transition-colors focus-visible:outline-none ${
                 hasError
                   ? 'border border-accent bg-accent/10 text-accent-light'

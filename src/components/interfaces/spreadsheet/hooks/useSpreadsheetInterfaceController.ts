@@ -226,6 +226,7 @@ export function useSpreadsheetInterfaceController(): SpreadsheetInterfaceControl
     hideTotalsUntilAllScored,
     hideAverages,
     showMiniatures,
+    shortcutBindings,
     currentProject,
     editingManualClipId,
     cellRefs,

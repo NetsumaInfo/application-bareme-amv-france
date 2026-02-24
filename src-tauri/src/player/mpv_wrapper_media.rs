@@ -128,6 +128,10 @@ impl MpvPlayer {
             video_frame_count: 0,
             sample_aspect_ratio: self.get_property_string_safe("video-params/sar"),
             display_aspect_ratio: self.get_property_string_safe("video-params/dar"),
+            rotation_degrees: self
+                .get_property_string_safe("video-params/rotate")
+                .parse()
+                .unwrap_or(0),
         }
     }
 

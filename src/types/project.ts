@@ -72,6 +72,8 @@ export interface ImportedJudgeNote {
   scores: Record<string, ImportedJudgeCriterionScore>
   finalScore?: number
   textNotes?: string
+  criterionNotes?: Record<string, string>
+  categoryNotes?: Record<string, string>
 }
 
 export interface ImportedJudgeData {

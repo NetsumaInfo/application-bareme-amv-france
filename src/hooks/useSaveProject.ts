@@ -2,6 +2,7 @@ import { useCallback } from 'react'
 import { useProjectStore } from '@/store/useProjectStore'
 import { useNotationStore } from '@/store/useNotationStore'
 import * as tauri from '@/services/tauri'
+import { rememberRecentProjectPath } from '@/services/recentProjects'
 
 export function useSaveProject() {
   const save = useCallback(async () => {
@@ -22,7 +23,14 @@ export function useSaveProject() {
     const projectData = projectState.getProjectData(notesData)
     if (!projectData) return
 
+    const activeBaremeId = notationState.currentBareme?.id
+    if (activeBaremeId) {
+      projectData.baremeId = activeBaremeId
+      projectData.project.baremeId = activeBaremeId
+    }
+
     await tauri.saveProjectFile(projectData, filePath)
+    await rememberRecentProjectPath(filePath)
     projectState.markClean()
   }, [])
 
@@ -41,7 +49,14 @@ export function useSaveProject() {
     const projectData = projectState.getProjectData(notesData)
     if (!projectData) return
 
+    const activeBaremeId = notationState.currentBareme?.id
+    if (activeBaremeId) {
+      projectData.baremeId = activeBaremeId
+      projectData.project.baremeId = activeBaremeId
+    }
+
     await tauri.saveProjectFile(projectData, filePath)
+    await rememberRecentProjectPath(filePath)
     projectState.markClean()
   }, [])
 

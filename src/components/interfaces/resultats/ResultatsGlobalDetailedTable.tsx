@@ -7,6 +7,7 @@ import {
   type NoteLike,
 } from '@/utils/results'
 import type { ResultatsRow } from '@/components/interfaces/resultats/types'
+import { ClipMiniaturePreview } from '@/components/interfaces/spreadsheet/miniaturePreview'
 
 interface ResultatsGlobalDetailedTableProps {
   canSortByScore: boolean
@@ -24,6 +25,8 @@ interface ResultatsGlobalDetailedTableProps {
   onSetCriterionDraftCell: (key: string, value: string) => void
   onCommitCriterionDraftCell: (clipId: string, criterionId: string, judgeKey: string) => void
   onClearCriterionDraftCell: (key: string) => void
+  showMiniatures: boolean
+  thumbnailDefaultSeconds: number
 }
 
 function formatCriterionValue(value: number): string {
@@ -48,6 +51,8 @@ export function ResultatsGlobalDetailedTable({
   onSetCriterionDraftCell,
   onCommitCriterionDraftCell,
   onClearCriterionDraftCell,
+  showMiniatures,
+  thumbnailDefaultSeconds,
 }: ResultatsGlobalDetailedTableProps) {
   return (
     <div className="flex-1 overflow-auto rounded-lg border border-gray-700">
@@ -146,7 +151,6 @@ export function ResultatsGlobalDetailedTable({
                       style={{
                         color,
                         backgroundColor: withAlpha(color, 0.07),
-                        boxShadow: `inset 0 2px 0 0 ${withAlpha(color, 0.9)}`,
                       }}
                       title={judge.judgeName}
                     >
@@ -188,8 +192,8 @@ export function ResultatsGlobalDetailedTable({
                   onContextMenu={(event) => {
                     event.preventDefault()
                     event.stopPropagation()
-                    const width = 210
-                    const height = 152
+                    const width = 220
+                    const height = 210
                     const x = Math.max(8, Math.min(event.clientX, window.innerWidth - width - 8))
                     const y = Math.max(8, Math.min(event.clientY, window.innerHeight - height - 8))
                     onOpenClipContextMenu(row.clip.id, x, y)
@@ -200,6 +204,13 @@ export function ResultatsGlobalDetailedTable({
                     {getClipSecondaryLabel(row.clip) && (
                       <span className="truncate text-[9px] text-gray-500">{getClipSecondaryLabel(row.clip)}</span>
                     )}
+                    {showMiniatures && row.clip.filePath ? (
+                      <ClipMiniaturePreview
+                        clip={row.clip}
+                        enabled={showMiniatures}
+                        defaultSeconds={thumbnailDefaultSeconds}
+                      />
+                    ) : null}
                   </div>
                 </td>
 

@@ -3,6 +3,7 @@ import { Upload, Users } from 'lucide-react'
 import type { ResultatsHeaderProps } from '@/components/interfaces/resultats/types'
 import { ColorSwatchPicker } from '@/components/ui/ColorSwatchPicker'
 import { COLOR_MEMORY_KEYS } from '@/utils/colorPickerStorage'
+import { withAlpha } from '@/utils/colors'
 
 export function ResultatsHeader({
   importing,
@@ -61,49 +62,21 @@ export function ResultatsHeader({
                 event.preventDefault()
                 onOpenMemberContextMenu(importedIndex, event.clientX, event.clientY)
               }}
-              className={`inline-flex items-center gap-1.5 text-[11px] px-2 py-1 rounded border transition-colors ${
-                active
-                  ? 'border-primary-500/60 bg-primary-600/12 text-primary-200'
-                  : 'border-gray-700 bg-surface-dark text-gray-300 hover:border-gray-500'
-              }`}
+              className="inline-flex items-center text-[11px] px-2 py-1 rounded border transition-colors bg-surface-dark hover:text-white"
+              style={{
+                color,
+                borderColor: withAlpha(color, active ? 0.7 : 0.45),
+                backgroundColor: withAlpha(color, active ? 0.15 : 0.07),
+              }}
               title={importedIndex !== null ? 'Clic droit pour options' : undefined}
             >
-              <span
-                role="button"
-                tabIndex={0}
-                className="inline-block w-2 h-2 rounded-full cursor-pointer"
-                style={{ backgroundColor: color }}
-                title="Couleur du juge (clic: sélecteur, clic droit: favoris)"
-                onClick={(event) => {
-                  event.preventDefault()
-                  event.stopPropagation()
-                  colorPickerButtonRefs.current[judge.key]?.click()
-                }}
-                onContextMenu={(event) => {
-                  event.preventDefault()
-                  event.stopPropagation()
-                  const trigger = colorPickerButtonRefs.current[judge.key]
-                  if (!trigger) return
-                  trigger.dispatchEvent(new MouseEvent('contextmenu', {
-                    bubbles: true,
-                    cancelable: true,
-                    clientX: event.clientX,
-                    clientY: event.clientY,
-                  }))
-                }}
-                onKeyDown={(event) => {
-                  if (event.key !== 'Enter' && event.key !== ' ') return
-                  event.preventDefault()
-                  event.stopPropagation()
-                  colorPickerButtonRefs.current[judge.key]?.click()
-                }}
-              />
               {displayName}
             </button>
             <ColorSwatchPicker
               value={color}
               onChange={(next) => onJudgeColorChange(judge.key, next)}
               title={`Couleur de ${displayName}`}
+              triggerSize="sm"
               memoryKey={COLOR_MEMORY_KEYS.recentJudgeColors}
               triggerRef={(node) => { colorPickerButtonRefs.current[judge.key] = node }}
             />

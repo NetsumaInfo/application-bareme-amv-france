@@ -154,6 +154,7 @@ export interface MediaInfo {
   video_frame_count: number
   sample_aspect_ratio: string
   display_aspect_ratio: string
+  rotation_degrees: number
 }
 
 export async function playerGetMediaInfo(path?: string): Promise<MediaInfo> {

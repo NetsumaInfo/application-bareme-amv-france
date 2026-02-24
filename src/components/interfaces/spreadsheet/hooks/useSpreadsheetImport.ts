@@ -6,6 +6,7 @@ import {
   createClipFromVideoMeta,
   mergeImportedVideosWithClips,
 } from '@/utils/clipImport'
+import { normalizeFilePath } from '@/utils/path'
 import { useSpreadsheetDropListeners } from '@/components/interfaces/spreadsheet/hooks/useSpreadsheetDropListeners'
 import type { Clip, Project, ProjectSettings } from '@/types/project'
 
@@ -51,17 +52,30 @@ export function useSpreadsheetImport({
     const latestClips = useProjectStore.getState().clips
     const existingPaths = new Set(
       latestClips
-        .map((clip) => clip.filePath)
+        .map((clip) => normalizeFilePath(clip.filePath))
         .filter((path) => Boolean(path)),
     )
-    const videoPaths = paths.filter((p) => isVideoFile(p) && !existingPaths.has(p))
+    const queuedPaths = new Set<string>()
+    const videoPaths = paths.filter((pathValue) => {
+      if (!isVideoFile(pathValue)) return false
+      const normalized = normalizeFilePath(pathValue)
+      if (!normalized || existingPaths.has(normalized) || queuedPaths.has(normalized)) return false
+      queuedPaths.add(normalized)
+      return true
+    })
     const folderPaths = paths.filter((p) => !p.includes('.') || (!isVideoFile(p) && !p.endsWith('.json')))
 
     let folderVideos: tauri.VideoMetadata[] = []
     for (const folder of folderPaths) {
       try {
         const videos = await tauri.scanVideoFolder(folder)
-        folderVideos = [...folderVideos, ...videos.filter((v) => !existingPaths.has(v.file_path))]
+        const uniqueVideos = videos.filter((video) => {
+          const normalized = normalizeFilePath(video.file_path)
+          if (!normalized || existingPaths.has(normalized) || queuedPaths.has(normalized)) return false
+          queuedPaths.add(normalized)
+          return true
+        })
+        folderVideos = [...folderVideos, ...uniqueVideos]
       } catch {
         // ignore invalid folders
       }

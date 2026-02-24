@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState, type MutableRefObject } from 
 import * as tauri from '@/services/tauri'
 import { formatPreciseTimecode } from '@/utils/formatters'
 import { normalizeShortcutFromEvent } from '@/utils/shortcuts'
+import { computeFramePreviewPlacement } from '@/utils/framePreviewPosition'
 import { snapToFrameSeconds } from '@/utils/timecodes'
 import type { Clip } from '@/types/project'
 import type { ShortcutAction } from '@/utils/shortcuts'
@@ -82,8 +83,11 @@ export function useSpreadsheetFrameTools({
   const showFramePreview = useCallback(async (params: { seconds: number; anchorRect: DOMRect }) => {
     if (!currentClip?.filePath) return
 
-    const left = Math.min(window.innerWidth - 250, Math.max(12, params.anchorRect.left))
-    const top = Math.max(12, params.anchorRect.top - 186)
+    const placement = computeFramePreviewPlacement({
+      anchorRect: params.anchorRect,
+      previewWidth: 236,
+      previewHeight: 136,
+    })
     const cacheKey = `${currentClip.filePath}|${params.seconds.toFixed(3)}`
     const requestId = ++hoverRequestRef.current
 
@@ -91,8 +95,8 @@ export function useSpreadsheetFrameTools({
     if (cached) {
       setFramePreview({
         visible: true,
-        left,
-        top,
+        left: placement.left,
+        top: placement.top,
         image: cached,
         loading: false,
       })
@@ -101,8 +105,8 @@ export function useSpreadsheetFrameTools({
 
     setFramePreview({
       visible: true,
-      left,
-      top,
+      left: placement.left,
+      top: placement.top,
       image: null,
       loading: true,
     })
@@ -114,8 +118,8 @@ export function useSpreadsheetFrameTools({
     }
     setFramePreview({
       visible: true,
-      left,
-      top,
+      left: placement.left,
+      top: placement.top,
       image,
       loading: false,
     })

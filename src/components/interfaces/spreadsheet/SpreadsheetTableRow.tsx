@@ -30,6 +30,13 @@ interface SpreadsheetTableRowProps {
   onManualClipFieldChange: (clipId: string, field: 'author' | 'displayName', value: string) => void
   onCellChange: (clipId: string, criterionId: string, value: string) => void
   onCellKeyDown: (event: ReactKeyboardEvent, clipIdx: number, critIdx: number) => void
+  onShowSubcategoryBubble: (params: {
+    clip: Clip
+    note: SpreadsheetNoteLike | undefined
+    criterionId?: string
+    x: number
+    y: number
+  }) => void
 }
 
 export function SpreadsheetTableRow({
@@ -57,6 +64,7 @@ export function SpreadsheetTableRow({
   onManualClipFieldChange,
   onCellChange,
   onCellKeyDown,
+  onShowSubcategoryBubble,
 }: SpreadsheetTableRowProps) {
   const rowClassName = isActive
     ? 'bg-primary-600/15'
@@ -119,6 +127,7 @@ export function SpreadsheetTableRow({
         onCellChange={onCellChange}
         onCellKeyDown={onCellKeyDown}
         onSetCurrentClip={onSetCurrentClip}
+        onShowCriterionBubble={(params) => onShowSubcategoryBubble(params)}
       />
 
       {!hideTotalsSetting && (

@@ -53,6 +53,9 @@ export function ResultatsViewModeControls({
         <SegmentedButton active={mainView === 'top'} onClick={() => onMainViewChange('top')}>
           Liste Top
         </SegmentedButton>
+        <SegmentedButton active={mainView === 'judgeNotes'} onClick={() => onMainViewChange('judgeNotes')}>
+          Notes des juges
+        </SegmentedButton>
       </div>
 
       {mainView === 'global' && (

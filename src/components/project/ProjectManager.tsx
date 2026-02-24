@@ -27,6 +27,9 @@ export default function ProjectManager() {
 
   const [open, setOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
+  const judgeName = currentProject?.judgeName?.trim() || 'juge'
+  const projectName = currentProject?.name?.trim() || 'Projet'
+  const exportJudgeFilename = `${projectName}_${judgeName}.json`
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -59,9 +62,10 @@ export default function ProjectManager() {
 
       {open && (
         <div className="absolute top-full right-0 mt-1 w-52 bg-surface border border-gray-700 rounded-lg shadow-xl z-50 py-1">
+          <SectionLabel>Concours</SectionLabel>
           <MenuItem
             icon={<FilePlus size={13} />}
-            label="Nouveau projet"
+            label="Nouveau concours"
             shortcut="Ctrl+N"
             onClick={() => closeAndRun(handleNewProject)}
           />
@@ -75,6 +79,7 @@ export default function ProjectManager() {
           {currentProject && (
             <>
               <div className="border-t border-gray-700 my-1" />
+              <SectionLabel>Import vidéo</SectionLabel>
               <MenuItem
                 icon={<FolderPlus size={13} />}
                 label="Importer un dossier..."
@@ -96,6 +101,7 @@ export default function ProjectManager() {
                 onClick={() => closeAndRun(handleRelocateVideos)}
               />
               <div className="border-t border-gray-700 my-1" />
+              <SectionLabel>Sauvegarde</SectionLabel>
               <MenuItem
                 icon={<Save size={13} />}
                 label="Sauvegarder"
@@ -108,20 +114,29 @@ export default function ProjectManager() {
                 onClick={() => closeAndRun(handleSaveAs)}
               />
               <div className="border-t border-gray-700 my-1" />
+              <SectionLabel>Export</SectionLabel>
               <MenuItem
                 icon={<FileDown size={13} />}
-                label="Exporter projet (JSON)"
+                label="Exporter concours (JSON)"
                 onClick={() => closeAndRun(handleExport)}
               />
               <MenuItem
                 icon={<FileDown size={13} />}
-                label="Exporter notation (JE.json)"
+                label={`Exporter notation (${exportJudgeFilename})`}
                 onClick={() => closeAndRun(handleExportJudgeNotes)}
               />
             </>
           )}
         </div>
       )}
+    </div>
+  )
+}
+
+function SectionLabel({ children }: { children: ReactNode }) {
+  return (
+    <div className="px-3 pt-1 pb-0.5 text-[10px] uppercase tracking-wide text-gray-500">
+      {children}
     </div>
   )
 }

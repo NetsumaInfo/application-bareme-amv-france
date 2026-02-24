@@ -3,6 +3,7 @@ import { getClipPrimaryLabel, getClipSecondaryLabel } from '@/utils/formatters'
 import { withAlpha } from '@/utils/colors'
 import type { JudgeSource } from '@/utils/results'
 import type { ResultatsRow } from '@/components/interfaces/resultats/types'
+import { ClipMiniaturePreview } from '@/components/interfaces/spreadsheet/miniaturePreview'
 
 interface ResultatsTopListsProps {
   canSortByScore: boolean
@@ -12,6 +13,8 @@ interface ResultatsTopListsProps {
   selectedClipId: string | null
   onSelectClip: (clipId: string) => void
   onOpenClipInNotation: (clipId: string) => void
+  showMiniatures: boolean
+  thumbnailDefaultSeconds: number
 }
 
 function sortRowsByScore(rows: ResultatsRow[], scoreAccessor: (row: ResultatsRow) => number) {
@@ -41,6 +44,8 @@ function TopList({
   selectedClipId,
   onSelectClip,
   onOpenClipInNotation,
+  showMiniatures,
+  thumbnailDefaultSeconds,
 }: {
   title: string
   entries: ResultatsRow[]
@@ -48,6 +53,8 @@ function TopList({
   selectedClipId: string | null
   onSelectClip: (clipId: string) => void
   onOpenClipInNotation: (clipId: string) => void
+  showMiniatures: boolean
+  thumbnailDefaultSeconds: number
 }) {
   return (
     <div className="rounded-lg border border-gray-700 bg-surface overflow-hidden flex-1 basis-0 min-w-[260px]">
@@ -83,6 +90,13 @@ function TopList({
                   {getClipSecondaryLabel(row.clip) && (
                     <div className="truncate text-[11px] text-gray-500">{getClipSecondaryLabel(row.clip)}</div>
                   )}
+                  {showMiniatures && row.clip.filePath ? (
+                    <ClipMiniaturePreview
+                      clip={row.clip}
+                      enabled={showMiniatures}
+                      defaultSeconds={thumbnailDefaultSeconds}
+                    />
+                  ) : null}
                 </div>
               </div>
             </button>
@@ -101,6 +115,8 @@ export function ResultatsTopLists({
   selectedClipId,
   onSelectClip,
   onOpenClipInNotation,
+  showMiniatures,
+  thumbnailDefaultSeconds,
 }: ResultatsTopListsProps) {
   const finalTop = useMemo(
     () => sortRowsByScore(rows, (row) => row.averageTotal),
@@ -136,6 +152,8 @@ export function ResultatsTopLists({
             selectedClipId={selectedClipId}
             onSelectClip={onSelectClip}
             onOpenClipInNotation={onOpenClipInNotation}
+            showMiniatures={showMiniatures}
+            thumbnailDefaultSeconds={thumbnailDefaultSeconds}
           />
         ))}
 
@@ -146,6 +164,8 @@ export function ResultatsTopLists({
           selectedClipId={selectedClipId}
           onSelectClip={onSelectClip}
           onOpenClipInNotation={onOpenClipInNotation}
+          showMiniatures={showMiniatures}
+          thumbnailDefaultSeconds={thumbnailDefaultSeconds}
         />
       </div>
     </div>

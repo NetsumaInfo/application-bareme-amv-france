@@ -14,6 +14,7 @@ interface ColorSwatchPickerProps {
   onChange: (color: string) => void
   disabled?: boolean
   title?: string
+  triggerSize?: 'md' | 'sm'
   presets?: string[]
   memoryKey?: string
   maxRemembered?: number
@@ -122,6 +123,7 @@ export function ColorSwatchPicker({
   onChange,
   disabled = false,
   title,
+  triggerSize = 'md',
   presets = CATEGORY_COLOR_PRESETS,
   memoryKey = FALLBACK_MEMORY_KEY,
   maxRemembered = 10,
@@ -340,14 +342,14 @@ export function ColorSwatchPicker({
         disabled={disabled}
         onClick={togglePicker}
         onContextMenu={(event) => openColorContextMenu(event, normalizedValue)}
-        className="h-8 px-2 rounded border border-gray-700 bg-surface-dark/80 hover:border-gray-500 disabled:opacity-40 disabled:cursor-not-allowed inline-flex items-center gap-1.5"
+        className={`${triggerSize === 'sm' ? 'h-[28px] px-2 gap-1.5' : 'h-8 px-2 gap-1.5'} rounded border border-gray-700 bg-surface-dark/80 hover:border-gray-500 disabled:opacity-40 disabled:cursor-not-allowed inline-flex items-center`}
         title={title}
       >
         <span
-          className="inline-block w-4 h-4 rounded border border-white/20"
+          className={`${triggerSize === 'sm' ? 'w-4 h-4' : 'w-4 h-4'} inline-block rounded border border-white/20`}
           style={{ backgroundColor: normalizedValue }}
         />
-        <ChevronDown size={12} className="text-gray-400" />
+        <ChevronDown size={triggerSize === 'sm' ? 11 : 12} className="text-gray-400" />
       </button>
 
       {open && !disabled && (

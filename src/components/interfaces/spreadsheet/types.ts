@@ -14,4 +14,7 @@ export interface SpreadsheetNoteScore {
 
 export interface SpreadsheetNoteLike {
   scores: Record<string, SpreadsheetNoteScore>
+  textNotes?: string
+  criterionNotes?: Record<string, string>
+  categoryNotes?: Record<string, string>
 }

@@ -10,6 +10,8 @@ interface ResultatsNotesPanelProps {
   selectedClipFps: number | null
   onSetCurrentJudgeText: (clipId: string, text: string) => void
   onJumpToTimecode: (clipId: string, seconds: number) => void
+  onTimecodeHover: (params: { seconds: number; anchorRect: DOMRect }) => void
+  onTimecodeLeave: () => void
 }
 
 export function ResultatsNotesPanel({
@@ -19,6 +21,8 @@ export function ResultatsNotesPanel({
   selectedClipFps,
   onSetCurrentJudgeText,
   onJumpToTimecode,
+  onTimecodeHover,
+  onTimecodeLeave,
 }: ResultatsNotesPanelProps) {
   if (hidden || !selectedClip) {
     return null
@@ -50,6 +54,10 @@ export function ResultatsNotesPanel({
                   onTimecodeSelect={(item) => {
                     onJumpToTimecode(selectedClip.id, item.seconds)
                   }}
+                  onTimecodeHover={({ item, anchorRect }) => {
+                    onTimecodeHover({ seconds: item.seconds, anchorRect })
+                  }}
+                  onTimecodeLeave={onTimecodeLeave}
                   color="#60a5fa"
                   fpsHint={selectedClipFps ?? undefined}
                   textareaClassName="min-h-[52px]"
@@ -64,6 +72,10 @@ export function ResultatsNotesPanel({
                     onTimecodeSelect={(item) => {
                       onJumpToTimecode(selectedClip.id, item.seconds)
                     }}
+                    onTimecodeHover={({ item, anchorRect }) => {
+                      onTimecodeHover({ seconds: item.seconds, anchorRect })
+                    }}
+                    onTimecodeLeave={onTimecodeLeave}
                     color="#94a3b8"
                     fpsHint={selectedClipFps ?? undefined}
                     textareaClassName="min-h-[52px]"

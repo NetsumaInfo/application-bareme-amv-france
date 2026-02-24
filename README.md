@@ -1,5 +1,5 @@
 # AMV Notation
-![Version](https://img.shields.io/badge/version-v0.4.0-2563eb)
+![Version](https://img.shields.io/badge/version-v0.5.0-2563eb)
 
 Application desktop de notation pour concours AMV (Anime Music Video).
 
@@ -37,17 +37,26 @@ Application desktop de notation pour concours AMV (Anime Music Video).
 
 - 3 modes de notation: **Tableur**, **Notes** et **Dual** (vue combinée)
 - Barèmes personnalisables (catégories, critères, coefficients, couleurs par catégorie)
-- Éditeur de barème avec options déroulantes et événements d'ouverture rapide
+- Éditeur de barème avec options déroulantes et Color Swatch Picker personnalisé
 - Notes par critère avec commentaires textuels
 - Notes par catégorie et notes globales
+- Notes par critère et par catégorie pour les juges importés (JE.json)
 - Système de timecodes dans les notes (détection automatique, chips cliquables, seek instantané)
 - Fenêtre de notes détachée (multi-écran) synchronisée en temps réel
 - Annuler (Undo) sur les notes
+- Saisie numérique validée avec bornes (min/max/step)
 
 ### Résultats et exports
 
-- Onglet **Résultat**: tableau récapitulatif par clip et par juge
+- Onglet **Résultat** avec vues multiples:
+  - **Vue globale par catégorie**: synthèse des résultats par catégorie
+  - **Vue globale détaillée**: résultats critère par critère
+  - **Vue globale juge couleur**: visualisation colorée par juge
+  - **Vue par juge**: résultats individuels de chaque juge
+  - **Top lists**: classements automatiques
+  - Contrôles de changement de vue intégrés
 - Import de notations de juges externes (`JE.json`)
+- Menu contextuel dans les résultats (actions par clip)
 - Onglet **Export**: exports multiples
   - **Exporter projet (JSON)**: projet complet (clips, notes, config)
   - **Exporter notation (JE.json)**: uniquement les notes du juge pour partage
@@ -57,15 +66,16 @@ Application desktop de notation pour concours AMV (Anime Music Video).
 
 - Création de projets avec assistant
 - Sauvegarde/ouverture de projets (`.json`)
-- Projets récents
+- Projets récents avec session persistante
 - Import de clips vidéo depuis un dossier
+- Import de clips avec parsing intelligent des noms (tokens, ordre)
 - Sauvegarde automatique configurable
 - Indicateur de progression
 
 ### Interface
 
 - Menu contextuel (clic droit) avec actions rapides
-- Raccourcis clavier entièrement personnalisables (30 actions configurables)
+- Raccourcis clavier entièrement personnalisables (30+ actions configurables)
 - Gestion améliorée du clavier via `event.code` (compatibilité layouts)
 - Zoom de l'interface (Ctrl+=/Ctrl+-/Ctrl+0)
 - Thème sombre moderne
@@ -77,6 +87,7 @@ Application desktop de notation pour concours AMV (Anime Music Video).
 - Processus ffmpeg/ffprobe optimisés (threads limités, fenêtre console masquée)
 - ffmpeg, ffprobe et libmpv-2.dll bundlés dans l'installeur
 - File d'attente concurrente pour le chargement des miniatures
+- Architecture modulaire (composants décomposés, hooks dédiés)
 
 ## Prérequis
 
@@ -152,6 +163,7 @@ npm run tauri build
 | Insérer timecode | `Ctrl+T` |
 | Activer miniatures | `Ctrl+M` |
 | Définir frame miniature | `Ctrl+Shift+M` |
+| Capture d'écran globale | `Ctrl+Shift+G` |
 | Navigation champs notes | `Ctrl+Flèches` |
 
 Tous les raccourcis sont personnalisables dans les paramètres.
@@ -171,66 +183,61 @@ src/                    Frontend React
                         Header, ContextMenu, BaremeSelector,
                         NotationModeSwitcher, NotationTabContent,
                         WelcomeScreen
-      hooks/            Hooks layout (useLayoutState, etc.)
+      hooks/            Hooks layout
     player/             VideoPlayer, PlayerControls, PlayerMainControls,
                         PlayerSeekBar, FloatingVideoPlayer,
-                        FullscreenOverlay, AudioDbMeter, MediaInfoPanel,
-                        AudioTrackSelector, SubtitleSelector
+                        FullscreenOverlay, AudioDbMeter, MediaInfoPanel
       floating/         Composants lecteur flottant
-      hooks/            Hooks lecteur (usePlayerResize, etc.)
+      hooks/            Hooks lecteur
       mediaInfo/        Composants panneau MediaInfo
       overlay/          Composants overlay plein écran
     interfaces/         SpreadsheetInterface, ModernInterface,
                         NotationInterface, ResultatsInterface,
                         ExportInterface, InterfaceSwitcher
-      spreadsheet/      Sous-composants tableur
+      spreadsheet/      Sous-composants tableur + hooks
       modern/           Sous-composants vue moderne
       notation/         Sous-composants vue notes
-      resultats/        Sous-composants résultats
+      resultats/        Vues résultats (Global, Détaillé, Juge,
+                        TopLists, ContextMenus) + hooks
       export/           Sous-composants export
     notes/              DetachedNotesWindow, DetachedNotesHeader,
-                        DetachedFramePreview, DetachedNotesLoading,
-                        TimecodeChipList, TimecodeTextarea,
-                        InlineTimecodeText, insertTextAtCursor
+                        DetachedFramePreview, TimecodeInlineText
       detached/         Sous-composants fenêtre détachée
-    project/            ProjectManager, CreateProjectModal, VideoList,
-                        ProgressIndicator
+    project/            ProjectManager, CreateProjectModal, VideoList
                         useProjectFileActions, useProjectMenuActions,
                         useProjectVideoActions
     settings/           SettingsPanel, SettingsGeneralTab,
-                        SettingsNotationTab, SettingsShortcutsTab,
-                        SettingsToggle, settingsPanelConfig
+                        SettingsNotationTab, SettingsShortcutsTab
     scoring/            BaremeEditor, baremeEditorUtils
       bareme/           Sous-composants éditeur de barème
+    ui/                 ColorSwatchPicker
   store/                usePlayerStore, useProjectStore, useNotationStore,
                         useUIStore
-                        notationStoreBaremeActions, notationStoreNoteActions,
-                        notationStoreStateUpdates, notationStoreUtils
-                        projectStoreClipActions, projectStoreNormalization,
-                        projectStoreProjectActions
-  hooks/                usePlayer, useAutoSave, useKeyboardShortcuts, useSaveProject
-  services/             tauri.ts (wrappers invoke)
-    tauri_api/          API Tauri modulaire
+                        + actions modulaires (bareme, notes, clips, etc.)
+  hooks/                usePlayer, useAutoSave, useKeyboardShortcuts,
+                        useSaveProject
+  services/             tauri.ts, projectSession, recentProjects
+    tauri_api/          API Tauri modulaire (player, windows)
   types/                Types TypeScript (project, player, notation, bareme)
   schemas/              Schémas Zod
   utils/                scoring, formatters, shortcuts, timecodes, results,
                         colors, screenshot, clipImport, clipImportTokens,
-                        clipOrder, manualClipParser
+                        clipOrder, manualClipParser, numberInput,
+                        colorPickerStorage, framePreviewPosition, path
 
 src-tauri/src/          Backend Rust
   main.rs               setup Tauri + init mpv + création overlay
   state.rs              AppState
   app_windows.rs        Gestion fenêtres applicatives
   player/
-    mod.rs              Module player
     bootstrap.rs        Initialisation mpv
-    commands/           Commandes Tauri (modulaire)
+    commands/           Commandes Tauri modulaires (cache, control,
+                        media, overlay, parsing, probe_media)
     mpv_ffi.rs          Bindings FFI mpv
     mpv_wrapper.rs      Wrapper haut niveau mpv
-    mpv_wrapper_media.rs    Media info wrapper
+    mpv_wrapper_media.rs    Media info
     mpv_wrapper_properties.rs  Propriétés mpv
-    mpv_probe.rs        Probe media (ffprobe, mediainfo)
-      mpv_probe/        Sous-modules probe
+    mpv_probe/          Probe media (ffprobe, mediainfo)
     mpv_window.rs       Gestion fenêtre mpv
     mpv_window_geometry.rs  Géométrie fenêtre
     mpv_window_mode.rs  Modes fenêtre (PiP, fullscreen)
@@ -238,8 +245,7 @@ src-tauri/src/          Backend Rust
     mpv_win32.rs        Intégration Win32
     mpv_types.rs        Types mpv
   project/
-    manager.rs          Gestion projet
-    manager/            Sous-modules manager
+    manager/            Gestion projet modulaire
   video/                Scan de dossiers vidéos
 ```
 

@@ -2,6 +2,7 @@ import { getClipPrimaryLabel, getClipSecondaryLabel } from '@/utils/formatters'
 import { withAlpha } from '@/utils/colors'
 import { hasAnyCriterionScore, type CategoryGroup, type JudgeSource, type NoteLike } from '@/utils/results'
 import type { ResultatsRow } from '@/components/interfaces/resultats/types'
+import { ClipMiniaturePreview } from '@/components/interfaces/spreadsheet/miniaturePreview'
 
 interface ResultatsGlobalCategoryTableProps {
   currentBaremeTotalPoints: number
@@ -13,6 +14,8 @@ interface ResultatsGlobalCategoryTableProps {
   onSelectClip: (clipId: string) => void
   onOpenClipInNotation: (clipId: string) => void
   onOpenClipContextMenu: (clipId: string, x: number, y: number) => void
+  showMiniatures: boolean
+  thumbnailDefaultSeconds: number
 }
 
 function formatAverage(values: number[]): string {
@@ -31,31 +34,38 @@ export function ResultatsGlobalCategoryTable({
   onSelectClip,
   onOpenClipInNotation,
   onOpenClipContextMenu,
+  showMiniatures,
+  thumbnailDefaultSeconds,
 }: ResultatsGlobalCategoryTableProps) {
+  const judgeBandMinWidth = Math.max(220, (judges.length + 1) * 76)
+
   return (
     <div className="flex-1 overflow-auto rounded-lg border border-gray-700">
-      <table className="w-full border-collapse text-xs">
+      <table className="w-full min-w-max border-collapse text-xs">
         <thead className="sticky top-0 z-10">
           <tr>
             <th
+              rowSpan={2}
               className="px-2 py-1.5 text-center text-[10px] font-medium text-gray-500 border-r border-b border-gray-700 w-8 bg-surface-dark sticky left-0 z-20"
             >
               #
             </th>
             <th
-              className="px-2 py-1.5 text-left text-[10px] font-medium text-gray-500 border-r border-b border-gray-700 min-w-[120px] max-w-[180px] bg-surface-dark sticky left-8 z-20"
+              rowSpan={2}
+              className="px-1.5 py-1.5 text-left text-[10px] font-medium text-gray-500 border-r border-b border-gray-700 min-w-[104px] max-w-[152px] bg-surface-dark sticky left-8 z-20"
             >
               Clip
             </th>
             {categoryGroups.map((group) => (
               <th
                 key={group.category}
-                colSpan={judges.length + 1}
-                className="px-2 py-1.5 text-center text-[10px] font-bold uppercase tracking-wider border-r border-b"
+                colSpan={1}
+                className="px-2 py-1.5 text-center text-[10px] font-bold uppercase tracking-wider border-r border-b min-w-[240px]"
                 style={{
                   color: group.color,
                   backgroundColor: withAlpha(group.color, 0.16),
                   borderColor: withAlpha(group.color, 0.3),
+                  minWidth: `${judgeBandMinWidth}px`,
                 }}
               >
                 {group.category}
@@ -71,10 +81,14 @@ export function ResultatsGlobalCategoryTable({
             {categoryGroups.map((group) => (
               <th
                 key={`${group.category}-heads`}
-                colSpan={judges.length + 1}
+                colSpan={1}
                 className="px-0 py-0 border-r border-b border-gray-700"
+                style={{ minWidth: `${judgeBandMinWidth}px` }}
               >
-                <div className="grid" style={{ gridTemplateColumns: `repeat(${judges.length + 1}, minmax(0, 1fr))` }}>
+                <div
+                  className="grid"
+                  style={{ gridTemplateColumns: `repeat(${judges.length + 1}, minmax(72px, 1fr))` }}
+                >
                   {judges.map((judge) => (
                     <div
                       key={`${group.category}-${judge.key}-head`}
@@ -117,7 +131,7 @@ export function ResultatsGlobalCategoryTable({
                   {index + 1}
                 </td>
                 <td
-                  className="px-2 py-1 border-r border-gray-800 sticky left-8 z-10 bg-surface-dark max-w-[180px]"
+                  className="px-1.5 py-1 border-r border-gray-800 sticky left-8 z-10 bg-surface-dark min-w-[104px] max-w-[152px]"
                   onDoubleClick={(event) => {
                     event.stopPropagation()
                     onOpenClipInNotation(row.clip.id)
@@ -125,8 +139,8 @@ export function ResultatsGlobalCategoryTable({
                   onContextMenu={(event) => {
                     event.preventDefault()
                     event.stopPropagation()
-                    const width = 210
-                    const height = 152
+                    const width = 220
+                    const height = 210
                     const x = Math.max(8, Math.min(event.clientX, window.innerWidth - width - 8))
                     const y = Math.max(8, Math.min(event.clientY, window.innerHeight - height - 8))
                     onOpenClipContextMenu(row.clip.id, x, y)
@@ -135,8 +149,15 @@ export function ResultatsGlobalCategoryTable({
                   <div className="flex flex-col min-w-0 leading-tight">
                     <span className="truncate text-primary-300 text-[11px] font-semibold">{getClipPrimaryLabel(row.clip)}</span>
                     {getClipSecondaryLabel(row.clip) && (
-                      <span className="truncate text-[9px] text-gray-500">{getClipSecondaryLabel(row.clip)}</span>
+                      <span className="truncate text-[8px] text-gray-500">{getClipSecondaryLabel(row.clip)}</span>
                     )}
+                    {showMiniatures && row.clip.filePath ? (
+                      <ClipMiniaturePreview
+                        clip={row.clip}
+                        enabled={showMiniatures}
+                        defaultSeconds={thumbnailDefaultSeconds}
+                      />
+                    ) : null}
                   </div>
                 </td>
 
@@ -145,8 +166,12 @@ export function ResultatsGlobalCategoryTable({
                     <td
                       key={`${row.clip.id}-${group.category}-judge-values`}
                       className="px-0 py-0 border-r border-gray-800 font-mono text-white/90"
+                      style={{ minWidth: `${judgeBandMinWidth}px` }}
                     >
-                      <div className="grid" style={{ gridTemplateColumns: `repeat(${judges.length + 1}, minmax(0, 1fr))` }}>
+                      <div
+                        className="grid"
+                        style={{ gridTemplateColumns: `repeat(${judges.length + 1}, minmax(72px, 1fr))` }}
+                      >
                         {judges.map((judge, judgeIndex) => {
                           const note = judge.notes[row.clip.id] as NoteLike | undefined
                           const hasScore = hasAnyCriterionScore(note, group.criteria)

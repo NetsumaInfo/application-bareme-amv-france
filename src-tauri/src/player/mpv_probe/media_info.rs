@@ -5,6 +5,44 @@ use crate::player::mpv_probe::parsing::{
 };
 use serde_json::Value;
 
+fn normalize_rotation(raw: i64) -> i64 {
+    let mut normalized = raw % 360;
+    if normalized < 0 {
+        normalized += 360;
+    }
+    normalized
+}
+
+fn parse_rotation_degrees(video_stream: Option<&Value>) -> i64 {
+    let direct = parse_stream_i64(video_stream, "rotation");
+    if direct != 0 {
+        return normalize_rotation(direct);
+    }
+
+    let from_tag = parse_i64(
+        video_stream
+            .and_then(|stream| stream.get("tags"))
+            .and_then(|tags| tags.get("rotate")),
+    );
+    if from_tag != 0 {
+        return normalize_rotation(from_tag);
+    }
+
+    if let Some(side_data_list) = video_stream
+        .and_then(|stream| stream.get("side_data_list"))
+        .and_then(|side_data| side_data.as_array())
+    {
+        for side_data in side_data_list {
+            let side_rotation = parse_i64(side_data.get("rotation"));
+            if side_rotation != 0 {
+                return normalize_rotation(side_rotation);
+            }
+        }
+    }
+
+    0
+}
+
 pub fn media_info_from_probe(root: Value) -> MediaInfo {
     let streams = root
         .get("streams")
@@ -151,6 +189,7 @@ pub fn media_info_from_probe(root: Value) -> MediaInfo {
     };
     let sample_aspect_ratio = parse_stream_str(video_stream, "sample_aspect_ratio");
     let display_aspect_ratio = parse_stream_str(video_stream, "display_aspect_ratio");
+    let rotation_degrees = parse_rotation_degrees(video_stream);
 
     let format_name = parse_str(format.get("format_name"));
     let format_long_name = parse_str(format.get("format_long_name"));
@@ -216,5 +255,6 @@ pub fn media_info_from_probe(root: Value) -> MediaInfo {
         video_frame_count,
         sample_aspect_ratio,
         display_aspect_ratio,
+        rotation_degrees,
     }
 }

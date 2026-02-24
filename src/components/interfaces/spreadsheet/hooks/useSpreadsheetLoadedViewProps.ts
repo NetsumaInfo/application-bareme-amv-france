@@ -7,6 +7,7 @@ import type { Bareme } from '@/types/bareme'
 import type { CategoryGroup } from '@/utils/results'
 import type { Clip, Project } from '@/types/project'
 import type { Note } from '@/types/notation'
+import type { ShortcutAction } from '@/utils/shortcuts'
 
 interface UseSpreadsheetLoadedViewPropsParams {
   isDragOver: boolean
@@ -19,6 +20,7 @@ interface UseSpreadsheetLoadedViewPropsParams {
   hideTotalsUntilAllScored: boolean
   hideAverages: boolean
   showMiniatures: boolean
+  shortcutBindings: Record<ShortcutAction, string>
   showAddRowButton: boolean
   currentProject: Project | null
   editingManualClipId: string | null
@@ -40,6 +42,10 @@ interface UseSpreadsheetLoadedViewPropsParams {
   handleChange: (clipId: string, criterionId: string, value: string) => void
   handleKeyDown: (event: ReactKeyboardEvent<Element>, clipIdx: number, critIdx: number) => void
   toggleScoringCategory: (category: string) => void
+  seek: (time: number) => Promise<void>
+  pause: () => Promise<void>
+  showFramePreview: (params: { seconds: number; anchorRect: DOMRect }) => Promise<void>
+  hideFramePreview: () => void
   currentClip: Clip | undefined
   hideTextNotes: boolean
   currentNote: Note | undefined
@@ -48,10 +54,6 @@ interface UseSpreadsheetLoadedViewPropsParams {
   setTextNotes: (clipId: string, text: string) => void
   markDirty: () => void
   setShowPipVideo: (show: boolean) => void
-  seek: (time: number) => Promise<void>
-  pause: () => Promise<void>
-  showFramePreview: (params: { seconds: number; anchorRect: DOMRect }) => Promise<void>
-  hideFramePreview: () => void
   framePreview: {
     visible: boolean
     left: number
@@ -89,6 +91,7 @@ export function useSpreadsheetLoadedViewProps({
   hideTotalsUntilAllScored,
   hideAverages,
   showMiniatures,
+  shortcutBindings,
   showAddRowButton,
   currentProject,
   editingManualClipId,
@@ -110,6 +113,10 @@ export function useSpreadsheetLoadedViewProps({
   handleChange,
   handleKeyDown,
   toggleScoringCategory,
+  seek,
+  pause,
+  showFramePreview,
+  hideFramePreview,
   currentClip,
   hideTextNotes,
   currentNote,
@@ -118,10 +125,6 @@ export function useSpreadsheetLoadedViewProps({
   setTextNotes,
   markDirty,
   setShowPipVideo,
-  seek,
-  pause,
-  showFramePreview,
-  hideFramePreview,
   framePreview,
   contextMenu,
   contextClip,
@@ -172,6 +175,10 @@ export function useSpreadsheetLoadedViewProps({
     handleChange,
     handleKeyDown,
     toggleScoringCategory,
+    seek,
+    pause,
+    showFramePreview,
+    hideFramePreview,
   })
 
   const notesPanelProps = buildSpreadsheetNotesPanelProps({
@@ -196,6 +203,7 @@ export function useSpreadsheetLoadedViewProps({
     contextClip,
     currentClip,
     showMiniatures,
+    shortcutBindings,
     contextMenuRef,
     handleToggleScored,
     handleOpenNotes,

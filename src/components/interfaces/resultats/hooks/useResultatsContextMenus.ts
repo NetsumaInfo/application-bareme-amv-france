@@ -3,8 +3,10 @@ import { useEffect, useRef, useState } from 'react'
 export function useResultatsContextMenus() {
   const [memberContextMenu, setMemberContextMenu] = useState<{ index: number; x: number; y: number } | null>(null)
   const [clipContextMenu, setClipContextMenu] = useState<{ clipId: string; x: number; y: number } | null>(null)
+  const [emptyContextMenu, setEmptyContextMenu] = useState<{ x: number; y: number } | null>(null)
   const memberContextMenuRef = useRef<HTMLDivElement | null>(null)
   const clipContextMenuRef = useRef<HTMLDivElement | null>(null)
+  const emptyContextMenuRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
     if (!memberContextMenu) return
@@ -28,12 +30,26 @@ export function useResultatsContextMenus() {
     return () => document.removeEventListener('mousedown', handleOutside)
   }, [clipContextMenu])
 
+  useEffect(() => {
+    if (!emptyContextMenu) return
+    const handleOutside = (event: MouseEvent) => {
+      const target = event.target as Node
+      if (emptyContextMenuRef.current?.contains(target)) return
+      setEmptyContextMenu(null)
+    }
+    document.addEventListener('mousedown', handleOutside)
+    return () => document.removeEventListener('mousedown', handleOutside)
+  }, [emptyContextMenu])
+
   return {
     memberContextMenu,
     clipContextMenu,
+    emptyContextMenu,
     memberContextMenuRef,
     clipContextMenuRef,
+    emptyContextMenuRef,
     setMemberContextMenu,
     setClipContextMenu,
+    setEmptyContextMenu,
   }
 }

@@ -2,17 +2,18 @@ import { useNotationStore } from '@/store/useNotationStore'
 import { useProjectStore } from '@/store/useProjectStore'
 import { useUIStore } from '@/store/useUIStore'
 import * as tauri from '@/services/tauri'
+import { rememberRecentProjectPath } from '@/services/recentProjects'
+import { loadAndApplyProjectFile } from '@/services/projectSession'
 
 export function useProjectFileActions() {
   const {
     currentProject,
     clips,
-    setProjectFromData,
     setFilePath,
     markClean,
     getProjectData,
   } = useProjectStore()
-  const { getNotesData, loadNotes } = useNotationStore()
+  const { getNotesData } = useNotationStore()
   const { setShowProjectModal } = useUIStore()
 
   const handleNewProject = () => {
@@ -24,27 +25,8 @@ export function useProjectFileActions() {
       const filePath = await tauri.openProjectDialog()
       if (!filePath) return
 
-      const data = (await tauri.loadProjectFile(filePath)) as {
-        version?: string
-        project: Parameters<typeof setProjectFromData>[0]['project']
-        clips: Parameters<typeof setProjectFromData>[0]['clips']
-        notes: Record<string, Parameters<typeof loadNotes>[0][string]>
-        baremeId: string
-        importedJudges?: Parameters<typeof setProjectFromData>[0]['importedJudges']
-      }
-
-      setProjectFromData({
-        ...data,
-        version: typeof data.version === 'string' ? data.version : '1.0',
-        project: { ...data.project, filePath },
-        baremeId: data.baremeId ?? data.project.baremeId,
-        clips: Array.isArray(data.clips) ? data.clips : [],
-        notes: data.notes ?? {},
-      })
-
-      if (data.notes) {
-        loadNotes(data.notes)
-      }
+      await loadAndApplyProjectFile(filePath)
+      await rememberRecentProjectPath(filePath)
     } catch (errorValue) {
       console.error('Failed to open project:', errorValue)
       alert(`Erreur lors de l'ouverture: ${errorValue}`)
@@ -55,7 +37,15 @@ export function useProjectFileActions() {
     const notesData = getNotesData()
     const projectData = getProjectData(notesData)
     if (!projectData) return
+
+    const activeBaremeId = useNotationStore.getState().currentBareme?.id
+    if (activeBaremeId) {
+      projectData.baremeId = activeBaremeId
+      projectData.project.baremeId = activeBaremeId
+    }
+
     await tauri.saveProjectFile(projectData, filePath)
+    await rememberRecentProjectPath(filePath)
     markClean()
   }
 
@@ -96,7 +86,7 @@ export function useProjectFileActions() {
     if (!currentProject) return
 
     try {
-      const filePath = await tauri.saveJsonDialog(`${currentProject.name}_projet.json`)
+      const filePath = await tauri.saveJsonDialog(`${currentProject.name}.json`)
       if (!filePath) return
 
       const notesData = getNotesData()
@@ -112,7 +102,8 @@ export function useProjectFileActions() {
     if (!currentProject) return
 
     try {
-      const defaultName = `${currentProject.name}_${currentProject.judgeName || 'juge'}_JE.json`
+      const sanitizedJudge = (currentProject.judgeName || 'juge').trim() || 'juge'
+      const defaultName = `${currentProject.name}_${sanitizedJudge}.json`
       const filePath = await tauri.saveJsonDialog(defaultName)
       if (!filePath) return
 

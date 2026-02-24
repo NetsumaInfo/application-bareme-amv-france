@@ -3,6 +3,7 @@ import { useUIStore } from '@/store/useUIStore'
 import * as tauri from '@/services/tauri'
 import { DEFAULT_SHORTCUT_BINDINGS } from '@/utils/shortcuts'
 import type { Bareme } from '@/types/bareme'
+import type { ShortcutAction } from '@/utils/shortcuts'
 
 type UseBootstrapSettingsParams = {
   loadCustomBaremes: (baremes: Bareme[]) => void
@@ -27,8 +28,23 @@ export function useBootstrapSettings({ loadCustomBaremes }: UseBootstrapSettings
           useUIStore.setState({ showAudioDb: settings.showAudioDb })
         }
         if (settings.shortcutBindings && typeof settings.shortcutBindings === 'object') {
-          const merged = { ...DEFAULT_SHORTCUT_BINDINGS, ...(settings.shortcutBindings as Record<string, string>) }
+          const rawBindings = settings.shortcutBindings as Record<string, string>
+          const merged = { ...DEFAULT_SHORTCUT_BINDINGS, ...rawBindings } as Record<ShortcutAction, string>
+          let migrated = false
+
+          if (!Object.prototype.hasOwnProperty.call(rawBindings, 'saveAs') || merged.saveAs === 'ctrl+alt+s') {
+            merged.saveAs = 'ctrl+shift+s'
+            migrated = true
+          }
+          if (!Object.prototype.hasOwnProperty.call(rawBindings, 'screenshot') || merged.screenshot === 'ctrl+shift+s') {
+            merged.screenshot = 'ctrl+shift+g'
+            migrated = true
+          }
+
           useUIStore.setState({ shortcutBindings: merged })
+          if (migrated) {
+            tauri.saveUserSettings({ ...settings, shortcutBindings: merged }).catch(() => {})
+          }
         }
       }
     }).catch(() => {})

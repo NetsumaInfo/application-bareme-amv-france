@@ -34,6 +34,10 @@ interface UseSpreadsheetTablePropsParams {
   handleChange: (clipId: string, criterionId: string, value: string) => void
   handleKeyDown: (event: ReactKeyboardEvent<Element>, clipIdx: number, critIdx: number) => void
   toggleScoringCategory: (category: string) => void
+  seek: (time: number) => Promise<void>
+  pause: () => Promise<void>
+  showFramePreview: (params: { seconds: number; anchorRect: DOMRect }) => Promise<void>
+  hideFramePreview: () => void
 }
 
 export function buildSpreadsheetTableProps({
@@ -65,6 +69,10 @@ export function buildSpreadsheetTableProps({
   handleChange,
   handleKeyDown,
   toggleScoringCategory,
+  seek,
+  pause,
+  showFramePreview,
+  hideFramePreview,
 }: UseSpreadsheetTablePropsParams): ComponentProps<typeof SpreadsheetTable> {
   return {
     clips,
@@ -95,5 +103,11 @@ export function buildSpreadsheetTableProps({
     onCellChange: handleChange,
     onCellKeyDown: handleKeyDown,
     onToggleScoringCategory: toggleScoringCategory,
+    onSeekAndPauseToTimecode: async (seconds: number) => {
+      await seek(seconds)
+      await pause()
+    },
+    onShowFramePreview: showFramePreview,
+    onHideFramePreview: hideFramePreview,
   }
 }

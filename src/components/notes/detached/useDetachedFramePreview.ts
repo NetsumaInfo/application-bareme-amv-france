@@ -1,5 +1,6 @@
 import { useCallback, useRef, useState } from 'react'
 import * as tauri from '@/services/tauri'
+import { computeFramePreviewPlacement } from '@/utils/framePreviewPosition'
 
 interface FramePreviewState {
   visible: boolean
@@ -32,18 +33,21 @@ export function useDetachedFramePreview(clipFilePath?: string) {
   }, [])
 
   const showFramePreview = useCallback(async ({ seconds, anchorRect }: ShowFramePreviewParams) => {
-    if (!clipFilePath) return
-    const left = Math.min(window.innerWidth - 250, Math.max(12, anchorRect.left))
-    const top = Math.max(12, anchorRect.top - 186)
-    const cacheKey = `${clipFilePath}|${seconds.toFixed(3)}`
+    const targetPath = clipFilePath ?? null
+    const placement = computeFramePreviewPlacement({
+      anchorRect,
+      previewWidth: 236,
+      previewHeight: 136,
+    })
+    const cacheKey = `${targetPath ?? '__current__'}|${seconds.toFixed(3)}`
     const requestId = ++hoverRequestRef.current
 
     const cached = framePreviewCacheRef.current.get(cacheKey)
     if (cached) {
       setFramePreview({
         visible: true,
-        left,
-        top,
+        left: placement.left,
+        top: placement.top,
         image: cached,
         loading: false,
       })
@@ -52,21 +56,23 @@ export function useDetachedFramePreview(clipFilePath?: string) {
 
     setFramePreview({
       visible: true,
-      left,
-      top,
+      left: placement.left,
+      top: placement.top,
       image: null,
       loading: true,
     })
 
-    const image = await tauri.playerGetFramePreview(clipFilePath, seconds, 236).catch(() => null)
+    const image =
+      await tauri.playerGetFramePreview(targetPath, seconds, 236).catch(() => null)
+      ?? await tauri.playerGetFramePreview(targetPath, seconds, 164).catch(() => null)
     if (hoverRequestRef.current !== requestId) return
     if (image) {
       framePreviewCacheRef.current.set(cacheKey, image)
     }
     setFramePreview({
       visible: true,
-      left,
-      top,
+      left: placement.left,
+      top: placement.top,
       image,
       loading: false,
     })

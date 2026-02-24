@@ -47,10 +47,13 @@ export function useResultatsInteractions({
   const {
     memberContextMenu,
     clipContextMenu,
+    emptyContextMenu,
     memberContextMenuRef,
     clipContextMenuRef,
+    emptyContextMenuRef,
     setMemberContextMenu,
     setClipContextMenu,
+    setEmptyContextMenu,
   } = useResultatsContextMenus()
 
   const { openClipInNotation, jumpToTimecodeInNotation } = useResultatsClipActions({
@@ -101,11 +104,14 @@ export function useResultatsInteractions({
     selectedClipFps,
     memberContextMenu,
     clipContextMenu,
+    emptyContextMenu,
     memberContextMenuRef,
     clipContextMenuRef,
+    emptyContextMenuRef,
     setSelectedClipId,
     setMemberContextMenu,
     setClipContextMenu,
+    setEmptyContextMenu,
     setCriterionDraftCell,
     clearCriterionDraftCell,
     commitCriterionDraftCell,

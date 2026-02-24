@@ -21,6 +21,7 @@ export function buildMediaInfoSections(info: MediaInfo): MediaInfoSection[] {
         ['Frames', info.video_frame_count > 0 ? info.video_frame_count.toLocaleString('fr-FR') : '-'],
         ['SAR', safeText(info.sample_aspect_ratio)],
         ['DAR', safeText(info.display_aspect_ratio)],
+        ['Rotation', info.rotation_degrees ? `${info.rotation_degrees}\u00b0` : '0\u00b0'],
         ['Espace couleur', safeText(info.color_space)],
         ['Primaires', safeText(info.color_primaries)],
         ['Transfert', safeText(info.color_transfer)],

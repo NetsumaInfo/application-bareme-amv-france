@@ -125,8 +125,8 @@ export function ResultatsTable({
                   onContextMenu={(event) => {
                     event.preventDefault()
                     event.stopPropagation()
-                    const width = 210
-                    const height = 152
+                    const width = 220
+                    const height = 210
                     const x = Math.max(8, Math.min(event.clientX, window.innerWidth - width - 8))
                     const y = Math.max(8, Math.min(event.clientY, window.innerHeight - height - 8))
                     onOpenClipContextMenu(row.clip.id, x, y)

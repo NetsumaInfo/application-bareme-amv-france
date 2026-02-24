@@ -52,6 +52,26 @@ export function SettingsShortcutsTab({
         ))}
       </div>
 
+      <div className="mt-3 rounded-lg border border-gray-700/80 bg-surface-dark/40 p-2.5">
+        <div className="text-[10px] uppercase tracking-wide text-gray-500 mb-1.5">
+          Raccourcis contextuels
+        </div>
+        <div className="space-y-1 text-[11px] text-gray-400">
+          <div className="flex items-center justify-between gap-2">
+            <span>Ouvrir le lecteur depuis la liste</span>
+            <kbd className="px-1.5 py-0.5 rounded text-[10px] font-mono bg-surface text-gray-400 border border-gray-700">
+              Double clic
+            </kbd>
+          </div>
+          <div className="flex items-center justify-between gap-2">
+            <span>Afficher les commentaires d&apos;une sous-catégorie</span>
+            <kbd className="px-1.5 py-0.5 rounded text-[10px] font-mono bg-surface text-gray-400 border border-gray-700">
+              Ctrl + clic
+            </kbd>
+          </div>
+        </div>
+      </div>
+
       <button
         onClick={() => {
           onSetEditingShortcut(null)

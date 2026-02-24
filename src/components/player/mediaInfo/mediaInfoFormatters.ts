@@ -31,6 +31,7 @@ export function buildFallbackInfo(filePath: string): MediaInfo {
     video_frame_count: 0,
     sample_aspect_ratio: '',
     display_aspect_ratio: '',
+    rotation_degrees: 0,
   }
 }
 

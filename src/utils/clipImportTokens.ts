@@ -66,3 +66,30 @@ export function findMatchingPlaceholderIndex(
     return !importedAuthor || !clipAuthor || clipAuthor === importedAuthor
   })
 }
+
+export function findMatchingLinkedClipIndex(
+  current: Clip[],
+  imported: Clip,
+  matchedClipIds: Set<string>,
+): number {
+  const importedFull = getImportFullToken(imported)
+  const importedDisplay = getImportDisplayToken(imported)
+  const importedAuthor = getImportAuthorToken(imported)
+
+  const fullMatchIndex = current.findIndex((clip) => {
+    if (!clip.filePath?.trim()) return false
+    if (matchedClipIds.has(clip.id)) return false
+    const clipFull = getClipFullToken(clip)
+    return Boolean(importedFull) && clipFull === importedFull
+  })
+  if (fullMatchIndex >= 0) return fullMatchIndex
+
+  return current.findIndex((clip) => {
+    if (!clip.filePath?.trim()) return false
+    if (matchedClipIds.has(clip.id)) return false
+    const clipDisplay = getClipDisplayToken(clip)
+    if (!importedDisplay || clipDisplay !== importedDisplay) return false
+    const clipAuthor = getClipAuthorToken(clip)
+    return !importedAuthor || !clipAuthor || clipAuthor === importedAuthor
+  })
+}

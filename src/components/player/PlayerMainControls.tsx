@@ -112,7 +112,7 @@ export default function PlayerMainControls({
           onClick={onScreenshot}
           className="p-1 rounded hover:bg-surface-light text-gray-400 hover:text-white transition-colors"
           disabled={!isLoaded}
-          title="Capture d'écran (Ctrl+Shift+S)"
+          title="Capture d'écran (Ctrl+Shift+G)"
         >
           <Camera size={14} />
         </button>

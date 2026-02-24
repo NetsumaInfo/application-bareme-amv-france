@@ -95,13 +95,13 @@ export default function ContextMenu({
       label: 'Clip suivant',
       icon: ChevronRight,
       onClick: () => { nextClip(); onClose() },
-      shortcut: 'N',
+      shortcut: formatShortcutDisplay(shortcutBindings.nextClip),
     })
     items.push({
       label: 'Clip précédent',
       icon: ChevronLeft,
       onClick: () => { previousClip(); onClose() },
-      shortcut: 'P',
+      shortcut: formatShortcutDisplay(shortcutBindings.prevClip),
     })
     items.push({ separator: true, label: '' })
     items.push({
