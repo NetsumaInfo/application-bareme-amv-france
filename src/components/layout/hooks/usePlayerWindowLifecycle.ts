@@ -34,6 +34,8 @@ export function usePlayerWindowLifecycle({
   pause,
   onEscapeFullscreen,
 }: UsePlayerWindowLifecycleParams) {
+  const isPlayerTab = currentTab === 'notation' || currentTab === 'resultats'
+
   // Load clips during fullscreen or detached player window
   useEffect(() => {
     if (!isFullscreen && !isDetached) return
@@ -98,7 +100,7 @@ export function usePlayerWindowLifecycle({
       const currentClip = clips[currentClipIndex]
       const hasClipFile = Boolean(currentClip?.filePath)
       const shouldShowDetached =
-        currentTab === 'notation' &&
+        isPlayerTab &&
         !isAnyModalOpen &&
         showPipVideo &&
         Boolean(currentClip)
@@ -123,7 +125,7 @@ export function usePlayerWindowLifecycle({
       return
     }
 
-    const shouldShowPlayer = currentTab === 'notation' ? showPipVideo : false
+    const shouldShowPlayer = isPlayerTab ? showPipVideo : false
     if (!shouldShowPlayer) {
       pause().catch(() => {})
       tauri.playerHide().catch(() => {})
@@ -143,6 +145,7 @@ export function usePlayerWindowLifecycle({
   }, [
     currentProject,
     isAnyModalOpen,
+    isPlayerTab,
     currentTab,
     currentInterface,
     showPipVideo,

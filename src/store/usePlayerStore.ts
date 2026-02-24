@@ -30,7 +30,13 @@ interface PlayerStore {
   setCurrentAudioId: (id: number | null) => void
   setFullscreen: (fs: boolean) => void
   setDetached: (detached: boolean) => void
-  syncStatus: (status: { isPlaying: boolean; currentTime: number; duration: number; isFullscreen: boolean }) => void
+  syncStatus: (status: {
+    isPlaying: boolean
+    currentTime: number
+    duration: number
+    volume: number
+    isFullscreen: boolean
+  }) => void
   reset: () => void
 }
 
@@ -78,17 +84,28 @@ export const usePlayerStore = create<PlayerStore>((set) => ({
   setCurrentAudioId: (id) => set({ currentAudioId: id }),
   setFullscreen: (fs) => set({ isFullscreen: fs }),
   setDetached: (detached) => set({ isDetached: detached }),
-  syncStatus: ({ isPlaying, currentTime, duration, isFullscreen }) =>
+  syncStatus: ({ isPlaying, currentTime, duration, volume, isFullscreen }) =>
     set((state) => {
       const nextTime = Number.isFinite(currentTime) ? currentTime : 0
       const nextDuration = Number.isFinite(duration) ? duration : 0
+      const nextVolume = Number.isFinite(volume) ? Math.max(0, Math.min(100, volume)) : state.volume
+      const nextMuted = nextVolume <= 0.001
 
       const hasPlayingChanged = state.isPlaying !== isPlaying
       const hasTimeChanged = Math.abs(state.currentTime - nextTime) >= 0.05
       const hasDurationChanged = Math.abs(state.duration - nextDuration) >= 0.1
+      const hasVolumeChanged = Math.abs(state.volume - nextVolume) >= 0.1
+      const hasMutedChanged = state.muted !== nextMuted
       const hasFullscreenChanged = state.isFullscreen !== isFullscreen
 
-      if (!hasPlayingChanged && !hasTimeChanged && !hasDurationChanged && !hasFullscreenChanged) {
+      if (
+        !hasPlayingChanged
+        && !hasTimeChanged
+        && !hasDurationChanged
+        && !hasVolumeChanged
+        && !hasMutedChanged
+        && !hasFullscreenChanged
+      ) {
         return state
       }
 
@@ -96,6 +113,8 @@ export const usePlayerStore = create<PlayerStore>((set) => ({
         isPlaying,
         currentTime: nextTime,
         duration: nextDuration,
+        volume: nextVolume,
+        muted: nextMuted,
         isFullscreen,
       }
     }),

@@ -4,10 +4,10 @@ import type { Clip } from '@/types/project'
 import type { CategoryGroup } from './types'
 
 interface SpreadsheetTableFooterProps {
+  clips: Clip[]
   currentBareme: Bareme
   categoryGroups: CategoryGroup[]
   hideTotalsSetting: boolean
-  scoredClips: Clip[]
   hasAnyScoreInGroup: (clipId: string, group: CategoryGroup) => boolean
   getCategoryScore: (clipId: string, group: CategoryGroup) => number
   hasAnyScoreInBareme: (clipId: string) => boolean
@@ -15,10 +15,10 @@ interface SpreadsheetTableFooterProps {
 }
 
 export function SpreadsheetTableFooter({
+  clips,
   currentBareme,
   categoryGroups,
   hideTotalsSetting,
-  scoredClips,
   hasAnyScoreInGroup,
   getCategoryScore,
   hasAnyScoreInBareme,
@@ -42,7 +42,7 @@ export function SpreadsheetTableFooter({
         {categoryGroups.map((group) =>
           group.criteria.map((criterion, index) => {
             if (index !== 0) return null
-            const values = scoredClips
+            const values = clips
               .filter((clip) => hasAnyScoreInGroup(clip.id, group))
               .map((clip) => getCategoryScore(clip.id, group))
             const avg = values.length > 0
@@ -66,7 +66,7 @@ export function SpreadsheetTableFooter({
         {!hideTotalsSetting && (
           <td className="px-2 py-2 text-center font-mono font-bold text-[12px] text-white bg-surface-dark">
             {(() => {
-              const values = scoredClips
+              const values = clips
                 .filter((clip) => hasAnyScoreInBareme(clip.id))
                 .map((clip) => getScoreForClip(clip.id))
               return (

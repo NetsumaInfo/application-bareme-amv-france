@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, useEffect, type ChangeEvent } from 'react'
+import { useState, useRef, useCallback, useMemo, useEffect, type ChangeEvent } from 'react'
 import { emit, listen } from '@tauri-apps/api/event'
 import * as tauri from '@/services/tauri'
 import { useUIStore } from '@/store/useUIStore'
@@ -21,6 +21,7 @@ export function useFullscreenOverlayState() {
     isPlaying,
     currentTime,
     duration,
+    volume: liveVolume,
     setCurrentTime,
   } = useOverlayPlayerStatus()
   const {
@@ -28,10 +29,17 @@ export function useFullscreenOverlayState() {
     resetHideTimer,
   } = useOverlayControlVisibility({ isPlayerFullscreen })
 
-  const [volume, setVolume] = useState(80)
-  const [isMuted, setIsMuted] = useState(false)
   const [markerTooltip, setMarkerTooltip] = useState<{ left: number; text: string } | null>(null)
   const showAudioDb = useUIStore((state) => state.showAudioDb)
+  const lastNonZeroVolumeRef = useRef(80)
+  const volume = Number.isFinite(liveVolume) ? Math.max(0, Math.min(100, liveVolume)) : 0
+  const isMuted = volume <= 0.001
+
+  useEffect(() => {
+    if (volume > 0.001) {
+      lastNonZeroVolumeRef.current = volume
+    }
+  }, [volume])
 
   useEffect(() => {
     let active = true
@@ -113,18 +121,18 @@ export function useFullscreenOverlayState() {
 
   const handleSetVolume = useCallback((event: ChangeEvent<HTMLInputElement>) => {
     const nextVolume = Number(event.target.value)
-    setVolume(nextVolume)
-    setIsMuted(false)
+    if (Number.isFinite(nextVolume) && nextVolume > 0.001) {
+      lastNonZeroVolumeRef.current = nextVolume
+    }
     tauri.playerSetVolume(nextVolume).catch(() => {})
     resetHideTimer()
   }, [resetHideTimer])
 
   const handleToggleMute = useCallback(() => {
-    const nextMuted = !isMuted
-    setIsMuted(nextMuted)
-    tauri.playerSetVolume(nextMuted ? 0 : volume).catch(() => {})
+    const nextVolume = isMuted ? lastNonZeroVolumeRef.current : 0
+    tauri.playerSetVolume(nextVolume).catch(() => {})
     resetHideTimer()
-  }, [isMuted, resetHideTimer, volume])
+  }, [isMuted, resetHideTimer])
 
   const handleExitFullscreen = useCallback(() => {
     tauri.playerSetFullscreen(false).catch(() => {})

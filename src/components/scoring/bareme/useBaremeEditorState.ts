@@ -27,7 +27,7 @@ export function useBaremeEditorState() {
     hideTotalsUntilAllScored,
     error,
     getCategoryColor,
-    startEdit,
+    startEdit: startEditForm,
     setName,
     setDescription,
     setGlobalStep,
@@ -64,6 +64,11 @@ export function useBaremeEditorState() {
 
   const startNew = () => {
     resetForm()
+    setMode('edit')
+  }
+
+  const startEdit = (bareme: Bareme) => {
+    startEditForm(bareme)
     setMode('edit')
   }
 

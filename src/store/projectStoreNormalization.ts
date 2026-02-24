@@ -8,6 +8,7 @@ import type {
 } from '@/types/project'
 import { DEFAULT_PROJECT_SETTINGS } from '@/types/project'
 import { generateId, parseClipName } from '@/utils/formatters'
+import { sanitizeColor } from '@/utils/colors'
 
 interface NormalizedProjectData {
   project: Project
@@ -18,6 +19,16 @@ interface NormalizedProjectData {
 function numberOr(value: unknown, fallback: number) {
   const parsed = Number(value)
   return Number.isFinite(parsed) ? parsed : fallback
+}
+
+function normalizeJudgeColors(raw: unknown): Record<string, string> {
+  if (!raw || typeof raw !== 'object') return {}
+  return Object.entries(raw as Record<string, unknown>).reduce<Record<string, string>>((acc, [key, value]) => {
+    if (!key.trim()) return acc
+    if (typeof value !== 'string') return acc
+    acc[key] = sanitizeColor(value)
+    return acc
+  }, {})
 }
 
 function normalizeImportedJudges(rawImportedJudges: unknown[]): ImportedJudgeData[] {
@@ -124,6 +135,7 @@ export function normalizeProjectDataInput(data: ProjectData): NormalizedProjectD
         rawSettings.defaultVolume ?? rawSettings.default_volume,
         DEFAULT_PROJECT_SETTINGS.defaultVolume,
       ),
+      judgeColors: normalizeJudgeColors(rawSettings.judgeColors ?? rawSettings.judge_colors),
       hideFinalScoreUntilEnd:
         typeof rawSettings.hideFinalScoreUntilEnd === 'boolean'
           ? rawSettings.hideFinalScoreUntilEnd

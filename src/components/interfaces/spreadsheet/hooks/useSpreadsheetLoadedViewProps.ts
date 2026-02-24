@@ -18,7 +18,6 @@ interface UseSpreadsheetLoadedViewPropsParams {
   hideTotalsSetting: boolean
   hideTotalsUntilAllScored: boolean
   hideAverages: boolean
-  scoredClips: Clip[]
   showMiniatures: boolean
   showAddRowButton: boolean
   currentProject: Project | null
@@ -89,7 +88,6 @@ export function useSpreadsheetLoadedViewProps({
   hideTotalsSetting,
   hideTotalsUntilAllScored,
   hideAverages,
-  scoredClips,
   showMiniatures,
   showAddRowButton,
   currentProject,
@@ -154,7 +152,6 @@ export function useSpreadsheetLoadedViewProps({
     hideTotalsSetting,
     hideTotalsUntilAllScored,
     hideAverages,
-    scoredClips,
     showMiniatures,
     currentProject,
     editingManualClipId,

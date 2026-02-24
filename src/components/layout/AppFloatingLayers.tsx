@@ -42,8 +42,10 @@ export function AppFloatingLayers({
       {showSettings ? <SettingsPanel onClose={onCloseSettings} /> : null}
 
       {currentProject
-        && currentTab === 'notation'
-        && (currentInterface === 'spreadsheet' || currentInterface === 'dual')
+        && (
+          currentTab === 'resultats'
+          || (currentTab === 'notation' && (currentInterface === 'spreadsheet' || currentInterface === 'dual'))
+        )
         && showPipVideo
         && !isDetached ? (
         <FloatingVideoPlayer onClose={() => setShowPipVideo(false)} />

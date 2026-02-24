@@ -14,6 +14,7 @@ export function useSpreadsheetDropListeners({
 }: UseSpreadsheetDropListenersParams) {
   const [isDragOver, setIsDragOver] = useState(false)
   const dragHoverTsRef = useRef(0)
+  const fileDragDetectedTsRef = useRef(0)
 
   useEffect(() => {
     let unlistenDrop: (() => void) | null = null
@@ -46,6 +47,12 @@ export function useSpreadsheetDropListeners({
     }).then((fn) => { unlistenDrop = fn })
 
     listen('tauri://file-drop-hover', () => {
+      // Guard against false positives (text selection/internal drags).
+      // Tauri hover can fire without payload, so we only trust it shortly
+      // after a native dragenter/dragover that explicitly carries Files.
+      if (Date.now() - fileDragDetectedTsRef.current > 900) {
+        return
+      }
       dragHoverTsRef.current = Date.now()
       suppressEmptyManualCleanupRef.current = true
       setIsDragOver(true)
@@ -59,13 +66,17 @@ export function useSpreadsheetDropListeners({
 
     const preventBrowserFileDrop = (event: DragEvent) => {
       if (event.dataTransfer?.types?.includes('Files')) {
+        fileDragDetectedTsRef.current = Date.now()
         event.preventDefault()
       }
     }
-    const markSuppressionOnDragEnter = () => {
+    const markSuppressionOnDragEnter = (event: DragEvent) => {
+      if (!event.dataTransfer?.types?.includes('Files')) return
+      fileDragDetectedTsRef.current = Date.now()
       suppressEmptyManualCleanupRef.current = true
     }
-    const relaxSuppressionOnDragLeave = () => {
+    const relaxSuppressionOnDragLeave = (event: DragEvent) => {
+      if (!event.dataTransfer?.types?.includes('Files')) return
       resetCleanupSuppressionSoon(180)
     }
 
@@ -77,6 +88,7 @@ export function useSpreadsheetDropListeners({
     const forceReset = () => {
       setIsDragOver(false)
       dragHoverTsRef.current = 0
+      fileDragDetectedTsRef.current = 0
     }
     const watchdog = window.setInterval(() => {
       if (!dragHoverTsRef.current) return

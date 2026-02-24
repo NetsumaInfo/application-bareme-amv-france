@@ -1,50 +1,41 @@
 import { useCallback } from 'react'
 import { useResultatsContextMenus } from '@/components/interfaces/resultats/hooks/useResultatsContextMenus'
 import { useResultatsSelectedClip } from '@/components/interfaces/resultats/hooks/useResultatsSelectedClip'
-import { useResultatsDraftCells } from '@/components/interfaces/resultats/hooks/useResultatsDraftCells'
+import { useResultatsCriterionDraftCells } from '@/components/interfaces/resultats/hooks/useResultatsCriterionDraftCells'
 import { useResultatsJudgeImport } from '@/components/interfaces/resultats/hooks/useResultatsJudgeImport'
 import { useResultatsClipActions } from '@/components/interfaces/resultats/hooks/useResultatsClipActions'
-import { useResultatsCategoryValue } from '@/components/interfaces/resultats/hooks/useResultatsCategoryValue'
+import { useResultatsCriterionValue } from '@/components/interfaces/resultats/hooks/useResultatsCriterionValue'
 import type { Bareme } from '@/types/bareme'
-import type { Note } from '@/types/notation'
 import type {
   Clip,
   ImportedJudgeData,
 } from '@/types/project'
-import type { CategoryGroup, JudgeSource } from '@/utils/results'
+import type { JudgeSource } from '@/utils/results'
 
 interface UseResultatsInteractionsParams {
   currentBareme: Bareme | null
-  notes: Record<string, Note>
   clips: Clip[]
   sortedClips: Clip[]
   judges: JudgeSource[]
-  categoryGroups: CategoryGroup[]
   importedJudges: ImportedJudgeData[]
   setImportedJudges: (judges: ImportedJudgeData[]) => void
   updateCriterion: (clipId: string, criterionId: string, value: number | string | boolean) => void
   markDirty: () => void
   setCurrentClip: (index: number) => void
   setShowPipVideo: (show: boolean) => void
-  switchInterface: (next: 'spreadsheet' | 'modern') => void
-  switchTab: (tab: 'notation' | 'resultats' | 'export') => void
 }
 
 export function useResultatsInteractions({
   currentBareme,
-  notes,
   clips,
   sortedClips,
   judges,
-  categoryGroups,
   importedJudges,
   setImportedJudges,
   updateCriterion,
   markDirty,
   setCurrentClip,
   setShowPipVideo,
-  switchInterface,
-  switchTab,
 }: UseResultatsInteractionsParams) {
   const {
     selectedClipId,
@@ -66,8 +57,6 @@ export function useResultatsInteractions({
     clips,
     setCurrentClip,
     setShowPipVideo,
-    switchInterface,
-    switchTab,
   })
 
   const {
@@ -80,10 +69,8 @@ export function useResultatsInteractions({
     setImportedJudges,
   })
 
-  const { applyCategoryValue } = useResultatsCategoryValue({
+  const { applyCriterionValue } = useResultatsCriterionValue({
     currentBareme,
-    notes,
-    categoryGroups,
     importedJudges,
     judges,
     updateCriterion,
@@ -92,13 +79,13 @@ export function useResultatsInteractions({
   })
 
   const {
-    draftCells,
-    getCellKey,
-    commitDraftCell,
-    setDraftCell,
-    clearDraftCell,
-  } = useResultatsDraftCells({
-    applyCategoryValue,
+    criterionDraftCells,
+    getCriterionCellKey,
+    commitCriterionDraftCell,
+    setCriterionDraftCell,
+    clearCriterionDraftCell,
+  } = useResultatsCriterionDraftCells({
+    applyCriterionValue,
   })
 
   const removeImportedJudge = useCallback((index: number) => {
@@ -108,7 +95,7 @@ export function useResultatsInteractions({
 
   return {
     importing,
-    draftCells,
+    criterionDraftCells,
     selectedClipId,
     selectedClip,
     selectedClipFps,
@@ -119,10 +106,10 @@ export function useResultatsInteractions({
     setSelectedClipId,
     setMemberContextMenu,
     setClipContextMenu,
-    setDraftCell,
-    clearDraftCell,
-    commitDraftCell,
-    getCellKey,
+    setCriterionDraftCell,
+    clearCriterionDraftCell,
+    commitCriterionDraftCell,
+    getCriterionCellKey,
     handleImportJudgeJson,
     removeImportedJudge,
     openClipInNotation,

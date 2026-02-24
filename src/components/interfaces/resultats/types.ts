@@ -1,6 +1,9 @@
 import type { Clip, ImportedJudgeData } from '@/types/project'
 import type { JudgeSource, CategoryGroup } from '@/utils/results'
 
+export type ResultatsMainView = 'judge' | 'global' | 'top'
+export type ResultatsGlobalVariant = 'detailed' | 'category'
+
 export interface ResultatsRow {
   clip: Clip
   categoryJudgeScores: Record<string, number[]>
@@ -11,9 +14,12 @@ export interface ResultatsRow {
 export interface ResultatsHeaderProps {
   importing: boolean
   judges: JudgeSource[]
-  currentJudgeName?: string
   importedJudges: ImportedJudgeData[]
+  selectedJudgeKey: string
+  judgeColors: Record<string, string>
   onImportJudgeJson: () => void
+  onSelectJudge: (judgeKey: string) => void
+  onJudgeColorChange: (judgeKey: string, color: string) => void
   onOpenMemberContextMenu: (index: number, x: number, y: number) => void
 }
 

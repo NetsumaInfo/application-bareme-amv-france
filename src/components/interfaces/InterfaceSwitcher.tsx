@@ -1,6 +1,8 @@
 import { Table, BarChart2, FileOutput } from 'lucide-react'
 import { useUIStore } from '@/store/useUIStore'
 import { useProjectStore } from '@/store/useProjectStore'
+import { useNotationStore } from '@/store/useNotationStore'
+import { isNoteComplete } from '@/utils/scoring'
 import type { AppTab } from '@/types/notation'
 
 const TABS: { tab: AppTab; label: string; icon: typeof Table; shortcut: string }[] = [
@@ -12,7 +14,14 @@ const TABS: { tab: AppTab; label: string; icon: typeof Table; shortcut: string }
 export default function InterfaceSwitcher() {
   const { currentTab, switchTab } = useUIStore()
   const { currentProject, clips } = useProjectStore()
-  const allClipsScored = clips.length > 0 && clips.every((clip) => clip.scored)
+  const currentBareme = useNotationStore((state) => state.currentBareme)
+  const notes = useNotationStore((state) => state.notes)
+  const allClipsScored = clips.length > 0 && clips.every((clip) => {
+    if (clip.scored) return true
+    if (!currentBareme) return false
+    const clipNote = notes[clip.id]
+    return clipNote ? isNoteComplete(clipNote, currentBareme) : false
+  })
   const lockResultsUntilScored = Boolean(currentProject?.settings.hideFinalScoreUntilEnd) && !allClipsScored
 
   return (

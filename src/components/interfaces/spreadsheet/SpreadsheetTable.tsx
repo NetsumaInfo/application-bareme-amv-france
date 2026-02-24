@@ -15,7 +15,6 @@ interface SpreadsheetTableProps {
   hideTotalsSetting: boolean
   hideTotalsUntilAllScored: boolean
   hideAverages: boolean
-  scoredClips: Clip[]
   showMiniatures: boolean
   thumbnailDefaultSeconds: number
   editingManualClipId: string | null
@@ -47,7 +46,6 @@ export function SpreadsheetTable({
   hideTotalsSetting,
   hideTotalsUntilAllScored,
   hideAverages,
-  scoredClips,
   showMiniatures,
   thumbnailDefaultSeconds,
   editingManualClipId,
@@ -120,10 +118,10 @@ export function SpreadsheetTable({
 
         {clips.length > 1 && !hideAverages && !hideTotalsUntilAllScored && (
           <SpreadsheetTableFooter
+            clips={clips}
             currentBareme={currentBareme}
             categoryGroups={categoryGroups}
             hideTotalsSetting={hideTotalsSetting}
-            scoredClips={scoredClips}
             hasAnyScoreInGroup={hasAnyScoreInGroup}
             getCategoryScore={getCategoryScore}
             hasAnyScoreInBareme={hasAnyScoreInBareme}

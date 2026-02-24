@@ -1,6 +1,7 @@
 import { useCallback, useMemo } from 'react'
 import { getClipPrimaryLabel } from '@/utils/formatters'
 import { CATEGORY_COLOR_PRESETS, sanitizeColor } from '@/utils/colors'
+import { isNoteComplete } from '@/utils/scoring'
 import type { CategoryGroup } from '@/components/interfaces/spreadsheet/types'
 import type { Bareme } from '@/types/bareme'
 import type { Clip, Project } from '@/types/project'
@@ -60,8 +61,13 @@ export function useSpreadsheetDerivedData({
   }, [clips])
 
   const allClipsScored = useMemo(
-    () => clips.length > 0 && clips.every((clip) => clip.scored),
-    [clips],
+    () => clips.length > 0 && clips.every((clip) => {
+      if (clip.scored) return true
+      if (!currentBareme) return false
+      const note = getNoteForClip(clip.id)
+      return note ? isNoteComplete(note, currentBareme) : false
+    }),
+    [clips, currentBareme, getNoteForClip],
   )
   const hideTotalsSetting = Boolean(currentProject?.settings.hideTotals)
   const hideTotalsUntilAllScored =

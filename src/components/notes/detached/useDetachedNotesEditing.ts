@@ -3,6 +3,7 @@ import type { Dispatch, MutableRefObject, SetStateAction } from 'react'
 import { emit } from '@tauri-apps/api/event'
 import { formatPreciseTimecode } from '@/utils/formatters'
 import { snapToFrameSeconds } from '@/utils/timecodes'
+import { parseNumericInputValue } from '@/utils/numberInput'
 import { insertTextAtCursor } from '@/components/notes/insertTextAtCursor'
 import { useDetachedNoteDebounce } from '@/components/notes/detached/useDetachedNoteDebounce'
 import type { ActiveNoteField } from '@/components/notes/detached/types'
@@ -40,8 +41,11 @@ export function useDetachedNotesEditing({
   const handleValueChange = useCallback(
     (criterionId: string, value: number | string) => {
       if (!clip) return
-      const numValue = value === '' ? '' : Number(value)
-      if (typeof numValue === 'number' && Number.isNaN(numValue)) return
+      const parsedValue =
+        typeof value === 'number'
+          ? (Number.isFinite(value) ? value : null)
+          : parseNumericInputValue(value)
+      if (parsedValue === null) return
 
       setLocalNote((prev) => {
         if (!prev) return prev
@@ -51,7 +55,7 @@ export function useDetachedNotesEditing({
             ...prev.scores,
             [criterionId]: {
               criterionId,
-              value: numValue,
+              value: parsedValue,
               isValid: true,
               validationErrors: [],
             } as CriterionScore,
@@ -62,7 +66,7 @@ export function useDetachedNotesEditing({
       emit('notes:criterion-updated', {
         clipId: clip.id,
         criterionId,
-        value: numValue,
+        value: parsedValue,
       }).catch(() => {})
     },
     [clip, setLocalNote],

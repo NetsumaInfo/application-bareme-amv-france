@@ -7,6 +7,7 @@ export function useOverlayPlayerStatus() {
   const [isPlaying, setIsPlaying] = useState(false)
   const [currentTime, setCurrentTime] = useState(0)
   const [duration, setDuration] = useState(0)
+  const [volume, setVolume] = useState(0)
   const wasFullscreenRef = useRef(false)
 
   useEffect(() => {
@@ -26,6 +27,7 @@ export function useOverlayPlayerStatus() {
         setIsPlaying(status.is_playing)
         setCurrentTime(status.current_time)
         setDuration(status.duration)
+        setVolume(status.volume)
         setIsPlayerFullscreen(fullscreen)
         wasFullscreenRef.current = fullscreen
       } catch {
@@ -51,6 +53,7 @@ export function useOverlayPlayerStatus() {
     isPlaying,
     currentTime,
     duration,
+    volume,
     setCurrentTime,
   }
 }

@@ -185,7 +185,6 @@ export function useSpreadsheetInterfaceController(): SpreadsheetInterfaceControl
 
   const {
     contextClip,
-    scoredClips,
     selectedScoringGroup,
     selectedScoringNote,
     selectedScoringCategoryScore,
@@ -226,7 +225,6 @@ export function useSpreadsheetInterfaceController(): SpreadsheetInterfaceControl
     hideTotalsSetting,
     hideTotalsUntilAllScored,
     hideAverages,
-    scoredClips,
     showMiniatures,
     currentProject,
     editingManualClipId,

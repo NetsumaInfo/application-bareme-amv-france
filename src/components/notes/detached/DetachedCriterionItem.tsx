@@ -74,7 +74,7 @@ export function DetachedCriterionItem({
           onChange={(event) =>
             onValueChange(
               criterion.id,
-              event.target.value === '' ? '' : Number(event.target.value),
+              event.target.value,
             )}
           onKeyDown={(event) => onInputKeyDown(event, flatIndex)}
           className={`amv-soft-number w-16 px-2 py-1 text-center text-sm rounded-md border font-mono focus-visible:outline-none ${

@@ -3,6 +3,7 @@ import { emit } from '@tauri-apps/api/event'
 import { formatPreciseTimecode } from '@/utils/formatters'
 import { normalizeShortcutFromEvent } from '@/utils/shortcuts'
 import { snapToFrameSeconds } from '@/utils/timecodes'
+import { parseNumericInputValue } from '@/utils/numberInput'
 import { insertTextAtCursor } from '@/components/notes/insertTextAtCursor'
 import { useNotationFocusNavigation } from '@/components/interfaces/notation/useNotationFocusNavigation'
 import { useNotationMarkerFocusEffect } from '@/components/interfaces/notation/useNotationMarkerFocusEffect'
@@ -57,9 +58,12 @@ export function useNotationInteractions({
 
   const handleValueChange = useCallback((criterionId: string, value: number | string) => {
     if (!currentClip) return
-    const numValue = value === '' ? '' : Number(value)
-    if (typeof numValue === 'number' && Number.isNaN(numValue)) return
-    updateCriterion(currentClip.id, criterionId, numValue as number)
+    const parsedValue =
+      typeof value === 'number'
+        ? (Number.isFinite(value) ? value : null)
+        : parseNumericInputValue(value)
+    if (parsedValue === null) return
+    updateCriterion(currentClip.id, criterionId, parsedValue)
     markDirty()
   }, [currentClip, markDirty, updateCriterion])
 

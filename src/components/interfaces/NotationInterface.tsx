@@ -12,6 +12,7 @@ import { NotationCategoriesAccordion } from '@/components/interfaces/notation/No
 import { NotationNotesFooter } from '@/components/interfaces/notation/NotationNotesFooter'
 import { useNotationCategories } from '@/components/interfaces/notation/useNotationCategories'
 import { useNotationInteractions } from '@/components/interfaces/notation/useNotationInteractions'
+import { isNoteComplete } from '@/utils/scoring'
 
 export default function NotationInterface() {
   const { currentBareme, updateCriterion, setCategoryNote, setCriterionNote, setTextNotes, getNoteForClip, getScoreForClip } = useNotationStore()
@@ -33,7 +34,12 @@ export default function NotationInterface() {
   const globalTextareaRef = useRef<HTMLTextAreaElement | null>(null)
   const activeNoteFieldRef = useRef<{ kind: 'category' | 'global'; category?: string } | null>(null)
 
-  const allClipsScored = clips.length > 0 && clips.every((clip) => clip.scored)
+  const allClipsScored = clips.length > 0 && clips.every((clip) => {
+    if (clip.scored) return true
+    if (!currentBareme) return false
+    const clipNote = getNoteForClip(clip.id)
+    return clipNote ? isNoteComplete(clipNote, currentBareme) : false
+  })
   const hideTotalsUntilAllScored = Boolean(currentProject?.settings.hideFinalScoreUntilEnd) && !allClipsScored
   const hideTotalsSetting = Boolean(currentProject?.settings.hideTotals)
   const shouldHideTotals = hideFinalScore || hideTotalsSetting || hideTotalsUntilAllScored

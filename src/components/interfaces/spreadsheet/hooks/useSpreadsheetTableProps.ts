@@ -14,7 +14,6 @@ interface UseSpreadsheetTablePropsParams {
   hideTotalsSetting: boolean
   hideTotalsUntilAllScored: boolean
   hideAverages: boolean
-  scoredClips: Clip[]
   showMiniatures: boolean
   currentProject: Project | null
   editingManualClipId: string | null
@@ -46,7 +45,6 @@ export function buildSpreadsheetTableProps({
   hideTotalsSetting,
   hideTotalsUntilAllScored,
   hideAverages,
-  scoredClips,
   showMiniatures,
   currentProject,
   editingManualClipId,
@@ -77,7 +75,6 @@ export function buildSpreadsheetTableProps({
     hideTotalsSetting,
     hideTotalsUntilAllScored,
     hideAverages,
-    scoredClips,
     showMiniatures,
     thumbnailDefaultSeconds: currentProject?.settings.thumbnailDefaultTimeSec ?? 10,
     editingManualClipId,

@@ -49,7 +49,14 @@ export default function Header({
                 — {currentProject.judgeName}
               </span>
             )}
-            {isDirty && <span className="text-accent ml-1">*</span>}
+            <span
+              className={`ml-1 inline-block w-2 text-accent transition-opacity ${
+                isDirty ? 'opacity-100' : 'opacity-0'
+              }`}
+              aria-hidden={!isDirty}
+            >
+              *
+            </span>
           </span>
         )}
       </div>

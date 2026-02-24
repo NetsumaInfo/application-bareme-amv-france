@@ -29,6 +29,7 @@ export interface ProjectSettings {
   autoSaveInterval: number
   defaultPlaybackSpeed: number
   defaultVolume: number
+  judgeColors: Record<string, string>
   hideFinalScoreUntilEnd: boolean
   hideTotals: boolean
   showMiniatures: boolean
@@ -83,6 +84,7 @@ export const DEFAULT_PROJECT_SETTINGS: ProjectSettings = {
   autoSaveInterval: 30,
   defaultPlaybackSpeed: 1,
   defaultVolume: 80,
+  judgeColors: {},
   hideFinalScoreUntilEnd: false,
   hideTotals: false,
   showMiniatures: false,

@@ -1,4 +1,5 @@
 import { useCallback } from 'react'
+import { parseNumericInputValue } from '@/utils/numberInput'
 
 interface UseSpreadsheetCriterionChangeOptions {
   markDirty: () => void
@@ -11,9 +12,9 @@ export function useSpreadsheetCriterionChange({
 }: UseSpreadsheetCriterionChangeOptions) {
   return useCallback(
     (clipId: string, criterionId: string, value: string) => {
-      const parsedValue = value === '' ? '' : Number(value)
-      if (typeof parsedValue === 'number' && Number.isNaN(parsedValue)) return
-      updateCriterion(clipId, criterionId, parsedValue as number)
+      const parsedValue = parseNumericInputValue(value)
+      if (parsedValue === null) return
+      updateCriterion(clipId, criterionId, parsedValue)
       markDirty()
     },
     [markDirty, updateCriterion],

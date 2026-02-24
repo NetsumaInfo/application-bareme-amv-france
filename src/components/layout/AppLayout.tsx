@@ -20,6 +20,7 @@ import { useAutoSave } from '@/hooks/useAutoSave'
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts'
 import { usePlayer } from '@/hooks/usePlayer'
 import { useSaveProject } from '@/hooks/useSaveProject'
+import { isNoteComplete } from '@/utils/scoring'
 
 export default function AppLayout() {
   const { currentProject, clips, currentClipIndex } = useProjectStore()
@@ -53,7 +54,12 @@ export default function AppLayout() {
   const undoLastChange = useNotationStore((state) => state.undoLastChange)
   const [showSettings, setShowSettings] = useState(false)
   const appRootRef = useRef<HTMLDivElement | null>(null)
-  const allClipsScored = clips.length > 0 && clips.every((clip) => clip.scored)
+  const allClipsScored = clips.length > 0 && clips.every((clip) => {
+    if (clip.scored) return true
+    if (!currentBareme) return false
+    const clipNote = notes[clip.id]
+    return clipNote ? isNoteComplete(clipNote, currentBareme) : false
+  })
   const lockResultsUntilScored = Boolean(currentProject?.settings.hideFinalScoreUntilEnd) && !allClipsScored
 
   const { toggleMiniatures, setCurrentClipMiniatureFrame } = useMiniatureActions()

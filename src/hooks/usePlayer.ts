@@ -23,6 +23,13 @@ export function usePlayer() {
   const { clips, currentClipIndex } = useProjectStore()
   const currentClip = clips[currentClipIndex]
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const lastNonZeroVolumeRef = useRef(80)
+
+  useEffect(() => {
+    if (volume > 0.001) {
+      lastNonZeroVolumeRef.current = volume
+    }
+  }, [volume])
 
   // Poll player status every 250ms
   useEffect(() => {
@@ -40,6 +47,7 @@ export function usePlayer() {
           isPlaying: status.is_playing,
           currentTime: status.current_time,
           duration: status.duration,
+          volume: status.volume,
           isFullscreen: fullscreen,
         })
       } catch {
@@ -88,13 +96,17 @@ export function usePlayer() {
   const setVolume = useCallback(async (volume: number) => {
     try {
       await tauri.playerSetVolume(volume)
-      usePlayerStore.getState().setVolume(volume)
+      const state = usePlayerStore.getState()
+      state.setVolume(volume)
+      state.setMuted(volume <= 0.001)
     } catch { /* ignore */ }
   }, [])
 
   const setMuted = useCallback((muted: boolean) => {
-    usePlayerStore.getState().setMuted(muted)
-    const vol = muted ? 0 : usePlayerStore.getState().volume
+    const state = usePlayerStore.getState()
+    state.setMuted(muted)
+    const vol = muted ? 0 : Math.max(1, lastNonZeroVolumeRef.current)
+    if (!muted) state.setVolume(vol)
     tauri.playerSetVolume(vol).catch(() => {})
   }, [])
 

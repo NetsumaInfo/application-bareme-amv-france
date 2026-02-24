@@ -6,13 +6,19 @@ import { getClipPrimaryLabel, getClipSecondaryLabel } from '@/utils/formatters'
 import { ModernCategorySection } from '@/components/interfaces/modern/ModernCategorySection'
 import { ScoreRing } from '@/components/interfaces/modern/ScoreRing'
 import { useModernCategories } from '@/components/interfaces/modern/useModernCategories'
+import { isNoteComplete } from '@/utils/scoring'
 
 export default function ModernInterface() {
   const { currentBareme, updateCriterion, getNoteForClip, getScoreForClip } = useNotationStore()
   const { clips, currentClipIndex, currentProject, markDirty } = useProjectStore()
   const { hideFinalScore, hideTextNotes } = useUIStore()
   const currentClip = clips[currentClipIndex]
-  const allClipsScored = clips.length > 0 && clips.every((clip) => clip.scored)
+  const allClipsScored = clips.length > 0 && clips.every((clip) => {
+    if (clip.scored) return true
+    if (!currentBareme) return false
+    const clipNote = getNoteForClip(clip.id)
+    return clipNote ? isNoteComplete(clipNote, currentBareme) : false
+  })
   const hideTotalsUntilAllScored = Boolean(currentProject?.settings.hideFinalScoreUntilEnd) && !allClipsScored
   const hideTotalsSetting = Boolean(currentProject?.settings.hideTotals)
   const shouldHideTotals = hideFinalScore || hideTotalsSetting || hideTotalsUntilAllScored

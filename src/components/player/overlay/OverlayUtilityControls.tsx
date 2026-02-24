@@ -7,7 +7,7 @@ import {
   Headphones,
   ImagePlus,
 } from 'lucide-react'
-import { useEffect, useRef, useState, type ChangeEvent, type MutableRefObject } from 'react'
+import { useEffect, useMemo, useRef, useState, type ChangeEvent, type MutableRefObject } from 'react'
 import AudioDbMeter from '@/components/player/AudioDbMeter'
 import type { TrackItem } from '@/services/tauri'
 import type { ClipInfo } from '@/components/player/overlay/types'
@@ -68,6 +68,8 @@ export function OverlayUtilityControls({
   onExitFullscreen,
   onToggleFullscreen,
 }: OverlayUtilityControlsProps) {
+  const rootRef = useRef<HTMLDivElement | null>(null)
+  const [utilityWidth, setUtilityWidth] = useState(0)
   const subtitleOptions = [
     {
       key: 'none',
@@ -90,8 +92,40 @@ export function OverlayUtilityControls({
     onSelect: () => onSelectAudio(track.id),
   }))
 
-  const iconOnlyAudio = tinyControls || controlsRowWidth < 900
-  const showInlineMeter = showAudioDb && !iconOnlyAudio && controlsRowWidth >= 1100
+  useEffect(() => {
+    const element = rootRef.current
+    if (!element) return
+
+    const update = () => {
+      const next = Math.round(element.getBoundingClientRect().width)
+      setUtilityWidth((prev) => (prev === next ? prev : next))
+    }
+
+    update()
+    const observer = new ResizeObserver(update)
+    observer.observe(element)
+    window.addEventListener('resize', update)
+    return () => {
+      observer.disconnect()
+      window.removeEventListener('resize', update)
+    }
+  }, [])
+
+  const effectiveWidth = Math.max(controlsRowWidth, utilityWidth)
+  const inlineVolumeBreakpoint = compactControls ? 280 : 320
+  const inlineMeterBreakpoint = compactControls ? 480 : 540
+  const iconOnlyAudio = effectiveWidth < inlineVolumeBreakpoint
+  const showInlineMeter = showAudioDb && !iconOnlyAudio && effectiveWidth >= inlineMeterBreakpoint
+  const volumeSliderWidth = useMemo(() => {
+    if (iconOnlyAudio) return 0
+    const min = compactControls ? 72 : 92
+    const max = compactControls ? 126 : 156
+    const rightIconsReserve = compactControls ? 182 : 224
+    const miniatureReserve = clipInfo.miniaturesEnabled ? (compactControls ? 30 : 44) : 0
+    const meterReserve = showInlineMeter ? (compactControls ? 128 : 148) : 0
+    const target = effectiveWidth - rightIconsReserve - miniatureReserve - meterReserve
+    return Math.max(min, Math.min(max, target))
+  }, [iconOnlyAudio, compactControls, clipInfo.miniaturesEnabled, showInlineMeter, effectiveWidth])
   const displayedVolume = isMuted ? 0 : volume
   const clampedVolume = Math.max(0, Math.min(100, displayedVolume))
   const volumeGradient = `linear-gradient(to right, rgba(59,130,246,0.95) 0%, rgba(59,130,246,0.95) ${clampedVolume}%, rgba(255,255,255,0.28) ${clampedVolume}%, rgba(255,255,255,0.28) 100%)`
@@ -123,7 +157,7 @@ export function OverlayUtilityControls({
   }, [])
 
   return (
-    <div className={`flex items-center min-w-0 ${compactControls ? 'gap-1' : 'gap-2'}`}>
+    <div ref={rootRef} className={`flex items-center min-w-0 ${compactControls ? 'gap-1' : 'gap-2'}`}>
       <div
         className="relative shrink-0"
         onMouseEnter={openVolumePanel}
@@ -160,9 +194,6 @@ export function OverlayUtilityControls({
                 style={{ background: volumeGradient }}
               />
             </div>
-            {showAudioDb && !tinyControls && (
-              <AudioDbMeter enabled compact muted={isMuted || volume === 0} className="mt-2" />
-            )}
           </div>
         )}
       </div>
@@ -175,12 +206,12 @@ export function OverlayUtilityControls({
             max={100}
             value={displayedVolume}
             onChange={onSetVolume}
-            className={`${compactControls ? 'w-14 h-1' : 'w-28 h-1.5'} bg-white/30 rounded-full appearance-none cursor-pointer accent-primary-500
+            className={`${compactControls ? 'h-1' : 'h-1.5'} bg-white/30 rounded-full appearance-none cursor-pointer accent-primary-500
               [&::-webkit-slider-thumb]:appearance-none ${compactControls ? '[&::-webkit-slider-thumb]:w-2.5 [&::-webkit-slider-thumb]:h-2.5' : '[&::-webkit-slider-thumb]:w-3.5 [&::-webkit-slider-thumb]:h-3.5'}
               [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white
               [&::-webkit-slider-thumb]:shadow-lg [&::-webkit-slider-thumb]:cursor-pointer"
             `}
-            style={{ background: volumeGradient }}
+            style={{ background: volumeGradient, width: `${volumeSliderWidth}px` }}
           />
 
           {showInlineMeter && (

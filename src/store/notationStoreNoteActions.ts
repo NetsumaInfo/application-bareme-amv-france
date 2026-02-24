@@ -13,7 +13,10 @@ function normalizeCriterionValue(
     && value !== null
     && value !== ''
   ) {
-    const numeric = Number(value)
+    const numeric =
+      typeof value === 'string'
+        ? Number(value.replace(',', '.'))
+        : Number(value)
     if (Number.isFinite(numeric)) {
       const min = Number.isFinite(criterion.min) ? Number(criterion.min) : numeric
       const max = Number.isFinite(criterion.max) ? Number(criterion.max) : numeric

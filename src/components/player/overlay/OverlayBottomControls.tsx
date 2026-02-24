@@ -85,7 +85,9 @@ export function OverlayBottomControls({
   onToggleFullscreen,
 }: OverlayBottomControlsProps) {
   const controlsRowRef = useRef<HTMLDivElement | null>(null)
+  const transportRef = useRef<HTMLDivElement | null>(null)
   const [controlsRowWidth, setControlsRowWidth] = useState(0)
+  const [transportWidth, setTransportWidth] = useState(0)
 
   useEffect(() => {
     const el = controlsRowRef.current
@@ -112,7 +114,36 @@ export function OverlayBottomControls({
     }
   }, [])
 
+  useEffect(() => {
+    const el = transportRef.current
+    if (!el) return
+
+    let frame = 0
+    const update = () => {
+      cancelAnimationFrame(frame)
+      frame = requestAnimationFrame(() => {
+        const next = Math.round(el.getBoundingClientRect().width)
+        setTransportWidth((prev) => (prev === next ? prev : next))
+      })
+    }
+
+    update()
+    const observer = new ResizeObserver(update)
+    observer.observe(el)
+    window.addEventListener('resize', update)
+
+    return () => {
+      cancelAnimationFrame(frame)
+      observer.disconnect()
+      window.removeEventListener('resize', update)
+    }
+  }, [])
+
   const hasVideo = clipInfo.hasVideo !== false
+  const utilityAvailableWidth = Math.max(
+    180,
+    controlsRowWidth - transportWidth - (compactControls ? 24 : 32),
+  )
 
   return (
     <div
@@ -136,43 +167,47 @@ export function OverlayBottomControls({
       />
 
       <div ref={controlsRowRef} className={`flex items-center justify-between ${tinyControls ? 'gap-1' : 'gap-2'}`}>
-        <OverlayTransportControls
-          compactControls={compactControls}
-          clipInfo={clipInfo}
-          isPlaying={hasVideo ? isPlaying : false}
-          onPrevClip={onPrevClip}
-          onNextClip={onNextClip}
-          onSeekRelative={hasVideo ? onSeekRelative : () => {}}
-          onTogglePause={hasVideo ? onTogglePause : () => {}}
-        />
+        <div ref={transportRef} className="shrink-0">
+          <OverlayTransportControls
+            compactControls={compactControls}
+            clipInfo={clipInfo}
+            isPlaying={hasVideo ? isPlaying : false}
+            onPrevClip={onPrevClip}
+            onNextClip={onNextClip}
+            onSeekRelative={hasVideo ? onSeekRelative : () => {}}
+            onTogglePause={hasVideo ? onTogglePause : () => {}}
+          />
+        </div>
 
-        <OverlayUtilityControls
-          controlsRowWidth={controlsRowWidth}
-          compactControls={compactControls}
-          tinyControls={tinyControls}
-          isPlayerFullscreen={isPlayerFullscreen}
-          isMuted={hasVideo ? isMuted : true}
-          volume={hasVideo ? volume : 0}
-          showAudioDb={showAudioDb}
-          clipInfo={clipInfo}
-          subtitleTracks={subtitleTracks}
-          audioTracks={audioTracks}
-          currentSubtitleId={currentSubtitleId}
-          currentAudioId={currentAudioId}
-          subMenuOpen={subMenuOpen}
-          audioMenuOpen={audioMenuOpen}
-          subRef={subRef}
-          audioRef={audioRef}
-          onToggleMute={hasVideo ? onToggleMute : () => {}}
-          onSetVolume={hasVideo ? onSetVolume : () => {}}
-          onToggleSubMenu={onToggleSubMenu}
-          onToggleAudioMenu={onToggleAudioMenu}
-          onSelectSubtitle={onSelectSubtitle}
-          onSelectAudio={onSelectAudio}
-          onSetMiniatureFrame={onSetMiniatureFrame}
-          onExitFullscreen={onExitFullscreen}
-          onToggleFullscreen={onToggleFullscreen}
-        />
+        <div className="min-w-0 flex justify-end" style={{ width: utilityAvailableWidth }}>
+          <OverlayUtilityControls
+            controlsRowWidth={utilityAvailableWidth}
+            compactControls={compactControls}
+            tinyControls={tinyControls}
+            isPlayerFullscreen={isPlayerFullscreen}
+            isMuted={hasVideo ? isMuted : true}
+            volume={hasVideo ? volume : 0}
+            showAudioDb={showAudioDb}
+            clipInfo={clipInfo}
+            subtitleTracks={subtitleTracks}
+            audioTracks={audioTracks}
+            currentSubtitleId={currentSubtitleId}
+            currentAudioId={currentAudioId}
+            subMenuOpen={subMenuOpen}
+            audioMenuOpen={audioMenuOpen}
+            subRef={subRef}
+            audioRef={audioRef}
+            onToggleMute={hasVideo ? onToggleMute : () => {}}
+            onSetVolume={hasVideo ? onSetVolume : () => {}}
+            onToggleSubMenu={onToggleSubMenu}
+            onToggleAudioMenu={onToggleAudioMenu}
+            onSelectSubtitle={onSelectSubtitle}
+            onSelectAudio={onSelectAudio}
+            onSetMiniatureFrame={onSetMiniatureFrame}
+            onExitFullscreen={onExitFullscreen}
+            onToggleFullscreen={onToggleFullscreen}
+          />
+        </div>
       </div>
     </div>
   )

@@ -1,5 +1,7 @@
 import { ArrowDown, ArrowUp, Trash2 } from 'lucide-react'
 import { CATEGORY_COLOR_PRESETS, sanitizeColor, withAlpha } from '@/utils/colors'
+import { ColorSwatchPicker } from '@/components/ui/ColorSwatchPicker'
+import { COLOR_MEMORY_KEYS } from '@/utils/colorPickerStorage'
 import type { Criterion } from '@/types/bareme'
 
 interface BaremeCriterionCardProps {
@@ -80,16 +82,15 @@ export function BaremeCriterionCard({
               style={{ borderColor: withAlpha(color, 0.45) }}
               disabled={readOnly}
             />
-            <input
-              type="color"
+            <ColorSwatchPicker
               value={sanitizeColor(color)}
-              onChange={(event) => {
+              onChange={(nextColor) => {
                 if (!rawCategory) return
-                onSetCategoryColor(rawCategory, event.target.value)
+                onSetCategoryColor(rawCategory, nextColor)
               }}
               disabled={readOnly || !rawCategory}
               title={rawCategory ? `Couleur de ${rawCategory}` : 'Saisis une catégorie d’abord'}
-              className="h-8 w-10 p-0 bg-transparent border border-gray-700 rounded cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+              memoryKey={COLOR_MEMORY_KEYS.recentBaremeColors}
             />
           </div>
           {rawCategory && (

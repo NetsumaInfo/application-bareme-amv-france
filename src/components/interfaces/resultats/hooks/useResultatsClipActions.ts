@@ -8,34 +8,35 @@ interface UseResultatsClipActionsParams {
   clips: Clip[]
   setCurrentClip: (index: number) => void
   setShowPipVideo: (show: boolean) => void
-  switchInterface: (next: 'spreadsheet' | 'modern') => void
-  switchTab: (tab: 'notation' | 'resultats' | 'export') => void
 }
 
 export function useResultatsClipActions({
   clips,
   setCurrentClip,
   setShowPipVideo,
-  switchInterface,
-  switchTab,
 }: UseResultatsClipActionsParams) {
-  const openClipInNotation = useCallback((clipId: string) => {
+  const openClipInNotation = useCallback(async (clipId: string) => {
     const index = clips.findIndex((clip) => clip.id === clipId)
     if (index < 0) return
 
+    const clip = clips[index]
     setCurrentClip(index)
     setShowPipVideo(true)
-    switchInterface('spreadsheet')
-    switchTab('notation')
-
-    tauri.playerShow()
-      .then(() => tauri.playerSyncOverlay().catch(() => {}))
-      .catch(() => {})
-
-    setTimeout(() => {
-      tauri.playerSyncOverlay().catch(() => {})
-    }, 120)
-  }, [clips, setCurrentClip, setShowPipVideo, switchInterface, switchTab])
+    try {
+      const playerState = usePlayerStore.getState()
+      if (clip.filePath) {
+        if (!playerState.isLoaded || playerState.currentFilePath !== clip.filePath) {
+          playerState.setLoaded(false)
+          await tauri.playerLoad(clip.filePath)
+          playerState.setLoaded(true, clip.filePath)
+        }
+      }
+      await tauri.playerShow().catch(() => {})
+      await tauri.playerSyncOverlay().catch(() => {})
+    } catch (error) {
+      console.error('Failed to open clip from results:', error)
+    }
+  }, [clips, setCurrentClip, setShowPipVideo])
 
   const jumpToTimecodeInNotation = useCallback(async (
     clipId: string,
@@ -52,8 +53,6 @@ export function useResultatsClipActions({
 
     setCurrentClip(index)
     setShowPipVideo(true)
-    switchInterface('spreadsheet')
-    switchTab('notation')
 
     const playerState = usePlayerStore.getState()
     try {
@@ -77,7 +76,7 @@ export function useResultatsClipActions({
     }
     window.dispatchEvent(new CustomEvent('amv:focus-note-marker', { detail }))
     emit('main:focus-note-marker', detail).catch(() => {})
-  }, [clips, setCurrentClip, setShowPipVideo, switchInterface, switchTab])
+  }, [clips, setCurrentClip, setShowPipVideo])
 
   return {
     openClipInNotation,
