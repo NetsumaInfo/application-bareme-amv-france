@@ -7,7 +7,7 @@ interface MenuPosition {
 }
 
 interface MemberMenuState extends MenuPosition {
-  index: number
+  judgeKey: string
 }
 
 interface ClipMenuState extends MenuPosition {
@@ -28,7 +28,8 @@ interface ResultatsContextMenusProps {
   onCloseMemberMenu: () => void
   onCloseClipMenu: () => void
   onCloseEmptyMenu: () => void
-  onRemoveImportedJudge: (index: number) => void
+  onRemoveImportedJudge: (judgeKey: string) => void
+  onRenameJudge: (judgeKey: string) => void
   onOpenClipInNotation: (clip: Clip) => void
   onOpenDetailedNotes: (clip: Clip) => void
   onImportJudgeJson: () => void
@@ -48,11 +49,14 @@ export function ResultatsContextMenus({
   onCloseClipMenu,
   onCloseEmptyMenu,
   onRemoveImportedJudge,
+  onRenameJudge,
   onOpenClipInNotation,
   onOpenDetailedNotes,
   onImportJudgeJson,
   onRemoveClip,
 }: ResultatsContextMenusProps) {
+  const canRemoveSelectedJudge = Boolean(memberContextMenu?.judgeKey.startsWith('imported-'))
+
   return (
     <>
       {memberContextMenu && (
@@ -63,13 +67,27 @@ export function ResultatsContextMenus({
         >
           <button
             onClick={() => {
-              onRemoveImportedJudge(memberContextMenu.index)
+              onRenameJudge(memberContextMenu.judgeKey)
               onCloseMemberMenu()
             }}
-            className="w-full text-left px-3 py-1.5 text-[11px] text-red-400 hover:bg-gray-800 transition-colors"
+            className="w-full text-left px-3 py-1.5 text-[11px] text-gray-300 hover:bg-gray-800 transition-colors"
           >
-            Supprimer le membre sélectionné
+            Renommer le juge
           </button>
+          {canRemoveSelectedJudge && (
+            <>
+              <div className="border-t border-gray-700 my-0.5" />
+              <button
+                onClick={() => {
+                  onRemoveImportedJudge(memberContextMenu.judgeKey)
+                  onCloseMemberMenu()
+                }}
+                className="w-full text-left px-3 py-1.5 text-[11px] text-red-400 hover:bg-gray-800 transition-colors"
+              >
+                Supprimer le juge
+              </button>
+            </>
+          )}
         </div>
       )}
 

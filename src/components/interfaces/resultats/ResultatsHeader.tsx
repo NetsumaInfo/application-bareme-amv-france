@@ -8,7 +8,6 @@ import { withAlpha } from '@/utils/colors'
 export function ResultatsHeader({
   importing,
   judges,
-  importedJudges,
   selectedJudgeKey,
   judgeColors,
   onImportJudgeJson,
@@ -48,9 +47,6 @@ export function ResultatsHeader({
         const color = judgeColors[judge.key] ?? '#60a5fa'
         const active = selectedJudgeKey === judge.key
         const displayName = getDisplayName(judge.judgeName, judge.isCurrentJudge)
-        const importedIndex = judge.key.startsWith('imported-')
-          ? Number(judge.key.replace('imported-', ''))
-          : null
 
         return (
           <div key={judge.key} className="inline-flex items-center gap-1.5">
@@ -58,9 +54,9 @@ export function ResultatsHeader({
               type="button"
               onClick={() => onSelectJudge(judge.key)}
               onContextMenu={(event) => {
-                if (importedIndex === null || importedIndex < 0 || importedIndex >= importedJudges.length) return
                 event.preventDefault()
-                onOpenMemberContextMenu(importedIndex, event.clientX, event.clientY)
+                event.stopPropagation()
+                onOpenMemberContextMenu(judge.key, event.clientX, event.clientY)
               }}
               className="inline-flex items-center text-[11px] px-2 py-1 rounded border transition-colors bg-surface-dark hover:text-white"
               style={{
@@ -68,7 +64,7 @@ export function ResultatsHeader({
                 borderColor: withAlpha(color, active ? 0.7 : 0.45),
                 backgroundColor: withAlpha(color, active ? 0.15 : 0.07),
               }}
-              title={importedIndex !== null ? 'Clic droit pour options' : undefined}
+              title="Clic droit pour options"
             >
               {displayName}
             </button>

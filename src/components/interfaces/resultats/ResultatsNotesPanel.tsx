@@ -1,3 +1,4 @@
+import { X } from 'lucide-react'
 import TimecodeTextarea from '@/components/notes/TimecodeTextarea'
 import { getClipPrimaryLabel } from '@/utils/formatters'
 import type { Clip } from '@/types/project'
@@ -9,6 +10,7 @@ interface ResultatsNotesPanelProps {
   judges: JudgeSource[]
   selectedClipFps: number | null
   onSetCurrentJudgeText: (clipId: string, text: string) => void
+  onClosePanel?: () => void
   onJumpToTimecode: (clipId: string, seconds: number) => void
   onTimecodeHover: (params: { seconds: number; anchorRect: DOMRect }) => void
   onTimecodeLeave: () => void
@@ -20,6 +22,7 @@ export function ResultatsNotesPanel({
   judges,
   selectedClipFps,
   onSetCurrentJudgeText,
+  onClosePanel,
   onJumpToTimecode,
   onTimecodeHover,
   onTimecodeLeave,
@@ -30,9 +33,21 @@ export function ResultatsNotesPanel({
 
   return (
     <div className="shrink-0 border border-gray-700 rounded-lg bg-surface overflow-hidden">
-      <div className="px-3 py-2 border-b border-gray-700 text-[11px] text-gray-400">
-        Notes du clip
-        <span className="text-primary-300 ml-1">{getClipPrimaryLabel(selectedClip)}</span>
+      <div className="px-3 py-2 border-b border-gray-700 text-[11px] text-gray-400 flex items-center justify-between gap-2">
+        <div>
+          Notes du clip
+          <span className="text-primary-300 ml-1">{getClipPrimaryLabel(selectedClip)}</span>
+        </div>
+        {onClosePanel && (
+          <button
+            type="button"
+            onClick={onClosePanel}
+            className="h-5 w-5 rounded text-gray-400 hover:text-white hover:bg-gray-700/60 transition-colors"
+            title="Masquer les notes"
+          >
+            <X size={13} className="mx-auto" />
+          </button>
+        )}
       </div>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-2 p-2">
         {judges.map((judge) => {

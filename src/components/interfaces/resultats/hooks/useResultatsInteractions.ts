@@ -66,6 +66,7 @@ export function useResultatsInteractions({
     importing,
     handleImportJudgeJson,
     removeImportedJudge: removeImportedJudgeRaw,
+    renameImportedJudge: renameImportedJudgeRaw,
   } = useResultatsJudgeImport({
     clips,
     importedJudges,
@@ -96,6 +97,10 @@ export function useResultatsInteractions({
     setMemberContextMenu(null)
   }, [removeImportedJudgeRaw, setMemberContextMenu])
 
+  const renameImportedJudge = useCallback((index: number, nextName: string) => {
+    return renameImportedJudgeRaw(index, nextName)
+  }, [renameImportedJudgeRaw])
+
   return {
     importing,
     criterionDraftCells,
@@ -118,6 +123,7 @@ export function useResultatsInteractions({
     getCriterionCellKey,
     handleImportJudgeJson,
     removeImportedJudge,
+    renameImportedJudge,
     openClipInNotation,
     jumpToTimecodeInNotation,
   }

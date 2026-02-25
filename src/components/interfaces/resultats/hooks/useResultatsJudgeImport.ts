@@ -55,9 +55,24 @@ export function useResultatsJudgeImport({
     setImportedJudges(importedJudges.filter((_, i) => i !== index))
   }, [importedJudges, setImportedJudges])
 
+  const renameImportedJudge = useCallback((index: number, nextName: string) => {
+    if (index < 0 || index >= importedJudges.length) return false
+
+    const trimmedName = nextName.trim()
+    if (!trimmedName) return false
+
+    setImportedJudges(
+      importedJudges.map((judge, judgeIndex) => (
+        judgeIndex === index ? { ...judge, judgeName: trimmedName } : judge
+      )),
+    )
+    return true
+  }, [importedJudges, setImportedJudges])
+
   return {
     importing,
     handleImportJudgeJson,
     removeImportedJudge,
+    renameImportedJudge,
   }
 }
