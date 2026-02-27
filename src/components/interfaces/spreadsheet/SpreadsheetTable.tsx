@@ -43,7 +43,6 @@ interface SpreadsheetTableProps {
   onManualClipFieldChange: (clipId: string, field: 'author' | 'displayName', value: string) => void
   onCellChange: (clipId: string, criterionId: string, value: string) => void
   onCellKeyDown: (event: ReactKeyboardEvent, clipIdx: number, critIdx: number) => void
-  onToggleScoringCategory: (category: string) => void
   onSeekAndPauseToTimecode: (seconds: number) => Promise<void>
   onShowFramePreview: (params: { seconds: number; anchorRect: DOMRect }) => Promise<void>
   onHideFramePreview: () => void
@@ -77,7 +76,6 @@ export function SpreadsheetTable({
   onManualClipFieldChange,
   onCellChange,
   onCellKeyDown,
-  onToggleScoringCategory,
   onSeekAndPauseToTimecode,
   onShowFramePreview,
   onHideFramePreview,
@@ -213,13 +211,12 @@ export function SpreadsheetTable({
   const currentClip = clips[currentClipIndex]
 
   return (
-    <div className="flex-1 overflow-auto">
+    <div className="relative flex-1 overflow-auto">
       <table className="w-full border-collapse text-xs">
         <SpreadsheetTableHeader
           categoryGroups={categoryGroups}
           currentBareme={currentBareme}
           hideTotalsSetting={hideTotalsSetting}
-          onToggleScoringCategory={onToggleScoringCategory}
         />
 
         <tbody>

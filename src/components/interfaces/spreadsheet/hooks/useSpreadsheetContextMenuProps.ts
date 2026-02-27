@@ -8,6 +8,8 @@ interface UseSpreadsheetContextMenuPropsParams {
   contextClip: Clip | null
   currentClip: Clip | undefined
   showMiniatures: boolean
+  hasAnyLinkedVideo: boolean
+  showAddRowButton: boolean
   shortcutBindings: Record<ShortcutAction, string>
   contextMenuRef: MutableRefObject<HTMLDivElement | null>
   handleToggleScored: (clip: Clip) => void
@@ -16,6 +18,7 @@ interface UseSpreadsheetContextMenuPropsParams {
   handleSetMiniatureFromCurrentFrame: (clip: Clip) => void
   handleResetMiniature: (clip: Clip) => void
   handleToggleMiniatures: () => void
+  handleToggleAddRowButton: () => void
   handleShowMediaInfo: (clip: Clip) => void
   handleRemoveClip: (clip: Clip) => void
 }
@@ -25,6 +28,8 @@ export function buildSpreadsheetContextMenuProps({
   contextClip,
   currentClip,
   showMiniatures,
+  hasAnyLinkedVideo,
+  showAddRowButton,
   shortcutBindings,
   contextMenuRef,
   handleToggleScored,
@@ -33,6 +38,7 @@ export function buildSpreadsheetContextMenuProps({
   handleSetMiniatureFromCurrentFrame,
   handleResetMiniature,
   handleToggleMiniatures,
+  handleToggleAddRowButton,
   handleShowMediaInfo,
   handleRemoveClip,
 }: UseSpreadsheetContextMenuPropsParams): ComponentProps<typeof ClipContextMenu> {
@@ -41,6 +47,8 @@ export function buildSpreadsheetContextMenuProps({
     contextClip,
     currentClipId: currentClip?.id,
     showMiniatures,
+    hasAnyLinkedVideo,
+    showAddRowButton,
     shortcutBindings,
     contextMenuRef,
     onToggleScored: handleToggleScored,
@@ -49,6 +57,7 @@ export function buildSpreadsheetContextMenuProps({
     onSetMiniatureFromCurrentFrame: handleSetMiniatureFromCurrentFrame,
     onResetMiniature: handleResetMiniature,
     onToggleMiniatures: handleToggleMiniatures,
+    onToggleAddRowButton: handleToggleAddRowButton,
     onShowMediaInfo: handleShowMediaInfo,
     onRemoveClip: handleRemoveClip,
   }

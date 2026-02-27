@@ -122,6 +122,23 @@ export function normalizeProjectDataInput(data: ProjectData): NormalizedProjectD
       ),
     ),
   )
+  const normalizedMultiPseudoDisplayMode = (() => {
+    const rawMode = rawSettings.multiPseudoDisplayMode ?? rawSettings.multi_pseudo_display_mode
+    if (
+      rawMode === 'collab_mep'
+      || rawMode === 'first_three'
+      || rawMode === 'all'
+    ) {
+      return rawMode
+    }
+
+    const legacyCollabMep = rawSettings.showCollabMepLabels ?? rawSettings.show_collab_mep_labels
+    if (typeof legacyCollabMep === 'boolean') {
+      return legacyCollabMep ? 'collab_mep' : 'all'
+    }
+
+    return DEFAULT_PROJECT_SETTINGS.multiPseudoDisplayMode
+  })()
 
   const project: Project = {
     id: (rawProject.id as string) || generateId(),
@@ -185,6 +202,7 @@ export function normalizeProjectDataInput(data: ProjectData): NormalizedProjectD
           : typeof rawSettings.show_miniatures === 'boolean'
             ? rawSettings.show_miniatures
             : DEFAULT_PROJECT_SETTINGS.showMiniatures,
+      multiPseudoDisplayMode: normalizedMultiPseudoDisplayMode,
       showAddRowButton:
         typeof rawSettings.showAddRowButton === 'boolean'
           ? rawSettings.showAddRowButton

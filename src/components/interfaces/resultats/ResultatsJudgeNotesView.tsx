@@ -108,11 +108,6 @@ export function ResultatsJudgeNotesView({
           <ChevronRight size={16} className="mx-auto" />
         </button>
 
-        <div className="text-xs text-gray-300 truncate min-w-0">
-          <span className="text-primary-300">{getClipPrimaryLabel(selectedClip)}</span>
-          {getClipSecondaryLabel(selectedClip) ? ` - ${getClipSecondaryLabel(selectedClip)}` : ''}
-        </div>
-
         <button
           type="button"
           onClick={() => {

@@ -60,7 +60,10 @@ export default function AppLayout() {
     const clipNote = notes[clip.id]
     return clipNote ? isNoteComplete(clipNote, currentBareme) : false
   })
-  const lockResultsUntilScored = Boolean(currentProject?.settings.hideFinalScoreUntilEnd) && !allClipsScored
+  const hasAnyLinkedVideo = clips.some((clip) => Boolean(clip.filePath))
+  const lockResultsUntilScored = Boolean(currentProject?.settings.hideFinalScoreUntilEnd)
+    && hasAnyLinkedVideo
+    && !allClipsScored
 
   const { toggleMiniatures, setCurrentClipMiniatureFrame } = useMiniatureActions()
   const { contextMenu, setContextMenu, handleContextMenu } = useLayoutContextMenu()

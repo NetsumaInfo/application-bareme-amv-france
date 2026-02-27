@@ -8,6 +8,8 @@ import type { Clip, Project } from '@/types/project'
 interface UseSpreadsheetContextMenuHandlersOptions {
   clips: Clip[]
   showMiniatures: boolean
+  showAddRowButton: boolean
+  hasAnyLinkedVideo: boolean
   updateSettings: (settings: Partial<Project['settings']>) => void
   setClipScored: (clipId: string, scored: boolean) => void
   setCurrentClip: (index: number) => void
@@ -21,6 +23,8 @@ interface UseSpreadsheetContextMenuHandlersOptions {
 export function useSpreadsheetContextMenuHandlers({
   clips,
   showMiniatures,
+  showAddRowButton,
+  hasAnyLinkedVideo,
   updateSettings,
   setClipScored,
   setCurrentClip,
@@ -65,9 +69,18 @@ export function useSpreadsheetContextMenuHandlers({
   }, [closeContextMenu, setClipThumbnailTime])
 
   const handleToggleMiniatures = useCallback(() => {
+    if (!hasAnyLinkedVideo) {
+      closeContextMenu()
+      return
+    }
     updateSettings({ showMiniatures: !showMiniatures })
     closeContextMenu()
-  }, [closeContextMenu, showMiniatures, updateSettings])
+  }, [closeContextMenu, hasAnyLinkedVideo, showMiniatures, updateSettings])
+
+  const handleToggleAddRowButton = useCallback(() => {
+    updateSettings({ showAddRowButton: !showAddRowButton })
+    closeContextMenu()
+  }, [closeContextMenu, showAddRowButton, updateSettings])
 
   const handleShowMediaInfo = useCallback((clip: Clip) => {
     if (!clip.filePath) return
@@ -88,6 +101,7 @@ export function useSpreadsheetContextMenuHandlers({
     handleSetMiniatureFromCurrentFrame,
     handleResetMiniature,
     handleToggleMiniatures,
+    handleToggleAddRowButton,
     handleShowMediaInfo,
     handleRemoveClip,
   }

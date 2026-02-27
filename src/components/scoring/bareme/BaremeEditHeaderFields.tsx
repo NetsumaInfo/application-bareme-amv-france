@@ -30,7 +30,7 @@ export function BaremeEditHeaderFields({
           <input
             value={name}
             onChange={(event) => onNameChange(event.target.value)}
-            placeholder="ex: Finale 2026"
+            placeholder="Japan Expo 2025"
             className="w-full px-3 py-2 bg-surface-dark border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:border-primary-500 focus:outline-none text-sm"
             disabled={readOnly}
           />
@@ -48,7 +48,6 @@ export function BaremeEditHeaderFields({
         <input
           value={description}
           onChange={(event) => onDescriptionChange(event.target.value)}
-          placeholder="ex: Barème phase finale"
           className="w-full px-3 py-2 bg-surface-dark border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:border-primary-500 focus:outline-none text-sm"
           disabled={readOnly}
         />

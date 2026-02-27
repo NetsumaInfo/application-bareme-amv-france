@@ -53,11 +53,6 @@ export function BaremeSelector() {
             >
               <div className="flex items-center gap-1.5">
                 <span className="truncate font-medium">{bareme.name}</span>
-                {bareme.isOfficial ? (
-                  <span className="text-[8px] px-1 py-0.5 rounded bg-primary-600/30 text-primary-300 shrink-0">
-                    Officiel
-                  </span>
-                ) : null}
               </div>
               <div className="text-[10px] text-gray-500 mt-0.5">
                 {bareme.criteria.length} critères — {bareme.totalPoints} pts

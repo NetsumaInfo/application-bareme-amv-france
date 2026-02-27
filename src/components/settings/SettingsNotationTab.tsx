@@ -1,6 +1,6 @@
 import { SettingsToggle } from '@/components/settings/SettingsToggle'
 import type { Bareme } from '@/types/bareme'
-import type { ProjectSettings } from '@/types/project'
+import type { MultiPseudoDisplayMode, ProjectSettings } from '@/types/project'
 
 interface SettingsNotationTabProps {
   currentBareme: Bareme | null
@@ -31,6 +31,16 @@ export function SettingsNotationTab({
   onToggleAudioDb,
   onUpdateSettings,
 }: SettingsNotationTabProps) {
+  const multiPseudoDisplayMode = settings?.multiPseudoDisplayMode ?? 'collab_mep'
+  const multiPseudoDisplayOptions: Array<{
+    value: MultiPseudoDisplayMode
+    label: string
+  }> = [
+    { value: 'collab_mep', label: 'colab / mep' },
+    { value: 'first_three', label: '3 pseudos + ...' },
+    { value: 'all', label: 'Tous les pseudos' },
+  ]
+
   return (
     <>
       <div className="p-3 rounded-lg bg-surface-dark border border-gray-700">
@@ -47,7 +57,6 @@ export function SettingsNotationTab({
         {currentBareme && (
           <div className="text-[10px] text-gray-500 mt-0.5">
             {currentBareme.criteria.length} critères — {currentBareme.totalPoints} points
-            {currentBareme.isOfficial && ' — Officiel'}
           </div>
         )}
       </div>
@@ -110,6 +119,30 @@ export function SettingsNotationTab({
               })
             }
           />
+        </div>
+        <div>
+          <div className="mb-1">
+            <span className="text-sm text-gray-300 block">Affichage des pseudos multiples</span>
+            <span className="text-[10px] text-gray-500">
+              Choisis comment afficher les auteurs contenant plusieurs pseudos
+            </span>
+          </div>
+          <div className="grid grid-cols-3 gap-2">
+            {multiPseudoDisplayOptions.map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() => onUpdateSettings({ multiPseudoDisplayMode: option.value })}
+                className={`px-2 py-1.5 rounded border text-[11px] transition-colors ${
+                  multiPseudoDisplayMode === option.value
+                    ? 'border-primary-500 text-primary-300 bg-primary-500/10'
+                    : 'border-gray-700 text-gray-300 hover:text-white hover:border-gray-600'
+                }`}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
         </div>
         <div className="flex items-center justify-between">
           <div>

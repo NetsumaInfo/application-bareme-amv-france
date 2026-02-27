@@ -13,6 +13,8 @@ interface ClipContextMenuProps {
   contextClip: Clip | null
   currentClipId?: string
   showMiniatures: boolean
+  hasAnyLinkedVideo: boolean
+  showAddRowButton: boolean
   shortcutBindings: Record<ShortcutAction, string>
   contextMenuRef: RefObject<HTMLDivElement | null>
   onToggleScored: (clip: Clip) => void
@@ -21,6 +23,7 @@ interface ClipContextMenuProps {
   onSetMiniatureFromCurrentFrame: (clip: Clip) => void
   onResetMiniature: (clip: Clip) => void
   onToggleMiniatures: () => void
+  onToggleAddRowButton: () => void
   onShowMediaInfo: (clip: Clip) => void
   onRemoveClip: (clip: Clip) => void
 }
@@ -30,6 +33,8 @@ export function ClipContextMenu({
   contextClip,
   currentClipId,
   showMiniatures,
+  hasAnyLinkedVideo,
+  showAddRowButton,
   shortcutBindings,
   contextMenuRef,
   onToggleScored,
@@ -38,11 +43,11 @@ export function ClipContextMenu({
   onSetMiniatureFromCurrentFrame,
   onResetMiniature,
   onToggleMiniatures,
+  onToggleAddRowButton,
   onShowMediaInfo,
   onRemoveClip,
 }: ClipContextMenuProps) {
   if (!contextMenu) return null
-  const hasVideo = Boolean(contextClip?.filePath)
 
   return (
     <div
@@ -96,7 +101,7 @@ export function ClipContextMenu({
           <div className="border-t border-gray-700 my-0.5" />
         </>
       )}
-      {hasVideo ? (
+      {hasAnyLinkedVideo ? (
         <button
           onClick={onToggleMiniatures}
           className="w-full text-left px-3 py-1.5 text-[11px] text-gray-300 hover:bg-gray-800 transition-colors flex items-center gap-2"
@@ -113,6 +118,13 @@ export function ClipContextMenu({
           Miniatures indisponibles (pas de vidéo)
         </div>
       )}
+      <div className="border-t border-gray-700 my-0.5" />
+      <button
+        onClick={onToggleAddRowButton}
+        className="w-full text-left px-3 py-1.5 text-[11px] text-gray-300 hover:bg-gray-800 transition-colors"
+      >
+        {showAddRowButton ? 'Masquer bouton' : 'Afficher bouton'}
+      </button>
       <div className="border-t border-gray-700 my-0.5" />
       <button
         onClick={() => contextClip && onShowMediaInfo(contextClip)}

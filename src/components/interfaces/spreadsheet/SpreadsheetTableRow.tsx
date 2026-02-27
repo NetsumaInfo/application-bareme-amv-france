@@ -69,10 +69,10 @@ export function SpreadsheetTableRow({
   const rowClassName = isActive
     ? 'bg-primary-600/15'
     : clipIdx % 2 === 0
-      ? 'bg-surface-dark/30'
-      : 'bg-transparent'
+      ? 'bg-surface-dark/40'
+      : 'bg-surface'
   const stickyCellClassName = isActive
-    ? 'bg-primary-900/30'
+    ? 'bg-[#132748]'
     : clipIdx % 2 === 0
       ? 'bg-surface-dark'
       : 'bg-surface'
@@ -95,7 +95,7 @@ export function SpreadsheetTableRow({
       }}
     >
       <td
-        className={`px-2 py-1 text-center font-mono text-[10px] text-gray-500 border-r border-gray-800 sticky left-0 z-10 ${stickyCellClassName}`}
+        className={`px-2 py-1 text-center font-mono text-[10px] text-gray-500 border-r border-gray-800 sticky left-0 z-20 ${stickyCellClassName}`}
       >
         {clipIdx + 1}
       </td>

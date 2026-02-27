@@ -69,9 +69,12 @@ export function useSpreadsheetDerivedData({
     }),
     [clips, currentBareme, getNoteForClip],
   )
+  const hasAnyLinkedVideo = clips.some((clip) => Boolean(clip.filePath))
   const hideTotalsSetting = Boolean(currentProject?.settings.hideTotals)
   const hideTotalsUntilAllScored =
-    Boolean(currentProject?.settings.hideFinalScoreUntilEnd) && !allClipsScored
+    Boolean(currentProject?.settings.hideFinalScoreUntilEnd)
+    && hasAnyLinkedVideo
+    && !allClipsScored
   const showMiniatures = Boolean(currentProject?.settings.showMiniatures)
   const showAddRowButton = Boolean(currentProject?.settings.showAddRowButton)
 
@@ -130,6 +133,7 @@ export function useSpreadsheetDerivedData({
     categoryGroups,
     sortedClips,
     allClipsScored,
+    hasAnyLinkedVideo,
     hideTotalsSetting,
     hideTotalsUntilAllScored,
     showMiniatures,

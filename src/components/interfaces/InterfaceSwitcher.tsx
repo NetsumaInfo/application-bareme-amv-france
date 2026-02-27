@@ -22,7 +22,10 @@ export default function InterfaceSwitcher() {
     const clipNote = notes[clip.id]
     return clipNote ? isNoteComplete(clipNote, currentBareme) : false
   })
-  const lockResultsUntilScored = Boolean(currentProject?.settings.hideFinalScoreUntilEnd) && !allClipsScored
+  const hasAnyLinkedVideo = clips.some((clip) => Boolean(clip.filePath))
+  const lockResultsUntilScored = Boolean(currentProject?.settings.hideFinalScoreUntilEnd)
+    && hasAnyLinkedVideo
+    && !allClipsScored
 
   return (
     <div className="flex items-center bg-surface-dark rounded-lg p-0.5 gap-0.5">

@@ -34,6 +34,8 @@ interface ResultatsContextMenusProps {
   onOpenDetailedNotes: (clip: Clip) => void
   onImportJudgeJson: () => void
   onRemoveClip: (clipId: string) => void
+  hideGeneralNotes: boolean
+  onToggleGeneralNotes: () => void
 }
 
 export function ResultatsContextMenus({
@@ -54,6 +56,8 @@ export function ResultatsContextMenus({
   onOpenDetailedNotes,
   onImportJudgeJson,
   onRemoveClip,
+  hideGeneralNotes,
+  onToggleGeneralNotes,
 }: ResultatsContextMenusProps) {
   const canRemoveSelectedJudge = Boolean(memberContextMenu?.judgeKey.startsWith('imported-'))
 
@@ -126,6 +130,16 @@ export function ResultatsContextMenus({
                   Notes détaillées des juges
                 </button>
                 <div className="border-t border-gray-700 my-0.5" />
+                <button
+                  onClick={() => {
+                    onToggleGeneralNotes()
+                    onCloseClipMenu()
+                  }}
+                  className="w-full text-left px-3 py-1.5 text-[11px] text-gray-300 hover:bg-gray-800 transition-colors"
+                >
+                  {hideGeneralNotes ? 'Afficher note générale' : 'Masquer note générale'}
+                </button>
+                <div className="border-t border-gray-700 my-0.5" />
               </>
             )
           })()}
@@ -147,6 +161,16 @@ export function ResultatsContextMenus({
           className="fixed z-[90] bg-gray-900 border border-gray-700 rounded-lg shadow-xl py-1 min-w-[230px]"
           style={{ left: emptyContextMenu.x, top: emptyContextMenu.y }}
         >
+          <button
+            onClick={() => {
+              onToggleGeneralNotes()
+              onCloseEmptyMenu()
+            }}
+            className="w-full text-left px-3 py-1.5 text-[11px] text-gray-300 hover:bg-gray-800 transition-colors"
+          >
+            {hideGeneralNotes ? 'Afficher note générale' : 'Masquer note générale'}
+          </button>
+          <div className="border-t border-gray-700 my-0.5" />
           <button
             onClick={() => {
               onImportJudgeJson()

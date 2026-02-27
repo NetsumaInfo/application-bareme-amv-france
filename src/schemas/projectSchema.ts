@@ -8,6 +8,7 @@ export const projectSettingsSchema = z.object({
   hideFinalScoreUntilEnd: z.boolean(),
   hideTotals: z.boolean().default(false),
   showMiniatures: z.boolean().default(false),
+  multiPseudoDisplayMode: z.enum(['collab_mep', 'first_three', 'all']).default('collab_mep'),
   showAddRowButton: z.boolean().default(false),
   thumbnailDefaultTimeSec: z.number().min(0).max(600).default(10),
 })

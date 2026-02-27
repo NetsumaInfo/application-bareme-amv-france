@@ -3,7 +3,6 @@ import { Download } from 'lucide-react'
 import MediaInfoPanel from '@/components/player/MediaInfoPanel'
 import { FramePreviewTooltip } from '@/components/interfaces/spreadsheet/FramePreviewTooltip'
 import { ClipContextMenu } from '@/components/interfaces/spreadsheet/ClipContextMenu'
-import { CategoryScoringModal } from '@/components/interfaces/spreadsheet/CategoryScoringModal'
 import { SpreadsheetTable } from '@/components/interfaces/spreadsheet/SpreadsheetTable'
 import { SpreadsheetNotesPanel } from '@/components/interfaces/spreadsheet/SpreadsheetNotesPanel'
 import { SpreadsheetToolbar } from '@/components/interfaces/spreadsheet/SpreadsheetToolbar'
@@ -18,7 +17,6 @@ interface SpreadsheetLoadedViewProps {
   contextMenuProps: ComponentProps<typeof ClipContextMenu>
   mediaInfoClip: { name: string; path: string } | null
   onCloseMediaInfo: () => void
-  categoryScoringModalProps: ComponentProps<typeof CategoryScoringModal>
 }
 
 export function SpreadsheetLoadedView({
@@ -31,7 +29,6 @@ export function SpreadsheetLoadedView({
   contextMenuProps,
   mediaInfoClip,
   onCloseMediaInfo,
-  categoryScoringModalProps,
 }: SpreadsheetLoadedViewProps) {
   return (
     <div className={`flex flex-col h-full ${isDragOver ? 'ring-2 ring-primary-400 ring-inset' : ''}`}>
@@ -59,8 +56,6 @@ export function SpreadsheetLoadedView({
           onClose={onCloseMediaInfo}
         />
       )}
-
-      <CategoryScoringModal {...categoryScoringModalProps} />
     </div>
   )
 }

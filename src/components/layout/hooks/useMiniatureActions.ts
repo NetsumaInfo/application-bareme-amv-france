@@ -7,6 +7,8 @@ export function useMiniatureActions() {
     const store = useProjectStore.getState()
     const project = store.currentProject
     if (!project) return
+    const hasAnyLinkedVideo = store.clips.some((clip) => Boolean(clip.filePath))
+    if (!hasAnyLinkedVideo) return
     store.updateSettings({
       showMiniatures: !project.settings.showMiniatures,
     })

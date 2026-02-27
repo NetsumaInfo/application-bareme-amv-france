@@ -1,5 +1,5 @@
 # AMV Notation
-![Version](https://img.shields.io/badge/version-v0.5.0-2563eb)
+![Version](https://img.shields.io/badge/version-v0.6.0-2563eb)
 
 Application desktop de notation pour concours AMV (Anime Music Video), développée avec **Tauri + React + Rust**.
 
@@ -54,8 +54,29 @@ L’application propose 5 interfaces qui partagent le même état global (Zustan
 
 - Agrégation des résultats multi-juges
 - Import de notations externes au format **JE.json**
+- Gestion des juges dans Résultats (clic droit: renommage, suppression des juges importés, couleur)
+- **Mode multi-pseudo** : affichage collaborateurs configurable (collab/MEP, premier seul, tous)
+- Panneau **note générale** en bas de Résultats (style Notation), masquable via croix ou clic droit
+- Vue dédiée **Notes détaillées des juges** (notes par critère/catégorie + notes générales)
 - Export de la notation juge en **JE.json**
-- Export des résultats en **PDF/PNG**
+- Export tableau en **PDF/PNG** avec:
+  - vue **Synthèse** (catégories),
+  - vue **Détaillée** (sous-catégories / critères),
+  - PNG **image unique**, **plusieurs images** ou **les deux**,
+  - réglage du nombre de participants par image en mode paginé,
+  - réglage largeur colonnes (clip, score).
+- Export **PDF des notes**:
+  - notes générales,
+  - notes des juges,
+  - ou les deux,
+  - pagination lisible (évite les titres de clip orphelins en bas de page).
+- **Export poster** :
+  - panneau de prévisualisation en temps réel,
+  - blocs personnalisables (titre, résultats, top lists, texte libre),
+  - polices configurables par bloc,
+  - images de fond avec calques,
+  - badges de rang stylisables,
+  - thèmes d'export (clair/sombre).
 
 ### Gestion de projet
 
@@ -169,7 +190,8 @@ src/                    Frontend React
       notation/         Sous-composants vue notes
       resultats/        Vues résultats (Global, Détaillé, Juge,
                         TopLists, ContextMenus) + hooks
-      export/           Sous-composants export
+      export/           ExportPreviewPanel, ExportOptionsPanel,
+                        ExportPosterPreviewPanel, posterDefaults, types
     notes/              DetachedNotesWindow, DetachedNotesHeader,
                         DetachedFramePreview, TimecodeInlineText
       detached/         Sous-composants fenêtre détachée
@@ -180,7 +202,7 @@ src/                    Frontend React
                         SettingsNotationTab, SettingsShortcutsTab
     scoring/            BaremeEditor, baremeEditorUtils
       bareme/           Sous-composants éditeur de barème
-    ui/                 ColorSwatchPicker
+    ui/                 ColorSwatchPicker, HoverTextTooltip
   store/                usePlayerStore, useProjectStore, useNotationStore,
                         useUIStore
                         + actions modulaires (bareme, notes, clips, etc.)

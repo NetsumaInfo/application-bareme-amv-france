@@ -55,7 +55,7 @@ export function SettingsGeneralTab({
       <div>
         <label className="text-xs font-medium text-gray-400 mb-2 block">Interface de notation</label>
         <div className="grid grid-cols-3 gap-2">
-          {INTERFACE_OPTIONS.map(({ mode, label, icon: Icon }) => (
+          {INTERFACE_OPTIONS.map(({ mode, label, icon: Icon, iconSecondary: IconSecondary }) => (
             <button
               key={mode}
               onClick={() => onSwitchInterface(mode)}
@@ -64,7 +64,10 @@ export function SettingsGeneralTab({
                   : 'bg-surface-dark border-gray-700 text-gray-400 hover:text-white hover:border-gray-600'
                 }`}
             >
-              <Icon size={14} />
+              <span className="inline-flex items-center gap-1">
+                <Icon size={14} />
+                {IconSecondary && <IconSecondary size={14} />}
+              </span>
               <span className="truncate">{label}</span>
             </button>
           ))}

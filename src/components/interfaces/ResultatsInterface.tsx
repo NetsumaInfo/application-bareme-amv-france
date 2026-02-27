@@ -56,8 +56,11 @@ export default function ResultatsInterface() {
     const clipNote = notes[clip.id]
     return clipNote ? isNoteComplete(clipNote, currentBareme) : false
   })
+  const hasAnyLinkedVideo = clips.some((clip) => Boolean(clip.filePath))
   const hideTotalsSetting = Boolean(currentProject?.settings.hideTotals)
-  const hideTotalsUntilAllScored = Boolean(currentProject?.settings.hideFinalScoreUntilEnd) && !allClipsScored
+  const hideTotalsUntilAllScored = Boolean(currentProject?.settings.hideFinalScoreUntilEnd)
+    && hasAnyLinkedVideo
+    && !allClipsScored
   const canSortByScore = !hideTotalsSetting && !hideTotalsUntilAllScored
   const showMiniatures = Boolean(currentProject?.settings.showMiniatures)
   const thumbnailDefaultSeconds = currentProject?.settings.thumbnailDefaultTimeSec ?? 10
@@ -102,6 +105,7 @@ export default function ResultatsInterface() {
   const selectedJudgeIndex = judges.findIndex((judge) => judge.key === effectiveSelectedJudgeKey)
   const effectiveJudgeIndex = selectedJudgeIndex >= 0 ? selectedJudgeIndex : 0
   const selectedJudge = judges[effectiveJudgeIndex]
+  const currentJudge = judges.find((judge) => judge.isCurrentJudge) ?? null
   const resolveImportedJudgeIndex = useCallback((judgeKey: string): number | null => {
     if (!judgeKey.startsWith('imported-')) return null
     const parsed = Number(judgeKey.replace('imported-', ''))
@@ -441,7 +445,9 @@ export default function ResultatsInterface() {
       <ResultatsNotesPanel
         hidden={hideTextNotes || mainView === 'judgeNotes'}
         selectedClip={selectedClip}
-        judges={mainView === 'judge' && selectedJudge ? [selectedJudge] : judges}
+        generalJudge={currentJudge}
+        categoryGroups={categoryGroups}
+        hideTotalsSummary={!canSortByScore}
         selectedClipFps={selectedClipFps}
         onSetCurrentJudgeText={(clipId, text) => {
           setTextNotes(clipId, text)
@@ -488,6 +494,8 @@ export default function ResultatsInterface() {
           handleImportJudgeJson().catch(() => {})
         }}
         onRemoveClip={removeClip}
+        hideGeneralNotes={hideTextNotes}
+        onToggleGeneralNotes={toggleTextNotes}
       />
 
       {renameJudgeDialog && (

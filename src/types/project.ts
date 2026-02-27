@@ -33,9 +33,12 @@ export interface ProjectSettings {
   hideFinalScoreUntilEnd: boolean
   hideTotals: boolean
   showMiniatures: boolean
+  multiPseudoDisplayMode: MultiPseudoDisplayMode
   showAddRowButton: boolean
   thumbnailDefaultTimeSec: number
 }
+
+export type MultiPseudoDisplayMode = 'collab_mep' | 'first_three' | 'all'
 
 export interface ProjectData {
   version: string
@@ -90,6 +93,7 @@ export const DEFAULT_PROJECT_SETTINGS: ProjectSettings = {
   hideFinalScoreUntilEnd: false,
   hideTotals: false,
   showMiniatures: false,
+  multiPseudoDisplayMode: 'collab_mep',
   showAddRowButton: false,
   thumbnailDefaultTimeSec: 10,
 }

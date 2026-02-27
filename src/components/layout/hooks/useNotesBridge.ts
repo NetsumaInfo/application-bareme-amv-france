@@ -49,8 +49,11 @@ export function useNotesBridge({
       const itemNote = useNotationStore.getState().getNoteForClip(item.id)
       return itemNote ? isNoteComplete(itemNote, bareme) : false
     })
+    const hasAnyLinkedVideo = allClips.some((item) => Boolean(item.filePath))
     const hideTotalsSetting = Boolean(project?.settings.hideTotals)
-    const hideTotalsUntilAllScored = Boolean(project?.settings.hideFinalScoreUntilEnd) && !allClipsScored
+    const hideTotalsUntilAllScored = Boolean(project?.settings.hideFinalScoreUntilEnd)
+      && hasAnyLinkedVideo
+      && !allClipsScored
     const hideTotals = Boolean(useUIStore.getState().hideFinalScore) || hideTotalsSetting || hideTotalsUntilAllScored
     emit('main:clip-data', {
       clip,

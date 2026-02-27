@@ -49,11 +49,6 @@ export function BaremeListView({
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-semibold text-white truncate">{bareme.name}</span>
-                  {bareme.isOfficial && (
-                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-primary-600/30 text-primary-300 shrink-0">
-                      Officiel
-                    </span>
-                  )}
                   {bareme.hideTotalsUntilAllScored && (
                     <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 shrink-0">
                       Totaux cachés

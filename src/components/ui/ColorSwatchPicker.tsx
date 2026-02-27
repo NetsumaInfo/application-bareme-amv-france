@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type Ref } from 'react'
+import { createPortal } from 'react-dom'
 import { ChevronDown } from 'lucide-react'
 import { CATEGORY_COLOR_PRESETS, sanitizeColor, withAlpha } from '@/utils/colors'
 import {
@@ -118,6 +119,16 @@ function hsvToHex(h: number, s: number, v: number) {
   return rgbToHex(r, g, b)
 }
 
+function assignRef<T>(ref: Ref<T> | undefined, value: T | null) {
+  if (!ref) return
+  if (typeof ref === 'function') {
+    ref(value)
+    return
+  }
+  const objectRef = ref as { current: T | null }
+  objectRef.current = value
+}
+
 export function ColorSwatchPicker({
   value,
   onChange,
@@ -140,9 +151,16 @@ export function ColorSwatchPicker({
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; color: string } | null>(null)
   const containerRef = useRef<HTMLDivElement | null>(null)
   const contextMenuRef = useRef<HTMLDivElement | null>(null)
+  const pickerRef = useRef<HTMLDivElement | null>(null)
+  const triggerButtonRef = useRef<HTMLButtonElement | null>(null)
   const svAreaRef = useRef<HTMLDivElement | null>(null)
   const hueAreaRef = useRef<HTMLDivElement | null>(null)
   const dragStateRef = useRef<'sv' | 'hue' | null>(null)
+  const [pickerStyle, setPickerStyle] = useState<{ top: number; left: number; width: number }>({
+    top: 0,
+    left: 0,
+    width: 280,
+  })
 
   const displayColor = useMemo(() => hsvToHex(hsv.h, hsv.s, hsv.v), [hsv])
 
@@ -254,17 +272,60 @@ export function ColorSwatchPicker({
     setOpen(false)
   }, [displayColor, openBaseColor, rememberColor])
 
+  const setTriggerButtonNode = useCallback((node: HTMLButtonElement | null) => {
+    triggerButtonRef.current = node
+    assignRef(triggerRef, node)
+  }, [triggerRef])
+
+  const updatePickerPosition = useCallback(() => {
+    const trigger = triggerButtonRef.current
+    if (!trigger) return
+
+    const rect = trigger.getBoundingClientRect()
+    const width = 280
+    const viewportPadding = 8
+    const measuredHeight = pickerRef.current?.offsetHeight ?? 360
+    const spaceBelow = window.innerHeight - rect.bottom - viewportPadding
+    const spaceAbove = rect.top - viewportPadding
+    const openUpwards = spaceBelow < measuredHeight && spaceAbove > spaceBelow
+
+    const rawTop = openUpwards ? (rect.top - measuredHeight - 8) : (rect.bottom + 8)
+    const top = clamp(rawTop, viewportPadding, window.innerHeight - measuredHeight - viewportPadding)
+    const left = clamp(rect.left, viewportPadding, window.innerWidth - width - viewportPadding)
+
+    setPickerStyle({ top, left, width })
+  }, [])
+
   useEffect(() => {
     if (!open) return
     const onOutside = (event: MouseEvent) => {
+      const target = event.target as Node
+      if (containerRef.current?.contains(target)) return
+      if (pickerRef.current?.contains(target)) return
+      if (contextMenuRef.current?.contains(target)) return
       if (!containerRef.current) return
-      if (!containerRef.current.contains(event.target as Node)) {
-        closePicker()
-      }
+      closePicker()
     }
     document.addEventListener('mousedown', onOutside)
     return () => document.removeEventListener('mousedown', onOutside)
   }, [closePicker, open])
+
+  useEffect(() => {
+    if (!open) return
+    updatePickerPosition()
+
+    const animationFrame = window.requestAnimationFrame(() => {
+      updatePickerPosition()
+    })
+    window.addEventListener('resize', updatePickerPosition)
+    window.addEventListener('scroll', updatePickerPosition, true)
+
+    return () => {
+      window.cancelAnimationFrame(animationFrame)
+      window.removeEventListener('resize', updatePickerPosition)
+      window.removeEventListener('scroll', updatePickerPosition, true)
+    }
+  }, [open, updatePickerPosition])
 
   useEffect(() => {
     if (!open) return
@@ -337,7 +398,7 @@ export function ColorSwatchPicker({
   return (
     <div className="relative" ref={containerRef}>
       <button
-        ref={triggerRef}
+        ref={setTriggerButtonNode}
         type="button"
         disabled={disabled}
         onClick={togglePicker}
@@ -352,10 +413,11 @@ export function ColorSwatchPicker({
         <ChevronDown size={triggerSize === 'sm' ? 11 : 12} className="text-gray-400" />
       </button>
 
-      {open && !disabled && (
+      {open && !disabled && createPortal(
         <div
-          className="absolute left-0 mt-1.5 rounded-xl border border-gray-700 bg-surface-dark shadow-2xl z-50 p-2.5"
-          style={{ width: 280 }}
+          ref={pickerRef}
+          className="fixed rounded-xl border border-gray-700 bg-surface-dark shadow-2xl z-[140] p-2.5"
+          style={{ width: pickerStyle.width, top: pickerStyle.top, left: pickerStyle.left }}
         >
           <div
             ref={svAreaRef}
@@ -530,7 +592,8 @@ export function ColorSwatchPicker({
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
 
       {contextMenu && !disabled && (

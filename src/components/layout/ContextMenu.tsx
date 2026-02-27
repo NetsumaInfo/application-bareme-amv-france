@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react'
 import {
   Table,
-  Maximize2,
+  Table2,
   ChevronLeft,
   ChevronRight,
   MonitorPlay,
@@ -28,6 +28,7 @@ interface ContextMenuProps {
 interface MenuItem {
   label: string
   icon?: typeof Table
+  iconSecondary?: typeof Table
   onClick?: () => void
   separator?: boolean
   active?: boolean
@@ -55,6 +56,7 @@ export default function ContextMenu({
   } = useUIStore()
   const { nextClip, previousClip, currentProject, updateSettings, clips, currentClipIndex } = useProjectStore()
   const hasCurrentClipVideo = Boolean(clips[currentClipIndex]?.filePath)
+  const hasAnyLinkedVideo = clips.some((clip) => Boolean(clip.filePath))
 
   useEffect(() => {
     const handleClick = () => onClose()
@@ -80,13 +82,14 @@ export default function ContextMenu({
     })
     items.push({
       label: 'Vue notes',
-      icon: Maximize2,
+      icon: FileText,
       onClick: () => { switchInterface('notation' as InterfaceMode); onClose() },
       active: currentInterface === 'notation',
     })
     items.push({
       label: 'Vue mixte',
       icon: Table,
+      iconSecondary: FileText,
       onClick: () => { switchInterface('dual' as InterfaceMode); onClose() },
       active: currentInterface === 'dual',
     })
@@ -113,14 +116,31 @@ export default function ContextMenu({
     })
     if (currentProject) {
       items.push({
-        label: currentProject.settings.showMiniatures ? 'Masquer miniatures' : 'Afficher miniatures',
+        label: hasAnyLinkedVideo
+          ? (currentProject.settings.showMiniatures ? 'Masquer miniatures' : 'Afficher miniatures')
+          : 'Miniatures indisponibles (pas de média)',
         icon: Image,
-        onClick: () => {
-          updateSettings({ showMiniatures: !currentProject.settings.showMiniatures })
-          onClose()
-        },
+        onClick: hasAnyLinkedVideo
+          ? () => {
+            updateSettings({ showMiniatures: !currentProject.settings.showMiniatures })
+            onClose()
+          }
+          : undefined,
         shortcut: formatShortcutDisplay(shortcutBindings.toggleMiniatures),
       })
+
+      if (currentInterface === 'spreadsheet' || currentInterface === 'dual') {
+        items.push({
+          label: currentProject.settings.showAddRowButton
+            ? 'Masquer bouton'
+            : 'Afficher bouton',
+          icon: Table2,
+          onClick: () => {
+            updateSettings({ showAddRowButton: !currentProject.settings.showAddRowButton })
+            onClose()
+          },
+        })
+      }
     }
     if (onImportVideos) {
       items.push({
@@ -199,7 +219,12 @@ export default function ContextMenu({
             }`}
             disabled={!item.onClick}
           >
-            {item.icon && <item.icon size={13} />}
+            {item.icon && (
+              <span className="flex items-center gap-1">
+                <item.icon size={13} />
+                {item.iconSecondary && <item.iconSecondary size={13} />}
+              </span>
+            )}
             <span className="flex-1 text-left">{item.label}</span>
             {item.shortcut && <span className="text-[10px] text-gray-500">{item.shortcut}</span>}
           </button>

@@ -8,7 +8,6 @@ import { useSpreadsheetDerivedData } from '@/components/interfaces/spreadsheet/h
 import { useSpreadsheetContextActions } from '@/components/interfaces/spreadsheet/hooks/useSpreadsheetContextActions'
 import { useSpreadsheetContextMenuHandlers } from '@/components/interfaces/spreadsheet/hooks/useSpreadsheetContextMenuHandlers'
 import { useSpreadsheetCriterionChange } from '@/components/interfaces/spreadsheet/hooks/useSpreadsheetCriterionChange'
-import { useSpreadsheetScoringState } from '@/components/interfaces/spreadsheet/hooks/useSpreadsheetScoringState'
 import { useSpreadsheetNoVideoProps } from '@/components/interfaces/spreadsheet/hooks/useSpreadsheetNoVideoProps'
 import { useSpreadsheetLoadedViewProps } from '@/components/interfaces/spreadsheet/hooks/useSpreadsheetLoadedViewProps'
 import type { NoVideoState } from '@/components/interfaces/spreadsheet/NoVideoState'
@@ -108,6 +107,7 @@ export function useSpreadsheetInterfaceController(): SpreadsheetInterfaceControl
   const {
     categoryGroups,
     sortedClips,
+    hasAnyLinkedVideo,
     hideTotalsSetting,
     hideTotalsUntilAllScored,
     showMiniatures,
@@ -163,11 +163,14 @@ export function useSpreadsheetInterfaceController(): SpreadsheetInterfaceControl
     handleSetMiniatureFromCurrentFrame,
     handleResetMiniature,
     handleToggleMiniatures,
+    handleToggleAddRowButton,
     handleShowMediaInfo,
     handleRemoveClip,
   } = useSpreadsheetContextMenuHandlers({
     clips,
     showMiniatures,
+    showAddRowButton,
+    hasAnyLinkedVideo,
     updateSettings,
     setClipScored,
     setCurrentClip,
@@ -183,21 +186,9 @@ export function useSpreadsheetInterfaceController(): SpreadsheetInterfaceControl
     updateCriterion,
   })
 
-  const {
-    contextClip,
-    selectedScoringGroup,
-    selectedScoringNote,
-    selectedScoringCategoryScore,
-    setScoringCategory,
-    toggleScoringCategory,
-  } = useSpreadsheetScoringState({
-    clips,
-    contextClipId: contextMenu?.clipId ?? null,
-    currentClip,
-    categoryGroups,
-    getNoteForClip,
-    getCategoryScore,
-  })
+  const contextClip = contextMenu
+    ? (clips.find((clip) => clip.id === contextMenu.clipId) ?? null)
+    : null
 
   const noVideoStateProps = useSpreadsheetNoVideoProps({
     isDragOver,
@@ -226,6 +217,7 @@ export function useSpreadsheetInterfaceController(): SpreadsheetInterfaceControl
     hideTotalsUntilAllScored,
     hideAverages,
     showMiniatures,
+    hasAnyLinkedVideo,
     shortcutBindings,
     currentProject,
     editingManualClipId,
@@ -247,7 +239,6 @@ export function useSpreadsheetInterfaceController(): SpreadsheetInterfaceControl
     handleManualClipFieldChange,
     handleChange,
     handleKeyDown,
-    toggleScoringCategory,
     currentClip,
     hideTextNotes,
     currentNote,
@@ -270,14 +261,11 @@ export function useSpreadsheetInterfaceController(): SpreadsheetInterfaceControl
     handleSetMiniatureFromCurrentFrame,
     handleResetMiniature,
     handleToggleMiniatures,
+    handleToggleAddRowButton,
     handleShowMediaInfo,
     handleRemoveClip,
     mediaInfoClip,
     setMediaInfoClip,
-    selectedScoringGroup,
-    selectedScoringNote,
-    selectedScoringCategoryScore,
-    setScoringCategory,
   })
 
   return {

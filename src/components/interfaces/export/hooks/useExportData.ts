@@ -6,6 +6,7 @@ import {
   buildCategoryGroups,
   buildJudgeSources,
   getCategoryScore,
+  getCriterionNumericScore,
   getNoteTotal,
   type NoteLike,
 } from '@/utils/results'
@@ -59,6 +60,8 @@ export function useExportData({
     return orderedClips.map((clip) => {
       const categoryJudgeScores: Record<string, number[]> = {}
       const categoryAverages: Record<string, number> = {}
+      const criterionJudgeScores: Record<string, number[]> = {}
+      const criterionAverages: Record<string, number> = {}
       for (const group of categoryGroups) {
         const values = judges.map((judge) =>
           getCategoryScore(judge.notes[clip.id] as NoteLike | undefined, group.criteria),
@@ -69,6 +72,17 @@ export function useExportData({
           : 0
 
         categoryAverages[group.category] = Math.round(average * 100) / 100
+
+        for (const criterion of group.criteria) {
+          const criterionValues = judges.map((judge) =>
+            getCriterionNumericScore(judge.notes[clip.id] as NoteLike | undefined, criterion),
+          )
+          criterionJudgeScores[criterion.id] = criterionValues
+          const criterionAverage = criterionValues.length > 0
+            ? criterionValues.reduce((sum, value) => sum + value, 0) / criterionValues.length
+            : 0
+          criterionAverages[criterion.id] = Math.round(criterionAverage * 100) / 100
+        }
       }
 
       const judgeTotals = judges.map((judge) =>
@@ -78,7 +92,15 @@ export function useExportData({
         ? Math.round((judgeTotals.reduce((sum, value) => sum + value, 0) / judgeTotals.length) * 100) / 100
         : 0
 
-      return { clip, categoryJudgeScores, categoryAverages, judgeTotals, averageTotal }
+      return {
+        clip,
+        categoryJudgeScores,
+        categoryAverages,
+        criterionJudgeScores,
+        criterionAverages,
+        judgeTotals,
+        averageTotal,
+      }
     })
   }, [orderedClips, categoryGroups, currentBareme, judges])
 

@@ -40,7 +40,10 @@ export default function NotationInterface() {
     const clipNote = getNoteForClip(clip.id)
     return clipNote ? isNoteComplete(clipNote, currentBareme) : false
   })
-  const hideTotalsUntilAllScored = Boolean(currentProject?.settings.hideFinalScoreUntilEnd) && !allClipsScored
+  const hasAnyLinkedVideo = clips.some((clip) => Boolean(clip.filePath))
+  const hideTotalsUntilAllScored = Boolean(currentProject?.settings.hideFinalScoreUntilEnd)
+    && hasAnyLinkedVideo
+    && !allClipsScored
   const hideTotalsSetting = Boolean(currentProject?.settings.hideTotals)
   const shouldHideTotals = hideFinalScore || hideTotalsSetting || hideTotalsUntilAllScored
 

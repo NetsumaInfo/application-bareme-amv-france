@@ -47,8 +47,8 @@ cd src-tauri && cargo build    # Build Rust backend
   - Spreadsheet (table with keyboard nav, PiP floating video, right-click context menu for clip deletion, 3-way sorting)
   - Modern (cards, sliders, ScoreRing SVG)
   - Notation (compact panel alongside fullscreen video)
-  - Resultats (aggregate scores from multiple judges, import JE.json files, 3-way sorting)
-  - Export (customizable PDF/PNG export with theme, density, sorting options)
+  - Resultats (aggregate scores from multiple judges, import JE.json files, right-click judge management, dedicated judge-notes view)
+  - Export (table and poster modes, customizable PDF/PNG/JSON exports, summary/detailed table views, notes PDF export)
 
 - **services/tauri.ts** - Typed wrappers around all `invoke()` calls. Always go through this module, never call `invoke()` directly from components.
 
@@ -158,6 +158,23 @@ Both folder import (`scanVideoFolder`) and individual file import (`openVideoFil
 ### JE.json Export Format
 Separate from full project export, "Exporter notation (JE.json)" exports only the current judge's scores for sharing/integration. This format can be imported in the Resultats interface to aggregate scores from multiple judges.
 
+### Resultats Notes Panel
+- The bottom panel in `ResultatsInterface` is for the **general note** only (current judge editable text).
+- Detailed per-judge notes must remain in `ResultatsJudgeNotesView`.
+- Visibility is controlled by `hideTextNotes` and can be toggled from the panel close button or the right-click context menu ("Afficher/Masquer note générale").
+
+### Export Table Views
+- Export table supports two views:
+  - `summary`: one column per category
+  - `detailed`: category headers + criterion/sub-category columns
+- `useExportData` prepares both category-level and criterion-level aggregates used by these views.
+
+### Export PNG/PDF Notes
+- PNG export supports `single`, `paged`, and `both` modes.
+- Paged PNG uses `exportPageRefs` targets marked with `data-export-page="true"` and sorted by `data-export-page-index`.
+- Notes PDF export supports `general`, `judges`, and `both`.
+- Notes PDF pagination avoids orphan clip headers at the bottom of a page by reserving space for header + first note lines before rendering a clip block.
+
 ## File Layout
 
 ```
@@ -202,4 +219,3 @@ Via mpv/FFmpeg, the app supports common formats:
 - **Auto-save**: Configurable interval in settings. Projects marked dirty when scores change, auto-saved to their existing file path.
 - **WM_CLOSE handling**: The mpv window intercepts WM_CLOSE to hide instead of destroy, preventing accidental destruction when the user closes the detached window.
 - **Window validity**: All Win32 operations in `mpv_window.rs` check `IsWindow()` before proceeding, guarding against stale HWND references.
-

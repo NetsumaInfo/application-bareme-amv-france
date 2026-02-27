@@ -74,3 +74,18 @@ export function getClipSecondaryLabel(clip: {
   const name = clip.displayName?.trim()
   return name ? name : null
 }
+
+export function splitAuthorPseudos(author?: string): string[] {
+  if (!author) return []
+  return author
+    .split(/[,&]/)
+    .map((pseudo) => pseudo.trim())
+    .filter((pseudo) => pseudo.length > 0)
+}
+
+export function getAuthorCollabLabel(author?: string): 'colab' | 'mep' | null {
+  const pseudos = splitAuthorPseudos(author)
+  if (pseudos.length === 2) return 'colab'
+  if (pseudos.length >= 3) return 'mep'
+  return null
+}

@@ -129,7 +129,6 @@ export default function CreateProjectModal() {
               {availableBaremes.map((b) => (
                 <option key={b.id} value={b.id}>
                   {b.name} ({b.criteria.length} critères, {b.totalPoints} pts)
-                  {b.isOfficial ? ' - Officiel' : ''}
                 </option>
               ))}
             </select>

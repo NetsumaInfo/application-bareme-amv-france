@@ -20,6 +20,7 @@ interface UseSpreadsheetLoadedViewPropsParams {
   hideTotalsUntilAllScored: boolean
   hideAverages: boolean
   showMiniatures: boolean
+  hasAnyLinkedVideo: boolean
   shortcutBindings: Record<ShortcutAction, string>
   showAddRowButton: boolean
   currentProject: Project | null
@@ -41,7 +42,6 @@ interface UseSpreadsheetLoadedViewPropsParams {
   handleManualClipFieldChange: (clipId: string, field: 'author' | 'displayName', value: string) => void
   handleChange: (clipId: string, criterionId: string, value: string) => void
   handleKeyDown: (event: ReactKeyboardEvent<Element>, clipIdx: number, critIdx: number) => void
-  toggleScoringCategory: (category: string) => void
   seek: (time: number) => Promise<void>
   pause: () => Promise<void>
   showFramePreview: (params: { seconds: number; anchorRect: DOMRect }) => Promise<void>
@@ -70,14 +70,11 @@ interface UseSpreadsheetLoadedViewPropsParams {
   handleSetMiniatureFromCurrentFrame: (clip: Clip) => void
   handleResetMiniature: (clip: Clip) => void
   handleToggleMiniatures: () => void
+  handleToggleAddRowButton: () => void
   handleShowMediaInfo: (clip: Clip) => void
   handleRemoveClip: (clip: Clip) => void
   mediaInfoClip: { name: string; path: string } | null
   setMediaInfoClip: (clip: { name: string; path: string } | null) => void
-  selectedScoringGroup: CategoryGroup | null
-  selectedScoringNote: Note | undefined
-  selectedScoringCategoryScore: number
-  setScoringCategory: (category: string | null) => void
 }
 
 export function useSpreadsheetLoadedViewProps({
@@ -91,6 +88,7 @@ export function useSpreadsheetLoadedViewProps({
   hideTotalsUntilAllScored,
   hideAverages,
   showMiniatures,
+  hasAnyLinkedVideo,
   shortcutBindings,
   showAddRowButton,
   currentProject,
@@ -112,7 +110,6 @@ export function useSpreadsheetLoadedViewProps({
   handleManualClipFieldChange,
   handleChange,
   handleKeyDown,
-  toggleScoringCategory,
   seek,
   pause,
   showFramePreview,
@@ -135,14 +132,11 @@ export function useSpreadsheetLoadedViewProps({
   handleSetMiniatureFromCurrentFrame,
   handleResetMiniature,
   handleToggleMiniatures,
+  handleToggleAddRowButton,
   handleShowMediaInfo,
   handleRemoveClip,
   mediaInfoClip,
   setMediaInfoClip,
-  selectedScoringGroup,
-  selectedScoringNote,
-  selectedScoringCategoryScore,
-  setScoringCategory,
 }: UseSpreadsheetLoadedViewPropsParams): ComponentProps<typeof SpreadsheetLoadedView> | null {
   if (!currentBareme) return null
 
@@ -174,7 +168,6 @@ export function useSpreadsheetLoadedViewProps({
     handleManualClipFieldChange,
     handleChange,
     handleKeyDown,
-    toggleScoringCategory,
     seek,
     pause,
     showFramePreview,
@@ -203,6 +196,8 @@ export function useSpreadsheetLoadedViewProps({
     contextClip,
     currentClip,
     showMiniatures,
+    hasAnyLinkedVideo,
+    showAddRowButton,
     shortcutBindings,
     contextMenuRef,
     handleToggleScored,
@@ -211,6 +206,7 @@ export function useSpreadsheetLoadedViewProps({
     handleSetMiniatureFromCurrentFrame,
     handleResetMiniature,
     handleToggleMiniatures,
+    handleToggleAddRowButton,
     handleShowMediaInfo,
     handleRemoveClip,
   })
@@ -220,6 +216,7 @@ export function useSpreadsheetLoadedViewProps({
     hasClips: clips.length > 0,
     toolbarProps: {
       onAddManualRow: handleAddManualRow,
+      onToggleAddManualRowButton: handleToggleAddRowButton,
       showAddManualRowButton: showAddRowButton,
     },
     tableProps,
@@ -230,13 +227,5 @@ export function useSpreadsheetLoadedViewProps({
     contextMenuProps,
     mediaInfoClip,
     onCloseMediaInfo: () => setMediaInfoClip(null),
-    categoryScoringModalProps: {
-      group: selectedScoringGroup,
-      currentClip: currentClip ?? null,
-      clipNote: selectedScoringNote,
-      categoryScore: selectedScoringCategoryScore,
-      onChange: handleChange,
-      onClose: () => setScoringCategory(null),
-    },
   } satisfies ComponentProps<typeof SpreadsheetLoadedView>
 }

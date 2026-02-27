@@ -1,3 +1,4 @@
+import { FileText, Table } from 'lucide-react'
 import { useUIStore } from '@/store/useUIStore'
 import type { InterfaceMode } from '@/types/notation'
 
@@ -52,7 +53,10 @@ export function NotationModeSwitcher() {
             : 'text-gray-400 hover:text-white hover:bg-surface-light'
         }`}
       >
-        Tableur
+        <span className="inline-flex items-center gap-1.5">
+          <Table size={13} />
+          <span>Tableur</span>
+        </span>
       </button>
       <button
         onClick={toggleNotation}
@@ -62,7 +66,10 @@ export function NotationModeSwitcher() {
             : 'text-gray-400 hover:text-white hover:bg-surface-light'
         }`}
       >
-        Notation
+        <span className="inline-flex items-center gap-1.5">
+          <FileText size={13} />
+          <span>Notation</span>
+        </span>
       </button>
     </div>
   )

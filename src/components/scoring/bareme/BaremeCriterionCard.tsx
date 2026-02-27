@@ -77,7 +77,7 @@ export function BaremeCriterionCard({
               value={rawCategory}
               onChange={(event) => onUpdateCriterionCategory(index, event.target.value)}
               onBlur={(event) => onCommitCategoryColor(event.target.value)}
-              placeholder="Général"
+              placeholder="Montage"
               className="w-full px-2 py-1.5 rounded border text-xs text-white bg-surface focus:outline-none focus:border-primary-500"
               style={{ borderColor: withAlpha(color, 0.45) }}
               disabled={readOnly}
