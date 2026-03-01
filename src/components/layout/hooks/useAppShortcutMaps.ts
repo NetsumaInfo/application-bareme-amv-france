@@ -8,7 +8,6 @@ interface UseAppShortcutMapsOptions {
   togglePause: () => void
   seekRelative: (seconds: number) => void
   switchTab: (tab: 'notation' | 'resultats' | 'export') => void
-  lockResultsUntilScored: boolean
   frameStep: () => void
   frameBackStep: () => void
   save: () => Promise<void>
@@ -33,7 +32,6 @@ export function useAppShortcutMaps({
   togglePause,
   seekRelative,
   switchTab,
-  lockResultsUntilScored,
   frameStep,
   frameBackStep,
   save,
@@ -60,12 +58,8 @@ export function useAppShortcutMaps({
     map[shortcutBindings.seekForwardLong] = () => seekRelative(30)
     map[shortcutBindings.seekBackLong] = () => seekRelative(-30)
     map[shortcutBindings.tabNotation] = () => switchTab('notation')
-    map[shortcutBindings.tabResultats] = () => {
-      if (!lockResultsUntilScored) switchTab('resultats')
-    }
-    map[shortcutBindings.tabExport] = () => {
-      if (!lockResultsUntilScored) switchTab('export')
-    }
+    map[shortcutBindings.tabResultats] = () => switchTab('resultats')
+    map[shortcutBindings.tabExport] = () => switchTab('export')
     map[shortcutBindings.frameForward] = frameStep
     map[shortcutBindings.frameBack] = frameBackStep
     return map
@@ -74,7 +68,6 @@ export function useAppShortcutMaps({
     togglePause,
     seekRelative,
     switchTab,
-    lockResultsUntilScored,
     frameStep,
     frameBackStep,
   ])

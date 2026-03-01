@@ -8,6 +8,7 @@ import { SpreadsheetTableHeader } from './SpreadsheetTableHeader'
 import { SpreadsheetTableRow } from './SpreadsheetTableRow'
 import { SpreadsheetSubcategoryBubble } from './SpreadsheetSubcategoryBubble'
 import { getClipPrimaryLabel, getClipSecondaryLabel } from '@/utils/formatters'
+import { useI18n } from '@/i18n'
 
 function normalizeComment(value: string | undefined): string | null {
   if (!value) return null
@@ -80,6 +81,7 @@ export function SpreadsheetTable({
   onShowFramePreview,
   onHideFramePreview,
 }: SpreadsheetTableProps) {
+  const { t } = useI18n()
   const [subcategoryBubble, setSubcategoryBubble] = useState<{
     clipId: string
     clipLabel: string
@@ -175,7 +177,7 @@ export function SpreadsheetTable({
               normalizeComment(note?.criterionNotes?.[criterion.id])
               ?? categoryComment
               ?? globalComment
-              ?? 'Aucun commentaire',
+              ?? t('Aucun commentaire'),
           }))
 
         if (criteria.length === 0) return []
@@ -189,7 +191,7 @@ export function SpreadsheetTable({
       }),
     })
     setBubbleHovered(false)
-  }, [categoryGroups])
+  }, [categoryGroups, t])
 
   const handleTimecodeSelect = useCallback(async ({ clipId, seconds }: { clipId: string; seconds: number }) => {
     const targetIndex = clips.findIndex((clip) => clip.id === clipId)

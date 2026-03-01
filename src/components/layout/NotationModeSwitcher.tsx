@@ -1,6 +1,7 @@
 import { FileText, Table } from 'lucide-react'
 import { useUIStore } from '@/store/useUIStore'
 import type { InterfaceMode } from '@/types/notation'
+import { useI18n } from '@/i18n'
 
 function hasSpreadsheetView(mode: InterfaceMode): boolean {
   return mode === 'spreadsheet' || mode === 'dual'
@@ -12,6 +13,7 @@ function hasNotationView(mode: InterfaceMode): boolean {
 
 export function NotationModeSwitcher() {
   const { currentTab, currentInterface, switchInterface } = useUIStore()
+  const { t } = useI18n()
   if (currentTab !== 'notation') return null
 
   const spreadsheetActive = hasSpreadsheetView(currentInterface)
@@ -55,7 +57,7 @@ export function NotationModeSwitcher() {
       >
         <span className="inline-flex items-center gap-1.5">
           <Table size={13} />
-          <span>Tableur</span>
+          <span>{t('Tableur')}</span>
         </span>
       </button>
       <button
@@ -68,7 +70,7 @@ export function NotationModeSwitcher() {
       >
         <span className="inline-flex items-center gap-1.5">
           <FileText size={13} />
-          <span>Notation</span>
+          <span>{t('Notation')}</span>
         </span>
       </button>
     </div>

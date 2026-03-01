@@ -8,6 +8,7 @@ import {
 } from '@/utils/results'
 import type { ResultatsRow } from '@/components/interfaces/resultats/types'
 import { ClipMiniaturePreview } from '@/components/interfaces/spreadsheet/miniaturePreview'
+import { useI18n } from '@/i18n'
 
 interface ResultatsGlobalDetailedTableProps {
   canSortByScore: boolean
@@ -54,6 +55,7 @@ export function ResultatsGlobalDetailedTable({
   showMiniatures,
   thumbnailDefaultSeconds,
 }: ResultatsGlobalDetailedTableProps) {
+  const { t } = useI18n()
   return (
     <div className="flex-1 overflow-auto rounded-lg border border-gray-700">
       <table className="w-full border-collapse text-xs">
@@ -69,7 +71,7 @@ export function ResultatsGlobalDetailedTable({
               rowSpan={3}
               className="px-2 py-1.5 text-left text-[10px] font-medium text-gray-500 border-r border-b border-gray-700 min-w-[120px] max-w-[180px] bg-surface-dark sticky left-8 z-20"
             >
-              Clip
+              {t('Clip')}
             </th>
             {categoryGroups.map((group) => (
               <th
@@ -91,7 +93,7 @@ export function ResultatsGlobalDetailedTable({
                 colSpan={judges.length + 1}
                 className="px-2 py-1.5 text-center text-[10px] font-bold uppercase tracking-wider border-r border-b border-gray-700 min-w-[90px] bg-surface-dark"
               >
-                Total
+                {t('Total')}
                 <div className="text-gray-500 font-normal">/{currentBaremeTotalPoints}</div>
               </th>
             )}
@@ -134,7 +136,7 @@ export function ResultatsGlobalDetailedTable({
                 rowSpan={2}
                 className="px-1 py-1 text-center text-[9px] text-gray-500 border-r border-b border-gray-700 bg-surface-dark"
               >
-                Moy.
+                {t('Moy.')}
               </th>
             )}
           </tr>
@@ -235,6 +237,15 @@ export function ResultatsGlobalDetailedTable({
                             max={Number.isFinite(criterion.max) ? Number(criterion.max) : undefined}
                             step={Number.isFinite(criterion.step) ? Number(criterion.step) : 0.5}
                             value={displayed}
+                            onContextMenu={(event) => {
+                              event.preventDefault()
+                              event.stopPropagation()
+                              const width = 225
+                              const height = 170
+                              const x = Math.max(8, Math.min(event.clientX, window.innerWidth - width - 8))
+                              const y = Math.max(8, Math.min(event.clientY, window.innerHeight - height - 8))
+                              onOpenClipContextMenu(row.clip.id, x, y)
+                            }}
                             onChange={(event) => {
                               onSetCriterionDraftCell(key, event.target.value)
                             }}

@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { X } from 'lucide-react'
+import { useI18n } from '@/i18n'
 
 interface ResultatsRenameJudgeModalProps {
   title: string
@@ -18,6 +19,7 @@ export function ResultatsRenameJudgeModal({
   onCancel,
   onConfirm,
 }: ResultatsRenameJudgeModalProps) {
+  const { t } = useI18n()
   const inputRef = useRef<HTMLInputElement | null>(null)
 
   useEffect(() => {
@@ -52,7 +54,7 @@ export function ResultatsRenameJudgeModal({
             type="button"
             onClick={onCancel}
             className="rounded p-1 text-gray-400 hover:bg-surface-light hover:text-white transition-colors"
-            title="Fermer"
+            title={t('Fermer')}
           >
             <X size={16} />
           </button>
@@ -65,14 +67,14 @@ export function ResultatsRenameJudgeModal({
             onConfirm()
           }}
         >
-          <label className="mb-1.5 block text-xs text-gray-400">Nom du juge</label>
+          <label className="mb-1.5 block text-xs text-gray-400">{t('Nom du juge')}</label>
           <input
             ref={inputRef}
             type="text"
             value={value}
             onChange={(event) => onChangeValue(event.target.value)}
             className="w-full rounded-lg border border-gray-700 bg-surface-dark px-3 py-2 text-sm text-white outline-none focus:border-primary-500"
-            placeholder="Nom du juge"
+            placeholder={t('Nom du juge')}
           />
           {errorMessage && (
             <p className="mt-1.5 text-xs text-accent">{errorMessage}</p>
@@ -84,13 +86,13 @@ export function ResultatsRenameJudgeModal({
               onClick={onCancel}
               className="rounded-lg bg-surface-light px-4 py-2 text-sm text-gray-300 hover:text-white transition-colors"
             >
-              Annuler
+              {t('Annuler')}
             </button>
             <button
               type="submit"
               className="rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-500 transition-colors"
             >
-              Renommer
+              {t('Renommer')}
             </button>
           </div>
         </form>

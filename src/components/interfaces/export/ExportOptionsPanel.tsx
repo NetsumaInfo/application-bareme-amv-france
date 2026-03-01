@@ -1,6 +1,8 @@
 import { SlidersHorizontal } from 'lucide-react'
 import type {
   ExportDensity,
+  ExportJsonJudgeOption,
+  ExportJsonMode,
   ExportJudge,
   ExportMode,
   ExportNotesPdfMode,
@@ -13,6 +15,7 @@ import { ExportAccentPresets } from '@/components/interfaces/export/ExportAccent
 import { ExportActions } from '@/components/interfaces/export/ExportActions'
 import { ExportBinaryButtons } from '@/components/interfaces/export/ExportBinaryButtons'
 import { ExportCheckbox } from '@/components/interfaces/export/ExportCheckbox'
+import { useI18n } from '@/i18n'
 
 interface ExportOptionsPanelProps {
   title: string
@@ -41,6 +44,9 @@ interface ExportOptionsPanelProps {
   accentPresets: string[]
   exporting: boolean
   notesPdfMode: ExportNotesPdfMode
+  jsonExportMode: ExportJsonMode
+  jsonJudgeKey: string
+  jsonJudgeOptions: ExportJsonJudgeOption[]
   onSetTitle: (value: string) => void
   onSetExportMode: (mode: ExportMode) => void
   onSetTableView: (view: ExportTableView) => void
@@ -51,6 +57,8 @@ interface ExportOptionsPanelProps {
   onSetPngExportMode: (mode: ExportPngMode) => void
   onSetPngScale: (value: number) => void
   onSetRowsPerImage: (value: number) => void
+  onSetJsonExportMode: (mode: ExportJsonMode) => void
+  onSetJsonJudgeKey: (judgeKey: string) => void
   onSetAccent: (accent: string) => void
   onSetTableClipColumnWidth: (value: number) => void
   onSetTableScoreColumnWidth: (value: number) => void
@@ -97,6 +105,9 @@ export function ExportOptionsPanel({
   accentPresets,
   exporting,
   notesPdfMode,
+  jsonExportMode,
+  jsonJudgeKey,
+  jsonJudgeOptions,
   onSetTitle,
   onSetExportMode,
   onSetTableView,
@@ -107,6 +118,8 @@ export function ExportOptionsPanel({
   onSetPngExportMode,
   onSetPngScale,
   onSetRowsPerImage,
+  onSetJsonExportMode,
+  onSetJsonJudgeKey,
   onSetAccent,
   onSetTableClipColumnWidth,
   onSetTableScoreColumnWidth,
@@ -125,40 +138,41 @@ export function ExportOptionsPanel({
   onExportJson,
   onSetNotesPdfMode,
 }: ExportOptionsPanelProps) {
+  const { t } = useI18n()
   return (
     <div className="w-full rounded-lg border border-gray-700 bg-surface p-3 overflow-y-auto">
       <h3 className="text-sm font-semibold text-white mb-1 flex items-center gap-1.5">
         <SlidersHorizontal size={14} />
-        Options d'export
+        {t("Options d'export")}
       </h3>
       <p className="text-[11px] text-gray-500 mb-3">
-        Mets en forme le rendu avant export.
+        {t('Mets en forme le rendu avant export.')}
       </p>
 
       <div className="space-y-3">
         <div>
-          <label className="block text-xs text-gray-400 mb-1">Titre</label>
+          <label className="block text-xs text-gray-400 mb-1">{t('Titre')}</label>
           <input
             value={title}
             onChange={(event) => onSetTitle(event.target.value)}
             className="w-full px-2 py-1.5 rounded border border-gray-700 bg-surface-dark text-xs text-white focus:border-primary-500 focus:outline-none"
-            placeholder="Titre de la planche export"
+            placeholder={t("Titre de la planche d'export")}
           />
         </div>
 
         <div>
-          <label className="block text-xs text-gray-400 mb-1">Type de résultats</label>
+          <label className="block text-xs text-gray-400 mb-1">{t('Type de résultats')}</label>
           <ExportBinaryButtons
             value={exportMode}
-            left={{ label: 'Groupés', value: 'grouped' }}
-            right={{ label: 'Individuel', value: 'individual' }}
+            left={{ label: t('Groupés'), value: 'grouped' }}
+            right={{ label: t('Individuel'), value: 'individual' }}
             onChange={onSetExportMode}
           />
         </div>
 
         {exportMode === 'individual' && (
           <div>
-            <label className="block text-xs text-gray-400 mb-1">Juge</label>
+            <label className="block text-xs text-gray-400 mb-1">{t('Juge')}</label>
             <select
               value={selectedJudgeKey}
               onChange={(event) => onSetSelectedJudgeKey(event.target.value)}
@@ -174,50 +188,50 @@ export function ExportOptionsPanel({
         )}
 
         <div>
-          <label className="block text-xs text-gray-400 mb-1">Arrondi des notes</label>
+          <label className="block text-xs text-gray-400 mb-1">{t('Arrondi des notes')}</label>
           <select
             value={decimals}
             onChange={(event) => onSetDecimals(Number(event.target.value))}
             className="w-full px-2 py-1.5 rounded border border-gray-700 bg-surface-dark text-xs text-white focus:border-primary-500 focus:outline-none"
           >
-            <option value={0}>0 décimale</option>
-            <option value={1}>1 décimale</option>
-            <option value={2}>2 décimales</option>
+            <option value={0}>{t('0 décimale')}</option>
+            <option value={1}>{t('1 décimale')}</option>
+            <option value={2}>{t('2 décimales')}</option>
           </select>
         </div>
 
         <div>
-          <label className="block text-xs text-gray-400 mb-1">Thème</label>
+          <label className="block text-xs text-gray-400 mb-1">{t('Thème')}</label>
           <ExportBinaryButtons
             value={theme}
-            left={{ label: 'Sombre', value: 'dark' }}
-            right={{ label: 'Clair', value: 'light' }}
+            left={{ label: t('Sombre'), value: 'dark' }}
+            right={{ label: t('Clair'), value: 'light' }}
             onChange={onSetTheme}
           />
         </div>
 
         <div>
-          <label className="block text-xs text-gray-400 mb-1">Densité</label>
+          <label className="block text-xs text-gray-400 mb-1">{t('Densité')}</label>
           <ExportBinaryButtons
             value={density}
-            left={{ label: 'Confort', value: 'comfortable' }}
-            right={{ label: 'Compact', value: 'compact' }}
+            left={{ label: t('Confort'), value: 'comfortable' }}
+            right={{ label: t('Compact'), value: 'compact' }}
             onChange={onSetDensity}
           />
         </div>
 
         <div>
-          <label className="block text-xs text-gray-400 mb-1">Affichage tableau</label>
+          <label className="block text-xs text-gray-400 mb-1">{t('Affichage tableau')}</label>
           <ExportBinaryButtons
             value={tableView}
-            left={{ label: 'Synthèse', value: 'summary' }}
-            right={{ label: 'Détaillé', value: 'detailed' }}
+            left={{ label: t('Synthèse'), value: 'summary' }}
+            right={{ label: t('Détaillé'), value: 'detailed' }}
             onChange={onSetTableView}
           />
         </div>
 
         <div>
-          <label className="block text-xs text-gray-400 mb-1">Qualité PNG (échelle): x{pngScale}</label>
+          <label className="block text-xs text-gray-400 mb-1">{t('Qualité PNG (échelle)')}: x{pngScale}</label>
           <input
             type="range"
             min={2}
@@ -230,24 +244,24 @@ export function ExportOptionsPanel({
         </div>
 
         <div>
-          <label className="block text-xs text-gray-400 mb-1">Accent</label>
+          <label className="block text-xs text-gray-400 mb-1">{t('Accent')}</label>
           <ExportAccentPresets accent={accent} presets={accentPresets} onChange={onSetAccent} />
         </div>
 
         <div className="rounded border border-gray-700/80 bg-surface-dark/40 p-2.5 space-y-1.5">
-          <div className="text-[11px] font-semibold text-gray-200">Habillage tableau</div>
+          <div className="text-[11px] font-semibold text-gray-200">{t('Habillage tableau')}</div>
           <ExportCheckbox
             checked={showTopBanner}
             onToggle={onToggleShowTopBanner}
-            label="Afficher bandeau supérieur"
+            label={t('Afficher bandeau supérieur')}
           />
         </div>
 
         <div className="rounded border border-gray-700/80 bg-surface-dark/40 p-2.5 space-y-2">
-          <div className="text-[11px] font-semibold text-gray-200">Personnalisation avancée</div>
+          <div className="text-[11px] font-semibold text-gray-200">{t('Personnalisation avancée')}</div>
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <label className="block text-xs text-gray-400 mb-1">Colonne clip (px)</label>
+              <label className="block text-xs text-gray-400 mb-1">{t('Colonne clip (px)')}</label>
               <input
                 type="number"
                 min={260}
@@ -258,7 +272,7 @@ export function ExportOptionsPanel({
               />
             </div>
             <div>
-              <label className="block text-xs text-gray-400 mb-1">Colonne notes (px)</label>
+              <label className="block text-xs text-gray-400 mb-1">{t('Colonne notes (px)')}</label>
               <input
                 type="number"
                 min={88}
@@ -270,7 +284,7 @@ export function ExportOptionsPanel({
             </div>
           </div>
           <div>
-            <label className="block text-xs text-gray-400 mb-1">Hauteur ligne: {tableRowHeight}px</label>
+            <label className="block text-xs text-gray-400 mb-1">{t('Hauteur ligne')}: {tableRowHeight}px</label>
             <input
               type="range"
               min={44}
@@ -282,7 +296,7 @@ export function ExportOptionsPanel({
             />
           </div>
           <div>
-            <label className="block text-xs text-gray-400 mb-1">Taille chiffres: {tableNumberFontSize}px</label>
+            <label className="block text-xs text-gray-400 mb-1">{t('Taille chiffres')}: {tableNumberFontSize}px</label>
             <input
               type="range"
               min={11}
@@ -295,7 +309,7 @@ export function ExportOptionsPanel({
           </div>
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <label className="block text-xs text-gray-400 mb-1">Taille pseudo: {tablePrimaryFontSize}px</label>
+              <label className="block text-xs text-gray-400 mb-1">{t('Taille pseudo')}: {tablePrimaryFontSize}px</label>
               <input
                 type="range"
                 min={12}
@@ -307,7 +321,7 @@ export function ExportOptionsPanel({
               />
             </div>
             <div>
-              <label className="block text-xs text-gray-400 mb-1">Taille clip: {tableSecondaryFontSize}px</label>
+              <label className="block text-xs text-gray-400 mb-1">{t('Taille clip')}: {tableSecondaryFontSize}px</label>
               <input
                 type="range"
                 min={10}
@@ -320,15 +334,15 @@ export function ExportOptionsPanel({
             </div>
           </div>
           <div>
-            <label className="block text-xs text-gray-400 mb-1">Style rang</label>
+            <label className="block text-xs text-gray-400 mb-1">{t('Style rang')}</label>
             <select
               value={rankBadgeStyle}
               onChange={(event) => onSetRankBadgeStyle(event.target.value as ExportRankBadgeStyle)}
               className="w-full px-2 py-1.5 rounded border border-gray-700 bg-surface-dark text-xs text-white focus:border-primary-500 focus:outline-none"
             >
-              <option value="filled">Puce pleine</option>
-              <option value="outline">Puce contour</option>
-              <option value="plain">Texte simple</option>
+              <option value="filled">{t('Puce pleine')}</option>
+              <option value="outline">{t('Puce contour')}</option>
+              <option value="plain">{t('Texte simple')}</option>
             </select>
           </div>
         </div>
@@ -337,19 +351,19 @@ export function ExportOptionsPanel({
           <ExportCheckbox
             checked={showJudgeColumns}
             onToggle={onToggleShowJudgeColumns}
-            label="Afficher les totaux par juge"
+            label={t('Afficher les totaux par juge')}
           />
         )}
 
-        <ExportCheckbox checked={showRank} onToggle={onToggleShowRank} label="Afficher le rang" />
+        <ExportCheckbox checked={showRank} onToggle={onToggleShowRank} label={t('Afficher le rang')} />
 
         <ExportCheckbox
           checked={useCollabMepLabels}
           onToggle={onToggleUseCollabMepLabels}
-          label="Remplacer pseudos multiples par colab / mep"
+          label={t('Remplacer pseudos multiples par colab / mep')}
         />
         <p className="text-[11px] text-gray-500 -mt-1">
-          Désactivé: export avec tous les pseudos. Séparateurs reconnus: <code>,</code> et <code>&amp;</code>.
+          {t('Désactivé: export avec tous les pseudos. Séparateurs reconnus:')} <code>,</code> {t('et')} <code>&amp;</code>.
         </p>
       </div>
 
@@ -358,9 +372,14 @@ export function ExportOptionsPanel({
         pngExportMode={pngExportMode}
         rowsPerImage={rowsPerImage}
         notesPdfMode={notesPdfMode}
+        jsonExportMode={jsonExportMode}
+        jsonJudgeKey={jsonJudgeKey}
+        jsonJudgeOptions={jsonJudgeOptions}
         onSetPngExportMode={onSetPngExportMode}
         onSetRowsPerImage={onSetRowsPerImage}
         onSetNotesPdfMode={onSetNotesPdfMode}
+        onSetJsonExportMode={onSetJsonExportMode}
+        onSetJsonJudgeKey={onSetJsonJudgeKey}
         onExportPng={onExportPng}
         onExportPdf={onExportPdf}
         onExportNotesPdf={onExportNotesPdf}

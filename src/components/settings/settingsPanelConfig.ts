@@ -1,21 +1,26 @@
 import { Table, FileText } from 'lucide-react'
 import type { InterfaceMode } from '@/types/notation'
+import type { TranslateFn } from '@/i18n'
 
 export type SettingsTab = 'general' | 'notation' | 'raccourcis'
 
-export const SETTINGS_TABS: { id: SettingsTab; label: string }[] = [
-  { id: 'general', label: 'Général' },
-  { id: 'notation', label: 'Notation' },
-  { id: 'raccourcis', label: 'Raccourcis' },
-]
+export function getSettingsTabs(t: TranslateFn): { id: SettingsTab; label: string }[] {
+  return [
+    { id: 'general', label: t('Général') },
+    { id: 'notation', label: t('Notation') },
+    { id: 'raccourcis', label: t('Raccourcis') },
+  ]
+}
 
-export const INTERFACE_OPTIONS: {
+export function getInterfaceOptions(t: TranslateFn): {
   mode: InterfaceMode
   label: string
   icon: typeof Table
   iconSecondary?: typeof Table
-}[] = [
-  { mode: 'spreadsheet', label: 'Tableur', icon: Table },
-  { mode: 'notation', label: 'Notes', icon: FileText },
-  { mode: 'dual', label: 'Tableur + Notes', icon: Table, iconSecondary: FileText },
-]
+}[] {
+  return [
+    { mode: 'spreadsheet', label: t('Tableur'), icon: Table },
+    { mode: 'notation', label: t('Notes'), icon: FileText },
+    { mode: 'dual', label: t('Tableur + Notes'), icon: Table, iconSecondary: FileText },
+  ]
+}

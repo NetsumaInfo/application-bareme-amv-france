@@ -5,6 +5,7 @@ import { useDetachedFramePreview } from '@/components/notes/detached/useDetached
 import { ResultatsJudgeNotesView } from '@/components/interfaces/resultats/ResultatsJudgeNotesView'
 import type { Clip } from '@/types/project'
 import type { JudgeSource, CategoryGroup } from '@/utils/results'
+import { useI18n } from '@/i18n'
 
 interface DetachedJudgeNotesPayload {
   clips: Clip[]
@@ -15,6 +16,7 @@ interface DetachedJudgeNotesPayload {
 }
 
 export default function DetachedResultatsJudgeNotesWindow() {
+  const { t } = useI18n()
   const [payload, setPayload] = useState<DetachedJudgeNotesPayload | null>(null)
 
   const selectedClip = useMemo(() => {
@@ -53,7 +55,7 @@ export default function DetachedResultatsJudgeNotesWindow() {
   if (!payload) {
     return (
       <div className="flex items-center justify-center h-screen w-full bg-surface-dark text-gray-400 text-sm">
-        Chargement des notes juges...
+        {t('Chargement des notes juges...')}
       </div>
     )
   }
@@ -83,4 +85,3 @@ export default function DetachedResultatsJudgeNotesWindow() {
     </div>
   )
 }
-

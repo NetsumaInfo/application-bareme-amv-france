@@ -3,6 +3,12 @@ import { emit } from '@tauri-apps/api/event'
 import type { InterfaceMode, AppTab } from '@/types/notation'
 import type { ShortcutAction } from '@/utils/shortcuts'
 import { DEFAULT_SHORTCUT_BINDINGS } from '@/utils/shortcuts'
+import {
+  applyAppearanceToDocument,
+  type AppThemePreset,
+  type PrimaryColorPreset,
+} from '@/utils/appTheme'
+import { applyLanguageToDocument, detectSystemLanguage, type AppLanguage } from '@/i18n/config'
 import * as tauri from '@/services/tauri'
 
 type ZoomMode = 'fixed' | 'navigable'
@@ -19,6 +25,9 @@ function normalizeInterfaceMode(mode: InterfaceMode): InterfaceMode {
 interface PersistedUiSettings {
   shortcutBindings?: Record<ShortcutAction, string>
   showAudioDb?: boolean
+  appTheme?: AppThemePreset
+  primaryColorPreset?: PrimaryColorPreset
+  language?: AppLanguage
 }
 
 async function persistUserSettingsPatch(patch: PersistedUiSettings) {
@@ -51,6 +60,9 @@ interface UIStore {
   showPipVideo: boolean
   zoomLevel: number
   zoomMode: ZoomMode
+  appTheme: AppThemePreset
+  primaryColorPreset: PrimaryColorPreset
+  language: AppLanguage
   shortcutBindings: Record<ShortcutAction, string>
   isNotesDetached: boolean
 
@@ -67,6 +79,9 @@ interface UIStore {
   setShowPipVideo: (show: boolean) => void
   setZoomLevel: (level: number) => void
   setZoomMode: (mode: ZoomMode) => void
+  setAppTheme: (theme: AppThemePreset) => void
+  setPrimaryColorPreset: (preset: PrimaryColorPreset) => void
+  setLanguage: (language: AppLanguage) => void
   setShortcut: (action: ShortcutAction, shortcut: string) => void
   resetShortcuts: () => void
   setNotesDetached: (detached: boolean) => void
@@ -74,6 +89,8 @@ interface UIStore {
   zoomOut: () => void
   resetZoom: () => void
 }
+
+const defaultLanguage = detectSystemLanguage()
 
 export const useUIStore = create<UIStore>((set) => ({
   currentTab: 'notation',
@@ -89,6 +106,9 @@ export const useUIStore = create<UIStore>((set) => ({
   showPipVideo: true,
   zoomLevel: 100,
   zoomMode: 'fixed',
+  appTheme: 'midnight',
+  primaryColorPreset: 'ocean',
+  language: defaultLanguage,
   shortcutBindings: { ...DEFAULT_SHORTCUT_BINDINGS },
   isNotesDetached: false,
 
@@ -111,6 +131,24 @@ export const useUIStore = create<UIStore>((set) => ({
   setShowPipVideo: (show) => set({ showPipVideo: show }),
   setZoomLevel: (level) => set({ zoomLevel: level }),
   setZoomMode: (mode) => set({ zoomMode: mode }),
+  setAppTheme: (theme) =>
+    set(() => {
+      applyAppearanceToDocument(theme, useUIStore.getState().primaryColorPreset)
+      persistUserSettingsPatch({ appTheme: theme }).catch(() => {})
+      return { appTheme: theme }
+    }),
+  setPrimaryColorPreset: (preset) =>
+    set(() => {
+      applyAppearanceToDocument(useUIStore.getState().appTheme, preset)
+      persistUserSettingsPatch({ primaryColorPreset: preset }).catch(() => {})
+      return { primaryColorPreset: preset }
+    }),
+  setLanguage: (language) =>
+    set(() => {
+      applyLanguageToDocument(language)
+      persistUserSettingsPatch({ language }).catch(() => {})
+      return { language }
+    }),
   setShortcut: (action, shortcut) =>
     set((state) => {
       const next = { ...state.shortcutBindings, [action]: shortcut }
@@ -126,3 +164,6 @@ export const useUIStore = create<UIStore>((set) => ({
   zoomOut: () => set((s) => ({ zoomLevel: Math.max(50, s.zoomLevel - 10) })),
   resetZoom: () => set({ zoomLevel: 100 }),
 }))
+
+applyAppearanceToDocument('midnight', 'ocean')
+applyLanguageToDocument(defaultLanguage)

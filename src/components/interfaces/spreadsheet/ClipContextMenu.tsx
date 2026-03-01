@@ -1,6 +1,25 @@
 import type { RefObject } from 'react'
+import {
+  CheckSquare2,
+  Clapperboard,
+  Eye,
+  EyeOff,
+  FileText,
+  Image,
+  ImagePlus,
+  Info,
+  Link2,
+  Table2,
+  Trash2,
+} from 'lucide-react'
 import type { Clip } from '@/types/project'
+import {
+  AppContextMenuItem,
+  AppContextMenuPanel,
+  AppContextMenuSeparator,
+} from '@/components/ui/AppContextMenu'
 import { formatShortcutDisplay, type ShortcutAction } from '@/utils/shortcuts'
+import { useI18n } from '@/i18n'
 
 interface ContextMenuPosition {
   clipId: string
@@ -47,102 +66,93 @@ export function ClipContextMenu({
   onShowMediaInfo,
   onRemoveClip,
 }: ClipContextMenuProps) {
+  const { t } = useI18n()
+
   if (!contextMenu) return null
 
   return (
-    <div
+    <AppContextMenuPanel
       ref={contextMenuRef}
-      className="fixed z-50 bg-gray-900 border border-gray-700 rounded-lg shadow-xl py-1 min-w-[160px]"
-      style={{ left: contextMenu.x, top: contextMenu.y }}
+      x={contextMenu.x}
+      y={contextMenu.y}
+      minWidthClassName="min-w-[220px]"
     >
       {contextClip && (
         <>
-          <button
+          <AppContextMenuItem
             onClick={() => onToggleScored(contextClip)}
-            className="w-full text-left px-3 py-1.5 text-[11px] text-gray-300 hover:bg-gray-800 transition-colors"
-          >
-            {contextClip.scored ? 'Retirer "noté"' : 'Marquer comme noté'}
-          </button>
-          <div className="border-t border-gray-700 my-0.5" />
-          <button
+            label={contextClip.scored ? t('Retirer "noté"') : t('Marquer comme noté')}
+            icon={CheckSquare2}
+          />
+          <AppContextMenuSeparator />
+          <AppContextMenuItem
             onClick={() => onOpenNotes(contextClip)}
-            className="w-full text-left px-3 py-1.5 text-[11px] text-gray-300 hover:bg-gray-800 transition-colors flex items-center gap-2"
-          >
-            <span className="flex-1 text-left">Notes du clip</span>
-          </button>
+            label={t('Notes du clip')}
+            icon={Clapperboard}
+            iconSecondary={FileText}
+          />
           {!contextClip.filePath && (
-            <button
+            <AppContextMenuItem
               onClick={() => onAttachVideo(contextClip)}
-              className="w-full text-left px-3 py-1.5 text-[11px] text-gray-300 hover:bg-gray-800 transition-colors"
-            >
-              Lier une vidéo à cette ligne...
-            </button>
+              label={t('Lier une vidéo à cette ligne...')}
+              icon={Link2}
+            />
           )}
           {showMiniatures && currentClipId === contextClip.id && contextClip.filePath && (
             <>
-              <div className="border-t border-gray-700 my-0.5" />
-              <button
+              <AppContextMenuSeparator />
+              <AppContextMenuItem
                 onClick={() => onSetMiniatureFromCurrentFrame(contextClip)}
-                className="w-full text-left px-3 py-1.5 text-[11px] text-gray-300 hover:bg-gray-800 transition-colors flex items-center gap-2"
-              >
-                <span className="flex-1 text-left">Définir miniature (frame courante)</span>
-                <span className="text-[10px] text-gray-500">
-                  {formatShortcutDisplay(shortcutBindings.setMiniatureFrame)}
-                </span>
-              </button>
-              <button
+                label={t('Définir miniature (frame courante)')}
+                icon={ImagePlus}
+                shortcut={formatShortcutDisplay(shortcutBindings.setMiniatureFrame, t)}
+              />
+              <AppContextMenuItem
                 onClick={() => onResetMiniature(contextClip)}
-                className="w-full text-left px-3 py-1.5 text-[11px] text-gray-300 hover:bg-gray-800 transition-colors"
-              >
-                Réinitialiser miniature
-              </button>
+                label={t('Réinitialiser miniature')}
+                icon={Image}
+              />
             </>
           )}
-          <div className="border-t border-gray-700 my-0.5" />
+          <AppContextMenuSeparator />
         </>
       )}
       {hasAnyLinkedVideo ? (
-        <button
+        <AppContextMenuItem
           onClick={onToggleMiniatures}
-          className="w-full text-left px-3 py-1.5 text-[11px] text-gray-300 hover:bg-gray-800 transition-colors flex items-center gap-2"
-        >
-          <span className="flex-1 text-left">
-            {showMiniatures ? 'Masquer miniatures' : 'Afficher miniatures'}
-          </span>
-          <span className="text-[10px] text-gray-500">
-            {formatShortcutDisplay(shortcutBindings.toggleMiniatures)}
-          </span>
-        </button>
+          label={showMiniatures ? t('Masquer miniatures') : t('Afficher miniatures')}
+          icon={Image}
+          iconSecondary={showMiniatures ? EyeOff : Eye}
+          shortcut={formatShortcutDisplay(shortcutBindings.toggleMiniatures, t)}
+        />
       ) : (
-        <div className="w-full text-left px-3 py-1.5 text-[11px] text-gray-600">
-          Miniatures indisponibles (pas de vidéo)
-        </div>
+        <AppContextMenuItem
+          label={t('Miniatures indisponibles (pas de vidéo)')}
+          icon={Image}
+          disabled
+        />
       )}
-      <div className="border-t border-gray-700 my-0.5" />
-      <button
+      <AppContextMenuSeparator />
+      <AppContextMenuItem
         onClick={onToggleAddRowButton}
-        className="w-full text-left px-3 py-1.5 text-[11px] text-gray-300 hover:bg-gray-800 transition-colors"
-      >
-        {showAddRowButton ? 'Masquer bouton' : 'Afficher bouton'}
-      </button>
-      <div className="border-t border-gray-700 my-0.5" />
-      <button
+        label={showAddRowButton ? t('Masquer bouton') : t('Afficher bouton')}
+        icon={Table2}
+        iconSecondary={showAddRowButton ? EyeOff : Eye}
+      />
+      <AppContextMenuSeparator />
+      <AppContextMenuItem
         onClick={() => contextClip && onShowMediaInfo(contextClip)}
         disabled={!contextClip?.filePath}
-        className={`w-full text-left px-3 py-1.5 text-[11px] transition-colors ${contextClip?.filePath
-            ? 'text-gray-300 hover:bg-gray-800'
-            : 'text-gray-600 cursor-not-allowed'
-          }`}
-      >
-        {contextClip?.filePath ? 'Afficher MediaInfo' : 'MediaInfo indisponible (pas de vidéo)'}
-      </button>
-      <div className="border-t border-gray-700 my-0.5" />
-      <button
+        label={contextClip?.filePath ? t('Afficher MediaInfo') : t('MediaInfo indisponible (pas de vidéo)')}
+        icon={Info}
+      />
+      <AppContextMenuSeparator />
+      <AppContextMenuItem
         onClick={() => contextClip && onRemoveClip(contextClip)}
-        className="w-full text-left px-3 py-1.5 text-[11px] text-red-400 hover:bg-gray-800 transition-colors"
-      >
-        {contextClip?.filePath ? 'Supprimer la vidéo' : 'Supprimer la ligne'}
-      </button>
-    </div>
+        label={contextClip?.filePath ? t('Supprimer la vidéo') : t('Supprimer la ligne')}
+        icon={Trash2}
+        danger
+      />
+    </AppContextMenuPanel>
   )
 }

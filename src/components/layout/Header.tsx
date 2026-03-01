@@ -6,7 +6,9 @@ import ProjectManager from '@/components/project/ProjectManager'
 import InterfaceSwitcher from '@/components/interfaces/InterfaceSwitcher'
 import { BaremeSelector } from '@/components/layout/BaremeSelector'
 import { NotationModeSwitcher } from '@/components/layout/NotationModeSwitcher'
-import { isNoteComplete } from '@/utils/scoring'
+import { useI18n } from '@/i18n'
+import { LanguageSwitcher } from '@/components/layout/LanguageSwitcher'
+import { areAllClipsScored } from '@/utils/resultsVisibility'
 
 export default function Header({
   onOpenSettings,
@@ -17,17 +19,13 @@ export default function Header({
   const { reset: resetNotation, currentBareme, notes } = useNotationStore()
   const clips = useProjectStore((state) => state.clips)
   const { handleExportJudgeNotes } = useProjectMenuActions()
-  const allClipsScored = clips.length > 0 && clips.every((clip) => {
-    if (clip.scored) return true
-    if (!currentBareme) return false
-    const clipNote = notes[clip.id]
-    return clipNote ? isNoteComplete(clipNote, currentBareme) : false
-  })
+  const { t } = useI18n()
+  const allClipsScored = areAllClipsScored(clips, currentBareme, (clipId) => notes[clipId])
 
   const handleCloseProject = () => {
     if (isDirty) {
       const confirmed = confirm(
-        'Le projet a des modifications non sauvegardées. Fermer quand même ?',
+        t('Le projet a des modifications non sauvegardées. Fermer quand même ?'),
       )
       if (!confirmed) return
     }
@@ -43,7 +41,7 @@ export default function Header({
           <button
             onClick={handleCloseProject}
             className="p-1 rounded hover:bg-surface-light text-gray-500 hover:text-white transition-colors"
-            title="Fermer le projet"
+            title={t('Fermer le projet')}
           >
             <Home size={14} />
           </button>
@@ -90,19 +88,20 @@ export default function Header({
               handleExportJudgeNotes().catch(() => {})
             }}
             className="h-8 px-2 rounded-md border border-gray-700 bg-surface-dark text-gray-300 hover:text-white hover:border-gray-600 text-xs font-medium transition-colors flex items-center gap-1.5"
-            title="Exporter notation (<concours>_<pseudo>.json)"
+            title={t('Exporter notation (<concours>_<pseudo>.json)')}
           >
             <FileDown size={14} />
-            Exporter notation
+            {t('Exporter notation')}
           </button>
         )}
+        <LanguageSwitcher compact />
         {currentProject && <BaremeSelector />}
         {currentProject && <ProjectManager />}
         {currentProject && (
           <button
             onClick={onOpenSettings}
             className="p-1.5 rounded hover:bg-surface-light text-gray-500 hover:text-white transition-colors"
-            title="Paramètres"
+            title={t('Paramètres')}
           >
             <Settings size={14} />
           </button>

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import * as tauri from '@/services/tauri'
+import { useI18n } from '@/i18n'
 
 interface AudioDbMeterProps {
   enabled: boolean
@@ -38,6 +39,7 @@ function valueColorClass(db: number): string {
 }
 
 export default function AudioDbMeter({ enabled, compact, tiny, muted, className }: AudioDbMeterProps) {
+  const { t } = useI18n()
   const [levels, setLevels] = useState<tauri.AudioLevels>({
     left_db: -90,
     right_db: -90,
@@ -86,7 +88,7 @@ export default function AudioDbMeter({ enabled, compact, tiny, muted, className 
       </div>
       {!tiny && (
         <span className={`${compact ? 'text-[10px] w-9' : 'text-[10px] w-10'} font-mono text-right ${muted ? 'text-gray-500' : leftValueClass}`}>
-          {muted ? 'mute' : formatDb(levels.left_db)}
+          {muted ? t('Muet') : formatDb(levels.left_db)}
         </span>
       )}
       <span className={`${compact ? 'text-[10px]' : 'text-[10px]'} text-gray-500 font-mono`}>R</span>
@@ -98,7 +100,7 @@ export default function AudioDbMeter({ enabled, compact, tiny, muted, className 
       </div>
       {!tiny && (
         <span className={`${compact ? 'text-[10px] w-9' : 'text-[10px] w-10'} font-mono text-right ${muted ? 'text-gray-500' : rightValueClass}`}>
-          {muted ? 'mute' : formatDb(levels.right_db)}
+          {muted ? t('Muet') : formatDb(levels.right_db)}
         </span>
       )}
     </div>

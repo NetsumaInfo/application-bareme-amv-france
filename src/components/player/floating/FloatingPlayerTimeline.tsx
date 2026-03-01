@@ -1,6 +1,7 @@
 import { formatTime } from '@/utils/formatters'
 import type { ChangeEvent } from 'react'
 import type { NoteTimecodeMarker } from '@/utils/timecodes'
+import { useI18n } from '@/i18n'
 
 interface FloatingPlayerTimelineProps {
   currentTime: number
@@ -19,6 +20,7 @@ export function FloatingPlayerTimeline({
   onSeek,
   onMarkerJump,
 }: FloatingPlayerTimelineProps) {
+  const { t } = useI18n()
   const handleSeekChange = (event: ChangeEvent<HTMLInputElement>) => {
     onSeek(Number(event.target.value))
   }
@@ -60,7 +62,7 @@ export function FloatingPlayerTimeline({
                   title={
                     marker.previewText
                       ? `${marker.raw} - ${marker.previewText}`
-                      : `${marker.raw} - ${marker.category ?? 'Notes globales'}`
+                      : `${marker.raw} - ${marker.category ?? t('Notes globales')}`
                   }
                 />
               )

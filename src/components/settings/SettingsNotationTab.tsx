@@ -1,6 +1,7 @@
 import { SettingsToggle } from '@/components/settings/SettingsToggle'
 import type { Bareme } from '@/types/bareme'
 import type { MultiPseudoDisplayMode, ProjectSettings } from '@/types/project'
+import { useI18n } from '@/i18n'
 
 interface SettingsNotationTabProps {
   currentBareme: Bareme | null
@@ -31,6 +32,7 @@ export function SettingsNotationTab({
   onToggleAudioDb,
   onUpdateSettings,
 }: SettingsNotationTabProps) {
+  const { t } = useI18n()
   const multiPseudoDisplayMode = settings?.multiPseudoDisplayMode ?? 'collab_mep'
   const multiPseudoDisplayOptions: Array<{
     value: MultiPseudoDisplayMode
@@ -45,28 +47,31 @@ export function SettingsNotationTab({
     <>
       <div className="p-3 rounded-lg bg-surface-dark border border-gray-700">
         <div className="flex items-center justify-between mb-2">
-          <span className="text-xs font-medium text-gray-300">Barème actif</span>
+          <span className="text-xs font-medium text-gray-300">{t('Barème actif')}</span>
           <button
             onClick={onOpenBaremeEditor}
             className="text-[10px] text-primary-400 hover:text-primary-300"
           >
-            Éditeur complet
+            {t('Éditeur complet')}
           </button>
         </div>
-        <div className="text-sm text-white font-medium">{currentBareme?.name ?? 'Aucun'}</div>
+        <div className="text-sm text-white font-medium">{currentBareme?.name ?? t('Aucun')}</div>
         {currentBareme && (
           <div className="text-[10px] text-gray-500 mt-0.5">
-            {currentBareme.criteria.length} critères — {currentBareme.totalPoints} points
+            {t('{count} critères — {points} points', {
+              count: currentBareme.criteria.length,
+              points: currentBareme.totalPoints,
+            })}
           </div>
         )}
       </div>
 
       <div className="space-y-3 pt-2 border-t border-gray-700">
-        <div className="flex items-center justify-between">
-          <div>
-            <span className="text-sm text-gray-300 block">Bloquer les résultats jusqu'à tout noter</span>
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0 pr-2">
+            <span className="text-sm text-gray-300 block">{t("Masquer les totaux jusqu'à tout noter")}</span>
             <span className="text-[10px] text-gray-500">
-              Cache les totaux et les onglets Résultat/Export tant que des clips ne sont pas marqués notés
+              {t('Les pages Résultat/Export restent accessibles, mais les totaux restent masqués tant que tous les clips ne sont pas notés')}
             </span>
           </div>
           <SettingsToggle
@@ -78,17 +83,17 @@ export function SettingsNotationTab({
             }
           />
         </div>
-        <div className="flex items-center justify-between">
-          <div>
-            <span className="text-sm text-gray-300 block">Masquer les scores</span>
-            <span className="text-[10px] text-gray-500">Cache le score total pendant la notation</span>
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0 pr-2">
+            <span className="text-sm text-gray-300 block">{t('Masquer les scores')}</span>
+            <span className="text-[10px] text-gray-500">{t('Cache le score total pendant la notation')}</span>
           </div>
           <SettingsToggle checked={hideFinalScore} onChange={onToggleFinalScore} />
         </div>
-        <div className="flex items-center justify-between">
-          <div>
-            <span className="text-sm text-gray-300 block">Masquer les totaux</span>
-            <span className="text-[10px] text-gray-500">Cache la colonne Total et désactive le tri par note</span>
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0 pr-2">
+            <span className="text-sm text-gray-300 block">{t('Masquer les totaux')}</span>
+            <span className="text-[10px] text-gray-500">{t('Cache la colonne Total et désactive le tri par note')}</span>
           </div>
           <SettingsToggle
             checked={Boolean(settings?.hideTotals)}
@@ -99,17 +104,17 @@ export function SettingsNotationTab({
             }
           />
         </div>
-        <div className="flex items-center justify-between">
-          <div>
-            <span className="text-sm text-gray-300 block">Masquer les moyennes</span>
-            <span className="text-[10px] text-gray-500">Cache la ligne de moyennes du tableur</span>
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0 pr-2">
+            <span className="text-sm text-gray-300 block">{t('Masquer les moyennes')}</span>
+            <span className="text-[10px] text-gray-500">{t('Cache la ligne de moyennes du tableur')}</span>
           </div>
           <SettingsToggle checked={hideAverages} onChange={onToggleAverages} />
         </div>
-        <div className="flex items-center justify-between">
-          <div>
-            <span className="text-sm text-gray-300 block">Afficher miniatures des clips</span>
-            <span className="text-[10px] text-gray-500">Affiche une image du clip sous le pseudo dans le tableur</span>
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0 pr-2">
+            <span className="text-sm text-gray-300 block">{t('Afficher miniatures des clips')}</span>
+            <span className="text-[10px] text-gray-500">{t('Affiche une image du clip sous le pseudo dans le tableur')}</span>
           </div>
           <SettingsToggle
             checked={Boolean(settings?.showMiniatures)}
@@ -122,32 +127,32 @@ export function SettingsNotationTab({
         </div>
         <div>
           <div className="mb-1">
-            <span className="text-sm text-gray-300 block">Affichage des pseudos multiples</span>
+            <span className="text-sm text-gray-300 block">{t('Affichage des pseudos multiples')}</span>
             <span className="text-[10px] text-gray-500">
-              Choisis comment afficher les auteurs contenant plusieurs pseudos
+              {t('Choisis comment afficher les auteurs contenant plusieurs pseudos')}
             </span>
           </div>
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
             {multiPseudoDisplayOptions.map((option) => (
               <button
                 key={option.value}
                 type="button"
                 onClick={() => onUpdateSettings({ multiPseudoDisplayMode: option.value })}
-                className={`px-2 py-1.5 rounded border text-[11px] transition-colors ${
+                className={`rounded border px-2 py-2 text-[11px] transition-colors ${
                   multiPseudoDisplayMode === option.value
                     ? 'border-primary-500 text-primary-300 bg-primary-500/10'
                     : 'border-gray-700 text-gray-300 hover:text-white hover:border-gray-600'
                 }`}
               >
-                {option.label}
+                <span className="whitespace-normal break-words leading-tight">{t(option.label)}</span>
               </button>
             ))}
           </div>
         </div>
-        <div className="flex items-center justify-between">
-          <div>
-            <span className="text-sm text-gray-300 block">Afficher bouton “Ajouter une ligne”</span>
-            <span className="text-[10px] text-gray-500">Affiche/masque la barre d’ajout manuel dans le tableur</span>
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0 pr-2">
+            <span className="text-sm text-gray-300 block">{t('Afficher bouton “Ajouter une ligne”')}</span>
+            <span className="text-[10px] text-gray-500">{t('Affiche/masque la barre d’ajout manuel dans le tableur')}</span>
           </div>
           <SettingsToggle
             checked={Boolean(settings?.showAddRowButton)}
@@ -160,8 +165,8 @@ export function SettingsNotationTab({
         </div>
         <div>
           <div className="flex items-center justify-between mb-1">
-            <span className="text-sm text-gray-300 block">Frame miniature par défaut</span>
-            <span className="text-[10px] text-gray-500">secondes</span>
+            <span className="text-sm text-gray-300 block">{t('Frame miniature par défaut')}</span>
+            <span className="text-[10px] text-gray-500">{t('secondes')}</span>
           </div>
           <input
             type="number"
@@ -178,20 +183,20 @@ export function SettingsNotationTab({
             className="w-full px-3 py-2 bg-surface-dark border border-gray-700 rounded-lg text-sm text-white placeholder-gray-500 focus:border-primary-500 focus:outline-none"
           />
           <p className="text-[10px] text-gray-500 mt-1">
-            Utilisée si aucune frame manuelle n&apos;est définie pour le clip.
+            {t('Utilisée si aucune frame manuelle n’est définie pour le clip.')}
           </p>
         </div>
-        <div className="flex items-center justify-between">
-          <div>
-            <span className="text-sm text-gray-300 block">Masquer la prise de notes</span>
-            <span className="text-[10px] text-gray-500">Cache les zones de texte "Notes libres"</span>
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0 pr-2">
+            <span className="text-sm text-gray-300 block">{t('Masquer la prise de notes')}</span>
+            <span className="text-[10px] text-gray-500">{t('Cache les zones de texte "Notes libres"')}</span>
           </div>
           <SettingsToggle checked={hideTextNotes} onChange={onToggleTextNotes} />
         </div>
-        <div className="flex items-center justify-between">
-          <div>
-            <span className="text-sm text-gray-300 block">Afficher VU-mètre audio L/R (dB)</span>
-            <span className="text-[10px] text-gray-500">Niveaux audio en temps réel sur le lecteur vidéo</span>
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0 pr-2">
+            <span className="text-sm text-gray-300 block">{t('Afficher VU-mètre audio L/R (dB)')}</span>
+            <span className="text-[10px] text-gray-500">{t('Niveaux audio en temps réel sur le lecteur vidéo')}</span>
           </div>
           <SettingsToggle checked={showAudioDb} onChange={onToggleAudioDb} />
         </div>

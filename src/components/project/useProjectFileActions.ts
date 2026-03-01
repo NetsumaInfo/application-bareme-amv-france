@@ -4,8 +4,10 @@ import { useUIStore } from '@/store/useUIStore'
 import * as tauri from '@/services/tauri'
 import { rememberRecentProjectPath } from '@/services/recentProjects'
 import { loadAndApplyProjectFile } from '@/services/projectSession'
+import { useI18n } from '@/i18n'
 
 export function useProjectFileActions() {
+  const { t } = useI18n()
   const {
     currentProject,
     clips,
@@ -29,7 +31,7 @@ export function useProjectFileActions() {
       await rememberRecentProjectPath(filePath)
     } catch (errorValue) {
       console.error('Failed to open project:', errorValue)
-      alert(`Erreur lors de l'ouverture: ${errorValue}`)
+      alert(t("Erreur lors de l'ouverture: {error}", { error: String(errorValue) }))
     }
   }
 
@@ -63,7 +65,7 @@ export function useProjectFileActions() {
       await saveProjectTo(filePath)
     } catch (errorValue) {
       console.error('Failed to save:', errorValue)
-      alert(`Erreur lors de la sauvegarde: ${errorValue}`)
+      alert(t('Erreur lors de la sauvegarde: {error}', { error: String(errorValue) }))
     }
   }
 
@@ -78,7 +80,7 @@ export function useProjectFileActions() {
       await saveProjectTo(filePath)
     } catch (errorValue) {
       console.error('Failed to save as:', errorValue)
-      alert(`Erreur lors de la sauvegarde: ${errorValue}`)
+      alert(t('Erreur lors de la sauvegarde: {error}', { error: String(errorValue) }))
     }
   }
 
@@ -94,7 +96,7 @@ export function useProjectFileActions() {
       await tauri.exportJsonFile(projectData, filePath)
     } catch (errorValue) {
       console.error('Failed to export:', errorValue)
-      alert(`Erreur lors de l'export: ${errorValue}`)
+      alert(t("Erreur lors de l'export: {error}", { error: String(errorValue) }))
     }
   }
 
@@ -128,7 +130,7 @@ export function useProjectFileActions() {
       )
     } catch (errorValue) {
       console.error('Failed to export judge notes:', errorValue)
-      alert(`Erreur lors de l'export notation: ${errorValue}`)
+      alert(t("Erreur lors de l'export notation: {error}", { error: String(errorValue) }))
     }
   }
 

@@ -3,8 +3,10 @@ import { createPortal } from 'react-dom'
 import { Headphones } from 'lucide-react'
 import { usePlayerStore } from '@/store/usePlayerStore'
 import * as tauri from '@/services/tauri'
+import { useI18n } from '@/i18n'
 
 export default function AudioTrackSelector() {
+  const { t } = useI18n()
   const { audioTracks, currentAudioId, setCurrentAudioId } = usePlayerStore()
   const [open, setOpen] = useState(false)
   const [menuStyle, setMenuStyle] = useState<{ top: number; left: number; width: number }>({
@@ -88,7 +90,7 @@ export default function AudioTrackSelector() {
               currentAudioId === track.id ? 'text-primary-400 font-medium' : 'text-gray-300'
             }`}
           >
-            {track.title || track.lang || `Audio ${track.id}`}
+            {track.title || track.lang || t('Audio {id}', { id: track.id })}
           </button>
         ))}
       </div>,
@@ -112,7 +114,7 @@ export default function AudioTrackSelector() {
               : 'text-gray-400 hover:bg-white/20 hover:text-white'
             : 'text-gray-600 cursor-default'
         }`}
-        title={hasTracks ? 'Pistes audio' : 'Audio unique'}
+        title={hasTracks ? t('Pistes audio') : t('Audio unique')}
       >
         <Headphones size={14} />
       </button>

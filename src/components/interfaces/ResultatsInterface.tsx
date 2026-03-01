@@ -22,9 +22,10 @@ import type {
   ResultatsGlobalVariant,
   ResultatsMainView,
 } from '@/components/interfaces/resultats/types'
-import { isNoteComplete } from '@/utils/scoring'
 import { CATEGORY_COLOR_PRESETS, sanitizeColor } from '@/utils/colors'
 import { COLOR_MEMORY_KEYS, readStoredColor } from '@/utils/colorPickerStorage'
+import { shouldHideResultsUntilAllScored } from '@/utils/resultsVisibility'
+import { useI18n } from '@/i18n'
 
 type SortMode = 'folder' | 'score'
 type RenameJudgeDialog = {
@@ -33,6 +34,7 @@ type RenameJudgeDialog = {
 }
 
 export default function ResultatsInterface() {
+  const { t } = useI18n()
   const currentBareme = useNotationStore((state) => state.currentBareme)
   const notes = useNotationStore((state) => state.notes)
   const updateCriterion = useNotationStore((state) => state.updateCriterion)
@@ -50,17 +52,13 @@ export default function ResultatsInterface() {
     setCurrentClip,
     removeClip,
   } = useProjectStore()
-  const allClipsScored = clips.length > 0 && clips.every((clip) => {
-    if (clip.scored) return true
-    if (!currentBareme) return false
-    const clipNote = notes[clip.id]
-    return clipNote ? isNoteComplete(clipNote, currentBareme) : false
-  })
-  const hasAnyLinkedVideo = clips.some((clip) => Boolean(clip.filePath))
   const hideTotalsSetting = Boolean(currentProject?.settings.hideTotals)
-  const hideTotalsUntilAllScored = Boolean(currentProject?.settings.hideFinalScoreUntilEnd)
-    && hasAnyLinkedVideo
-    && !allClipsScored
+  const hideTotalsUntilAllScored = shouldHideResultsUntilAllScored(
+    currentProject,
+    clips,
+    currentBareme,
+    (clipId) => notes[clipId],
+  )
   const canSortByScore = !hideTotalsSetting && !hideTotalsUntilAllScored
   const showMiniatures = Boolean(currentProject?.settings.showMiniatures)
   const thumbnailDefaultSeconds = currentProject?.settings.thumbnailDefaultTimeSec ?? 10
@@ -118,11 +116,11 @@ export default function ResultatsInterface() {
 
     setRenameJudgeDialog({
       judgeKey,
-      title: judgeKey === 'current' ? 'Renommer le juge du projet' : 'Renommer le juge importé',
+      title: judgeKey === 'current' ? t('Renommer le juge du projet') : t('Renommer le juge importé'),
     })
     setRenameJudgeValue(targetJudge.judgeName)
     setRenameJudgeError(null)
-  }, [judges])
+  }, [judges, t])
   const closeRenameJudgeDialog = useCallback(() => {
     setRenameJudgeDialog(null)
     setRenameJudgeValue('')
@@ -278,7 +276,7 @@ export default function ResultatsInterface() {
   if (!currentBareme) {
     return (
       <div className="flex items-center justify-center h-full text-gray-500 text-sm">
-        Aucun barème chargé
+        {t('Aucun barème chargé')}
       </div>
     )
   }
@@ -286,7 +284,7 @@ export default function ResultatsInterface() {
   if (clips.length === 0) {
     return (
       <div className="flex items-center justify-center h-full text-gray-500 text-sm">
-        Aucun clip dans le projet
+        {t('Aucun clip dans le projet')}
       </div>
     )
   }
@@ -303,6 +301,7 @@ export default function ResultatsInterface() {
           return
         }
         event.preventDefault()
+        event.stopPropagation()
         const width = 230
         const height = selectedClip ? 210 : 58
         const x = Math.max(8, Math.min(event.clientX, window.innerWidth - width - 8))

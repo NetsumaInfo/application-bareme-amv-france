@@ -1,8 +1,10 @@
 import { useProjectStore } from '@/store/useProjectStore'
 import { getProgressStats } from '@/utils/scoring'
+import { useI18n } from '@/i18n'
 
 export default function ProgressIndicator() {
   const { clips } = useProjectStore()
+  const { t } = useI18n()
   const stats = getProgressStats(clips)
 
   if (clips.length === 0) return null
@@ -10,7 +12,7 @@ export default function ProgressIndicator() {
   return (
     <div className="px-3 py-2 border-t border-gray-700">
       <div className="flex items-center justify-between text-xs mb-1">
-        <span className="text-gray-400">Progression</span>
+        <span className="text-gray-400">{t('Progression')}</span>
         <span className="text-gray-300 font-medium">
           {stats.scored}/{stats.total}
         </span>
@@ -23,7 +25,7 @@ export default function ProgressIndicator() {
       </div>
       {stats.remaining > 0 && (
         <p className="text-xs text-gray-500 mt-1">
-          {stats.remaining} restant{stats.remaining > 1 ? 's' : ''}
+          {t('{count} restant(s)', { count: stats.remaining })}
         </p>
       )}
     </div>

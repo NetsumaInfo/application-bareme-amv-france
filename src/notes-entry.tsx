@@ -2,6 +2,7 @@ import { createRoot } from 'react-dom/client'
 import { Component, type ReactNode } from 'react'
 import './index.css'
 import DetachedNotesWindow from './components/notes/DetachedNotesWindow'
+import { I18nProvider } from '@/i18n'
 
 class ErrorBoundary extends Component<{ children: ReactNode }, { error: Error | null }> {
   state: { error: Error | null } = { error: null }
@@ -28,7 +29,9 @@ const root = document.getElementById('root')
 if (root) {
   createRoot(root).render(
     <ErrorBoundary>
-      <DetachedNotesWindow />
+      <I18nProvider>
+        <DetachedNotesWindow />
+      </I18nProvider>
     </ErrorBoundary>,
   )
 }

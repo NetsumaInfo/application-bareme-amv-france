@@ -7,7 +7,8 @@ import { normalizeShortcutFromEvent, type ShortcutAction } from '@/utils/shortcu
 import { SettingsGeneralTab } from '@/components/settings/SettingsGeneralTab'
 import { SettingsNotationTab } from '@/components/settings/SettingsNotationTab'
 import { SettingsShortcutsTab } from '@/components/settings/SettingsShortcutsTab'
-import { SETTINGS_TABS, type SettingsTab } from '@/components/settings/settingsPanelConfig'
+import { getSettingsTabs, type SettingsTab } from '@/components/settings/settingsPanelConfig'
+import { useI18n } from '@/i18n'
 
 export default function SettingsPanel({ onClose }: { onClose: () => void }) {
   const { currentProject, updateSettings, updateProject } = useProjectStore()
@@ -28,6 +29,10 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
     setZoomLevel,
     zoomMode,
     setZoomMode,
+    appTheme,
+    setAppTheme,
+    primaryColorPreset,
+    setPrimaryColorPreset,
     projectsFolderPath,
     shortcutBindings,
     setShortcut,
@@ -35,8 +40,10 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
   } = useUIStore()
   const [activeTab, setActiveTab] = useState<SettingsTab>('general')
   const [editingShortcut, setEditingShortcut] = useState<ShortcutAction | null>(null)
+  const { t } = useI18n()
 
   const settings = currentProject?.settings
+  const settingsTabs = getSettingsTabs(t)
 
   const handleShortcutCapture = useCallback(
     (event: KeyboardEvent) => {
@@ -65,29 +72,30 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
   }, [editingShortcut, handleShortcutCapture])
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
-      <div className="bg-surface rounded-xl shadow-2xl w-full max-w-xl border border-gray-700 max-h-[85vh] flex flex-col mx-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" data-context-scope="settings">
+      <div className="bg-surface rounded-xl shadow-2xl w-full max-w-3xl border border-gray-700 max-h-[88vh] flex flex-col mx-4" data-context-scope="settings">
         <div className="flex items-center justify-between px-5 py-3 border-b border-gray-700 shrink-0">
-          <h2 className="text-sm font-semibold text-white">Paramètres</h2>
+          <h2 className="text-sm font-semibold text-white">{t('Paramètres')}</h2>
           <button
             onClick={onClose}
             className="p-1 rounded hover:bg-surface-light text-gray-400 hover:text-white"
+            title={t('Fermer')}
           >
             <X size={16} />
           </button>
         </div>
 
         <div className="flex border-b border-gray-700 shrink-0">
-          {SETTINGS_TABS.map((tab) => (
+          {settingsTabs.map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex-1 px-4 py-2 text-xs font-medium transition-colors ${activeTab === tab.id
+              className={`flex-1 min-w-0 px-4 py-2 text-xs font-medium leading-tight transition-colors ${activeTab === tab.id
                   ? 'text-primary-400 border-b-2 border-primary-400'
                   : 'text-gray-500 hover:text-gray-300'
                 }`}
             >
-              {tab.label}
+              <span className="whitespace-normal break-words">{tab.label}</span>
             </button>
           ))}
         </div>
@@ -100,12 +108,16 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
               currentInterface={currentInterface}
               zoomMode={zoomMode}
               zoomLevel={zoomLevel}
+              appTheme={appTheme}
+              primaryColorPreset={primaryColorPreset}
               projectsFolderPath={projectsFolderPath ?? ''}
               onUpdateProject={updateProject}
               onUpdateSettings={updateSettings}
               onSwitchInterface={switchInterface}
               onSetZoomMode={setZoomMode}
               onSetZoomLevel={setZoomLevel}
+              onSetAppTheme={setAppTheme}
+              onSetPrimaryColorPreset={setPrimaryColorPreset}
             />
           )}
 
@@ -144,7 +156,7 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
             onClick={onClose}
             className="px-4 py-1.5 text-xs rounded-lg bg-surface-light text-gray-300 hover:text-white transition-colors"
           >
-            Fermer
+            {t('Fermer')}
           </button>
         </div>
       </div>

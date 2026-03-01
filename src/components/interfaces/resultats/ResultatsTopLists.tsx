@@ -4,6 +4,7 @@ import { withAlpha } from '@/utils/colors'
 import type { JudgeSource } from '@/utils/results'
 import type { ResultatsRow } from '@/components/interfaces/resultats/types'
 import { ClipMiniaturePreview } from '@/components/interfaces/spreadsheet/miniaturePreview'
+import { useI18n } from '@/i18n'
 
 interface ResultatsTopListsProps {
   canSortByScore: boolean
@@ -118,27 +119,20 @@ export function ResultatsTopLists({
   showMiniatures,
   thumbnailDefaultSeconds,
 }: ResultatsTopListsProps) {
+  const { t } = useI18n()
   const finalTop = useMemo(
-    () => sortRowsByScore(rows, (row) => row.averageTotal),
-    [rows],
+    () => (canSortByScore ? sortRowsByScore(rows, (row) => row.averageTotal) : rows),
+    [canSortByScore, rows],
   )
 
   const topByJudge = useMemo(
     () =>
       judges.map((judge, index) => ({
         judge,
-        entries: sortRowsByScore(rows, (row) => row.judgeTotals[index] ?? 0),
+        entries: canSortByScore ? sortRowsByScore(rows, (row) => row.judgeTotals[index] ?? 0) : rows,
       })),
-    [judges, rows],
+    [canSortByScore, judges, rows],
   )
-
-  if (!canSortByScore) {
-    return (
-      <div className="flex-1 rounded-lg border border-gray-700 bg-surface-dark/40 px-3 py-3 text-xs text-gray-300">
-        Classement indisponible tant que les totaux sont masqués par les paramètres du projet.
-      </div>
-    )
-  }
 
   return (
     <div className="flex-1 min-h-0 overflow-x-auto overflow-y-hidden">
@@ -146,7 +140,7 @@ export function ResultatsTopLists({
         {topByJudge.map(({ judge, entries }) => (
           <TopList
             key={`top-${judge.key}`}
-            title={`Top ${judge.judgeName}`}
+            title={t('Top {name}', { name: judge.judgeName })}
             entries={entries}
             accentColor={judgeColors[judge.key] ?? '#22d3ee'}
             selectedClipId={selectedClipId}
@@ -158,7 +152,7 @@ export function ResultatsTopLists({
         ))}
 
         <TopList
-          title="Top final"
+          title={t('Top final')}
           entries={finalTop}
           accentColor="#60a5fa"
           selectedClipId={selectedClipId}

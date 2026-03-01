@@ -2,8 +2,10 @@ import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { useProjectStore } from '@/store/useProjectStore'
 import VideoList from '@/components/project/VideoList'
 import ProgressIndicator from '@/components/project/ProgressIndicator'
+import { useI18n } from '@/i18n'
 
 export default function Sidebar() {
+  const { t } = useI18n()
   const { clips, currentClipIndex, nextClip, previousClip } = useProjectStore()
 
   return (
@@ -22,14 +24,14 @@ export default function Sidebar() {
             className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 text-xs rounded bg-primary-900 text-gray-300 hover:bg-primary-800 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
           >
             <ChevronLeft size={14} />
-            Précédent
+            {t('Précédent')}
           </button>
           <button
             onClick={nextClip}
             disabled={currentClipIndex >= clips.length - 1}
             className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 text-xs rounded bg-primary-900 text-gray-300 hover:bg-primary-800 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
           >
-            Suivant
+            {t('Suivant')}
             <ChevronRight size={14} />
           </button>
         </div>

@@ -1,5 +1,6 @@
 import { ChevronLeft, ChevronRight, Play } from 'lucide-react'
 import type { Clip } from '@/types/project'
+import { useI18n } from '@/i18n'
 
 interface DetachedNotesHeaderProps {
   clip: Clip
@@ -24,9 +25,10 @@ export function DetachedNotesHeader({
   onNavigate,
   onOpenPlayer,
 }: DetachedNotesHeaderProps) {
+  const { t } = useI18n()
   return (
     <>
-      <div className="flex items-center justify-between px-3 py-2 border-b border-gray-700 shrink-0" style={{ background: '#1a1a2e' }}>
+      <div className="flex items-center justify-between px-3 py-2 border-b border-gray-700 shrink-0 bg-surface">
         <button
           onClick={() => onNavigate('prev')}
           disabled={clipIndex === 0}
@@ -37,7 +39,7 @@ export function DetachedNotesHeader({
         <div
           className="text-center min-w-0 flex-1 px-2"
           onDoubleClick={hasVideo ? onOpenPlayer : undefined}
-          title={hasVideo ? 'Double clic pour ouvrir le lecteur' : 'Aucune vidéo liée à cette ligne'}
+          title={hasVideo ? t('Double clic pour ouvrir le lecteur') : t('Aucune vidéo liée à cette ligne')}
         >
           <div className="flex items-center justify-center gap-2 min-w-0 text-[11px] leading-none">
             <button
@@ -48,7 +50,7 @@ export function DetachedNotesHeader({
               }}
               disabled={!hasVideo}
               className="p-0.5 rounded hover:bg-surface-light text-gray-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors shrink-0"
-              title={hasVideo ? 'Ouvrir la vidéo' : 'Vidéo indisponible'}
+              title={hasVideo ? t('Ouvrir la vidéo') : t('Vidéo indisponible')}
             >
               <Play size={13} />
             </button>
@@ -74,8 +76,8 @@ export function DetachedNotesHeader({
       </div>
 
       {!shouldHideTotals && (
-        <div className="flex items-center justify-between px-3 py-1.5 border-b border-gray-700/50 shrink-0" style={{ background: '#12122a' }}>
-          <span className="text-[10px] text-gray-500 uppercase tracking-wider">Score total</span>
+        <div className="flex items-center justify-between px-3 py-1.5 border-b border-gray-700/50 shrink-0 bg-surface-dark">
+          <span className="text-[10px] text-gray-500 uppercase tracking-wider">{t('Score total')}</span>
           <span className="text-sm font-bold text-white">
             {totalScore}
             <span className="text-xs text-gray-400 font-normal">/{totalPoints}</span>

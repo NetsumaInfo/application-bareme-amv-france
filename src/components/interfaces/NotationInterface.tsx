@@ -12,9 +12,11 @@ import { NotationCategoriesAccordion } from '@/components/interfaces/notation/No
 import { NotationNotesFooter } from '@/components/interfaces/notation/NotationNotesFooter'
 import { useNotationCategories } from '@/components/interfaces/notation/useNotationCategories'
 import { useNotationInteractions } from '@/components/interfaces/notation/useNotationInteractions'
-import { isNoteComplete } from '@/utils/scoring'
+import { useI18n } from '@/i18n'
+import { shouldHideResultsUntilAllScored } from '@/utils/resultsVisibility'
 
 export default function NotationInterface() {
+  const { t } = useI18n()
   const { currentBareme, updateCriterion, setCategoryNote, setCriterionNote, setTextNotes, getNoteForClip, getScoreForClip } = useNotationStore()
   const { clips, currentClipIndex, nextClip, previousClip, currentProject, markDirty } = useProjectStore()
   const { hideFinalScore, hideTextNotes, setShowPipVideo, isNotesDetached, shortcutBindings } = useUIStore()
@@ -34,16 +36,12 @@ export default function NotationInterface() {
   const globalTextareaRef = useRef<HTMLTextAreaElement | null>(null)
   const activeNoteFieldRef = useRef<{ kind: 'category' | 'global'; category?: string } | null>(null)
 
-  const allClipsScored = clips.length > 0 && clips.every((clip) => {
-    if (clip.scored) return true
-    if (!currentBareme) return false
-    const clipNote = getNoteForClip(clip.id)
-    return clipNote ? isNoteComplete(clipNote, currentBareme) : false
-  })
-  const hasAnyLinkedVideo = clips.some((clip) => Boolean(clip.filePath))
-  const hideTotalsUntilAllScored = Boolean(currentProject?.settings.hideFinalScoreUntilEnd)
-    && hasAnyLinkedVideo
-    && !allClipsScored
+  const hideTotalsUntilAllScored = shouldHideResultsUntilAllScored(
+    currentProject,
+    clips,
+    currentBareme,
+    getNoteForClip,
+  )
   const hideTotalsSetting = Boolean(currentProject?.settings.hideTotals)
   const shouldHideTotals = hideFinalScore || hideTotalsSetting || hideTotalsUntilAllScored
 
@@ -90,7 +88,7 @@ export default function NotationInterface() {
   if (!currentBareme || !currentClip) {
     return (
       <div className="flex items-center justify-center h-full text-gray-500 text-sm">
-        Selectionnez une video
+        {t('Sélectionnez une vidéo')}
       </div>
     )
   }
@@ -100,15 +98,15 @@ export default function NotationInterface() {
       <div className="flex h-full items-center justify-center text-center px-4">
         <div>
           <ExternalLink size={24} className="mx-auto mb-2 text-primary-400" />
-          <p className="text-sm text-gray-400">Notes detachees</p>
-          <p className="text-xs text-gray-600 mt-1">Editez dans la fenetre externe</p>
+          <p className="text-sm text-gray-400">{t('Notes détachées')}</p>
+          <p className="text-xs text-gray-600 mt-1">{t('Éditez dans la fenêtre externe')}</p>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="flex flex-col w-full h-full text-gray-200" style={{ background: '#0f0f23' }}>
+    <div className="flex flex-col w-full h-full text-gray-200 bg-surface-dark">
       <NotationClipHeader
         clip={currentClip}
         currentClipIndex={currentClipIndex}

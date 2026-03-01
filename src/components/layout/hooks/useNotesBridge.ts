@@ -6,7 +6,7 @@ import { usePlayerStore } from '@/store/usePlayerStore'
 import { useProjectStore } from '@/store/useProjectStore'
 import { useUIStore } from '@/store/useUIStore'
 import { getSortedClipPosition } from '@/utils/clipOrder'
-import { isNoteComplete } from '@/utils/scoring'
+import { shouldHideResultsUntilAllScored } from '@/utils/resultsVisibility'
 
 interface UseNotesBridgeOptions {
   isNotesDetached: boolean
@@ -43,17 +43,13 @@ export function useNotesBridge({
     const sortedPosition = getSortedClipPosition(allClips, idx)
     const bareme = useNotationStore.getState().currentBareme
     const note = clip ? useNotationStore.getState().getNoteForClip(clip.id) : null
-    const allClipsScored = allClips.length > 0 && allClips.every((item) => {
-      if (item.scored) return true
-      if (!bareme) return false
-      const itemNote = useNotationStore.getState().getNoteForClip(item.id)
-      return itemNote ? isNoteComplete(itemNote, bareme) : false
-    })
-    const hasAnyLinkedVideo = allClips.some((item) => Boolean(item.filePath))
     const hideTotalsSetting = Boolean(project?.settings.hideTotals)
-    const hideTotalsUntilAllScored = Boolean(project?.settings.hideFinalScoreUntilEnd)
-      && hasAnyLinkedVideo
-      && !allClipsScored
+    const hideTotalsUntilAllScored = shouldHideResultsUntilAllScored(
+      project,
+      allClips,
+      bareme,
+      (clipId) => useNotationStore.getState().getNoteForClip(clipId),
+    )
     const hideTotals = Boolean(useUIStore.getState().hideFinalScore) || hideTotalsSetting || hideTotalsUntilAllScored
     emit('main:clip-data', {
       clip,

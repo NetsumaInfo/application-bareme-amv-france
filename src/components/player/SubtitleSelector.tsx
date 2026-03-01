@@ -3,8 +3,10 @@ import { createPortal } from 'react-dom'
 import { Subtitles } from 'lucide-react'
 import { usePlayerStore } from '@/store/usePlayerStore'
 import * as tauri from '@/services/tauri'
+import { useI18n } from '@/i18n'
 
 export default function SubtitleSelector() {
+  const { t } = useI18n()
   const { subtitleTracks, currentSubtitleId, setCurrentSubtitleId } = usePlayerStore()
   const [open, setOpen] = useState(false)
   const [menuStyle, setMenuStyle] = useState<{ top: number; left: number; width: number }>({
@@ -86,7 +88,7 @@ export default function SubtitleSelector() {
             currentSubtitleId === null ? 'text-primary-400 font-medium' : 'text-gray-300'
           }`}
         >
-          Pas de sous-titres
+          {t('Pas de sous-titres')}
         </button>
         {subtitleTracks.map((track) => (
           <button
@@ -96,7 +98,7 @@ export default function SubtitleSelector() {
               currentSubtitleId === track.id ? 'text-primary-400 font-medium' : 'text-gray-300'
             }`}
           >
-            {track.title || track.lang || `Piste ${track.id}`}
+            {track.title || track.lang || t('Piste {id}', { id: track.id })}
             {track.codec ? ` (${track.codec})` : ''}
           </button>
         ))}
@@ -121,7 +123,7 @@ export default function SubtitleSelector() {
               : 'text-gray-400 hover:bg-white/20 hover:text-white'
             : 'text-gray-600 cursor-default'
         }`}
-        title={hasTracks ? 'Sous-titres' : 'Pas de sous-titres'}
+        title={hasTracks ? t('Sous-titres') : t('Pas de sous-titres')}
       >
         <Subtitles size={14} />
       </button>

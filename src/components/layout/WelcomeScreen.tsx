@@ -4,6 +4,7 @@ import { useUIStore } from '@/store/useUIStore'
 import * as tauri from '@/services/tauri'
 import { listRecentProjectPaths, rememberRecentProjectPath, setRecentProjectPaths } from '@/services/recentProjects'
 import { loadAndApplyProjectFile } from '@/services/projectSession'
+import { useI18n } from '@/i18n'
 
 interface ProjectListItem {
   name: string
@@ -28,6 +29,7 @@ function parseIsoDate(value: string): number {
 
 export function WelcomeScreen() {
   const { setShowProjectModal, setProjectsFolderPath } = useUIStore()
+  const { t, formatDate } = useI18n()
   const [projects, setProjects] = useState<ProjectListItem[]>([])
   const [folderPath, setFolderPath] = useState<string>('')
   const [loading, setLoading] = useState(true)
@@ -63,7 +65,7 @@ export function WelcomeScreen() {
                 }
               }
               return {
-                name: data.project?.name?.trim() || 'Sans nom',
+                name: data.project?.name?.trim() || t('Sans nom'),
                 judgeName: data.project?.judgeName || data.project?.judge_name || '',
                 updatedAt: data.project?.updatedAt || data.project?.updated_at || '',
                 filePath: path,
@@ -94,7 +96,7 @@ export function WelcomeScreen() {
       }
     }
     loadProjects()
-  }, [setProjectsFolderPath])
+  }, [setProjectsFolderPath, t])
 
   const openProjectFromFile = useCallback(async (filePath: string) => {
     try {
@@ -102,9 +104,9 @@ export function WelcomeScreen() {
       await rememberRecentProjectPath(filePath)
     } catch (error) {
       console.error('Failed to open project:', error)
-      alert("Impossible d'ouvrir ce projet. Il a peut-être été déplacé ou supprimé.")
+      alert(t("Impossible d'ouvrir ce projet. Il a peut-être été déplacé ou supprimé."))
     }
-  }, [])
+  }, [t])
 
   const handleOpenProject = async () => {
     try {
@@ -113,30 +115,16 @@ export function WelcomeScreen() {
       await openProjectFromFile(filePath)
     } catch (error) {
       console.error('Failed to open project:', error)
-      alert(`Erreur lors de l'ouverture: ${error}`)
-    }
-  }
-
-  const formatDate = (iso: string) => {
-    try {
-      return new Date(iso).toLocaleDateString('fr-FR', {
-        day: 'numeric',
-        month: 'short',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-      })
-    } catch {
-      return ''
+      alert(t("Erreur lors de l'ouverture: {error}", { error: String(error) }))
     }
   }
 
   return (
-    <div className="flex-1 flex items-center justify-center">
+    <div className="flex-1 flex items-center justify-center" data-context-scope="welcome">
       <div className="w-full max-w-md px-6">
         <div className="text-center mb-8">
           <h2 className="text-xl font-bold text-white mb-1">AMV Notation</h2>
-          <p className="text-gray-500 text-sm">Outil de notation pour compétitions AMV</p>
+          <p className="text-gray-500 text-sm">{t('Outil de notation pour compétitions AMV')}</p>
         </div>
 
         <div className="flex gap-3 mb-8">
@@ -145,24 +133,24 @@ export function WelcomeScreen() {
             className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-primary-600 hover:bg-primary-500 text-white text-sm font-medium transition-colors"
           >
             <FilePlus size={16} />
-            Nouveau projet
+            {t('Nouveau projet')}
           </button>
           <button
             onClick={handleOpenProject}
             className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-surface hover:bg-surface-light text-gray-300 hover:text-white text-sm font-medium transition-colors border border-gray-700"
           >
             <FolderOpen size={16} />
-            Ouvrir un projet
+            {t('Ouvrir un projet')}
           </button>
         </div>
 
         {loading ? (
-          <div className="text-center text-gray-500 text-sm py-4">Chargement des projets...</div>
+          <div className="text-center text-gray-500 text-sm py-4">{t('Chargement des projets...')}</div>
         ) : projects.length > 0 ? (
           <div>
             <h3 className="flex items-center gap-1.5 text-xs font-medium text-gray-500 uppercase tracking-wider mb-2 px-1">
               <Folder size={12} />
-              Projets
+              {t('Projets')}
             </h3>
             <div className="space-y-1">
               {projects.map((project) => (
@@ -179,7 +167,13 @@ export function WelcomeScreen() {
                           {project.judgeName} —{' '}
                         </span>
                       )}
-                      {formatDate(project.updatedAt)}
+                      {formatDate(project.updatedAt, {
+                        day: 'numeric',
+                        month: 'short',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
                     </div>
                   </div>
                 </button>
@@ -191,7 +185,7 @@ export function WelcomeScreen() {
         {folderPath && (
           <div className="mt-6 text-center">
             <p className="text-[9px] text-gray-600 truncate" title={folderPath}>
-              Dossier : {folderPath}
+              {t('Dossier : {path}', { path: folderPath })}
             </p>
           </div>
         )}

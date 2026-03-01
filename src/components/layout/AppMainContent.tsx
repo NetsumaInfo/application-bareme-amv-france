@@ -4,6 +4,7 @@ import Header from '@/components/layout/Header'
 import { WelcomeScreen } from '@/components/layout/WelcomeScreen'
 import type { Project } from '@/types/project'
 import type { AppTab } from '@/types/notation'
+import { useI18n } from '@/i18n'
 
 const NotationTabContent = lazy(async () => {
   const module = await import('@/components/layout/NotationTabContent')
@@ -14,9 +15,10 @@ const ResultatsInterface = lazy(() => import('@/components/interfaces/ResultatsI
 const ExportInterface = lazy(() => import('@/components/interfaces/ExportInterface'))
 
 function TabLoadingFallback() {
+  const { t } = useI18n()
   return (
     <div className="flex-1 flex items-center justify-center text-xs text-gray-500">
-      Chargement...
+      {t('Chargement...')}
     </div>
   )
 }

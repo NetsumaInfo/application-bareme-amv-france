@@ -12,6 +12,7 @@ import AudioDbMeter from '@/components/player/AudioDbMeter'
 import type { TrackItem } from '@/services/tauri'
 import type { ClipInfo } from '@/components/player/overlay/types'
 import { OverlayTrackSelector } from '@/components/player/overlay/OverlayTrackSelector'
+import { useI18n } from '@/i18n'
 
 interface OverlayUtilityControlsProps {
   controlsRowWidth: number
@@ -68,18 +69,19 @@ export function OverlayUtilityControls({
   onExitFullscreen,
   onToggleFullscreen,
 }: OverlayUtilityControlsProps) {
+  const { t } = useI18n()
   const rootRef = useRef<HTMLDivElement | null>(null)
   const [utilityWidth, setUtilityWidth] = useState(0)
   const subtitleOptions = [
     {
       key: 'none',
-      label: 'Pas de sous-titres',
+      label: t('Pas de sous-titres'),
       active: currentSubtitleId === null,
       onSelect: () => onSelectSubtitle(null),
     },
     ...subtitleTracks.map((track) => ({
       key: track.id,
-      label: `${track.title || track.lang || `Piste ${track.id}`}${track.codec ? ` (${track.codec})` : ''}`,
+      label: `${track.title || track.lang || t('Piste {id}', { id: track.id })}${track.codec ? ` (${track.codec})` : ''}`,
       active: currentSubtitleId === track.id,
       onSelect: () => onSelectSubtitle(track.id),
     })),
@@ -87,7 +89,7 @@ export function OverlayUtilityControls({
 
   const audioOptions = audioTracks.map((track) => ({
     key: track.id,
-    label: track.title || track.lang || `Audio ${track.id}`,
+    label: track.title || track.lang || t('Audio {id}', { id: track.id }),
     active: currentAudioId === track.id,
     onSelect: () => onSelectAudio(track.id),
   }))
@@ -166,7 +168,7 @@ export function OverlayUtilityControls({
         <button
           onClick={iconOnlyAudio ? () => setVolumePanelOpen((prev) => !prev) : onToggleMute}
           className={`${compactControls ? 'p-1.5' : 'p-2.5'} rounded-full hover:bg-white/20 text-white/80 hover:text-white transition-colors shrink-0`}
-          title={isMuted ? 'Activer le son' : 'Couper le son'}
+          title={isMuted ? t('Activer le son') : t('Couper le son')}
         >
           {isMuted || volume === 0 ? <VolumeX size={compactControls ? 16 : 22} /> : <Volume2 size={compactControls ? 16 : 22} />}
         </button>
@@ -177,7 +179,7 @@ export function OverlayUtilityControls({
               <button
                 onClick={onToggleMute}
                 className="p-1.5 rounded-full hover:bg-white/20 text-white/80 hover:text-white transition-colors shrink-0"
-                title={isMuted ? 'Activer le son' : 'Couper le son'}
+                title={isMuted ? t('Activer le son') : t('Couper le son')}
               >
                 {isMuted || volume === 0 ? <VolumeX size={14} /> : <Volume2 size={14} />}
               </button>
@@ -223,8 +225,8 @@ export function OverlayUtilityControls({
       <div className="shrink-0">
         <OverlayTrackSelector
           compactControls={compactControls}
-          buttonTitle="Sous-titres"
-          disabledTitle="Pas de sous-titres"
+          buttonTitle={t('Sous-titres')}
+          disabledTitle={t('Pas de sous-titres')}
           enabled={subtitleTracks.length > 0}
           active={currentSubtitleId !== null}
           icon={<Subtitles size={compactControls ? 16 : 22} />}
@@ -238,8 +240,8 @@ export function OverlayUtilityControls({
       <div className="shrink-0">
         <OverlayTrackSelector
           compactControls={compactControls}
-          buttonTitle="Pistes audio"
-          disabledTitle="Audio unique"
+          buttonTitle={t('Pistes audio')}
+          disabledTitle={t('Audio unique')}
           enabled={audioTracks.length > 1}
           active={currentAudioId !== null && currentAudioId !== audioTracks[0]?.id}
           icon={<Headphones size={compactControls ? 16 : 22} />}
@@ -254,7 +256,7 @@ export function OverlayUtilityControls({
         <button
           onClick={onSetMiniatureFrame}
           className={`${compactControls ? 'p-1.5' : 'p-2.5'} rounded-full hover:bg-white/20 text-white/80 hover:text-white transition-colors shrink-0`}
-          title="Définir la frame miniature"
+          title={t('Définir la frame miniature')}
         >
           <ImagePlus size={compactControls ? 16 : 22} />
         </button>
@@ -263,7 +265,7 @@ export function OverlayUtilityControls({
       <button
         onClick={isPlayerFullscreen ? onExitFullscreen : onToggleFullscreen}
         className={`${compactControls ? 'p-1.5 ml-1' : 'p-2.5 ml-2'} rounded-full hover:bg-white/20 text-white/80 hover:text-white transition-colors shrink-0`}
-        title={isPlayerFullscreen ? 'Quitter le plein ecran (Echap)' : 'Agrandir (F11)'}
+        title={isPlayerFullscreen ? t('Quitter le plein écran (Échap)') : t('Agrandir (F11)')}
       >
         {isPlayerFullscreen
           ? <Minimize2 size={compactControls ? 16 : 22} />

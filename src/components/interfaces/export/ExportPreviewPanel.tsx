@@ -10,6 +10,7 @@ import {
 import { HoverTextTooltip } from '@/components/ui/HoverTextTooltip'
 import { withAlpha } from '@/utils/colors'
 import type { CategoryGroup } from '@/utils/results'
+import { useI18n } from '@/i18n'
 import type {
   ExportJudge,
   ExportMode,
@@ -127,6 +128,7 @@ function ExportTableCard({
   maxTableBodyHeight,
   stickyHeader,
 }: ExportTableCardProps) {
+  const { t } = useI18n()
   const tableBorderColor = isLight ? '#d1d5db' : '#334155'
   const bodyBorderColor = isLight ? '#e5e7eb' : '#334155'
   const rowHeightPx = Math.max(44, Math.round(rowHeight))
@@ -220,7 +222,7 @@ function ExportTableCard({
                   }}
                   rowSpan={tableView === 'detailed' ? 2 : undefined}
                 >
-                  <span className="flex h-full w-full items-center px-3 leading-tight">Clip</span>
+                  <span className="flex h-full w-full items-center px-3 leading-tight">{t('Clip')}</span>
                 </th>
 
                 {tableView === 'detailed'
@@ -264,7 +266,7 @@ function ExportTableCard({
                   rowSpan={tableView === 'detailed' ? 2 : undefined}
                 >
                   <span className={headerContentClass}>
-                    {exportMode === 'individual' ? `Total ${selectedJudgeName || ''}` : 'Total moyen'}
+                    {exportMode === 'individual' ? `${t('Total')} ${selectedJudgeName || ''}` : t('Total moyen')}
                   </span>
                 </th>
 
@@ -315,7 +317,7 @@ function ExportTableCard({
                       color: isLight ? '#6b7280' : '#94a3b8',
                     }}
                   >
-                    Aucune donnée à exporter pour le moment.
+                    {t("Aucune donnée à exporter pour le moment.")}
                   </td>
                 </tr>
               )}
@@ -521,6 +523,7 @@ export function ExportPreviewPanel({
   rowsPerImage,
   formatScore,
 }: ExportPreviewPanelProps) {
+  const { t } = useI18n()
   const isLight = theme === 'light'
   const safeRowsPerImage = clampRowsPerImage(rowsPerImage)
   const safeClipColumnWidth = Math.max(260, Math.round(clipColumnWidth))
@@ -554,7 +557,7 @@ export function ExportPreviewPanel({
     <div className="flex-1 min-h-0 overflow-auto">
       <div className="text-xs text-gray-500 mb-2 flex items-center gap-1.5">
         <Download size={12} />
-        Aperçu exportable
+        {t('Aperçu exportable')}
       </div>
 
       <div className="mx-auto w-full">

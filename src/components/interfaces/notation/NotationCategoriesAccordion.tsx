@@ -6,6 +6,7 @@ import { DetachedCriterionItem } from '@/components/notes/detached/DetachedCrite
 import type { Note } from '@/types/notation'
 import type { Criterion } from '@/types/bareme'
 import type { NotationCategory } from '@/components/interfaces/notation/types'
+import { useI18n } from '@/i18n'
 
 interface NotationCategoriesAccordionProps {
   categories: NotationCategory[]
@@ -58,6 +59,7 @@ export function NotationCategoriesAccordion({
   onMarkDirty,
   getCategoryScore,
 }: NotationCategoriesAccordionProps) {
+  const { t } = useI18n()
   return (
     <div className="flex-1 overflow-y-auto py-1">
       {categories.map(({ category, criteria, color, totalMax }) => {
@@ -116,7 +118,7 @@ export function NotationCategoriesAccordion({
                     if (el) categoryTextareaRefs.current.set(category, el)
                     else categoryTextareaRefs.current.delete(category)
                   }}
-                  placeholder={`Notes "${category}"...`}
+                  placeholder={t('Notes "{name}"...', { name: category })}
                   value={note?.categoryNotes?.[category] ?? ''}
                   onChange={(nextValue) => {
                     onSetCategoryNote(currentClipId, category, nextValue)

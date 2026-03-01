@@ -2,6 +2,7 @@ import { getClipPrimaryLabel, getClipSecondaryLabel } from '@/utils/formatters'
 import { withAlpha } from '@/utils/colors'
 import { getGroupStep } from '@/components/interfaces/resultats/scoreDistribution'
 import type { ResultatsTableProps } from '@/components/interfaces/resultats/types'
+import { useI18n } from '@/i18n'
 
 export function ResultatsTable({
   canSortByScore,
@@ -19,6 +20,7 @@ export function ResultatsTable({
   onCommitDraftCell,
   onClearDraftCell,
 }: ResultatsTableProps) {
+  const { t } = useI18n()
   return (
     <div className="flex-1 overflow-auto rounded-lg border border-gray-700">
       <table className="w-full border-collapse text-xs">
@@ -34,7 +36,7 @@ export function ResultatsTable({
               rowSpan={2}
               className="px-2 py-1.5 text-left text-[10px] font-medium text-gray-500 border-r border-b border-gray-700 min-w-[120px] max-w-[180px] bg-surface-dark sticky left-8 z-20"
             >
-              Clip
+              {t('Clip')}
             </th>
 
             {categoryGroups.map((group) => (
@@ -58,7 +60,7 @@ export function ResultatsTable({
                 colSpan={judges.length + 1}
                 className="px-2 py-1.5 text-center text-[10px] font-bold uppercase tracking-wider border-r border-b border-gray-700 min-w-[90px] bg-surface-dark"
               >
-                Total
+                {t('Total')}
                 <div className="text-gray-500 font-normal">/{currentBaremeTotalPoints}</div>
               </th>
             )}
@@ -92,7 +94,7 @@ export function ResultatsTable({
             ))}
             {canSortByScore && (
               <th className="px-1 py-1 text-center text-[9px] text-gray-500 border-r border-b border-gray-700 bg-surface-dark">
-                Moy.
+                {t('Moy.')}
               </th>
             )}
           </tr>
@@ -160,6 +162,15 @@ export function ResultatsTable({
                           max={group.totalMax}
                           step={step}
                           value={displayed}
+                          onContextMenu={(event) => {
+                            event.preventDefault()
+                            event.stopPropagation()
+                            const width = 225
+                            const height = 170
+                            const x = Math.max(8, Math.min(event.clientX, window.innerWidth - width - 8))
+                            const y = Math.max(8, Math.min(event.clientY, window.innerHeight - height - 8))
+                            onOpenClipContextMenu(row.clip.id, x, y)
+                          }}
                           onChange={(event) => {
                             onSetDraftCell(key, event.target.value)
                           }}

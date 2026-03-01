@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 import { extractTimecodesFromText, type ParsedTimecode } from '@/utils/timecodes'
+import { useI18n } from '@/i18n'
 
 interface HoverPayload {
   item: ParsedTimecode
@@ -23,6 +24,7 @@ export default function InlineTimecodeText({
   onHover,
   onLeave,
 }: InlineTimecodeTextProps) {
+  const { t } = useI18n()
   const timecodes = useMemo(() => extractTimecodesFromText(text), [text])
   const hasTimecodes = timecodes.length > 0
   if (!text.trim() || !hasTimecodes) return null
@@ -65,7 +67,7 @@ export default function InlineTimecodeText({
             onMouseLeave={() => onLeave?.()}
             className="inline font-mono underline underline-offset-2 decoration-dotted decoration-1 hover:brightness-110 transition-colors"
             style={{ color }}
-            title={`Aller à ${segment.item.raw}`}
+            title={t('Aller à {timecode}', { timecode: segment.item.raw })}
           >
             {segment.item.raw}
           </button>

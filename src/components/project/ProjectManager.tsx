@@ -9,8 +9,10 @@ import {
   ChevronDown,
 } from 'lucide-react'
 import { useProjectMenuActions } from '@/components/project/useProjectMenuActions'
+import { useI18n } from '@/i18n'
 
 export default function ProjectManager() {
+  const { t } = useI18n()
   const {
     currentProject,
     handleNewProject,
@@ -27,8 +29,8 @@ export default function ProjectManager() {
 
   const [open, setOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
-  const judgeName = currentProject?.judgeName?.trim() || 'juge'
-  const projectName = currentProject?.name?.trim() || 'Projet'
+  const judgeName = currentProject?.judgeName?.trim() || t('juge')
+  const projectName = currentProject?.name?.trim() || t('Projet')
   const exportJudgeFilename = `${projectName}_${judgeName}.json`
 
   useEffect(() => {
@@ -51,9 +53,9 @@ export default function ProjectManager() {
       <button
         onClick={() => setOpen(!open)}
         className="flex items-center px-2 py-1.5 text-xs rounded hover:bg-surface-light text-gray-300 hover:text-white transition-colors"
-        title="Menu fichier"
+        title={t('Menu fichier')}
       >
-        <span className="hidden sm:inline">Fichier</span>
+        <span className="hidden sm:inline">{t('Fichier')}</span>
         <ChevronDown
           size={10}
           className={`transition-transform ${open ? 'rotate-180' : ''}`}
@@ -62,16 +64,16 @@ export default function ProjectManager() {
 
       {open && (
         <div className="absolute top-full right-0 mt-1 w-52 bg-surface border border-gray-700 rounded-lg shadow-xl z-50 py-1">
-          <SectionLabel>Concours</SectionLabel>
+          <SectionLabel>{t('Concours')}</SectionLabel>
           <MenuItem
             icon={<FilePlus size={13} />}
-            label="Nouveau concours"
+            label={t('Nouveau concours')}
             shortcut="Ctrl+N"
             onClick={() => closeAndRun(handleNewProject)}
           />
           <MenuItem
             icon={<FolderOpen size={13} />}
-            label="Ouvrir..."
+            label={t('Ouvrir...')}
             shortcut="Ctrl+O"
             onClick={() => closeAndRun(handleOpenProject)}
           />
@@ -79,50 +81,50 @@ export default function ProjectManager() {
           {currentProject && (
             <>
               <div className="border-t border-gray-700 my-1" />
-              <SectionLabel>Import vidéo</SectionLabel>
+              <SectionLabel>{t('Import vidéo')}</SectionLabel>
               <MenuItem
                 icon={<FolderPlus size={13} />}
-                label="Importer un dossier..."
+                label={t('Importer un dossier...')}
                 onClick={() => closeAndRun(handleImportFolder)}
               />
               <MenuItem
                 icon={<FolderOpen size={13} />}
-                label="Rattacher vidéos aux lignes..."
+                label={t('Rattacher vidéos aux lignes...')}
                 onClick={() => closeAndRun(handleRelinkOnly)}
               />
               <MenuItem
                 icon={<FilePlus size={13} />}
-                label="Importer des fichiers..."
+                label={t('Importer des fichiers...')}
                 onClick={() => closeAndRun(handleImportFiles)}
               />
               <MenuItem
                 icon={<FolderOpen size={13} />}
-                label="Relocaliser les vidéos..."
+                label={t('Relocaliser les vidéos...')}
                 onClick={() => closeAndRun(handleRelocateVideos)}
               />
               <div className="border-t border-gray-700 my-1" />
-              <SectionLabel>Sauvegarde</SectionLabel>
+              <SectionLabel>{t('Sauvegarde')}</SectionLabel>
               <MenuItem
                 icon={<Save size={13} />}
-                label="Sauvegarder"
+                label={t('Sauvegarder')}
                 shortcut="Ctrl+S"
                 onClick={() => closeAndRun(handleSave)}
               />
               <MenuItem
                 icon={<Save size={13} />}
-                label="Sauvegarder sous..."
+                label={t('Sauvegarder sous...')}
                 onClick={() => closeAndRun(handleSaveAs)}
               />
               <div className="border-t border-gray-700 my-1" />
-              <SectionLabel>Export</SectionLabel>
+              <SectionLabel>{t('Export')}</SectionLabel>
               <MenuItem
                 icon={<FileDown size={13} />}
-                label="Exporter concours (JSON)"
+                label={t('Exporter concours (JSON)')}
                 onClick={() => closeAndRun(handleExport)}
               />
               <MenuItem
                 icon={<FileDown size={13} />}
-                label={`Exporter notation (${exportJudgeFilename})`}
+                label={t('Exporter notation ({filename})', { filename: exportJudgeFilename })}
                 onClick={() => closeAndRun(handleExportJudgeNotes)}
               />
             </>

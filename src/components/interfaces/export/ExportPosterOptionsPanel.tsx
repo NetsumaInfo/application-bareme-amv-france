@@ -1,9 +1,12 @@
 import { useRef } from 'react'
-import { Brush, Copy, ImagePlus, RefreshCw, Type } from 'lucide-react'
+import { ArrowDown, ArrowUp, Brush, Copy, ImagePlus, RefreshCw, Type } from 'lucide-react'
 import { ExportActions } from '@/components/interfaces/export/ExportActions'
 import { COLOR_MEMORY_KEYS } from '@/utils/colorPickerStorage'
 import { ColorSwatchPicker } from '@/components/ui/ColorSwatchPicker'
+import { useI18n } from '@/i18n'
 import type {
+  ExportJsonJudgeOption,
+  ExportJsonMode,
   ExportPosterBlock,
   ExportPosterBlockId,
   ExportPosterFontOption,
@@ -23,6 +26,9 @@ interface ExportPosterOptionsPanelProps {
   selectedSizePreset: string
   posterWidth: number
   posterHeight: number
+  backgroundColor: string | null
+  effectiveBackgroundColor: string
+  backgroundColorPresets: string[]
   backgroundImage: string | null
   backgroundImageSizeLabel: string | null
   backgroundRenderedSizeLabel: string
@@ -39,12 +45,17 @@ interface ExportPosterOptionsPanelProps {
   generatedTopText: string
   exporting: boolean
   copiedTop: boolean
+  jsonExportMode: ExportJsonMode
+  jsonJudgeKey: string
+  jsonJudgeOptions: ExportJsonJudgeOption[]
   onSelectBlock: (id: ExportPosterBlockId) => void
   onPatchBlock: (id: ExportPosterBlockId, patch: Partial<ExportPosterBlock>) => void
   onSetFontSearch: (value: string) => void
   onLoadSystemFonts: () => void
   onUploadBackground: (file: File) => void
   onClearBackground: () => void
+  onSetBackgroundColor: (value: string) => void
+  onResetBackgroundColor: () => void
   onSetPosterWidth: (value: number) => void
   onSetPosterHeight: (value: number) => void
   onSetSizePreset: (value: string) => void
@@ -57,6 +68,8 @@ interface ExportPosterOptionsPanelProps {
   onSetOverlayOpacity: (value: number) => void
   onSetPreviewZoomPct: (value: number) => void
   onSetTopCount: (count: number) => void
+  onSetJsonExportMode: (mode: ExportJsonMode) => void
+  onSetJsonJudgeKey: (judgeKey: string) => void
   onToggleClipNameInTop: () => void
   onToggleScoreInTop: () => void
   onGenerateTopIntoBlock: () => void
@@ -64,6 +77,7 @@ interface ExportPosterOptionsPanelProps {
   onUploadOverlayImage: (file: File) => void
   onSelectOverlayImage: (id: string | null) => void
   onPatchOverlayImage: (id: string, patch: Partial<ExportPosterImageLayer>) => void
+  onReorderOverlayImage: (id: string, direction: 'front' | 'back' | 'forward' | 'backward') => void
   onRemoveOverlayImage: (id: string) => void
   onResetPosterLayout: () => void
   onExportPng: () => void
@@ -91,6 +105,9 @@ export function ExportPosterOptionsPanel({
   selectedSizePreset,
   posterWidth,
   posterHeight,
+  backgroundColor,
+  effectiveBackgroundColor,
+  backgroundColorPresets,
   backgroundImage,
   backgroundImageSizeLabel,
   backgroundRenderedSizeLabel,
@@ -107,12 +124,17 @@ export function ExportPosterOptionsPanel({
   generatedTopText,
   exporting,
   copiedTop,
+  jsonExportMode,
+  jsonJudgeKey,
+  jsonJudgeOptions,
   onSelectBlock,
   onPatchBlock,
   onSetFontSearch,
   onLoadSystemFonts,
   onUploadBackground,
   onClearBackground,
+  onSetBackgroundColor,
+  onResetBackgroundColor,
   onSetPosterWidth,
   onSetPosterHeight,
   onSetSizePreset,
@@ -125,6 +147,8 @@ export function ExportPosterOptionsPanel({
   onSetOverlayOpacity,
   onSetPreviewZoomPct,
   onSetTopCount,
+  onSetJsonExportMode,
+  onSetJsonJudgeKey,
   onToggleClipNameInTop,
   onToggleScoreInTop,
   onGenerateTopIntoBlock,
@@ -132,12 +156,14 @@ export function ExportPosterOptionsPanel({
   onUploadOverlayImage,
   onSelectOverlayImage,
   onPatchOverlayImage,
+  onReorderOverlayImage,
   onRemoveOverlayImage,
   onResetPosterLayout,
   onExportPng,
   onExportPdf,
   onExportJson,
 }: ExportPosterOptionsPanelProps) {
+  const { t } = useI18n()
   const bgFileInputRef = useRef<HTMLInputElement | null>(null)
   const overlayFileInputRef = useRef<HTMLInputElement | null>(null)
   const fallbackBlock = blocks[0]
@@ -148,21 +174,21 @@ export function ExportPosterOptionsPanel({
     <div className="w-full rounded-lg border border-gray-700 bg-surface p-3 overflow-y-auto">
       <h3 className="text-sm font-semibold text-white mb-1 flex items-center gap-1.5">
         <Brush size={14} />
-        Studio Affiche
+        {t('Studio Affiche')}
       </h3>
       <p className="text-[11px] text-gray-500 mb-3">
-        Fond custom, calques images, polices système et export image propre.
+        {t('Fond custom, calques images, polices système et export image propre.')}
       </p>
 
       <div className="space-y-3">
         <section className="rounded-lg border border-gray-700/80 bg-surface-dark/40 p-2.5 space-y-2">
-          <div className="text-[11px] font-semibold text-gray-200">Taille export</div>
+          <div className="text-[11px] font-semibold text-gray-200">{t('Taille export')}</div>
           <select
             value={selectedSizePreset}
             onChange={(event) => onSetSizePreset(event.target.value)}
             className="w-full px-2 py-1.5 rounded border border-gray-700 bg-surface-dark text-xs text-white focus:border-primary-500 focus:outline-none"
           >
-            <option value="custom">Custom</option>
+            <option value="custom">{t('Custom')}</option>
             {SIZE_PRESETS.map((preset) => (
               <option key={preset.value} value={preset.value}>
                 {preset.label}
@@ -171,7 +197,7 @@ export function ExportPosterOptionsPanel({
           </select>
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <label className="block text-[11px] text-gray-400 mb-1">Largeur (px)</label>
+              <label className="block text-[11px] text-gray-400 mb-1">{t('Largeur (px)')}</label>
               <input
                 type="number"
                 min={320}
@@ -182,7 +208,7 @@ export function ExportPosterOptionsPanel({
               />
             </div>
             <div>
-              <label className="block text-[11px] text-gray-400 mb-1">Hauteur (px)</label>
+              <label className="block text-[11px] text-gray-400 mb-1">{t('Hauteur (px)')}</label>
               <input
                 type="number"
                 min={240}
@@ -194,10 +220,10 @@ export function ExportPosterOptionsPanel({
             </div>
           </div>
           <p className="text-[11px] text-gray-400">
-            Taille image export: {posterWidth}x{posterHeight} px
+            {t('Taille image export')}: {posterWidth}x{posterHeight} px
           </p>
           <div>
-            <label className="block text-[11px] text-gray-400 mb-1">Zoom aperçu: {Math.round(previewZoomPct)}%</label>
+            <label className="block text-[11px] text-gray-400 mb-1">{t('Zoom aperçu')}: {Math.round(previewZoomPct)}%</label>
             <input
               type="range"
               min={25}
@@ -212,7 +238,36 @@ export function ExportPosterOptionsPanel({
         <section className="rounded-lg border border-gray-700/80 bg-surface-dark/40 p-2.5 space-y-2">
           <div className="text-[11px] font-semibold text-gray-200 flex items-center gap-1.5">
             <ImagePlus size={12} />
-            Arrière-plan
+            {t('Arrière-plan')}
+          </div>
+          <div>
+            <div className="flex items-center justify-between gap-2 mb-1">
+              <label className="block text-[11px] text-gray-400">{t('Couleur du fond')}</label>
+              <span className="text-[10px] text-gray-500">
+                {backgroundColor ? t('Personnalisée') : t('Couleur du thème')}
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={onResetBackgroundColor}
+                className={`px-2 py-1.5 rounded border text-xs transition-colors ${
+                  !backgroundColor
+                    ? 'border-primary-500 text-primary-300 bg-primary-500/10'
+                    : 'border-gray-700 bg-surface-dark text-gray-200 hover:text-white hover:border-gray-600'
+                }`}
+              >
+                {t('Couleur du thème')}
+              </button>
+              <ColorSwatchPicker
+                value={effectiveBackgroundColor}
+                onChange={onSetBackgroundColor}
+                triggerSize="sm"
+                title={t('Couleur de fond')}
+                presets={backgroundColorPresets}
+                memoryKey={COLOR_MEMORY_KEYS.recentGlobal}
+              />
+            </div>
           </div>
           <input
             ref={bgFileInputRef}
@@ -232,7 +287,7 @@ export function ExportPosterOptionsPanel({
               onClick={() => bgFileInputRef.current?.click()}
               className="px-2 py-1.5 rounded border border-gray-700 bg-surface-dark text-xs text-gray-200 hover:text-white hover:border-gray-600 transition-colors"
             >
-              {backgroundImage ? 'Remplacer image' : 'Choisir image'}
+              {backgroundImage ? t('Remplacer image') : t('Choisir image')}
             </button>
             {backgroundImage && (
               <button
@@ -240,25 +295,25 @@ export function ExportPosterOptionsPanel({
                 onClick={onClearBackground}
                 className="px-2 py-1.5 rounded border border-gray-700 bg-surface-dark text-xs text-red-300 hover:text-red-200 hover:border-red-500/60 transition-colors"
               >
-                Retirer
+                {t('Retirer')}
               </button>
             )}
           </div>
           {backgroundImageSizeLabel && (
             <p className="text-[11px] text-gray-400">
-              Taille image source: {backgroundImageSizeLabel}
+              {t('Taille image source')}: {backgroundImageSizeLabel}
             </p>
           )}
           {backgroundImage && (
             <p className="text-[11px] text-gray-400">
-              Taille du fond sur l'affiche: {backgroundRenderedSizeLabel}
+              {t("Taille du fond sur l'affiche")}: {backgroundRenderedSizeLabel}
             </p>
           )}
           {backgroundImage && (
             <div className="grid grid-cols-2 gap-2">
               <div>
                 <label className="block text-[11px] text-gray-400 mb-1">
-                  Largeur fond (px)
+                  {t('Largeur fond (px)')}
                 </label>
                 <input
                   type="number"
@@ -275,7 +330,7 @@ export function ExportPosterOptionsPanel({
               </div>
               <div>
                 <label className="block text-[11px] text-gray-400 mb-1">
-                  Hauteur fond (px)
+                  {t('Hauteur fond (px)')}
                 </label>
                 <input
                   type="number"
@@ -302,15 +357,15 @@ export function ExportPosterOptionsPanel({
                 : 'border-gray-700 text-gray-200 bg-surface-dark hover:text-white hover:border-gray-600'
             }`}
           >
-            {backgroundDragEnabled ? 'Déplacement du fond: actif' : 'Déplacer le fond (drag)'}
+            {backgroundDragEnabled ? t('Déplacement du fond: actif') : t('Déplacer le fond (drag)')}
           </button>
           <p className="text-[11px] text-gray-400">
             {backgroundImage
-              ? 'Clique et glisse dans l’aperçu pour repositionner le fond.'
-              : 'Ajoute une image de fond pour activer le déplacement.'}
+              ? t('Clique et glisse dans l’aperçu pour repositionner le fond.')
+              : t('Ajoute une image de fond pour activer le déplacement.')}
           </p>
           <div>
-            <label className="block text-[11px] text-gray-400 mb-1">Position X: {Math.round(backgroundPositionXPct)}%</label>
+            <label className="block text-[11px] text-gray-400 mb-1">{t('Position X')}: {Math.round(backgroundPositionXPct)}%</label>
             <input
               type="range"
               min={0}
@@ -321,7 +376,7 @@ export function ExportPosterOptionsPanel({
             />
           </div>
           <div>
-            <label className="block text-[11px] text-gray-400 mb-1">Position Y: {Math.round(backgroundPositionYPct)}%</label>
+            <label className="block text-[11px] text-gray-400 mb-1">{t('Position Y')}: {Math.round(backgroundPositionYPct)}%</label>
             <input
               type="range"
               min={0}
@@ -333,7 +388,7 @@ export function ExportPosterOptionsPanel({
           </div>
           <div>
             <label className="block text-[11px] text-gray-400 mb-1">
-              Zoom fond global: {Math.round((backgroundScaleXPct + backgroundScaleYPct) / 2)}%
+              {t('Zoom fond global')}: {Math.round((backgroundScaleXPct + backgroundScaleYPct) / 2)}%
             </label>
             <input
               type="range"
@@ -345,7 +400,7 @@ export function ExportPosterOptionsPanel({
             />
           </div>
           <div>
-            <label className="block text-[11px] text-gray-400 mb-1">Largeur fond: {Math.round(backgroundScaleXPct)}%</label>
+            <label className="block text-[11px] text-gray-400 mb-1">{t('Largeur fond')}: {Math.round(backgroundScaleXPct)}%</label>
             <input
               type="range"
               min={20}
@@ -356,7 +411,7 @@ export function ExportPosterOptionsPanel({
             />
           </div>
           <div>
-            <label className="block text-[11px] text-gray-400 mb-1">Hauteur fond: {Math.round(backgroundScaleYPct)}%</label>
+            <label className="block text-[11px] text-gray-400 mb-1">{t('Hauteur fond')}: {Math.round(backgroundScaleYPct)}%</label>
             <input
               type="range"
               min={20}
@@ -367,7 +422,7 @@ export function ExportPosterOptionsPanel({
             />
           </div>
           <div>
-            <label className="block text-[11px] text-gray-400 mb-1">Opacité du voile: {overlayOpacity}%</label>
+            <label className="block text-[11px] text-gray-400 mb-1">{t('Opacité du voile')}: {overlayOpacity}%</label>
             <input
               type="range"
               min={0}
@@ -381,7 +436,7 @@ export function ExportPosterOptionsPanel({
         </section>
 
         <section className="rounded-lg border border-gray-700/80 bg-surface-dark/40 p-2.5 space-y-2">
-          <div className="text-[11px] font-semibold text-gray-200">Images superposées</div>
+          <div className="text-[11px] font-semibold text-gray-200">{t('Images superposées')}</div>
           <input
             ref={overlayFileInputRef}
             type="file"
@@ -400,7 +455,7 @@ export function ExportPosterOptionsPanel({
               onClick={() => overlayFileInputRef.current?.click()}
               className="px-2 py-1.5 rounded border border-gray-700 bg-surface-dark text-xs text-gray-200 hover:text-white hover:border-gray-600 transition-colors"
             >
-              Ajouter image
+              {t('Ajouter image')}
             </button>
             {activeImage && (
               <button
@@ -408,7 +463,7 @@ export function ExportPosterOptionsPanel({
                 onClick={() => onRemoveOverlayImage(activeImage.id)}
                 className="px-2 py-1.5 rounded border border-gray-700 bg-surface-dark text-xs text-red-300 hover:text-red-200 hover:border-red-500/60 transition-colors"
               >
-                Supprimer image
+                {t('Supprimer image')}
               </button>
             )}
           </div>
@@ -433,18 +488,58 @@ export function ExportPosterOptionsPanel({
                       checked={activeImage.visible}
                       onChange={() => onPatchOverlayImage(activeImage.id, { visible: !activeImage.visible })}
                     />
-                    Afficher cette image
+                    {t('Afficher cette image')}
                   </label>
                   <p className="text-[11px] text-gray-400">
-                    Déplacement: glisser dans l’aperçu ou ajuster avec les curseurs.
+                    {t('Déplacement: glisser dans l’aperçu ou ajuster avec les curseurs.')}
                   </p>
                   {activeImageSizeLabel && (
                     <p className="text-[11px] text-gray-400">
-                      Taille image: {activeImageSizeLabel}
+                      {t('Taille image')}: {activeImageSizeLabel}
                     </p>
                   )}
+                  <div className="space-y-1">
+                    <div className="text-[11px] text-gray-400">
+                      {t('Ordre du calque')}: {images
+                        .slice()
+                        .sort((a, b) => a.zIndex - b.zIndex)
+                        .findIndex((image) => image.id === activeImage.id) + 1}/{images.length}
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => onReorderOverlayImage(activeImage.id, 'front')}
+                        className="px-2 py-1.5 rounded border border-gray-700 bg-surface-dark text-xs text-gray-200 hover:text-white hover:border-gray-600 transition-colors"
+                      >
+                        {t('Tout devant')}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => onReorderOverlayImage(activeImage.id, 'back')}
+                        className="px-2 py-1.5 rounded border border-gray-700 bg-surface-dark text-xs text-gray-200 hover:text-white hover:border-gray-600 transition-colors"
+                      >
+                        {t('Tout derrière')}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => onReorderOverlayImage(activeImage.id, 'forward')}
+                        className="inline-flex items-center justify-center gap-1 px-2 py-1.5 rounded border border-gray-700 bg-surface-dark text-xs text-gray-200 hover:text-white hover:border-gray-600 transition-colors"
+                      >
+                        <ArrowUp size={12} />
+                        {t('Devant')}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => onReorderOverlayImage(activeImage.id, 'backward')}
+                        className="inline-flex items-center justify-center gap-1 px-2 py-1.5 rounded border border-gray-700 bg-surface-dark text-xs text-gray-200 hover:text-white hover:border-gray-600 transition-colors"
+                      >
+                        <ArrowDown size={12} />
+                        {t('Derrière')}
+                      </button>
+                    </div>
+                  </div>
                   <div>
-                    <label className="block text-[11px] text-gray-400 mb-1">Position X: {Math.round(activeImage.xPct)}%</label>
+                    <label className="block text-[11px] text-gray-400 mb-1">{t('Position X')}: {Math.round(activeImage.xPct)}%</label>
                     <input
                       type="range"
                       min={0}
@@ -455,7 +550,7 @@ export function ExportPosterOptionsPanel({
                     />
                   </div>
                   <div>
-                    <label className="block text-[11px] text-gray-400 mb-1">Position Y: {Math.round(activeImage.yPct)}%</label>
+                    <label className="block text-[11px] text-gray-400 mb-1">{t('Position Y')}: {Math.round(activeImage.yPct)}%</label>
                     <input
                       type="range"
                       min={0}
@@ -466,7 +561,7 @@ export function ExportPosterOptionsPanel({
                     />
                   </div>
                   <div>
-                    <label className="block text-[11px] text-gray-400 mb-1">Taille: {Math.round(activeImage.widthPct)}%</label>
+                    <label className="block text-[11px] text-gray-400 mb-1">{t('Taille')}: {Math.round(activeImage.widthPct)}%</label>
                     <input
                       type="range"
                       min={4}
@@ -477,7 +572,7 @@ export function ExportPosterOptionsPanel({
                     />
                   </div>
                   <div>
-                    <label className="block text-[11px] text-gray-400 mb-1">Opacité: {Math.round(activeImage.opacity)}%</label>
+                    <label className="block text-[11px] text-gray-400 mb-1">{t('Opacité')}: {Math.round(activeImage.opacity)}%</label>
                     <input
                       type="range"
                       min={0}
@@ -488,7 +583,7 @@ export function ExportPosterOptionsPanel({
                     />
                   </div>
                   <div>
-                    <label className="block text-[11px] text-gray-400 mb-1">Rotation: {Math.round(activeImage.rotationDeg)}°</label>
+                    <label className="block text-[11px] text-gray-400 mb-1">{t('Rotation')}: {Math.round(activeImage.rotationDeg)}°</label>
                     <input
                       type="range"
                       min={-180}
@@ -507,11 +602,11 @@ export function ExportPosterOptionsPanel({
         <section className="rounded-lg border border-gray-700/80 bg-surface-dark/40 p-2.5 space-y-2">
           <div className="text-[11px] font-semibold text-gray-200 flex items-center gap-1.5">
             <Copy size={12} />
-            Générateur Top
+            {t('Générateur Top')}
           </div>
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <label className="block text-[11px] text-gray-400 mb-1">Nombre de places</label>
+              <label className="block text-[11px] text-gray-400 mb-1">{t('Nombre de places')}</label>
               <input
                 type="number"
                 min={1}
@@ -522,19 +617,19 @@ export function ExportPosterOptionsPanel({
               />
             </div>
             <div className="space-y-1">
-              <label className="block text-[11px] text-gray-400 mb-1">Inclure</label>
+              <label className="block text-[11px] text-gray-400 mb-1">{t('Inclure')}</label>
               <label className="flex items-center gap-1.5 text-[11px] text-gray-300">
                 <input type="checkbox" checked={includeClipNameInTop} onChange={onToggleClipNameInTop} />
-                Nom du clip
+                {t('Nom du clip')}
               </label>
               <label className="flex items-center gap-1.5 text-[11px] text-gray-300">
                 <input type="checkbox" checked={includeScoreInTop} onChange={onToggleScoreInTop} />
-                Score
+                {t('Score')}
               </label>
             </div>
           </div>
           <div className="rounded border border-gray-700 bg-surface-dark px-2 py-1.5 text-[11px] text-gray-300 whitespace-pre-wrap max-h-28 overflow-auto">
-            {generatedTopText || 'Aucune ligne de top disponible.'}
+            {generatedTopText || t('Aucune ligne de top disponible.')}
           </div>
           <div className="flex gap-2">
             <button
@@ -542,14 +637,14 @@ export function ExportPosterOptionsPanel({
               onClick={onGenerateTopIntoBlock}
               className="px-2 py-1.5 rounded border border-gray-700 bg-surface-dark text-xs text-gray-200 hover:text-white hover:border-gray-600 transition-colors"
             >
-              Mettre dans bloc TOP
+              {t('Mettre dans bloc TOP')}
             </button>
             <button
               type="button"
               onClick={onCopyTop}
               className="px-2 py-1.5 rounded border border-primary-600/50 bg-primary-600/10 text-xs text-primary-300 hover:text-primary-200 transition-colors"
             >
-              {copiedTop ? 'Copié' : 'Copier 1. ...'}
+              {copiedTop ? t('Copié') : t('Copier 1. ...')}
             </button>
           </div>
         </section>
@@ -558,10 +653,10 @@ export function ExportPosterOptionsPanel({
           <section className="rounded-lg border border-gray-700/80 bg-surface-dark/40 p-2.5 space-y-2">
             <div className="text-[11px] font-semibold text-gray-200 flex items-center gap-1.5">
               <Type size={12} />
-              Texte: {activeBlock.label}
+              {t('Texte')}: {activeBlock.label}
             </div>
             <div>
-              <label className="block text-[11px] text-gray-400 mb-1">Bloc actif</label>
+              <label className="block text-[11px] text-gray-400 mb-1">{t('Bloc actif')}</label>
               <select
                 value={activeBlock.id}
                 onChange={(event) => onSelectBlock(event.target.value as ExportPosterBlockId)}
@@ -580,10 +675,10 @@ export function ExportPosterOptionsPanel({
                 checked={activeBlock.visible}
                 onChange={() => onPatchBlock(activeBlock.id, { visible: !activeBlock.visible })}
               />
-              Afficher ce bloc
+              {t('Afficher ce bloc')}
             </label>
             <div>
-              <label className="block text-[11px] text-gray-400 mb-1">Texte</label>
+              <label className="block text-[11px] text-gray-400 mb-1">{t('Texte')}</label>
               <textarea
                 value={activeBlock.text}
                 onChange={(event) => onPatchBlock(activeBlock.id, { text: event.target.value })}
@@ -592,12 +687,12 @@ export function ExportPosterOptionsPanel({
               />
             </div>
             <div>
-              <label className="block text-[11px] text-gray-400 mb-1">Recherche police</label>
+              <label className="block text-[11px] text-gray-400 mb-1">{t('Recherche police')}</label>
               <input
                 value={fontSearch}
                 onChange={(event) => onSetFontSearch(event.target.value)}
                 className="w-full px-2 py-1.5 rounded border border-gray-700 bg-surface-dark text-xs text-white focus:border-primary-500 focus:outline-none"
-                placeholder="Tape le nom d'une police..."
+                placeholder={t("Tape le nom d'une police...")}
               />
             </div>
             <div className="flex gap-2">
@@ -607,14 +702,14 @@ export function ExportPosterOptionsPanel({
                 className="px-2 py-1.5 rounded border border-gray-700 bg-surface-dark text-xs text-gray-200 hover:text-white hover:border-gray-600 transition-colors disabled:opacity-60"
                 disabled={loadingSystemFonts}
               >
-                {loadingSystemFonts ? 'Scan polices...' : 'Scanner polices système'}
+                {loadingSystemFonts ? t('Scan polices...') : t('Scanner polices système')}
               </button>
               {fontLoadMessage && (
                 <div className="text-[11px] text-gray-400 self-center">{fontLoadMessage}</div>
               )}
             </div>
             <div>
-              <label className="block text-[11px] text-gray-400 mb-1">Police</label>
+              <label className="block text-[11px] text-gray-400 mb-1">{t('Police')}</label>
               <select
                 value={activeBlock.fontFamily}
                 onChange={(event) => onPatchBlock(activeBlock.id, { fontFamily: event.target.value })}
@@ -628,19 +723,19 @@ export function ExportPosterOptionsPanel({
               </select>
             </div>
             <div>
-              <label className="block text-[11px] text-gray-400 mb-1">Police manuelle</label>
+              <label className="block text-[11px] text-gray-400 mb-1">{t('Police manuelle')}</label>
               <input
                 value={activeBlock.fontFamily}
                 onChange={(event) => onPatchBlock(activeBlock.id, { fontFamily: event.target.value })}
                 className="w-full px-2 py-1.5 rounded border border-gray-700 bg-surface-dark text-xs text-white focus:border-primary-500 focus:outline-none"
-                placeholder='"Nom Police", sans-serif'
+                placeholder={t('"Nom Police", sans-serif')}
               />
             </div>
             <div className="rounded border border-gray-700/70 bg-surface-dark/40 p-2 space-y-2">
-              <div className="text-[11px] font-medium text-gray-300">Typographie</div>
+              <div className="text-[11px] font-medium text-gray-300">{t('Typographie')}</div>
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="block text-[11px] text-gray-400 mb-1">Poids</label>
+                  <label className="block text-[11px] text-gray-400 mb-1">{t('Poids')}</label>
                   <select
                     value={activeBlock.fontWeight}
                     onChange={(event) => onPatchBlock(activeBlock.id, { fontWeight: Number(event.target.value) as ExportPosterBlock['fontWeight'] })}
@@ -655,7 +750,7 @@ export function ExportPosterOptionsPanel({
                   </select>
                 </div>
                 <div>
-                  <label className="block text-[11px] text-gray-400 mb-1">Taille: {activeBlock.fontSize}px</label>
+                  <label className="block text-[11px] text-gray-400 mb-1">{t('Taille : {value}px', { value: activeBlock.fontSize })}</label>
                   <input
                     type="range"
                     min={12}
@@ -668,9 +763,9 @@ export function ExportPosterOptionsPanel({
               </div>
             </div>
             <div className="rounded border border-gray-700/70 bg-surface-dark/40 p-2 space-y-2">
-              <div className="text-[11px] font-medium text-gray-300">Disposition</div>
+              <div className="text-[11px] font-medium text-gray-300">{t('Disposition')}</div>
               <div>
-                <label className="block text-[11px] text-gray-400 mb-1">Largeur: {activeBlock.widthPct}%</label>
+                <label className="block text-[11px] text-gray-400 mb-1">{t('Largeur : {value}%', { value: activeBlock.widthPct })}</label>
                 <input
                   type="range"
                   min={20}
@@ -682,7 +777,7 @@ export function ExportPosterOptionsPanel({
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="block text-[11px] text-gray-400 mb-1">Position X: {Math.round(activeBlock.xPct)}%</label>
+                  <label className="block text-[11px] text-gray-400 mb-1">{t('Position X : {value}%', { value: Math.round(activeBlock.xPct) })}</label>
                   <input
                     type="range"
                     min={0}
@@ -693,7 +788,7 @@ export function ExportPosterOptionsPanel({
                   />
                 </div>
                 <div>
-                  <label className="block text-[11px] text-gray-400 mb-1">Position Y: {Math.round(activeBlock.yPct)}%</label>
+                  <label className="block text-[11px] text-gray-400 mb-1">{t('Position Y : {value}%', { value: Math.round(activeBlock.yPct) })}</label>
                   <input
                     type="range"
                     min={0}
@@ -705,7 +800,7 @@ export function ExportPosterOptionsPanel({
                 </div>
               </div>
               <div>
-                <label className="block text-[11px] text-gray-400 mb-1">Alignement</label>
+                <label className="block text-[11px] text-gray-400 mb-1">{t('Alignement')}</label>
                 <div className="grid grid-cols-3 gap-2">
                   <button
                     type="button"
@@ -716,7 +811,7 @@ export function ExportPosterOptionsPanel({
                         : 'border-gray-700 text-gray-300 hover:text-white hover:border-gray-600'
                     } transition-colors`}
                   >
-                    Gauche
+                    {t('Gauche')}
                   </button>
                   <button
                     type="button"
@@ -727,7 +822,7 @@ export function ExportPosterOptionsPanel({
                         : 'border-gray-700 text-gray-300 hover:text-white hover:border-gray-600'
                     } transition-colors`}
                   >
-                    Centre
+                    {t('Centre')}
                   </button>
                   <button
                     type="button"
@@ -738,44 +833,44 @@ export function ExportPosterOptionsPanel({
                         : 'border-gray-700 text-gray-300 hover:text-white hover:border-gray-600'
                     } transition-colors`}
                   >
-                    Droite
+                    {t('Droite')}
                   </button>
                 </div>
               </div>
             </div>
             <div className="rounded border border-gray-700/70 bg-surface-dark/40 p-2 space-y-2">
-              <div className="text-[11px] font-medium text-gray-300">Style</div>
+              <div className="text-[11px] font-medium text-gray-300">{t('Style')}</div>
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="block text-[11px] text-gray-400 mb-1">Couleur du texte</label>
+                  <label className="block text-[11px] text-gray-400 mb-1">{t('Couleur du texte')}</label>
                   <ColorSwatchPicker
                     value={activeBlock.color}
                     onChange={(color) => onPatchBlock(activeBlock.id, { color })}
-                    title="Couleur du bloc"
+                    title={t('Couleur du bloc')}
                     memoryKey={COLOR_MEMORY_KEYS.recentGlobal}
                   />
                 </div>
                 <div>
-                  <label className="block text-[11px] text-gray-400 mb-1">Ombre</label>
+                  <label className="block text-[11px] text-gray-400 mb-1">{t('Ombre')}</label>
                   <select
                     value={activeBlock.shadowStyle}
                     onChange={(event) => onPatchBlock(activeBlock.id, { shadowStyle: event.target.value as ExportPosterBlock['shadowStyle'] })}
                     className="w-full px-2 py-1.5 rounded border border-gray-700 bg-surface-dark text-xs text-white focus:border-primary-500 focus:outline-none"
                   >
-                    <option value="none">Aucune</option>
-                    <option value="soft">Douce</option>
-                    <option value="strong">Forte</option>
-                    <option value="outline">Contour</option>
-                    <option value="glow">Glow</option>
+                    <option value="none">{t('Aucune')}</option>
+                    <option value="soft">{t('Douce')}</option>
+                    <option value="strong">{t('Forte')}</option>
+                    <option value="outline">{t('Contour')}</option>
+                    <option value="glow">{t('Glow')}</option>
                   </select>
                 </div>
               </div>
               <div>
-                <label className="block text-[11px] text-gray-400 mb-1">Couleur ombre / contour / glow</label>
+                <label className="block text-[11px] text-gray-400 mb-1">{t('Couleur ombre / contour / glow')}</label>
                 <ColorSwatchPicker
                   value={activeBlock.shadowColor || '#000000'}
                   onChange={(shadowColor) => onPatchBlock(activeBlock.id, { shadowColor })}
-                  title="Couleur de l'ombre"
+                  title={t("Couleur de l'ombre")}
                   memoryKey={COLOR_MEMORY_KEYS.recentGlobal}
                 />
               </div>
@@ -789,12 +884,17 @@ export function ExportPosterOptionsPanel({
           className="w-full rounded border border-gray-700 bg-surface-dark px-2 py-1.5 text-xs text-gray-300 hover:text-white hover:border-gray-600 transition-colors flex items-center justify-center gap-1.5"
         >
           <RefreshCw size={12} />
-          Réinitialiser la mise en page affiche
+          {t('Réinitialiser la mise en page affiche')}
         </button>
       </div>
 
       <ExportActions
         exporting={exporting}
+        jsonExportMode={jsonExportMode}
+        jsonJudgeKey={jsonJudgeKey}
+        jsonJudgeOptions={jsonJudgeOptions}
+        onSetJsonExportMode={onSetJsonExportMode}
+        onSetJsonJudgeKey={onSetJsonJudgeKey}
         onExportPng={onExportPng}
         onExportPdf={onExportPdf}
         onExportJson={onExportJson}

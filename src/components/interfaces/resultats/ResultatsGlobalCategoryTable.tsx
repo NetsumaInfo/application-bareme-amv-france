@@ -3,6 +3,7 @@ import { withAlpha } from '@/utils/colors'
 import { hasAnyCriterionScore, type CategoryGroup, type JudgeSource, type NoteLike } from '@/utils/results'
 import type { ResultatsRow } from '@/components/interfaces/resultats/types'
 import { ClipMiniaturePreview } from '@/components/interfaces/spreadsheet/miniaturePreview'
+import { useI18n } from '@/i18n'
 
 interface ResultatsGlobalCategoryTableProps {
   currentBaremeTotalPoints: number
@@ -37,6 +38,7 @@ export function ResultatsGlobalCategoryTable({
   showMiniatures,
   thumbnailDefaultSeconds,
 }: ResultatsGlobalCategoryTableProps) {
+  const { t } = useI18n()
   const judgeBandMinWidth = Math.max(220, (judges.length + 1) * 76)
 
   return (
@@ -54,7 +56,7 @@ export function ResultatsGlobalCategoryTable({
               rowSpan={2}
               className="px-1.5 py-1.5 text-left text-[10px] font-medium text-gray-500 border-r border-b border-gray-700 min-w-[104px] max-w-[152px] bg-surface-dark sticky left-8 z-20"
             >
-              Clip
+              {t('Clip')}
             </th>
             {categoryGroups.map((group) => (
               <th
@@ -73,7 +75,7 @@ export function ResultatsGlobalCategoryTable({
               </th>
             ))}
             <th className="px-2 py-1.5 text-center text-[10px] font-bold uppercase tracking-wider border-r border-b border-gray-700 min-w-[100px] bg-surface-dark">
-              Total final
+              {t('Total final')}
               <div className="text-gray-500 font-normal">/{currentBaremeTotalPoints}</div>
             </th>
           </tr>
@@ -102,12 +104,12 @@ export function ResultatsGlobalCategoryTable({
                       {judge.judgeName}
                     </div>
                   ))}
-                  <div className="px-2 py-1 text-center text-[9px] text-gray-500 bg-surface-dark">Moy.</div>
+                  <div className="px-2 py-1 text-center text-[9px] text-gray-500 bg-surface-dark">{t('Moy.')}</div>
                 </div>
               </th>
             ))}
             <th className="px-2 py-1 text-center text-[9px] text-gray-500 border-r border-b border-gray-700 bg-surface-dark">
-              Moy.
+              {t('Moy.')}
             </th>
           </tr>
         </thead>

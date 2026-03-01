@@ -1,4 +1,5 @@
 import { ArrowDown, ArrowUp } from 'lucide-react'
+import { useI18n } from '@/i18n'
 import { CATEGORY_COLOR_PRESETS, sanitizeColor, withAlpha } from '@/utils/colors'
 
 interface BaremeEditCategoriesSummaryProps {
@@ -18,6 +19,8 @@ export function BaremeEditCategoriesSummary({
   getCategoryColor,
   onMoveCategory,
 }: BaremeEditCategoriesSummaryProps) {
+  const { t } = useI18n()
+
   return (
     <>
       <div className="flex flex-wrap gap-2">
@@ -39,7 +42,11 @@ export function BaremeEditCategoriesSummary({
                 color,
               }}
             >
-              {category}: {stat.count} crit. • /{stat.total}
+              {t('{category}: {count} crit. • /{total}', {
+                category,
+                count: stat.count,
+                total: stat.total,
+              })}
             </span>
           )
         })}
@@ -47,7 +54,7 @@ export function BaremeEditCategoriesSummary({
 
       {categoryOrder.length > 1 ? (
         <div className="rounded-lg border border-gray-700 bg-surface-dark/40 px-3 py-2">
-          <div className="text-[11px] text-gray-400 mb-2">Ordre des catégories</div>
+          <div className="text-[11px] text-gray-400 mb-2">{t('Ordre des catégories')}</div>
           <div className="flex flex-wrap gap-2">
             {categoryOrder.map((category, index) => {
               const color = getCategoryColor(category)
@@ -70,7 +77,7 @@ export function BaremeEditCategoriesSummary({
                         onClick={() => onMoveCategory(category, 'up')}
                         disabled={index === 0}
                         className="p-0.5 rounded text-gray-400 hover:text-white hover:bg-surface transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-                        title={`Monter ${category}`}
+                        title={t('Monter {category}', { category })}
                       >
                         <ArrowUp size={12} />
                       </button>
@@ -79,7 +86,7 @@ export function BaremeEditCategoriesSummary({
                         onClick={() => onMoveCategory(category, 'down')}
                         disabled={index >= categoryOrder.length - 1}
                         className="p-0.5 rounded text-gray-400 hover:text-white hover:bg-surface transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-                        title={`Descendre ${category}`}
+                        title={t('Descendre {category}', { category })}
                       >
                         <ArrowDown size={12} />
                       </button>

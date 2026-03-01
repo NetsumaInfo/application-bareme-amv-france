@@ -6,6 +6,7 @@ import {
   createManualClip,
   parseManualClipLine,
 } from '@/utils/clipImport'
+import { useI18n } from '@/i18n'
 import type { Clip, ProjectSettings } from '@/types/project'
 
 interface UseSpreadsheetManualClipsParams {
@@ -29,6 +30,7 @@ export function useSpreadsheetManualClips({
   removeClip,
   updateSettings,
 }: UseSpreadsheetManualClipsParams) {
+  const { t } = useI18n()
   const [showNoVideoTableModal, setShowNoVideoTableModal] = useState(false)
   const [noVideoTableAccepted, setNoVideoTableAccepted] = useState(false)
   const [noVideoTableInput, setNoVideoTableInput] = useState('')
@@ -145,7 +147,7 @@ export function useSpreadsheetManualClips({
     const latestClips = useProjectStore.getState().clips
     const duplicate = latestClips.find((clip) => clip.id !== clipId && clip.filePath === targetPath)
     if (duplicate) {
-      alert('Cette vidéo est déjà liée à une autre ligne.')
+      alert(t('Cette vidéo est déjà liée à une autre ligne.'))
       return
     }
 
@@ -167,7 +169,7 @@ export function useSpreadsheetManualClips({
     setClips(next)
     markDirty()
     setEditingManualClipId(null)
-  }, [markDirty, normalizeManualLabel, setClips])
+  }, [markDirty, normalizeManualLabel, setClips, t])
 
   const resetNoVideoTableModal = useCallback(() => {
     setShowNoVideoTableModal(false)

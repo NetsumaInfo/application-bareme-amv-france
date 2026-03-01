@@ -5,12 +5,14 @@ import { useProjectStore } from '@/store/useProjectStore'
 import { usePlayerStore } from '@/store/usePlayerStore'
 import * as tauri from '@/services/tauri'
 import { getClipPrimaryLabel, getClipSecondaryLabel } from '@/utils/formatters'
+import { useI18n } from '@/i18n'
 
 interface VideoPlayerProps {
   compact?: boolean
 }
 
 export default function VideoPlayer({ compact }: VideoPlayerProps) {
+  const { t } = useI18n()
   const containerRef = useRef<HTMLDivElement>(null)
   const { clips, currentClipIndex } = useProjectStore()
   const currentClip = clips[currentClipIndex]
@@ -140,14 +142,14 @@ export default function VideoPlayer({ compact }: VideoPlayerProps) {
         {!currentClip && (
           <div className="text-center p-3">
             <Film size={compact ? 18 : 24} className="mx-auto mb-1.5 text-gray-600" />
-            <p className="text-gray-500 text-[11px]">Sélectionnez un clip</p>
+            <p className="text-gray-500 text-[11px]">{t('Sélectionnez un clip')}</p>
           </div>
         )}
         {currentClip && !currentClip.filePath && (
           <div className="text-center p-4">
             <AlertTriangle size={compact ? 18 : 24} className="mx-auto mb-2 text-amber-400" />
-            <p className="text-gray-200 text-xs font-medium">Aucune vidéo liée</p>
-            <p className="text-gray-500 text-[11px] mt-1">Ce clip n’a pas de média associé.</p>
+            <p className="text-gray-200 text-xs font-medium">{t('Aucune vidéo liée')}</p>
+            <p className="text-gray-500 text-[11px] mt-1">{t("Ce clip n’a pas de média associé.")}</p>
           </div>
         )}
       </div>

@@ -1,5 +1,6 @@
 import { X } from 'lucide-react'
 import type { ClipInfo } from '@/components/player/overlay/types'
+import { useI18n } from '@/i18n'
 
 interface OverlayTopBarProps {
   clipInfo: ClipInfo
@@ -16,6 +17,7 @@ export function OverlayTopBar({
   isPlayerFullscreen,
   onClose,
 }: OverlayTopBarProps) {
+  const { t } = useI18n()
   return (
     <div
       className={`absolute top-0 left-0 right-0 ${compactControls ? 'px-3 py-2' : 'px-6 py-4'} ${
@@ -33,14 +35,14 @@ export function OverlayTopBar({
           </p>
           {clipInfo.total > 0 && (
             <p className={`${compactControls ? 'text-xs' : 'text-sm'} text-gray-300 drop-shadow`}>
-              Clip {clipInfo.index + 1} / {clipInfo.total}
+              {t('Clip')} {clipInfo.index + 1} / {clipInfo.total}
             </p>
           )}
         </div>
         <button
           onClick={onClose}
           className={`${compactControls ? 'p-1.5' : 'p-2'} rounded-full hover:bg-white/20 text-white/80 hover:text-white transition-colors shrink-0`}
-          title="Fermer le lecteur"
+          title={t('Fermer le lecteur')}
         >
           <X size={compactControls ? 14 : 18} />
         </button>

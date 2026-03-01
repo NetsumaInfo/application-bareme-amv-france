@@ -41,7 +41,7 @@ cd src-tauri && cargo build    # Build Rust backend
   - `useProjectStore` - Project data, clips array, currentClipIndex, dirty flag, navigation, `removeClip()`
   - `usePlayerStore` - Playback state synced from mpv via 250ms polling (isPlaying, currentTime, duration, volume, tracks, isDetached)
   - `useNotationStore` - Scores (`notes: Record<clipId, Note>`), bareme, validation. `updateCriterion()` validates + recalculates
-  - `useUIStore` - Interface mode (`spreadsheet | modern | notation | resultats | export`), sidebar state, modal flags, zoom level, floating video state
+  - `useUIStore` - Interface mode (`spreadsheet | modern | notation | resultats | export`), sidebar state, modal flags, zoom level, floating video state, language, app theme, primary accent color
 
 - **5 interfaces** read/write the same stores - switching is seamless:
   - Spreadsheet (table with keyboard nav, PiP floating video, right-click context menu for clip deletion, 3-way sorting)
@@ -175,6 +175,17 @@ Separate from full project export, "Exporter notation (JE.json)" exports only th
 - Notes PDF export supports `general`, `judges`, and `both`.
 - Notes PDF pagination avoids orphan clip headers at the bottom of a page by reserving space for header + first note lines before rendering a clip block.
 
+### App Appearance
+- Application appearance is driven by `src/utils/appTheme.ts`.
+- `applyAppearanceToDocument(theme, primaryColor)` sets `data-app-theme` and `data-primary-color` on `document.documentElement`.
+- Detached windows that render UI (`notes-entry`) must also bootstrap and apply the saved theme and language, not just the main app shell.
+
+### Custom Context Menus
+- Use `AppContextMenuPanel` / `AppContextMenuItem` for custom right-click menus instead of browser-native menus.
+- `AppContextMenuPanel` renders through a portal to `document.body`; prefer it for any menu that could be clipped by `overflow` containers.
+- Page-level context menus are handled by `useLayoutContextMenu` + `ContextMenu.tsx`.
+- Local feature menus (Spreadsheet clip menu, Resultats menus, Export poster/table menus) must stop propagation when they intentionally override the page-level context menu.
+
 ## File Layout
 
 ```
@@ -203,7 +214,28 @@ src-tauri/src/
 
 ## Language
 
-The UI is in French. Component labels, error messages, and tooltips use French text.
+- The **source language** of the UI is French.
+- The runtime UI is multilingual: French, English, Japanese, Russian, Chinese, Spanish.
+- Any new visible UI string must go through `useI18n().t(...)`.
+- Avoid introducing raw user-facing strings in JSX unless they are domain data coming from the project/barème itself.
+
+## Internationalization
+
+- The app now supports 6 UI languages: French, English, Japanese, Russian, Chinese, and Spanish.
+- French is the **source language** for all user-facing copy.
+- Any new UI string must be wrapped with `t('Texte français')` from `useI18n()`. Do not add raw user-facing strings directly in components.
+- Config-driven labels/descriptions that are not direct JSX literals must be added to `src/i18n/seed.ts` so they are picked up by the sync script.
+- The language picker must stay compact and minimal: prefer a flag-first UI with the native language label, avoid duplicated patterns such as `FR Français`, use consistent custom flag badges/icons instead of relying on OS emoji fallback, and render dropdowns in a portal when clipping/overflow is possible.
+- Auto-filled translations are only a baseline. Any visible UI change must include a manual review of the affected locale strings, with extra attention to Japanese/Chinese layout fit and to placeholder preservation (`{path}`, `{error}`, etc.).
+- After adding or changing French UI text, run:
+
+```bash
+npm run i18n:sync
+```
+
+- `scripts/sync-i18n.mjs` scans `t('...')` source strings, updates `src/i18n/locales/fr.json`, and auto-fills missing translations for the other supported locales.
+- The sync script only fills missing locale keys. Existing manual translations must be preserved and manually improved when auto-filled wording is weak or domain-inaccurate (for example around `barème`, judging, or export terminology).
+- Runtime fallback rule: if a translation is missing, the French source string is displayed.
 
 ## Supported Video Formats
 

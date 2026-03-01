@@ -3,6 +3,7 @@ import type {
   ResultatsGlobalVariant,
   ResultatsMainView,
 } from '@/components/interfaces/resultats/types'
+import { useI18n } from '@/i18n'
 
 interface ResultatsViewModeControlsProps {
   mainView: ResultatsMainView
@@ -41,30 +42,31 @@ export function ResultatsViewModeControls({
   globalVariant,
   onGlobalVariantChange,
 }: ResultatsViewModeControlsProps) {
+  const { t } = useI18n()
   return (
     <div className="rounded-lg border border-gray-700 bg-surface-dark/60 p-2">
       <div className="flex flex-wrap items-center gap-2">
         <SegmentedButton active={mainView === 'judge'} onClick={() => onMainViewChange('judge')}>
-          Tableau par juge
+          {t('Tableau par juge')}
         </SegmentedButton>
         <SegmentedButton active={mainView === 'global'} onClick={() => onMainViewChange('global')}>
-          Tableau global
+          {t('Tableau global')}
         </SegmentedButton>
         <SegmentedButton active={mainView === 'top'} onClick={() => onMainViewChange('top')}>
-          Liste Top
+          {t('Liste Top')}
         </SegmentedButton>
         <SegmentedButton active={mainView === 'judgeNotes'} onClick={() => onMainViewChange('judgeNotes')}>
-          Notes des juges
+          {t('Notes des juges')}
         </SegmentedButton>
       </div>
 
       {mainView === 'global' && (
         <div className="mt-2 flex flex-wrap items-center gap-2">
           <SegmentedButton active={globalVariant === 'detailed'} onClick={() => onGlobalVariantChange('detailed')}>
-            Detaillé
+            {t('Détaillé')}
           </SegmentedButton>
           <SegmentedButton active={globalVariant === 'category'} onClick={() => onGlobalVariantChange('category')}>
-            Par categorie
+            {t('Par catégorie')}
           </SegmentedButton>
         </div>
       )}

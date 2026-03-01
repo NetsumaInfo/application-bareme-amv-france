@@ -3,6 +3,7 @@ import TimecodeTextarea from '@/components/notes/TimecodeTextarea'
 import { getClipPrimaryLabel } from '@/utils/formatters'
 import type { Clip } from '@/types/project'
 import { getCategoryScore, type CategoryGroup, type NoteLike, type JudgeSource } from '@/utils/results'
+import { useI18n } from '@/i18n'
 
 interface ResultatsNotesPanelProps {
   hidden: boolean
@@ -31,6 +32,8 @@ export function ResultatsNotesPanel({
   onTimecodeHover,
   onTimecodeLeave,
 }: ResultatsNotesPanelProps) {
+  const { t } = useI18n()
+
   if (hidden || !selectedClip) {
     return null
   }
@@ -51,11 +54,11 @@ export function ResultatsNotesPanel({
   })
 
   return (
-    <div className="border-t border-gray-700 shrink-0" style={{ background: '#1a1a2e' }}>
+    <div className="border-t border-gray-700 shrink-0 bg-surface">
       <div className="px-3 py-1.5 border-b border-gray-700/60 text-[11px] text-gray-400 flex items-center justify-between gap-2">
         <div className="min-w-0">
-          Note générale du clip
-          <span className="text-primary-300 ml-1">{getClipPrimaryLabel(selectedClip)}</span>
+          {t('Note générale du clip')}
+          <span className="ml-1 text-primary-400">{getClipPrimaryLabel(selectedClip)}</span>
         </div>
         <div className="flex items-center gap-3 shrink-0 pl-2">
           {summaryByCategory.length > 0 && (
@@ -73,7 +76,7 @@ export function ResultatsNotesPanel({
               type="button"
               onClick={onClosePanel}
               className="h-5 w-5 rounded text-gray-400 hover:text-white hover:bg-gray-700/60 transition-colors"
-              title="Masquer les notes"
+              title={t('Masquer les notes')}
             >
               <X size={13} className="mx-auto" />
             </button>
@@ -93,10 +96,10 @@ export function ResultatsNotesPanel({
             onTimecodeHover({ seconds: item.seconds, anchorRect })
           }}
           onTimecodeLeave={onTimecodeLeave}
-          color="#60a5fa"
+          color="rgb(var(--color-primary-400))"
           fpsHint={selectedClipFps ?? undefined}
           textareaClassName="min-h-[36px]"
-          placeholder="Notes générales..."
+          placeholder={t('Notes générales...')}
         />
       </div>
     </div>

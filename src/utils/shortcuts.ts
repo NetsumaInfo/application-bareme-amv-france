@@ -154,14 +154,24 @@ const DISPLAY_TOKEN_MAP: Record<string, string> = {
   arrowright: '→',
   arrowup: '↑',
   arrowdown: '↓',
-  escape: 'Échap',
-  space: 'Espace',
+  escape: 'escape',
+  space: 'space',
 }
 
-export function formatShortcutDisplay(shortcut: string): string {
+export function formatShortcutDisplay(shortcut: string, translate?: (key: string) => string): string {
   if (!shortcut) return '-'
   return shortcut
     .split('+')
-    .map((token) => DISPLAY_TOKEN_MAP[token] ?? token.toUpperCase())
+    .map((token) => {
+      const mapped = DISPLAY_TOKEN_MAP[token] ?? token.toUpperCase()
+      if (!translate) {
+        if (mapped === 'escape') return 'Échap'
+        if (mapped === 'space') return 'Espace'
+        return mapped
+      }
+      if (mapped === 'escape') return translate('Échap')
+      if (mapped === 'space') return translate('Espace')
+      return mapped
+    })
     .join(' + ')
 }

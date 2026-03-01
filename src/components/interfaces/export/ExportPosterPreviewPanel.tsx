@@ -1,7 +1,13 @@
-import { useEffect, useRef } from 'react'
-import type { MouseEvent as ReactMouseEvent, MutableRefObject } from 'react'
-import { Download } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import type { MouseEvent as ReactMouseEvent, MutableRefObject, WheelEvent as ReactWheelEvent } from 'react'
+import { Download, EyeOff, Image as ImageIcon, Layers, Move, Type, Trash2 } from 'lucide-react'
 import { withAlpha } from '@/utils/colors'
+import { useI18n } from '@/i18n'
+import {
+  AppContextMenuItem,
+  AppContextMenuPanel,
+  AppContextMenuSeparator,
+} from '@/components/ui/AppContextMenu'
 import type {
   ExportPosterBlock,
   ExportPosterBlockId,
@@ -14,6 +20,7 @@ interface ExportPosterPreviewPanelProps {
   accent: string
   posterWidth: number
   posterHeight: number
+  backgroundColor: string
   backgroundImage: string | null
   backgroundPositionXPct: number
   backgroundPositionYPct: number
@@ -28,10 +35,23 @@ interface ExportPosterPreviewPanelProps {
   activeImageId: string | null
   onSelectBlock: (id: ExportPosterBlockId | null) => void
   onSelectImage: (id: string | null) => void
+  onSetPreviewZoomPct: (value: number) => void
+  onPatchBlock: (id: ExportPosterBlockId, patch: Partial<ExportPosterBlock>) => void
+  onPatchImage: (id: string, patch: Partial<ExportPosterImageLayer>) => void
+  onRemoveImage: (id: string) => void
+  onReorderImage: (id: string, direction: 'front' | 'back' | 'forward' | 'backward') => void
+  onClearBackground: () => void
+  onToggleBackgroundDrag: () => void
   onMoveBlock: (id: ExportPosterBlockId, xPct: number, yPct: number) => void
   onMoveImage: (id: string, xPct: number, yPct: number) => void
   onMoveBackground: (xPct: number, yPct: number) => void
 }
+
+type PosterElementContextMenu =
+  | null
+  | { x: number; y: number; kind: 'background' }
+  | { x: number; y: number; kind: 'image'; imageId: string }
+  | { x: number; y: number; kind: 'block'; blockId: ExportPosterBlockId }
 
 type DragState =
   | {
@@ -83,6 +103,7 @@ function getTextShadow(shadowStyle: ExportPosterShadowStyle, shadowColor: string
 
 interface PosterCanvasSceneProps {
   accent: string
+  backgroundColor: string
   backgroundImage: string | null
   backgroundPositionXPct: number
   backgroundPositionYPct: number
@@ -100,10 +121,14 @@ interface PosterCanvasSceneProps {
   onStartDragBlock: (event: ReactMouseEvent<HTMLDivElement>, block: ExportPosterBlock) => void
   onStartDragImage: (event: ReactMouseEvent<HTMLDivElement>, image: ExportPosterImageLayer) => void
   onStartDragBackground: (event: ReactMouseEvent<HTMLDivElement>) => void
+  onOpenBlockContextMenu: (event: ReactMouseEvent<HTMLDivElement>, block: ExportPosterBlock) => void
+  onOpenImageContextMenu: (event: ReactMouseEvent<HTMLDivElement>, image: ExportPosterImageLayer) => void
+  onOpenBackgroundContextMenu: (event: ReactMouseEvent<HTMLDivElement>) => void
 }
 
 function PosterCanvasScene({
   accent,
+  backgroundColor,
   backgroundImage,
   backgroundPositionXPct,
   backgroundPositionYPct,
@@ -121,12 +146,15 @@ function PosterCanvasScene({
   onStartDragBlock,
   onStartDragImage,
   onStartDragBackground,
+  onOpenBlockContextMenu,
+  onOpenImageContextMenu,
+  onOpenBackgroundContextMenu,
 }: PosterCanvasSceneProps) {
   return (
     <div
       className="relative h-full w-full overflow-hidden"
       style={{
-        backgroundColor: '#020617',
+        backgroundColor,
         backgroundImage: backgroundImage ? `url(${backgroundImage})` : undefined,
         backgroundPosition: `${backgroundPositionXPct}% ${backgroundPositionYPct}%`,
         backgroundSize: `${backgroundScaleXPct}% ${backgroundScaleYPct}%`,
@@ -146,75 +174,89 @@ function PosterCanvasScene({
         onSelectImage(null)
         onStartDragBackground(event)
       }}
+      onContextMenu={(event) => {
+        if (!interactive) return
+        if (event.target !== event.currentTarget) return
+        onOpenBackgroundContextMenu(event)
+      }}
     >
       {!backgroundImage && (
         <>
           <div
             className="absolute inset-0 pointer-events-none"
             style={{
-              background:
-                'radial-gradient(1000px 380px at 85% 12%, rgba(56,189,248,0.26), transparent 62%), radial-gradient(660px 300px at 12% 90%, rgba(245,158,11,0.24), transparent 68%)',
+              background: `radial-gradient(900px 360px at 82% 12%, ${withAlpha(accent, 0.16)}, transparent 62%)`,
             }}
           />
           <div
             className="absolute inset-0 pointer-events-none"
             style={{
               backgroundImage:
-                'linear-gradient(rgba(148,163,184,0.08) 1px, transparent 1px), linear-gradient(90deg, rgba(148,163,184,0.08) 1px, transparent 1px)',
+                'linear-gradient(rgba(148,163,184,0.06) 1px, transparent 1px), linear-gradient(90deg, rgba(148,163,184,0.06) 1px, transparent 1px)',
               backgroundSize: '42px 42px',
             }}
           />
         </>
       )}
 
-      <div
-        className="absolute inset-0 pointer-events-none"
-        style={{
-          background: `linear-gradient(180deg, rgba(2,6,23,${Math.min(0.88, overlayOpacity / 100 + 0.2)}), rgba(2,6,23,${Math.min(0.95, overlayOpacity / 100 + 0.35)}))`,
-        }}
-      />
+      {backgroundImage ? (
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            background: `linear-gradient(180deg, rgba(2,6,23,${Math.min(0.88, overlayOpacity / 100 + 0.2)}), rgba(2,6,23,${Math.min(0.95, overlayOpacity / 100 + 0.35)}))`,
+          }}
+        />
+      ) : null}
 
       <div
         className="absolute -right-24 -top-24 h-64 w-64 rounded-full blur-3xl pointer-events-none"
         style={{ backgroundColor: withAlpha(accent, 0.46) }}
       />
 
-      {images.filter((image) => image.visible).map((image) => {
-        const active = activeImageId === image.id
-        return (
-          <div
-            key={image.id}
-            className={interactive ? 'absolute z-10 cursor-move select-none' : 'absolute z-10'}
-            style={{
-              left: `${image.xPct}%`,
-              top: `${image.yPct}%`,
-              width: `${image.widthPct}%`,
-              outline: interactive && active ? `1px dashed ${withAlpha(accent, 0.96)}` : '1px dashed transparent',
-              backgroundColor: interactive && active ? withAlpha(accent, 0.08) : 'transparent',
-            }}
-            onMouseDown={(event) => {
-              if (!interactive) return
-              event.preventDefault()
-              event.stopPropagation()
-              onSelectImage(image.id)
-              onSelectBlock(null)
-              onStartDragImage(event, image)
-            }}
-          >
-            <img
-              src={image.src}
-              alt={image.label}
-              draggable={false}
-              className="block w-full h-auto pointer-events-none"
+      {images
+        .filter((image) => image.visible)
+        .sort((a, b) => a.zIndex - b.zIndex)
+        .map((image) => {
+          const active = activeImageId === image.id
+          return (
+            <div
+              key={image.id}
+              className={interactive ? 'absolute cursor-move select-none' : 'absolute'}
               style={{
-                opacity: clamp(image.opacity, 0, 100) / 100,
-                transform: `rotate(${image.rotationDeg}deg)`,
-                transformOrigin: 'center center',
+                left: `${image.xPct}%`,
+                top: `${image.yPct}%`,
+                width: `${image.widthPct}%`,
+                zIndex: 10 + image.zIndex,
+                outline: interactive && active ? `1px dashed ${withAlpha(accent, 0.96)}` : '1px dashed transparent',
+                backgroundColor: interactive && active ? withAlpha(accent, 0.08) : 'transparent',
               }}
-            />
-          </div>
-        )
-      })}
+              onMouseDown={(event) => {
+                if (!interactive) return
+                event.preventDefault()
+                event.stopPropagation()
+                onSelectImage(image.id)
+                onSelectBlock(null)
+                onStartDragImage(event, image)
+              }}
+              onContextMenu={(event) => {
+                if (!interactive) return
+                onOpenImageContextMenu(event, image)
+              }}
+            >
+              <img
+                src={image.src}
+                alt={image.label}
+                draggable={false}
+                className="block w-full h-auto pointer-events-none"
+                style={{
+                  opacity: clamp(image.opacity, 0, 100) / 100,
+                  transform: `rotate(${image.rotationDeg}deg)`,
+                  transformOrigin: 'center center',
+                }}
+              />
+            </div>
+          )
+        })}
 
       {blocks.filter((block) => block.visible).map((block) => {
         const active = activeBlockId === block.id
@@ -236,6 +278,10 @@ function PosterCanvasScene({
               onSelectBlock(block.id)
               onSelectImage(null)
               onStartDragBlock(event, block)
+            }}
+            onContextMenu={(event) => {
+              if (!interactive) return
+              onOpenBlockContextMenu(event, block)
             }}
           >
             <div
@@ -264,6 +310,7 @@ export function ExportPosterPreviewPanel({
   accent,
   posterWidth,
   posterHeight,
+  backgroundColor,
   backgroundImage,
   backgroundPositionXPct,
   backgroundPositionYPct,
@@ -278,12 +325,43 @@ export function ExportPosterPreviewPanel({
   activeImageId,
   onSelectBlock,
   onSelectImage,
+  onSetPreviewZoomPct,
+  onPatchBlock,
+  onPatchImage,
+  onRemoveImage,
+  onReorderImage,
+  onClearBackground,
+  onToggleBackgroundDrag,
   onMoveBlock,
   onMoveImage,
   onMoveBackground,
 }: ExportPosterPreviewPanelProps) {
+  const { t } = useI18n()
   const interactiveCanvasRef = useRef<HTMLDivElement | null>(null)
   const dragStateRef = useRef<DragState | null>(null)
+  const contextMenuRef = useRef<HTMLDivElement | null>(null)
+  const [contextMenu, setContextMenu] = useState<PosterElementContextMenu>(null)
+
+  useEffect(() => {
+    if (!contextMenu) return
+
+    const handlePointerDown = (event: MouseEvent) => {
+      const target = event.target as Node | null
+      if (target && contextMenuRef.current?.contains(target)) return
+      setContextMenu(null)
+    }
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setContextMenu(null)
+    }
+
+    window.addEventListener('mousedown', handlePointerDown)
+    window.addEventListener('keydown', handleEscape)
+    return () => {
+      window.removeEventListener('mousedown', handlePointerDown)
+      window.removeEventListener('keydown', handleEscape)
+    }
+  }, [contextMenu])
 
   useEffect(() => {
     const handleMouseMove = (event: MouseEvent) => {
@@ -331,15 +409,33 @@ export function ExportPosterPreviewPanel({
   const safePreviewZoomPct = clamp(Math.round(previewZoomPct), 25, 250)
   const previewScale = safePreviewZoomPct / 100
 
+  const handlePreviewWheel = (event: ReactWheelEvent<HTMLDivElement>) => {
+    if (!event.ctrlKey) return
+    event.preventDefault()
+    const direction = event.deltaY > 0 ? -10 : 10
+    onSetPreviewZoomPct(clamp(safePreviewZoomPct + direction, 25, 250))
+  }
+
+  const openContextMenu = (x: number, y: number, menu: PosterElementContextMenu) => {
+    setContextMenu({
+      ...menu,
+      x,
+      y,
+    } as PosterElementContextMenu)
+  }
+
   return (
     <div className="flex-1 min-h-0 overflow-auto">
       <div className="text-xs text-gray-500 mb-2 flex items-center gap-1.5">
         <Download size={12} />
-        Aperçu affiche exportable ({safeWidth}x{safeHeight}) • Zoom {safePreviewZoomPct}%
+        {t('Aperçu affiche exportable')} ({safeWidth}x{safeHeight}) • {t('Zoom')} {safePreviewZoomPct}% • {t('Ctrl + molette = zoom')}
       </div>
 
       <div className="rounded-2xl border border-slate-700 bg-slate-950 p-3 min-w-[760px]">
-        <div className="overflow-auto rounded-xl border border-slate-700 bg-slate-900/60 p-2">
+        <div
+          className="overflow-auto rounded-xl border border-slate-700 bg-slate-900/60 p-2"
+          onWheel={handlePreviewWheel}
+        >
           <div
             className="relative"
             style={{
@@ -359,6 +455,7 @@ export function ExportPosterPreviewPanel({
             >
               <PosterCanvasScene
                 accent={accent}
+                backgroundColor={backgroundColor}
                 backgroundImage={backgroundImage}
                 backgroundPositionXPct={backgroundPositionXPct}
                 backgroundPositionYPct={backgroundPositionYPct}
@@ -373,6 +470,27 @@ export function ExportPosterPreviewPanel({
                 interactive
                 onSelectBlock={onSelectBlock}
                 onSelectImage={onSelectImage}
+                onOpenBlockContextMenu={(event, block) => {
+                  event.preventDefault()
+                  event.stopPropagation()
+                  onSelectBlock(block.id)
+                  onSelectImage(null)
+                  openContextMenu(event.clientX, event.clientY, { kind: 'block', blockId: block.id, x: 0, y: 0 })
+                }}
+                onOpenImageContextMenu={(event, image) => {
+                  event.preventDefault()
+                  event.stopPropagation()
+                  onSelectImage(image.id)
+                  onSelectBlock(null)
+                  openContextMenu(event.clientX, event.clientY, { kind: 'image', imageId: image.id, x: 0, y: 0 })
+                }}
+                onOpenBackgroundContextMenu={(event) => {
+                  event.preventDefault()
+                  event.stopPropagation()
+                  onSelectBlock(null)
+                  onSelectImage(null)
+                  openContextMenu(event.clientX, event.clientY, { kind: 'background', x: 0, y: 0 })
+                }}
                 onStartDragBlock={(event, block) => {
                   dragStateRef.current = {
                     kind: 'block',
@@ -410,6 +528,134 @@ export function ExportPosterPreviewPanel({
         </div>
       </div>
 
+      {contextMenu ? (
+        <AppContextMenuPanel
+          ref={contextMenuRef}
+          x={contextMenu.x}
+          y={contextMenu.y}
+          minWidthClassName="min-w-[220px]"
+        >
+          {contextMenu.kind === 'image' ? (
+            <>
+              <AppContextMenuItem
+                label={t("Sélectionner l'image")}
+                icon={ImageIcon}
+                onClick={() => {
+                  onSelectImage(contextMenu.imageId)
+                  onSelectBlock(null)
+                  setContextMenu(null)
+                }}
+              />
+              <AppContextMenuItem
+                label={t("Masquer l'image")}
+                icon={ImageIcon}
+                iconSecondary={EyeOff}
+                onClick={() => {
+                  onPatchImage(contextMenu.imageId, { visible: false })
+                  setContextMenu(null)
+                }}
+              />
+              <AppContextMenuSeparator />
+              <AppContextMenuItem
+                label={t('Mettre devant')}
+                icon={Layers}
+                iconSecondary={Move}
+                onClick={() => {
+                  onReorderImage(contextMenu.imageId, 'front')
+                  setContextMenu(null)
+                }}
+              />
+              <AppContextMenuItem
+                label={t("Avancer d'un cran")}
+                icon={Layers}
+                onClick={() => {
+                  onReorderImage(contextMenu.imageId, 'forward')
+                  setContextMenu(null)
+                }}
+              />
+              <AppContextMenuItem
+                label={t("Reculer d'un cran")}
+                icon={Layers}
+                onClick={() => {
+                  onReorderImage(contextMenu.imageId, 'backward')
+                  setContextMenu(null)
+                }}
+              />
+              <AppContextMenuItem
+                label={t('Mettre derrière')}
+                icon={Layers}
+                iconSecondary={ImageIcon}
+                onClick={() => {
+                  onReorderImage(contextMenu.imageId, 'back')
+                  setContextMenu(null)
+                }}
+              />
+              <AppContextMenuSeparator />
+              <AppContextMenuItem
+                label={t("Supprimer l'image")}
+                icon={Trash2}
+                danger
+                onClick={() => {
+                  onRemoveImage(contextMenu.imageId)
+                  setContextMenu(null)
+                }}
+              />
+            </>
+          ) : null}
+
+          {contextMenu.kind === 'block' ? (
+            <>
+              <AppContextMenuItem
+                label={t('Sélectionner le bloc')}
+                icon={Type}
+                onClick={() => {
+                  onSelectBlock(contextMenu.blockId)
+                  onSelectImage(null)
+                  setContextMenu(null)
+                }}
+              />
+              <AppContextMenuItem
+                label={t('Masquer le bloc')}
+                icon={Type}
+                iconSecondary={EyeOff}
+                onClick={() => {
+                  onPatchBlock(contextMenu.blockId, { visible: false })
+                  setContextMenu(null)
+                }}
+              />
+            </>
+          ) : null}
+
+          {contextMenu.kind === 'background' ? (
+            <>
+              <AppContextMenuItem
+                label={backgroundDragEnabled ? t('Désactiver déplacement du fond') : t('Activer déplacement du fond')}
+                icon={ImageIcon}
+                iconSecondary={backgroundDragEnabled ? EyeOff : Move}
+                onClick={() => {
+                  onToggleBackgroundDrag()
+                  setContextMenu(null)
+                }}
+              />
+              {backgroundImage ? (
+                <>
+                  <AppContextMenuSeparator />
+                  <AppContextMenuItem
+                    label={t("Retirer l'image de fond")}
+                    icon={Trash2}
+                    danger
+                    onClick={() => {
+                      onClearBackground()
+                      setContextMenu(null)
+                    }}
+                  />
+                </>
+              ) : null}
+            </>
+          ) : null}
+        </AppContextMenuPanel>
+      ) : null}
+
       {/* Offscreen clean render target used for PNG/PDF export (no editing outlines). */}
       <div className="fixed inset-0 -z-10 opacity-0 pointer-events-none overflow-hidden">
         <div
@@ -421,6 +667,7 @@ export function ExportPosterPreviewPanel({
         >
           <PosterCanvasScene
             accent={accent}
+            backgroundColor={backgroundColor}
             backgroundImage={backgroundImage}
             backgroundPositionXPct={backgroundPositionXPct}
             backgroundPositionYPct={backgroundPositionYPct}
@@ -438,6 +685,9 @@ export function ExportPosterPreviewPanel({
             onStartDragBlock={() => {}}
             onStartDragImage={() => {}}
             onStartDragBackground={() => {}}
+            onOpenBlockContextMenu={() => {}}
+            onOpenImageContextMenu={() => {}}
+            onOpenBackgroundContextMenu={() => {}}
           />
         </div>
       </div>

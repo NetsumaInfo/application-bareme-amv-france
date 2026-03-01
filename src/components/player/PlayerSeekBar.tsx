@@ -1,6 +1,7 @@
 import type { ChangeEvent } from 'react'
 import { formatTime } from '@/utils/formatters'
 import type { NoteTimecodeMarker } from '@/utils/timecodes'
+import { useI18n } from '@/i18n'
 
 interface PlayerSeekBarProps {
   compact: boolean
@@ -21,6 +22,7 @@ export default function PlayerSeekBar({
   onSeek,
   onMarkerJump,
 }: PlayerSeekBarProps) {
+  const { t } = useI18n()
   const markerSizeClass = compact ? 'w-1.5 h-1.5' : 'w-2 h-2'
   const markerYOffsetClass = compact ? '-translate-y-1/2' : '-translate-y-1/2'
 
@@ -64,7 +66,7 @@ export default function PlayerSeekBar({
                   }}
                   title={marker.previewText
                     ? `${marker.raw} - ${marker.previewText}`
-                    : `${marker.raw} - ${marker.category ?? 'Notes globales'}`}
+                    : `${marker.raw} - ${marker.category ?? t('Notes globales')}`}
                 />
               )
             })}

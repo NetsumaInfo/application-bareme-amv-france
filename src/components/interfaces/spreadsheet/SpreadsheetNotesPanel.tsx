@@ -4,6 +4,7 @@ import { getClipPrimaryLabel, getClipSecondaryLabel } from '@/utils/formatters'
 import type { MutableRefObject } from 'react'
 import type { Clip } from '@/types/project'
 import type { CategoryGroup } from './types'
+import { useI18n } from '@/i18n'
 
 interface TimecodeItemLike {
   seconds: number
@@ -34,10 +35,12 @@ export function SpreadsheetNotesPanel({
   onTimecodeHover,
   onTimecodeLeave,
 }: SpreadsheetNotesPanelProps) {
+  const { t } = useI18n()
+
   return (
     <div className="px-3 py-2 border-t border-gray-700 bg-surface shrink-0">
       <div className="flex items-center gap-2 mb-1">
-        <span className="text-[10px] text-gray-500 uppercase tracking-wider">Notes</span>
+        <span className="text-[10px] text-gray-500 uppercase tracking-wider">{t('Notes')}</span>
         <span className="text-[10px] text-gray-600">—</span>
         <span className="text-[10px] text-gray-400">
           <span className="text-primary-400">{getClipPrimaryLabel(currentClip)}</span>
@@ -57,7 +60,7 @@ export function SpreadsheetNotesPanel({
         </span>
       </div>
       <TimecodeTextarea
-        placeholder="Notes libres pour ce clip..."
+        placeholder={t('Notes libres pour ce clip...')}
         value={currentNoteText}
         onChange={onChangeText}
         rows={2}

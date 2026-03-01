@@ -2,8 +2,10 @@ import { X } from 'lucide-react'
 import { BaremeEditView } from '@/components/scoring/bareme/BaremeEditView'
 import { BaremeListView } from '@/components/scoring/bareme/BaremeListView'
 import { useBaremeEditorState } from '@/components/scoring/bareme/useBaremeEditorState'
+import { useI18n } from '@/i18n'
 
 export default function BaremeEditor() {
+  const { t } = useI18n()
   const {
     showBaremeEditor,
     availableBaremes,
@@ -48,17 +50,17 @@ export default function BaremeEditor() {
   if (!showBaremeEditor) return null
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-3">
-      <div className="bg-surface rounded-xl shadow-2xl w-full max-w-6xl max-h-[90vh] flex flex-col border border-gray-700">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-3" data-context-scope="bareme-editor">
+      <div className="bg-surface rounded-xl shadow-2xl w-full max-w-6xl max-h-[90vh] flex flex-col border border-gray-700" data-context-scope="bareme-editor">
         <div className="flex items-center justify-between px-5 py-3 border-b border-gray-700">
           <h2 className="text-base font-semibold text-white">
             {mode === 'list'
-              ? 'Barèmes'
+              ? t('Barèmes')
               : readOnly
-                ? 'Consultation du barème'
+                ? t('Consultation du barème')
                 : editingBareme
-                  ? 'Modifier le barème'
-                  : 'Nouveau barème'}
+                  ? t('Modifier le barème')
+                  : t('Nouveau barème')}
           </h2>
           <button onClick={onClose} className="p-1 rounded hover:bg-surface-light text-gray-400 hover:text-white">
             <X size={18} />
@@ -116,14 +118,14 @@ export default function BaremeEditor() {
                 }}
                 className="px-4 py-2 text-sm rounded-lg bg-surface-light text-gray-300 hover:text-white transition-colors"
               >
-                Retour
+                {t('Retour')}
               </button>
               {!readOnly && (
                 <button
                   onClick={handleSave}
                   className="px-4 py-2 text-sm rounded-lg bg-primary-600 hover:bg-primary-500 text-white font-medium transition-colors"
                 >
-                  {editingBareme ? 'Enregistrer' : 'Créer le barème'}
+                  {editingBareme ? t('Enregistrer') : t('Créer le barème')}
                 </button>
               )}
             </>
@@ -132,7 +134,7 @@ export default function BaremeEditor() {
               onClick={onClose}
               className="px-4 py-2 text-sm rounded-lg bg-surface-light text-gray-300 hover:text-white transition-colors"
             >
-              Fermer
+              {t('Fermer')}
             </button>
           )}
         </div>

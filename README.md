@@ -1,5 +1,5 @@
 # AMV Notation
-![Version](https://img.shields.io/badge/version-v0.6.0-2563eb)
+![Version](https://img.shields.io/badge/version-v0.7.0-2563eb)
 
 Application desktop de notation pour concours AMV (Anime Music Video), développée avec **Tauri + React + Rust**.
 
@@ -11,7 +11,8 @@ AMV Notation permet de :
 - importer des clips vidéo,
 - noter selon un barème personnalisable,
 - agréger des notations de plusieurs juges,
-- exporter les résultats.
+- exporter les résultats,
+- changer la langue et l’apparence de l’interface.
 
 L’application est conçue pour une utilisation fluide en jury, avec lecteur vidéo intégré (mpv), raccourcis clavier et autosave.
 
@@ -34,6 +35,15 @@ L’application propose 5 interfaces qui partagent le même état global (Zustan
 - **Notation**
 - **Resultats**
 - **Export**
+
+### Interface & personnalisation
+
+- Interface multilingue : **français**, **anglais**, **japonais**, **russe**, **chinois**, **espagnol**
+- Détection automatique de la langue système au premier lancement
+- Préférence de langue sauvegardée dans les réglages utilisateur
+- Thèmes d’application sombres et clairs
+- Couleur principale personnalisable
+- Menus contextuels custom cohérents selon la page et le contexte
 
 ### Lecture vidéo
 
@@ -76,7 +86,8 @@ L’application propose 5 interfaces qui partagent le même état global (Zustan
   - polices configurables par bloc,
   - images de fond avec calques,
   - badges de rang stylisables,
-  - thèmes d'export (clair/sombre).
+  - thèmes d'export (clair/sombre),
+  - couleur de fond pilotée par le thème ou personnalisable.
 
 ### Gestion de projet
 
@@ -118,9 +129,14 @@ npm run dev
 # Lint
 npm run lint
 
+# Synchronisation i18n
+npm run i18n:sync
+
 # Vérification backend Rust
 cd src-tauri && cargo check
 ```
+
+Le script `npm run i18n:sync` complète uniquement les **clés manquantes** dans les autres langues. Les traductions importantes visibles dans l’UI doivent ensuite être **relues et corrigées manuellement**, surtout pour le japonais, le chinois et les termes métier comme `barème`, `notation`, `résultat` et `export`.
 
 ## Build
 
@@ -215,7 +231,9 @@ src/                    Frontend React
   utils/                scoring, formatters, shortcuts, timecodes, results,
                         colors, screenshot, clipImport, clipImportTokens,
                         clipOrder, manualClipParser, numberInput,
-                        colorPickerStorage, framePreviewPosition, path
+                        colorPickerStorage, framePreviewPosition, path,
+                        appTheme, resultsVisibility
+  i18n/                 config, provider, useI18n, locales, seed
 
 src-tauri/src/          Backend Rust
   main.rs               setup Tauri + init mpv + création overlay
@@ -246,6 +264,7 @@ src-tauri/src/          Backend Rust
 - **Pas de vidéo** : vérifier `libmpv-2.dll` à la racine.
 - **Fenêtre vidéo incohérente** : relancer complètement l’application.
 - **Comportement overlay plein écran** : vérifier que l’app est au premier plan.
+- **Texte non traduit** : lancer `npm run i18n:sync`, puis relire manuellement les chaînes visibles.
 
 ## Formats vidéo supportés
 

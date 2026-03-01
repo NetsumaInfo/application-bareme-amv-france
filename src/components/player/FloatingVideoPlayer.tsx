@@ -11,12 +11,14 @@ import { getClipPrimaryLabel } from '@/utils/formatters'
 import { FloatingPlayerHeader } from '@/components/player/floating/FloatingPlayerHeader'
 import { FloatingPlayerTimeline } from '@/components/player/floating/FloatingPlayerTimeline'
 import { FloatingPlayerControls } from '@/components/player/floating/FloatingPlayerControls'
+import { useI18n } from '@/i18n'
 
 interface FloatingVideoPlayerProps {
   onClose: () => void
 }
 
 export function FloatingVideoPlayer({ onClose }: FloatingVideoPlayerProps) {
+  const { t } = useI18n()
   const containerRef = useRef<HTMLDivElement | null>(null)
   const videoAreaRef = useRef<HTMLDivElement | null>(null)
   const {
@@ -98,7 +100,7 @@ export function FloatingVideoPlayer({ onClose }: FloatingVideoPlayerProps) {
       <FloatingPlayerHeader
         isDragging={isDragging}
         isHovering={isHovering}
-        title={isDetached ? 'Lecteur détaché' : currentClip ? getClipPrimaryLabel(currentClip) : 'Vidéo'}
+        title={isDetached ? t('Lecteur détaché') : currentClip ? getClipPrimaryLabel(currentClip) : t('Vidéo')}
         onMouseDown={handleMouseDown}
         onClose={handleClose}
       />
@@ -112,7 +114,7 @@ export function FloatingVideoPlayer({ onClose }: FloatingVideoPlayerProps) {
           <div className="absolute inset-0 flex items-center justify-center bg-slate-950/92">
             <div className="text-center">
               <AlertTriangle size={18} className="mx-auto mb-2 text-amber-400" />
-              <p className="text-xs text-white font-medium">Aucune vidéo liée</p>
+              <p className="text-xs text-white font-medium">{t('Aucune vidéo liée')}</p>
             </div>
           </div>
         )}

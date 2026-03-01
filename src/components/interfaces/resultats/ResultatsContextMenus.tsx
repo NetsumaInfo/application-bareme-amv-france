@@ -1,5 +1,21 @@
 import type { MutableRefObject } from 'react'
+import {
+  Clapperboard,
+  Eye,
+  EyeOff,
+  FileText,
+  Pencil,
+  Play,
+  Trash2,
+  Upload,
+} from 'lucide-react'
 import type { Clip } from '@/types/project'
+import {
+  AppContextMenuItem,
+  AppContextMenuPanel,
+  AppContextMenuSeparator,
+} from '@/components/ui/AppContextMenu'
+import { useI18n } from '@/i18n'
 
 interface MenuPosition {
   x: number
@@ -59,47 +75,49 @@ export function ResultatsContextMenus({
   hideGeneralNotes,
   onToggleGeneralNotes,
 }: ResultatsContextMenusProps) {
+  const { t } = useI18n()
   const canRemoveSelectedJudge = Boolean(memberContextMenu?.judgeKey.startsWith('imported-'))
 
   return (
     <>
       {memberContextMenu && (
-        <div
+        <AppContextMenuPanel
           ref={memberContextMenuRef}
-          className="fixed z-[90] bg-gray-900 border border-gray-700 rounded-lg shadow-xl py-1 min-w-[210px]"
-          style={{ left: memberContextMenu.x, top: memberContextMenu.y }}
+          x={memberContextMenu.x}
+          y={memberContextMenu.y}
+          minWidthClassName="min-w-[205px]"
         >
-          <button
+          <AppContextMenuItem
             onClick={() => {
               onRenameJudge(memberContextMenu.judgeKey)
               onCloseMemberMenu()
             }}
-            className="w-full text-left px-3 py-1.5 text-[11px] text-gray-300 hover:bg-gray-800 transition-colors"
-          >
-            Renommer le juge
-          </button>
+            label={t('Renommer le juge')}
+            icon={Pencil}
+          />
           {canRemoveSelectedJudge && (
             <>
-              <div className="border-t border-gray-700 my-0.5" />
-              <button
+              <AppContextMenuSeparator />
+              <AppContextMenuItem
                 onClick={() => {
                   onRemoveImportedJudge(memberContextMenu.judgeKey)
                   onCloseMemberMenu()
                 }}
-                className="w-full text-left px-3 py-1.5 text-[11px] text-red-400 hover:bg-gray-800 transition-colors"
-              >
-                Supprimer le juge
-              </button>
+                label={t('Supprimer le juge')}
+                icon={Trash2}
+                danger
+              />
             </>
           )}
-        </div>
+        </AppContextMenuPanel>
       )}
 
       {clipContextMenu && (
-        <div
+        <AppContextMenuPanel
           ref={clipContextMenuRef}
-          className="fixed z-[90] bg-gray-900 border border-gray-700 rounded-lg shadow-xl py-1 min-w-[210px]"
-          style={{ left: clipContextMenu.x, top: clipContextMenu.y }}
+          x={clipContextMenu.x}
+          y={clipContextMenu.y}
+          minWidthClassName="min-w-[225px]"
         >
           {(() => {
             const clip = clips.find((item) => item.id === clipContextMenu.clipId)
@@ -108,104 +126,102 @@ export function ResultatsContextMenus({
               <>
                 {clip.filePath ? (
                   <>
-                    <button
+                    <AppContextMenuItem
                       onClick={() => {
                         onOpenClipInNotation(clip)
                         onCloseClipMenu()
                       }}
-                      className="w-full text-left px-3 py-1.5 text-[11px] text-gray-300 hover:bg-gray-800 transition-colors"
-                    >
-                      Ouvrir le lecteur
-                    </button>
-                    <div className="border-t border-gray-700 my-0.5" />
+                      label={t('Ouvrir le lecteur')}
+                      icon={Play}
+                    />
+                    <AppContextMenuSeparator />
                   </>
                 ) : null}
-                <button
+                <AppContextMenuItem
                   onClick={() => {
                     onOpenDetailedNotes(clip)
                     onCloseClipMenu()
                   }}
-                  className="w-full text-left px-3 py-1.5 text-[11px] text-gray-300 hover:bg-gray-800 transition-colors"
-                >
-                  Notes détaillées des juges
-                </button>
-                <div className="border-t border-gray-700 my-0.5" />
-                <button
+                  label={t('Notes détaillées des juges')}
+                  icon={Clapperboard}
+                  iconSecondary={FileText}
+                />
+                <AppContextMenuSeparator />
+                <AppContextMenuItem
                   onClick={() => {
                     onToggleGeneralNotes()
                     onCloseClipMenu()
                   }}
-                  className="w-full text-left px-3 py-1.5 text-[11px] text-gray-300 hover:bg-gray-800 transition-colors"
-                >
-                  {hideGeneralNotes ? 'Afficher note générale' : 'Masquer note générale'}
-                </button>
-                <div className="border-t border-gray-700 my-0.5" />
+                  label={hideGeneralNotes ? t('Afficher note générale') : t('Masquer note générale')}
+                  icon={FileText}
+                  iconSecondary={hideGeneralNotes ? Eye : EyeOff}
+                />
+                <AppContextMenuSeparator />
               </>
             )
           })()}
-          <button
+          <AppContextMenuItem
             onClick={() => {
               onRemoveClip(clipContextMenu.clipId)
               onCloseClipMenu()
             }}
-            className="w-full text-left px-3 py-1.5 text-[11px] text-red-400 hover:bg-gray-800 transition-colors"
-          >
-            {clips.find((item) => item.id === clipContextMenu.clipId)?.filePath ? 'Supprimer la vidéo' : 'Supprimer la ligne'}
-          </button>
-        </div>
+            label={clips.find((item) => item.id === clipContextMenu.clipId)?.filePath ? t('Supprimer la vidéo') : t('Supprimer la ligne')}
+            icon={Trash2}
+            danger
+          />
+        </AppContextMenuPanel>
       )}
 
       {emptyContextMenu && (
-        <div
+        <AppContextMenuPanel
           ref={emptyContextMenuRef}
-          className="fixed z-[90] bg-gray-900 border border-gray-700 rounded-lg shadow-xl py-1 min-w-[230px]"
-          style={{ left: emptyContextMenu.x, top: emptyContextMenu.y }}
+          x={emptyContextMenu.x}
+          y={emptyContextMenu.y}
+          minWidthClassName="min-w-[235px]"
         >
-          <button
+          <AppContextMenuItem
             onClick={() => {
               onToggleGeneralNotes()
               onCloseEmptyMenu()
             }}
-            className="w-full text-left px-3 py-1.5 text-[11px] text-gray-300 hover:bg-gray-800 transition-colors"
-          >
-            {hideGeneralNotes ? 'Afficher note générale' : 'Masquer note générale'}
-          </button>
-          <div className="border-t border-gray-700 my-0.5" />
-          <button
+            label={hideGeneralNotes ? t('Afficher note générale') : t('Masquer note générale')}
+            icon={FileText}
+            iconSecondary={hideGeneralNotes ? Eye : EyeOff}
+          />
+          <AppContextMenuSeparator />
+          <AppContextMenuItem
             onClick={() => {
               onImportJudgeJson()
               onCloseEmptyMenu()
             }}
-            className="w-full text-left px-3 py-1.5 text-[11px] text-gray-300 hover:bg-gray-800 transition-colors"
-          >
-            Importer un JE.json
-          </button>
+            label={t('Importer un JE.json')}
+            icon={Upload}
+          />
           {selectedClip ? (
             <>
-              <div className="border-t border-gray-700 my-0.5" />
+              <AppContextMenuSeparator />
               {selectedClip.filePath ? (
-                <button
+                <AppContextMenuItem
                   onClick={() => {
                     onOpenClipInNotation(selectedClip)
                     onCloseEmptyMenu()
                   }}
-                  className="w-full text-left px-3 py-1.5 text-[11px] text-gray-300 hover:bg-gray-800 transition-colors"
-                >
-                  Ouvrir le lecteur (clip sélectionné)
-                </button>
+                  label={t('Ouvrir le lecteur (clip sélectionné)')}
+                  icon={Play}
+                />
               ) : null}
-              <button
+              <AppContextMenuItem
                 onClick={() => {
                   onOpenDetailedNotes(selectedClip)
                   onCloseEmptyMenu()
                 }}
-                className="w-full text-left px-3 py-1.5 text-[11px] text-gray-300 hover:bg-gray-800 transition-colors"
-              >
-                Notes détaillées des juges (clip sélectionné)
-              </button>
+                label={t('Notes détaillées des juges (clip sélectionné)')}
+                icon={Clapperboard}
+                iconSecondary={FileText}
+              />
             </>
           ) : null}
-        </div>
+        </AppContextMenuPanel>
       )}
     </>
   )

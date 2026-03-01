@@ -1,4 +1,5 @@
 import type { ParsedTimecode } from '@/utils/timecodes'
+import { useI18n } from '@/i18n'
 
 interface TimecodeChipListProps {
   items: ParsedTimecode[]
@@ -7,11 +8,12 @@ interface TimecodeChipListProps {
 }
 
 export default function TimecodeChipList({ items, color = '#60a5fa', onSelect }: TimecodeChipListProps) {
+  const { t } = useI18n()
   if (items.length === 0) return null
 
   return (
     <div className="mt-1 flex flex-wrap items-center gap-1">
-      <span className="text-[9px] uppercase tracking-wider text-gray-500">Timecodes:</span>
+      <span className="text-[9px] uppercase tracking-wider text-gray-500">{t('Timecodes :')}</span>
       {items.map((item) => (
         <button
           key={`${item.index}-${item.raw}`}
@@ -23,7 +25,7 @@ export default function TimecodeChipList({ items, color = '#60a5fa', onSelect }:
             color,
             backgroundColor: `${color}1A`,
           }}
-          title={`Aller à ${item.raw}`}
+          title={t('Aller à {timecode}', { timecode: item.raw })}
         >
           {item.raw}
         </button>

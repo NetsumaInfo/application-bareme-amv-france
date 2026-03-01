@@ -2,6 +2,7 @@ import { withAlpha } from '@/utils/colors'
 import type { Bareme } from '@/types/bareme'
 import type { CategoryGroup } from './types'
 import { useProjectStore } from '@/store/useProjectStore'
+import { useI18n } from '@/i18n'
 
 function blendWithSurface(hexColor: string, intensity: number): string {
   const hex = hexColor.replace('#', '').trim()
@@ -34,6 +35,7 @@ export function SpreadsheetTableHeader({
   currentBareme,
   hideTotalsSetting,
 }: SpreadsheetTableHeaderProps) {
+  const { t } = useI18n()
   const multiPseudoDisplayMode = useProjectStore(
     (state) => state.currentProject?.settings.multiPseudoDisplayMode ?? 'collab_mep',
   )
@@ -57,7 +59,7 @@ export function SpreadsheetTableHeader({
           rowSpan={2}
           className={`px-2 py-1.5 text-left text-[10px] font-medium text-gray-500 border-r border-b border-gray-700 bg-surface-dark sticky left-7 z-50 ${pseudoColumnWidthClass}`}
         >
-          Pseudo
+          {t('Pseudo')}
         </th>
         {categoryGroups.map((group) => (
           <th
@@ -78,7 +80,7 @@ export function SpreadsheetTableHeader({
             rowSpan={2}
             className="px-2 py-1.5 text-center text-[10px] font-bold uppercase tracking-wider border-b border-gray-700 min-w-[50px] bg-surface-dark"
           >
-            Total
+            {t('Total')}
             <div className="font-normal text-gray-500">/{currentBareme.totalPoints}</div>
           </th>
         )}

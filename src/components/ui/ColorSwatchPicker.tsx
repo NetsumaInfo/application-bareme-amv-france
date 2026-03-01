@@ -9,6 +9,7 @@ import {
   writeStoredColor,
   writeStoredColorList,
 } from '@/utils/colorPickerStorage'
+import { useI18n } from '@/i18n'
 
 interface ColorSwatchPickerProps {
   value: string
@@ -140,6 +141,7 @@ export function ColorSwatchPicker({
   maxRemembered = 10,
   triggerRef,
 }: ColorSwatchPickerProps) {
+  const { t } = useI18n()
   const [open, setOpen] = useState(false)
   const normalizedValue = sanitizeColor(value)
   const [draftHex, setDraftHex] = useState(normalizedValue)
@@ -477,21 +479,21 @@ export function ColorSwatchPicker({
 
           {defaultColor && (
             <div className="mt-2 pt-2 border-t border-gray-700">
-              <div className="text-[10px] uppercase tracking-wide text-gray-500 mb-1">Par défaut</div>
+              <div className="text-[10px] uppercase tracking-wide text-gray-500 mb-1">{t('Par défaut')}</div>
               <button
                 type="button"
                 onClick={() => commitHex(defaultColor, true)}
                 onContextMenu={(event) => openColorContextMenu(event, defaultColor)}
                 className="h-6 w-full rounded border border-gray-700 hover:border-gray-500"
                 style={{ backgroundColor: defaultColor }}
-                title={`${defaultColor} (couleur par défaut)`}
+                title={t('{color} (couleur par défaut)', { color: defaultColor })}
               />
             </div>
           )}
 
           {favoriteColors.length > 0 && (
             <div className="mt-2 pt-2 border-t border-gray-700">
-              <div className="text-[10px] uppercase tracking-wide text-gray-500 mb-1">Favoris</div>
+              <div className="text-[10px] uppercase tracking-wide text-gray-500 mb-1">{t('Favoris')}</div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(8, minmax(0, 1fr))', gap: 6 }}>
                 {favoriteColors.map((preset) => {
                   const color = sanitizeColor(preset)
@@ -507,7 +509,7 @@ export function ColorSwatchPicker({
                         active ? 'border-white' : 'border-gray-700 hover:border-gray-500'
                       }`}
                       style={{ backgroundColor: color }}
-                      title={isDefault ? `${color} (défaut)` : color}
+                      title={isDefault ? t('{color} (défaut)', { color }) : color}
                     >
                       {isDefault && (
                         <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-primary-400 border border-surface-dark" />
@@ -521,7 +523,7 @@ export function ColorSwatchPicker({
 
           {rememberedColors.length > 0 && (
             <div className="mt-2 pt-2 border-t border-gray-700">
-              <div className="text-[10px] uppercase tracking-wide text-gray-500 mb-1">Récents</div>
+              <div className="text-[10px] uppercase tracking-wide text-gray-500 mb-1">{t('Récents')}</div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(8, minmax(0, 1fr))', gap: 6 }}>
                 {rememberedColors.map((preset) => {
                   const color = sanitizeColor(preset)
@@ -567,7 +569,7 @@ export function ColorSwatchPicker({
           </div>
 
           <div className="mt-2 pt-2 border-t border-gray-700">
-            <div className="text-[10px] uppercase tracking-wide text-gray-500 mb-1">HEX</div>
+            <div className="text-[10px] uppercase tracking-wide text-gray-500 mb-1">{t('HEX')}</div>
             <div className="flex items-center gap-1.5">
               <input
                 value={draftHex}
@@ -580,7 +582,7 @@ export function ColorSwatchPicker({
                   }
                 }}
                 className="w-full h-8 px-2 rounded border border-gray-700 bg-surface text-xs text-gray-200 focus:outline-none focus:border-primary-500"
-                placeholder="#6366f1"
+                placeholder={t('#6366f1')}
               />
               <button
                 type="button"
@@ -588,7 +590,7 @@ export function ColorSwatchPicker({
                 className="h-8 px-2 rounded border border-gray-700 text-[11px] text-gray-200 hover:border-gray-500"
                 style={{ backgroundColor: withAlpha(displayColor, 0.14) }}
               >
-                OK
+                {t('OK')}
               </button>
             </div>
           </div>
@@ -615,7 +617,7 @@ export function ColorSwatchPicker({
               setContextMenu(null)
             }}
           >
-            {contextIsFavorite ? 'Retirer des favoris' : 'Ajouter aux favoris'}
+            {contextIsFavorite ? t('Retirer des favoris') : t('Ajouter aux favoris')}
           </button>
 
           <button
@@ -627,7 +629,7 @@ export function ColorSwatchPicker({
               setContextMenu(null)
             }}
           >
-            Définir comme couleur par défaut
+            {t('Définir comme couleur par défaut')}
           </button>
 
           {defaultColor && (
@@ -639,7 +641,7 @@ export function ColorSwatchPicker({
                 setContextMenu(null)
               }}
             >
-              Retirer la couleur par défaut
+              {t('Retirer la couleur par défaut')}
             </button>
           )}
 
@@ -652,7 +654,7 @@ export function ColorSwatchPicker({
                 setContextMenu(null)
               }}
             >
-              Appliquer la couleur par défaut
+              {t('Appliquer la couleur par défaut')}
             </button>
           )}
 
@@ -665,7 +667,7 @@ export function ColorSwatchPicker({
                 setContextMenu(null)
               }}
             >
-              Vider les favoris
+              {t('Vider les favoris')}
             </button>
           )}
         </div>

@@ -20,7 +20,8 @@ import { useAutoSave } from '@/hooks/useAutoSave'
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts'
 import { usePlayer } from '@/hooks/usePlayer'
 import { useSaveProject } from '@/hooks/useSaveProject'
-import { isNoteComplete } from '@/utils/scoring'
+import { applyAppearanceToDocument } from '@/utils/appTheme'
+import { applyLanguageToDocument } from '@/i18n/config'
 
 export default function AppLayout() {
   const { currentProject, clips, currentClipIndex } = useProjectStore()
@@ -45,6 +46,10 @@ export default function AppLayout() {
     shortcutBindings,
     isNotesDetached,
     setNotesDetached,
+    setShowBaremeEditor,
+    appTheme,
+    primaryColorPreset,
+    language,
   } = useUIStore()
   const { togglePause, seekRelative, toggleFullscreen, exitFullscreen, pause, frameStep, frameBackStep } = usePlayer()
   const isPlayerLoaded = usePlayerStore((state) => state.isLoaded)
@@ -54,17 +59,6 @@ export default function AppLayout() {
   const undoLastChange = useNotationStore((state) => state.undoLastChange)
   const [showSettings, setShowSettings] = useState(false)
   const appRootRef = useRef<HTMLDivElement | null>(null)
-  const allClipsScored = clips.length > 0 && clips.every((clip) => {
-    if (clip.scored) return true
-    if (!currentBareme) return false
-    const clipNote = notes[clip.id]
-    return clipNote ? isNoteComplete(clipNote, currentBareme) : false
-  })
-  const hasAnyLinkedVideo = clips.some((clip) => Boolean(clip.filePath))
-  const lockResultsUntilScored = Boolean(currentProject?.settings.hideFinalScoreUntilEnd)
-    && hasAnyLinkedVideo
-    && !allClipsScored
-
   const { toggleMiniatures, setCurrentClipMiniatureFrame } = useMiniatureActions()
   const { contextMenu, setContextMenu, handleContextMenu } = useLayoutContextMenu()
   const { isNavigableZoom, zoomStyle, navigableCanvasStyle, zoomOverflow } = useZoomStyles(zoomMode, zoomLevel)
@@ -80,14 +74,15 @@ export default function AppLayout() {
     setNotesDetached,
   })
 
-  useEffect(() => {
-    if (!lockResultsUntilScored) return
-    if (currentTab === 'resultats' || currentTab === 'export') {
-      switchTab('notation')
-    }
-  }, [lockResultsUntilScored, currentTab, switchTab])
-
   useBootstrapSettings({ loadCustomBaremes })
+
+  useEffect(() => {
+    applyAppearanceToDocument(appTheme, primaryColorPreset)
+  }, [appTheme, primaryColorPreset])
+
+  useEffect(() => {
+    applyLanguageToDocument(language)
+  }, [language])
 
   useOverlayBridge({
     clips,
@@ -146,7 +141,6 @@ export default function AppLayout() {
     togglePause,
     seekRelative,
     switchTab,
-    lockResultsUntilScored,
     frameStep,
     frameBackStep,
     save,
@@ -171,9 +165,9 @@ export default function AppLayout() {
   return (
     <div
       ref={appRootRef}
-      className={`flex flex-col h-screen w-full bg-surface-dark text-gray-200 ${zoomOverflow}`}
+      className={`app-shell flex flex-col h-screen w-full text-gray-200 ${zoomOverflow}`}
       style={zoomStyle}
-      onContextMenu={currentProject && currentTab === 'notation' ? handleContextMenu : undefined}
+      onContextMenu={handleContextMenu}
     >
       {isNavigableZoom ? (
         <div className="flex flex-col min-h-screen min-w-full" style={navigableCanvasStyle}>
@@ -194,6 +188,18 @@ export default function AppLayout() {
       <AppFloatingLayers
         contextMenu={contextMenu}
         onCloseContextMenu={() => setContextMenu(null)}
+        onOpenProject={() => {
+          handleCtrlO().catch(() => {})
+        }}
+        onCreateProject={() => setShowProjectModal(true)}
+        onOpenSettings={() => setShowSettings(true)}
+        onCloseSettingsMenuTarget={() => setShowSettings(false)}
+        onCloseProjectModal={() => setShowProjectModal(false)}
+        onOpenBaremes={() => {
+          setShowProjectModal(false)
+          setShowBaremeEditor(true)
+        }}
+        onCloseBaremeEditor={() => setShowBaremeEditor(false)}
         showSettings={showSettings}
         onCloseSettings={() => setShowSettings(false)}
         currentProject={currentProject}

@@ -2,6 +2,7 @@ import { Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, Maximize2, Minimi
 import SubtitleSelector from '@/components/player/SubtitleSelector'
 import AudioTrackSelector from '@/components/player/AudioTrackSelector'
 import AudioDbMeter from '@/components/player/AudioDbMeter'
+import { useI18n } from '@/i18n'
 
 interface PlayerMainControlsProps {
   isLoaded: boolean
@@ -42,6 +43,8 @@ export default function PlayerMainControls({
   onSetMiniatureFrame,
   onToggleFullscreen,
 }: PlayerMainControlsProps) {
+  const { t } = useI18n()
+
   return (
     <div className="flex items-center justify-between">
       <div className="flex items-center gap-1">
@@ -49,7 +52,7 @@ export default function PlayerMainControls({
           onClick={onFrameBackStep}
           className="p-1 rounded hover:bg-surface-light text-gray-400 hover:text-white transition-colors"
           disabled={!isLoaded}
-          title="Image précédente (,)"
+          title={t('Image précédente (,)')}
         >
           <ChevronLeft size={14} />
         </button>
@@ -57,7 +60,7 @@ export default function PlayerMainControls({
           onClick={onSeekBack}
           className="p-1 rounded hover:bg-surface-light text-gray-400 hover:text-white transition-colors"
           disabled={!isLoaded}
-          title="- 5s"
+          title={t('Reculer 5s')}
         >
           <SkipBack size={14} />
         </button>
@@ -72,7 +75,7 @@ export default function PlayerMainControls({
           onClick={onSeekForward}
           className="p-1 rounded hover:bg-surface-light text-gray-400 hover:text-white transition-colors"
           disabled={!isLoaded}
-          title="+ 5s"
+          title={t('Avancer 5s')}
         >
           <SkipForward size={14} />
         </button>
@@ -80,7 +83,7 @@ export default function PlayerMainControls({
           onClick={onFrameStep}
           className="p-1 rounded hover:bg-surface-light text-gray-400 hover:text-white transition-colors"
           disabled={!isLoaded}
-          title="Image suivante (.)"
+          title={t('Image suivante (.)')}
         >
           <ChevronRight size={14} />
         </button>
@@ -112,7 +115,7 @@ export default function PlayerMainControls({
           onClick={onScreenshot}
           className="p-1 rounded hover:bg-surface-light text-gray-400 hover:text-white transition-colors"
           disabled={!isLoaded}
-          title="Capture d'écran (Ctrl+Shift+G)"
+          title={t("Capture d'écran (Ctrl+Shift+G)")}
         >
           <Camera size={14} />
         </button>
@@ -122,7 +125,7 @@ export default function PlayerMainControls({
             onClick={onSetMiniatureFrame}
             className="p-1 rounded hover:bg-surface-light text-gray-400 hover:text-white transition-colors"
             disabled={!isLoaded}
-            title="Définir la frame miniature (Ctrl+Shift+M)"
+            title={t('Définir la frame miniature (Ctrl+Shift+M)')}
           >
             <ImagePlus size={14} />
           </button>
@@ -132,7 +135,7 @@ export default function PlayerMainControls({
           onClick={onToggleFullscreen}
           className="p-1 rounded hover:bg-surface-light text-gray-400 hover:text-white transition-colors ml-1"
           disabled={!isLoaded}
-          title={isFullscreen ? 'Quitter le plein écran (F11)' : 'Plein écran (F11)'}
+          title={isFullscreen ? t('Quitter le plein écran (F11)') : t('Plein écran (F11)')}
         >
           {isFullscreen ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
         </button>

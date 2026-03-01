@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { FolderPlus, Check, Circle } from 'lucide-react'
+import { FolderPlus, Check, Circle, CheckSquare2, Clapperboard, FileText, Trash2 } from 'lucide-react'
 import { useProjectStore } from '@/store/useProjectStore'
 import { useNotationStore } from '@/store/useNotationStore'
 import { useUIStore } from '@/store/useUIStore'
@@ -7,8 +7,15 @@ import * as tauri from '@/services/tauri'
 import { getClipPrimaryLabel, getClipSecondaryLabel } from '@/utils/formatters'
 import { createClipFromVideoMeta, mergeImportedVideosWithClips } from '@/utils/clipImport'
 import type { Clip } from '@/types/project'
+import { useI18n } from '@/i18n'
+import {
+  AppContextMenuItem,
+  AppContextMenuPanel,
+  AppContextMenuSeparator,
+} from '@/components/ui/AppContextMenu'
 
 export default function VideoList() {
+  const { t } = useI18n()
   const { clips, currentClipIndex, setCurrentClip, setClips, currentProject, updateProject, setClipScored, removeClip } =
     useProjectStore()
   const { isClipComplete } = useNotationStore()
@@ -46,7 +53,7 @@ export default function VideoList() {
       }
     } catch (e) {
       console.error('Failed to import folder:', e)
-      alert(`Erreur lors de l'import: ${e}`)
+      alert(t("Erreur lors de l'import: {error}", { error: String(e) }))
     }
   }
 
@@ -54,13 +61,13 @@ export default function VideoList() {
     <div className="flex flex-col h-full">
       <div className="flex items-center justify-between px-3 py-2 border-b border-gray-700">
         <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
-          Clips ({clips.length})
+          {t('Clips')} ({clips.length})
         </h3>
         {currentProject && (
           <button
             onClick={handleImportFolder}
             className="p-1 rounded hover:bg-surface-light text-gray-400 hover:text-white transition-colors"
-            title="Importer un dossier de vidéos"
+            title={t('Importer un dossier de vidéos')}
           >
             <FolderPlus size={14} />
           </button>
@@ -71,8 +78,8 @@ export default function VideoList() {
         {clips.length === 0 && (
           <div className="p-4 text-center text-gray-500 text-xs">
             {currentProject
-              ? 'Importez un dossier de vidéos pour commencer'
-              : 'Créez ou ouvrez un projet'}
+              ? t('Importez un dossier de vidéos pour commencer')
+              : t('Créez ou ouvrez un projet')}
           </div>
         )}
 
@@ -119,10 +126,11 @@ export default function VideoList() {
       </div>
 
       {contextMenu && (
-        <div
+        <AppContextMenuPanel
           ref={contextMenuRef}
-          className="fixed z-[95] bg-gray-900 border border-gray-700 rounded-lg shadow-xl py-1 min-w-[210px]"
-          style={{ left: contextMenu.x, top: contextMenu.y }}
+          x={contextMenu.x}
+          y={contextMenu.y}
+          minWidthClassName="min-w-[220px]"
         >
           {(() => {
             const clip = clips.find((item) => item.id === contextMenu.clipId)
@@ -130,40 +138,39 @@ export default function VideoList() {
             const clipIndex = clips.findIndex((item) => item.id === clip.id)
             return (
               <>
-                <button
+                <AppContextMenuItem
                   onClick={() => {
                     setClipScored(clip.id, !clip.scored)
                     setContextMenu(null)
                   }}
-                  className="w-full text-left px-3 py-1.5 text-[11px] text-gray-300 hover:bg-gray-800 transition-colors"
-                >
-                  {clip.scored ? 'Retirer "noté"' : 'Marquer comme noté'}
-                </button>
-                <div className="border-t border-gray-700 my-0.5" />
-                <button
+                  label={clip.scored ? t('Retirer "noté"') : t('Marquer comme noté')}
+                  icon={CheckSquare2}
+                />
+                <AppContextMenuSeparator />
+                <AppContextMenuItem
                   onClick={() => {
                     if (clipIndex >= 0) setCurrentClip(clipIndex)
                     tauri.openNotesWindow().then(() => setNotesDetached(true)).catch(() => {})
                     setContextMenu(null)
                   }}
-                  className="w-full text-left px-3 py-1.5 text-[11px] text-gray-300 hover:bg-gray-800 transition-colors"
-                >
-                  Notes du clip
-                </button>
-                <div className="border-t border-gray-700 my-0.5" />
+                  label={t('Notes du clip')}
+                  icon={Clapperboard}
+                  iconSecondary={FileText}
+                />
+                <AppContextMenuSeparator />
               </>
             )
           })()}
-          <button
+          <AppContextMenuItem
             onClick={() => {
               removeClip(contextMenu.clipId)
               setContextMenu(null)
             }}
-            className="w-full text-left px-3 py-1.5 text-[11px] text-red-400 hover:bg-gray-800 transition-colors"
-          >
-            Supprimer la vidéo
-          </button>
-        </div>
+            label={t('Supprimer la vidéo')}
+            icon={Trash2}
+            danger
+          />
+        </AppContextMenuPanel>
       )}
     </div>
   )

@@ -5,20 +5,41 @@ import {
   ChevronLeft,
   ChevronRight,
   MonitorPlay,
+  X,
+  FilePlus,
+  FolderOpen,
   FolderPlus,
   Upload,
   Image,
   FileText,
+  Settings,
+  BarChart3,
+  Share2,
 } from 'lucide-react'
 import { useUIStore } from '@/store/useUIStore'
 import { useProjectStore } from '@/store/useProjectStore'
+import {
+  AppContextMenuItem,
+  AppContextMenuPanel,
+  AppContextMenuSeparator,
+} from '@/components/ui/AppContextMenu'
 import type { InterfaceMode, AppTab } from '@/types/notation'
 import { formatShortcutDisplay } from '@/utils/shortcuts'
+import { useI18n } from '@/i18n'
+import type { LayoutContextScope } from '@/components/layout/hooks/useLayoutContextMenu'
 
 interface ContextMenuProps {
   x: number
   y: number
+  scope: LayoutContextScope
   onClose: () => void
+  onOpenProject?: () => void
+  onCreateProject?: () => void
+  onOpenSettings?: () => void
+  onCloseSettingsMenuTarget?: () => void
+  onCloseProjectModal?: () => void
+  onOpenBaremes?: () => void
+  onCloseBaremeEditor?: () => void
   onImportVideos?: () => void
   onImportJudge?: () => void
   onExportPNG?: () => void
@@ -38,12 +59,21 @@ interface MenuItem {
 export default function ContextMenu({
   x,
   y,
+  scope,
   onClose,
+  onOpenProject,
+  onCreateProject,
+  onOpenSettings,
+  onCloseSettingsMenuTarget,
+  onCloseProjectModal,
+  onOpenBaremes,
+  onCloseBaremeEditor,
   onImportVideos,
   onImportJudge,
   onExportPNG,
   onExportPDF,
 }: ContextMenuProps) {
+  const { t } = useI18n()
   const menuRef = useRef<HTMLDivElement>(null)
   const {
     currentTab,
@@ -73,21 +103,81 @@ export default function ContextMenu({
 
   const items: MenuItem[] = []
 
-  if (currentTab === 'notation') {
+  if (scope === 'create-project') {
+    if (onCloseProjectModal) {
+      items.push({
+        label: t('Fermer la création du projet'),
+        icon: X,
+        onClick: () => { onCloseProjectModal(); onClose() },
+      })
+    }
+    if (onOpenBaremes) {
+      items.push({
+        label: t('Gérer les barèmes'),
+        icon: Settings,
+        onClick: () => { onOpenBaremes(); onClose() },
+      })
+    }
+  } else if (scope === 'settings') {
+    if (onCloseSettingsMenuTarget) {
+      items.push({
+        label: t('Fermer les paramètres'),
+        icon: X,
+        onClick: () => { onCloseSettingsMenuTarget(); onClose() },
+      })
+    }
+  } else if (scope === 'bareme-editor') {
+    if (onCloseBaremeEditor) {
+      items.push({
+        label: t("Fermer l'éditeur de barèmes"),
+        icon: X,
+        onClick: () => { onCloseBaremeEditor(); onClose() },
+      })
+    }
+  } else if (!currentProject || scope === 'welcome') {
+    if (onCreateProject) {
+      items.push({
+        label: t('Nouveau projet'),
+        icon: FilePlus,
+        onClick: () => { onCreateProject(); onClose() },
+      })
+    }
+    if (onOpenProject) {
+      items.push({
+        label: t('Ouvrir un projet'),
+        icon: FolderOpen,
+        onClick: () => { onOpenProject(); onClose() },
+      })
+    }
+    if (onOpenSettings) {
+      items.push({ separator: true, label: '' })
+      items.push({
+        label: t('Paramètres'),
+        icon: Settings,
+        onClick: () => { onOpenSettings(); onClose() },
+      })
+    }
+    if (items.length === 0) {
+      items.push({
+        label: t('Aucune action disponible'),
+        icon: Settings,
+      })
+    }
+  } else if (currentTab === 'notation') {
     items.push({
-      label: 'Vue tableur',
+      label: t('Vue tableur'),
       icon: Table,
       onClick: () => { switchInterface('spreadsheet' as InterfaceMode); onClose() },
       active: currentInterface === 'spreadsheet',
     })
     items.push({
-      label: 'Vue notes',
+      label: t('Vue notes'),
       icon: FileText,
       onClick: () => { switchInterface('notation' as InterfaceMode); onClose() },
       active: currentInterface === 'notation',
     })
     items.push({
-      label: 'Vue mixte',
+      label: t('Vue mixte'),
       icon: Table,
       iconSecondary: FileText,
       onClick: () => { switchInterface('dual' as InterfaceMode); onClose() },
@@ -95,30 +185,30 @@ export default function ContextMenu({
     })
     items.push({ separator: true, label: '' })
     items.push({
-      label: 'Clip suivant',
+      label: t('Clip suivant'),
       icon: ChevronRight,
       onClick: () => { nextClip(); onClose() },
-      shortcut: formatShortcutDisplay(shortcutBindings.nextClip),
+      shortcut: formatShortcutDisplay(shortcutBindings.nextClip, t),
     })
     items.push({
-      label: 'Clip précédent',
+      label: t('Clip précédent'),
       icon: ChevronLeft,
       onClick: () => { previousClip(); onClose() },
-      shortcut: formatShortcutDisplay(shortcutBindings.prevClip),
+      shortcut: formatShortcutDisplay(shortcutBindings.prevClip, t),
     })
     items.push({ separator: true, label: '' })
     items.push({
       label: hasCurrentClipVideo
-        ? (showPipVideo ? 'Masquer la vidéo PiP' : 'Afficher la vidéo PiP')
-        : 'Vidéo PiP indisponible (pas de média)',
+        ? (showPipVideo ? t('Masquer la vidéo PiP') : t('Afficher la vidéo PiP'))
+        : t('Vidéo PiP indisponible (pas de média)'),
       icon: MonitorPlay,
       onClick: hasCurrentClipVideo ? () => { setShowPipVideo(!showPipVideo); onClose() } : undefined,
     })
     if (currentProject) {
       items.push({
         label: hasAnyLinkedVideo
-          ? (currentProject.settings.showMiniatures ? 'Masquer miniatures' : 'Afficher miniatures')
-          : 'Miniatures indisponibles (pas de média)',
+          ? (currentProject.settings.showMiniatures ? t('Masquer miniatures') : t('Afficher miniatures'))
+          : t('Miniatures indisponibles (pas de média)'),
         icon: Image,
         onClick: hasAnyLinkedVideo
           ? () => {
@@ -126,14 +216,14 @@ export default function ContextMenu({
             onClose()
           }
           : undefined,
-        shortcut: formatShortcutDisplay(shortcutBindings.toggleMiniatures),
+        shortcut: formatShortcutDisplay(shortcutBindings.toggleMiniatures, t),
       })
 
       if (currentInterface === 'spreadsheet' || currentInterface === 'dual') {
         items.push({
           label: currentProject.settings.showAddRowButton
-            ? 'Masquer bouton'
-            : 'Afficher bouton',
+            ? t('Masquer bouton')
+            : t('Afficher bouton'),
           icon: Table2,
           onClick: () => {
             updateSettings({ showAddRowButton: !currentProject.settings.showAddRowButton })
@@ -144,37 +234,61 @@ export default function ContextMenu({
     }
     if (onImportVideos) {
       items.push({
-        label: 'Importer des vidéos',
+        label: t('Importer des vidéos'),
         icon: FolderPlus,
         onClick: () => { onImportVideos(); onClose() },
       })
     }
   } else if (currentTab === 'resultats') {
     items.push({
-      label: 'Aller à la Notation',
+      label: t('Aller à la Notation'),
       icon: Table,
       onClick: () => { switchTab('notation' as AppTab); onClose() },
+    })
+    items.push({
+      label: t("Aller à l'Export"),
+      icon: Share2,
+      onClick: () => { switchTab('export' as AppTab); onClose() },
     })
     items.push({ separator: true, label: '' })
     if (onImportJudge) {
       items.push({
-        label: 'Importer fichier juge',
+        label: t('Importer fichier juge'),
         icon: Upload,
         onClick: () => { onImportJudge(); onClose() },
       })
     }
     if (onExportPNG) {
       items.push({
-        label: 'Exporter en PNG',
+        label: t('Exporter en PNG'),
         icon: Image,
         onClick: () => { onExportPNG(); onClose() },
       })
     }
     if (onExportPDF) {
       items.push({
-        label: 'Exporter en PDF',
+        label: t('Exporter en PDF'),
         icon: FileText,
         onClick: () => { onExportPDF(); onClose() },
+      })
+    }
+  } else if (currentTab === 'export') {
+    items.push({
+      label: t('Aller à la Notation'),
+      icon: Table,
+      onClick: () => { switchTab('notation' as AppTab); onClose() },
+    })
+    items.push({
+      label: t('Aller au Résultat'),
+      icon: BarChart3,
+      onClick: () => { switchTab('resultats' as AppTab); onClose() },
+    })
+    if (onOpenSettings) {
+      items.push({ separator: true, label: '' })
+      items.push({
+        label: t('Paramètres'),
+        icon: Settings,
+        onClick: () => { onOpenSettings(); onClose() },
       })
     }
   }
@@ -193,43 +307,30 @@ export default function ContextMenu({
   })()
 
   return (
-    <div
+    <AppContextMenuPanel
       ref={menuRef}
-      className="fixed z-[100] bg-surface border border-gray-600 rounded-lg shadow-2xl py-1 min-w-[200px]"
-      style={adjustedStyle}
-      onClick={(e) => e.stopPropagation()}
-      onContextMenu={(e) => e.preventDefault()}
+      x={adjustedStyle.left}
+      y={adjustedStyle.top}
+      minWidthClassName="min-w-[210px]"
     >
       {items.map((item, idx) => {
         if (item.separator) {
-          return <div key={`sep-${idx}`} className="h-px bg-gray-700 my-1" />
+          return <AppContextMenuSeparator key={`sep-${idx}`} />
         }
 
         return (
-          <button
+          <AppContextMenuItem
             key={item.label}
             onClick={item.onClick}
-            title={item.shortcut ? `${item.label} (${item.shortcut})` : item.label}
-            className={`w-full flex items-center gap-2 px-3 py-1.5 text-xs transition-colors ${
-              !item.onClick
-                ? 'text-gray-600 cursor-not-allowed'
-                : item.active
-                ? 'text-primary-400 bg-primary-600/10'
-                : 'text-gray-300 hover:bg-surface-light hover:text-white'
-            }`}
+            label={item.label}
+            icon={item.icon}
+            iconSecondary={item.iconSecondary}
+            shortcut={item.shortcut}
+            active={item.active}
             disabled={!item.onClick}
-          >
-            {item.icon && (
-              <span className="flex items-center gap-1">
-                <item.icon size={13} />
-                {item.iconSecondary && <item.iconSecondary size={13} />}
-              </span>
-            )}
-            <span className="flex-1 text-left">{item.label}</span>
-            {item.shortcut && <span className="text-[10px] text-gray-500">{item.shortcut}</span>}
-          </button>
+          />
         )
       })}
-    </div>
+    </AppContextMenuPanel>
   )
 }

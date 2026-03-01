@@ -2,6 +2,12 @@ import { useEffect } from 'react'
 import { useUIStore } from '@/store/useUIStore'
 import * as tauri from '@/services/tauri'
 import { DEFAULT_SHORTCUT_BINDINGS } from '@/utils/shortcuts'
+import {
+  applyAppearanceToDocument,
+  normalizeAppThemePreset,
+  normalizePrimaryColorPreset,
+} from '@/utils/appTheme'
+import { applyLanguageToDocument, normalizeAppLanguage } from '@/i18n/config'
 import type { Bareme } from '@/types/bareme'
 import type { ShortcutAction } from '@/utils/shortcuts'
 
@@ -24,8 +30,22 @@ export function useBootstrapSettings({ loadCustomBaremes }: UseBootstrapSettings
     tauri.loadUserSettings().then((data) => {
       if (data && typeof data === 'object') {
         const settings = data as Record<string, unknown>
+        const nextState: Partial<ReturnType<typeof useUIStore.getState>> = {}
+
         if (typeof settings.showAudioDb === 'boolean') {
-          useUIStore.setState({ showAudioDb: settings.showAudioDb })
+          nextState.showAudioDb = settings.showAudioDb
+        }
+        const normalizedAppThemePreset = normalizeAppThemePreset(settings.appTheme)
+        if (normalizedAppThemePreset) {
+          nextState.appTheme = normalizedAppThemePreset
+        }
+        const normalizedPrimaryColorPreset = normalizePrimaryColorPreset(settings.primaryColorPreset)
+        if (normalizedPrimaryColorPreset) {
+          nextState.primaryColorPreset = normalizedPrimaryColorPreset
+        }
+        const normalizedLanguage = normalizeAppLanguage(settings.language)
+        if (normalizedLanguage) {
+          nextState.language = normalizedLanguage
         }
         if (settings.shortcutBindings && typeof settings.shortcutBindings === 'object') {
           const rawBindings = settings.shortcutBindings as Record<string, string>
@@ -41,11 +61,20 @@ export function useBootstrapSettings({ loadCustomBaremes }: UseBootstrapSettings
             migrated = true
           }
 
-          useUIStore.setState({ shortcutBindings: merged })
+          nextState.shortcutBindings = merged
           if (migrated) {
             tauri.saveUserSettings({ ...settings, shortcutBindings: merged }).catch(() => {})
           }
         }
+
+        if (Object.keys(nextState).length > 0) {
+          useUIStore.setState(nextState)
+        }
+        applyAppearanceToDocument(
+          nextState.appTheme ?? useUIStore.getState().appTheme,
+          nextState.primaryColorPreset ?? useUIStore.getState().primaryColorPreset,
+        )
+        applyLanguageToDocument(nextState.language ?? useUIStore.getState().language)
       }
     }).catch(() => {})
   }, [])

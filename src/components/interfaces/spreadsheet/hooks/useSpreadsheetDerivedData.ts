@@ -1,11 +1,11 @@
 import { useCallback, useMemo } from 'react'
 import { getClipPrimaryLabel } from '@/utils/formatters'
 import { CATEGORY_COLOR_PRESETS, sanitizeColor } from '@/utils/colors'
-import { isNoteComplete } from '@/utils/scoring'
 import type { CategoryGroup } from '@/components/interfaces/spreadsheet/types'
 import type { Bareme } from '@/types/bareme'
 import type { Clip, Project } from '@/types/project'
 import type { Note } from '@/types/notation'
+import { areAllClipsScored, shouldHideResultsUntilAllScored } from '@/utils/resultsVisibility'
 
 type UseSpreadsheetDerivedDataParams = {
   currentBareme: Bareme | null
@@ -61,20 +61,17 @@ export function useSpreadsheetDerivedData({
   }, [clips])
 
   const allClipsScored = useMemo(
-    () => clips.length > 0 && clips.every((clip) => {
-      if (clip.scored) return true
-      if (!currentBareme) return false
-      const note = getNoteForClip(clip.id)
-      return note ? isNoteComplete(note, currentBareme) : false
-    }),
+    () => areAllClipsScored(clips, currentBareme, getNoteForClip),
     [clips, currentBareme, getNoteForClip],
   )
   const hasAnyLinkedVideo = clips.some((clip) => Boolean(clip.filePath))
   const hideTotalsSetting = Boolean(currentProject?.settings.hideTotals)
-  const hideTotalsUntilAllScored =
-    Boolean(currentProject?.settings.hideFinalScoreUntilEnd)
-    && hasAnyLinkedVideo
-    && !allClipsScored
+  const hideTotalsUntilAllScored = shouldHideResultsUntilAllScored(
+    currentProject,
+    clips,
+    currentBareme,
+    getNoteForClip,
+  )
   const showMiniatures = Boolean(currentProject?.settings.showMiniatures)
   const showAddRowButton = Boolean(currentProject?.settings.showAddRowButton)
 

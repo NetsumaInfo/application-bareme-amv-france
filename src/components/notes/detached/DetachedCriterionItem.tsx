@@ -3,6 +3,7 @@ import TimecodeTextarea from '@/components/notes/TimecodeTextarea'
 import { withAlpha } from '@/utils/colors'
 import type { Criterion } from '@/types/bareme'
 import type { CriterionScore } from '@/types/notation'
+import { useI18n } from '@/i18n'
 
 interface DetachedCriterionItemProps {
   criterion: Criterion
@@ -43,15 +44,15 @@ export function DetachedCriterionItem({
   onTimecodeHover,
   onTimecodeLeave,
 }: DetachedCriterionItemProps) {
+  const { t } = useI18n()
   const value = score?.value ?? ''
-  const hasError = Boolean(score && !score.isValid)
 
   return (
     <div className="space-y-1">
       <div
         className="flex items-center gap-2 px-3 py-2 rounded-md transition-colors"
         style={{
-          backgroundColor: hasError ? withAlpha('#ef4444', 0.12) : withAlpha(color, 0.07),
+          backgroundColor: withAlpha(color, 0.07),
         }}
       >
         <div className="flex-1 min-w-0">
@@ -77,19 +78,11 @@ export function DetachedCriterionItem({
               event.target.value,
             )}
           onKeyDown={(event) => onInputKeyDown(event, flatIndex)}
-          className={`amv-soft-number w-16 px-2 py-1 text-center text-sm rounded-md border font-mono focus-visible:outline-none ${
-            hasError
-              ? 'border-accent bg-accent/10 text-accent-light'
-              : 'text-white focus:border-primary-500'
-          } focus:outline-none`}
-          style={
-            !hasError
-              ? {
-                  borderColor: withAlpha(color, 0.42),
-                  backgroundColor: withAlpha(color, 0.1),
-                }
-              : undefined
-          }
+          className="amv-soft-number w-16 rounded-md border px-2 py-1 text-center text-sm font-mono text-white focus:border-primary-500 focus:outline-none focus-visible:outline-none"
+          style={{
+            borderColor: withAlpha(color, 0.42),
+            backgroundColor: withAlpha(color, 0.1),
+          }}
         />
         <span className="text-[10px] text-gray-500 w-7 text-right font-mono">/{criterion.max ?? 10}</span>
         <button
@@ -97,14 +90,14 @@ export function DetachedCriterionItem({
           onClick={onToggleNote}
           className="ml-1 px-1 text-[10px] leading-none text-gray-400 hover:text-white transition-colors bg-transparent"
           style={{ background: 'transparent' }}
-          title={isCriterionNoteExpanded ? 'Refermer la note' : 'Ouvrir la note'}
+          title={isCriterionNoteExpanded ? t('Refermer la note') : t('Ouvrir la note')}
         >
           {isCriterionNoteExpanded ? '▲' : '▼'}
         </button>
       </div>
       {isCriterionNoteExpanded ? (
         <TimecodeTextarea
-          placeholder={`Note "${criterion.name}"...`}
+          placeholder={t('Note "{name}"...', { name: criterion.name })}
           value={criterionNoteValue}
           onChange={(nextValue) => onCriterionNoteChange(criterion.id, nextValue)}
           textareaClassName="min-h-[30px]"

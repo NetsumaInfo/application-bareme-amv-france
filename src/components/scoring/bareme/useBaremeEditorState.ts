@@ -5,11 +5,13 @@ import { duplicateBareme } from '@/components/scoring/bareme/baremeEditorStateUt
 import { useBaremeEditorEvents } from '@/components/scoring/bareme/useBaremeEditorEvents'
 import { useBaremeEditorForm } from '@/components/scoring/bareme/useBaremeEditorForm'
 import { useBaremeJsonTransfer } from '@/components/scoring/bareme/useBaremeJsonTransfer'
+import { useI18n } from '@/i18n'
 import type { Bareme } from '@/types/bareme'
 
 type BaremeEditorMode = 'list' | 'edit'
 
 export function useBaremeEditorState() {
+  const { t } = useI18n()
   const { showBaremeEditor, setShowBaremeEditor } = useUIStore()
   const { addBareme, availableBaremes, removeBareme } = useNotationStore()
 
@@ -73,7 +75,7 @@ export function useBaremeEditorState() {
   }
 
   const handleDelete = (baremeId: string) => {
-    if (confirm('Supprimer ce bareme ?')) {
+    if (confirm(t('Supprimer ce barème ?'))) {
       removeBareme(baremeId)
     }
   }

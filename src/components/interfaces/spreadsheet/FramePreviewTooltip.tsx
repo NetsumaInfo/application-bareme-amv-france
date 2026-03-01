@@ -1,4 +1,5 @@
 import { createPortal } from 'react-dom'
+import { useI18n } from '@/i18n'
 
 interface FramePreviewTooltipState {
   visible: boolean
@@ -13,6 +14,7 @@ interface FramePreviewTooltipProps {
 }
 
 export function FramePreviewTooltip({ framePreview }: FramePreviewTooltipProps) {
+  const { t } = useI18n()
   if (!framePreview.visible) return null
 
   const preview = (
@@ -22,15 +24,15 @@ export function FramePreviewTooltip({ framePreview }: FramePreviewTooltipProps) 
     >
       <div className="h-[132px] bg-black flex items-center justify-center">
         {framePreview.loading ? (
-          <span className="text-[10px] text-gray-500">Chargement frame...</span>
+          <span className="text-[10px] text-gray-500">{t('Chargement frame...')}</span>
         ) : framePreview.image ? (
           <img
             src={framePreview.image}
-            alt="Frame preview"
+            alt={t('Aperçu frame')}
             className="w-full h-full object-cover"
           />
         ) : (
-          <span className="text-[10px] text-gray-500">Preview indisponible</span>
+          <span className="text-[10px] text-gray-500">{t('Preview indisponible')}</span>
         )}
       </div>
     </div>

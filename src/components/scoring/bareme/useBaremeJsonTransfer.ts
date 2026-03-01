@@ -3,6 +3,7 @@ import { generateId } from '@/utils/formatters'
 import * as tauri from '@/services/tauri'
 import { normalizeImportedBaremes } from '@/components/scoring/baremeEditorUtils'
 import type { Bareme } from '@/types/bareme'
+import { useI18n } from '@/i18n'
 
 interface UseBaremeJsonTransferParams {
   availableBaremes: Bareme[]
@@ -13,6 +14,7 @@ export function useBaremeJsonTransfer({
   availableBaremes,
   addBareme,
 }: UseBaremeJsonTransferParams) {
+  const { t } = useI18n()
   const handleImportBaremeJson = useCallback(async () => {
     try {
       const filePath = await tauri.openJsonDialog()
@@ -20,7 +22,7 @@ export function useBaremeJsonTransfer({
       const data = await tauri.loadProjectFile(filePath)
       const imported = normalizeImportedBaremes(data)
       if (imported.length === 0) {
-        alert('Aucun bareme valide trouve dans ce fichier JSON.')
+        alert(t('Aucun barème valide trouvé dans ce fichier JSON.'))
         return
       }
 
@@ -35,12 +37,12 @@ export function useBaremeJsonTransfer({
           isOfficial: false,
         })
       }
-      alert(`${imported.length} bareme(s) importe(s).`)
+      alert(t('{count} barème(s) importé(s).', { count: imported.length }))
     } catch (errorValue) {
       console.error('Import bareme JSON failed:', errorValue)
-      alert(`Erreur d'import JSON: ${errorValue}`)
+      alert(t("Erreur d'import JSON : {error}", { error: String(errorValue) }))
     }
-  }, [addBareme, availableBaremes])
+  }, [addBareme, availableBaremes, t])
 
   const handleExportBaremeJson = useCallback(async (bareme: Bareme) => {
     try {
@@ -57,9 +59,9 @@ export function useBaremeJsonTransfer({
       )
     } catch (errorValue) {
       console.error('Export bareme JSON failed:', errorValue)
-      alert(`Erreur d'export JSON: ${errorValue}`)
+      alert(t("Erreur d'export JSON : {error}", { error: String(errorValue) }))
     }
-  }, [])
+  }, [t])
 
   return {
     handleImportBaremeJson,

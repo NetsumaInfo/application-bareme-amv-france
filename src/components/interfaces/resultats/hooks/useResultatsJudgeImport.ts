@@ -2,6 +2,7 @@ import { useCallback, useState } from 'react'
 import * as tauri from '@/services/tauri'
 import { normalizeImportedJudge } from '@/components/interfaces/resultats/importJudge'
 import type { Clip, ImportedJudgeData } from '@/types/project'
+import { useI18n } from '@/i18n'
 
 interface UseResultatsJudgeImportOptions {
   clips: Clip[]
@@ -14,6 +15,7 @@ export function useResultatsJudgeImport({
   importedJudges,
   setImportedJudges,
 }: UseResultatsJudgeImportOptions) {
+  const { t } = useI18n()
   const [importing, setImporting] = useState(false)
 
   const handleImportJudgeJson = useCallback(async () => {
@@ -27,7 +29,7 @@ export function useResultatsJudgeImport({
       const normalized = normalizeImportedJudge(payload, clips)
 
       if (!normalized) {
-        alert('Le fichier importé ne contient pas de notes exploitables pour ce projet.')
+        alert(t("Le fichier importé ne contient pas de notes exploitables pour ce projet."))
         return
       }
 
@@ -41,15 +43,19 @@ export function useResultatsJudgeImport({
       setImportedJudges(next)
 
       if (matchedCount < totalClips) {
-        alert(`Import réussi : ${normalized.judgeName}\n${matchedCount}/${totalClips} clips appariés.`)
+        alert(t('Import réussi : {judgeName}\n{matchedCount}/{totalClips} clips appariés.', {
+          judgeName: normalized.judgeName,
+          matchedCount,
+          totalClips,
+        }))
       }
     } catch (error) {
       console.error('Import judge JSON failed:', error)
-      alert(`Erreur d'import: ${error}`)
+      alert(t("Erreur d'import: {error}", { error: String(error) }))
     } finally {
       setImporting(false)
     }
-  }, [clips, importedJudges, importing, setImportedJudges])
+  }, [clips, importedJudges, importing, setImportedJudges, t])
 
   const removeImportedJudge = useCallback((index: number) => {
     setImportedJudges(importedJudges.filter((_, i) => i !== index))

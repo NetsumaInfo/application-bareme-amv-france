@@ -4,6 +4,7 @@ import { save } from '@tauri-apps/api/dialog'
 import { writeBinaryFile } from '@tauri-apps/api/fs'
 import { join } from '@tauri-apps/api/path'
 import * as tauri from '@/services/tauri'
+import { useI18n } from '@/i18n'
 import type {
   ExportNotesPdfMode,
   ExportPngMode,
@@ -38,6 +39,7 @@ interface UseExportActionsOptions {
   theme: ExportTheme
   projectName: string
   jsonPayload: Record<string, unknown>
+  jsonDefaultFileName: string
   notesPdfPayload: ExportNotesPdfPayload
 }
 
@@ -82,8 +84,10 @@ export function useExportActions({
   theme,
   projectName,
   jsonPayload,
+  jsonDefaultFileName,
   notesPdfPayload,
 }: UseExportActionsOptions) {
+  const { t } = useI18n()
   const [exporting, setExporting] = useState(false)
 
   const exportContainer = useCallback(async (type: 'png' | 'pdf', captureOptions?: ExportCaptureOptions) => {
@@ -152,7 +156,7 @@ export function useExportActions({
             })
           if (pageTargets.length === 0) {
             if (pngMode === 'paged' && !hasWrittenOutput) {
-              alert('Aucune page disponible pour un export PNG paginé.')
+              alert(t('Aucune page disponible pour un export PNG paginé.'))
             }
           } else {
             const folderPath = await tauri.openFolderDialog()
@@ -234,22 +238,22 @@ export function useExportActions({
       await writeBinaryFile(pdfPath, new Uint8Array(pdf.output('arraybuffer')))
     } catch (error) {
       console.error(`Export ${type.toUpperCase()} failed:`, error)
-      alert(`Erreur export ${type.toUpperCase()}: ${error}`)
+      alert(`${t('Erreur export')} ${type.toUpperCase()}: ${error}`)
     } finally {
       setExporting(false)
     }
-  }, [exportPageRefs, exporting, previewRef, projectName, theme])
+  }, [exportPageRefs, exporting, previewRef, projectName, t, theme])
 
   const exportJson = useCallback(async () => {
     try {
-      const jsonPath = await tauri.saveJsonDialog(`${projectName}_export.json`)
+      const jsonPath = await tauri.saveJsonDialog(jsonDefaultFileName)
       if (!jsonPath) return
       await tauri.exportJsonFile(jsonPayload, jsonPath)
     } catch (error) {
       console.error('Export JSON failed:', error)
-      alert(`Erreur export JSON: ${error}`)
+      alert(`${t('Erreur export JSON')}: ${error}`)
     }
-  }, [jsonPayload, projectName])
+  }, [jsonDefaultFileName, jsonPayload, t])
 
   const exportNotesPdf = useCallback(async () => {
     if (exporting) return
@@ -286,7 +290,7 @@ export function useExportActions({
       }
 
       const writeLines = (text: string, fontSize: number, fontStyle: 'normal' | 'bold', indent = 0) => {
-        const safe = text.trim().length > 0 ? text : 'Aucune note.'
+        const safe = text.trim().length > 0 ? text : t('Aucune note.')
         pdf.setFont('helvetica', fontStyle)
         pdf.setFontSize(fontSize)
         const lines = pdf.splitTextToSize(safe, Math.max(80, contentWidth - indent))
@@ -303,7 +307,7 @@ export function useExportActions({
         indent = 0,
         fontStyle: 'normal' | 'bold' = 'normal',
       ): number => {
-        const safe = text.trim().length > 0 ? text : 'Aucune note.'
+        const safe = text.trim().length > 0 ? text : t('Aucune note.')
         pdf.setFont('helvetica', fontStyle)
         pdf.setFontSize(fontSize)
         const lines = pdf.splitTextToSize(safe, Math.max(80, contentWidth - indent))
@@ -316,9 +320,19 @@ export function useExportActions({
       }
 
       pdf.setTextColor(15, 23, 42)
-      writeLines(`Notes export - ${notesPdfPayload.title}`, 16, 'bold')
+      writeLines(`${t('Notes export')} - ${notesPdfPayload.title}`, 16, 'bold')
       writeGap(6)
-      writeLines(`Mode: ${notesPdfPayload.mode === 'general' ? 'Notes generales' : notesPdfPayload.mode === 'judges' ? 'Notes des juges' : 'Notes generales + notes des juges'}`, 10, 'normal')
+      writeLines(
+        `${t('Mode')}: ${
+          notesPdfPayload.mode === 'general'
+            ? t('Notes générales')
+            : notesPdfPayload.mode === 'judges'
+              ? t('Notes des juges')
+              : t('Notes générales + notes des juges')
+        }`,
+        10,
+        'normal',
+      )
       writeGap(8)
 
       notesPdfPayload.entries.forEach((entry, index) => {
@@ -329,7 +343,7 @@ export function useExportActions({
         let minimumEntryHeight = getLineCount(titleText, 12, 0, 'bold') * lineHeight
 
         if (hasGeneralSection) {
-          const generalPreview = entry.generalNote.trim().length > 0 ? entry.generalNote : 'Aucune note.'
+          const generalPreview = entry.generalNote.trim().length > 0 ? entry.generalNote : t('Aucune note.')
           minimumEntryHeight += 2 + lineHeight
           minimumEntryHeight += Math.min(2, getLineCount(generalPreview, 10, 12, 'normal')) * lineHeight
         }
@@ -342,7 +356,7 @@ export function useExportActions({
             const firstJudge = entry.judges[0]
             const firstJudgePreview = firstJudge.generalNote.trim().length > 0
               ? firstJudge.generalNote
-              : 'Aucune note generale.'
+              : t('Aucune note générale.')
             minimumEntryHeight += 2 + lineHeight
             minimumEntryHeight += Math.min(2, getLineCount(firstJudgePreview, 10, 18, 'normal')) * lineHeight
           }
@@ -353,7 +367,7 @@ export function useExportActions({
 
         if (hasGeneralSection) {
           writeGap(2)
-          writeLines('Note generale', 10, 'bold', 6)
+          writeLines(t('Note générale'), 10, 'bold', 6)
           writeLines(entry.generalNote, 10, 'normal', 12)
         }
 
@@ -363,13 +377,13 @@ export function useExportActions({
             ? lineHeight * 2
             : lineHeight * 3
           ensureSpace(judgesHeaderReserve)
-          writeLines('Notes des juges', 10, 'bold', 6)
+          writeLines(t('Notes des juges'), 10, 'bold', 6)
 
           if (entry.judges.length === 0) {
-            writeLines('Aucune note juge.', 10, 'normal', 12)
+            writeLines(t('Aucune note juge.'), 10, 'normal', 12)
           } else {
             entry.judges.forEach((judge) => {
-              const judgePreview = judge.generalNote.trim().length > 0 ? judge.generalNote : 'Aucune note generale.'
+              const judgePreview = judge.generalNote.trim().length > 0 ? judge.generalNote : t('Aucune note générale.')
               const judgeIntroHeight =
                 2
                 + lineHeight
@@ -381,14 +395,14 @@ export function useExportActions({
               if (judge.generalNote.trim().length > 0) {
                 writeLines(judge.generalNote, 10, 'normal', 18)
               } else {
-                writeLines('Aucune note generale.', 10, 'normal', 18)
+                writeLines(t('Aucune note générale.'), 10, 'normal', 18)
               }
 
               if (judge.categoryNotes.length > 0) {
                 const firstCategoryLine = `- ${judge.categoryNotes[0].category}: ${judge.categoryNotes[0].text}`
                 const categoryHeaderHeight = lineHeight + (Math.min(2, getLineCount(firstCategoryLine, 9, 24, 'normal')) * lineHeight)
                 ensureSpace(categoryHeaderHeight)
-                writeLines('Notes categorie:', 9, 'bold', 18)
+                writeLines(`${t('Notes catégorie')}:`, 9, 'bold', 18)
                 judge.categoryNotes.forEach((item) => {
                   writeLines(`- ${item.category}: ${item.text}`, 9, 'normal', 24)
                 })
@@ -398,7 +412,7 @@ export function useExportActions({
                 const firstCriterionLine = `- ${judge.criterionNotes[0].criterion}: ${judge.criterionNotes[0].text}`
                 const criterionHeaderHeight = lineHeight + (Math.min(2, getLineCount(firstCriterionLine, 9, 24, 'normal')) * lineHeight)
                 ensureSpace(criterionHeaderHeight)
-                writeLines('Notes sous-categorie:', 9, 'bold', 18)
+                writeLines(`${t('Notes sous-catégorie')}:`, 9, 'bold', 18)
                 judge.criterionNotes.forEach((item) => {
                   writeLines(`- ${item.criterion}: ${item.text}`, 9, 'normal', 24)
                 })
@@ -413,11 +427,11 @@ export function useExportActions({
       await writeBinaryFile(pdfPath, new Uint8Array(pdf.output('arraybuffer')))
     } catch (error) {
       console.error('Export PDF notes failed:', error)
-      alert(`Erreur export PDF notes: ${error}`)
+      alert(`${t('Erreur export PDF notes')}: ${error}`)
     } finally {
       setExporting(false)
     }
-  }, [exporting, notesPdfPayload, projectName])
+  }, [exporting, notesPdfPayload, projectName, t])
 
   return {
     exporting,

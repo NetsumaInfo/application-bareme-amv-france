@@ -1,4 +1,5 @@
 import { AlertTriangle, Download, FilePlus, FolderPlus, Table2 } from 'lucide-react'
+import { useI18n } from '@/i18n'
 
 interface NoVideoStateProps {
   isDragOver: boolean
@@ -29,6 +30,7 @@ export function NoVideoState({
   onNoVideoTableInputChange,
   onCreateNoVideoTable,
 }: NoVideoStateProps) {
+  const { t } = useI18n()
   return (
     <div
       className={`flex flex-col items-center justify-center h-full gap-4 transition-colors ${isDragOver ? 'bg-primary-600/10' : ''
@@ -41,25 +43,25 @@ export function NoVideoState({
         {isDragOver ? (
           <>
             <Download size={32} className="text-primary-400" />
-            <p className="text-primary-400 text-sm font-medium">Déposez vos fichiers ici</p>
+            <p className="text-primary-400 text-sm font-medium">{t('Déposez vos fichiers ici')}</p>
           </>
         ) : (
           <>
-            <p className="text-gray-500 text-sm">Glissez-déposez des vidéos ici, ou</p>
+            <p className="text-gray-500 text-sm">{t('Glissez-déposez des vidéos ici, ou')}</p>
             <div className="flex gap-2">
               <button
                 onClick={onImportFolder}
                 className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary-600 hover:bg-primary-500 text-white text-sm font-medium transition-colors"
               >
                 <FolderPlus size={16} />
-                Importer un dossier
+                {t('Importer un dossier')}
               </button>
               <button
                 onClick={onImportFiles}
                 className="flex items-center gap-2 px-4 py-2 rounded-lg border border-primary-600 text-primary-500 hover:bg-primary-600/10 text-sm font-medium transition-colors"
               >
                 <FilePlus size={16} />
-                Importer des fichiers
+                {t('Importer des fichiers')}
               </button>
             </div>
             <button
@@ -67,7 +69,7 @@ export function NoVideoState({
               className="mt-2 flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-600 text-gray-200 hover:bg-surface-light text-sm font-medium transition-colors"
             >
               <Table2 size={16} />
-              Créer un tableau sans vidéos
+              {t('Créer un tableau sans vidéos')}
             </button>
           </>
         )}
@@ -76,16 +78,12 @@ export function NoVideoState({
       {showNoVideoTableModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70">
           <div className="w-full max-w-2xl bg-surface border border-gray-700 rounded-xl p-5 shadow-2xl">
-            <h3 className="text-base font-semibold text-white mb-3">Créer un tableau sans vidéos</h3>
+            <h3 className="text-base font-semibold text-white mb-3">{t('Créer un tableau sans vidéos')}</h3>
             <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-200 mb-3">
               <div className="flex items-start gap-2">
                 <AlertTriangle size={14} className="mt-0.5 shrink-0" />
                 <p>
-                  Mode sans vidéo: vous pouvez noter, calculer et exporter les résultats.
-                  La lecture vidéo, MediaInfo et les fonctions frame/timecode liées au lecteur seront indisponibles
-                  tant que les fichiers ne sont pas importés. Pour lier automatiquement plus tard, utilisez le même
-                  format de nom (ex: <span className="font-mono">Pseudo - Nom du clip</span>).
-                  Vous pouvez laisser cette zone vide et créer/éditer les lignes ensuite directement dans le tableur.
+                  {t('Mode sans vidéo: vous pouvez noter, calculer et exporter les résultats. La lecture vidéo, MediaInfo et les fonctions frame/timecode liées au lecteur seront indisponibles tant que les fichiers ne sont pas importés. Pour lier automatiquement plus tard, utilisez le même format de nom (ex: Pseudo - Nom du clip). Vous pouvez laisser cette zone vide et créer/éditer les lignes ensuite directement dans le tableur.')}
                 </p>
               </div>
             </div>
@@ -97,11 +95,11 @@ export function NoVideoState({
                 onChange={(event) => onNoVideoTableAcceptedChange(event.target.checked)}
                 className="rounded border-gray-600 bg-surface-dark text-primary-500 focus:ring-primary-500"
               />
-              J’ai compris les limites du mode sans vidéos.
+              {t('J’ai compris les limites du mode sans vidéos.')}
             </label>
 
             <label className="block text-xs text-gray-400 mb-1">
-              Une ligne par participant: <span className="font-mono">Pseudo - Clip</span> ou juste <span className="font-mono">Clip</span>
+              {t('Une ligne par participant: Pseudo - Clip ou juste Clip')}
             </label>
             <textarea
               value={noVideoTableInput}
@@ -116,14 +114,14 @@ export function NoVideoState({
                 onClick={onCloseNoVideoModal}
                 className="px-4 py-2 rounded-lg bg-surface-light text-gray-300 hover:text-white text-sm"
               >
-                Annuler
+                {t('Annuler')}
               </button>
               <button
                 onClick={onCreateNoVideoTable}
                 disabled={!noVideoTableAccepted}
                 className="px-4 py-2 rounded-lg bg-primary-600 hover:bg-primary-500 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-medium"
               >
-                Créer le tableau
+                {t('Créer le tableau')}
               </button>
             </div>
           </div>

@@ -9,6 +9,7 @@ import {
 } from '@/utils/results'
 import { withAlpha } from '@/utils/colors'
 import type { Clip } from '@/types/project'
+import { useI18n } from '@/i18n'
 
 interface ResultatsJudgeNotesModalProps {
   clip: Clip
@@ -41,6 +42,7 @@ export function ResultatsJudgeNotesModal({
   onTimecodeLeave,
   onClose,
 }: ResultatsJudgeNotesModalProps) {
+  const { t } = useI18n()
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') onClose()
@@ -62,7 +64,7 @@ export function ResultatsJudgeNotesModal({
         <div className="shrink-0 px-4 py-3 border-b border-gray-700 flex items-start justify-between gap-3">
           <div className="min-w-0">
             <h2 className="text-sm font-semibold text-white">
-              Notes détaillées des juges
+              {t('Notes détaillées des juges')}
             </h2>
             <p className="text-xs text-gray-400 truncate">
               <span className="text-primary-300">{getClipPrimaryLabel(clip)}</span>
@@ -72,7 +74,7 @@ export function ResultatsJudgeNotesModal({
           <button
             onClick={onClose}
             className="p-1 rounded hover:bg-surface-light text-gray-400 hover:text-white transition-colors"
-            title="Fermer"
+            title={t('Fermer')}
           >
             <X size={16} />
           </button>
@@ -117,7 +119,7 @@ export function ResultatsJudgeNotesModal({
                   <thead>
                     <tr>
                       <th className="px-3 py-2 text-left text-[11px] text-gray-400 border-b border-r border-gray-800 bg-surface-dark min-w-[240px]">
-                        Sous-catégorie
+                        {t('Sous-catégorie')}
                       </th>
                       {judges.map((judge) => {
                         const color = judgeColors[judge.key] ?? '#60a5fa'
@@ -163,7 +165,7 @@ export function ResultatsJudgeNotesModal({
                                   onTimecodeLeave={onTimecodeLeave}
                                 />
                               ) : (
-                                <div className="text-[11px] text-gray-500">Aucune note</div>
+                                <div className="text-[11px] text-gray-500">{t('Aucune note')}</div>
                               )}
                             </td>
                           )
@@ -172,7 +174,7 @@ export function ResultatsJudgeNotesModal({
                     ))}
                     <tr className="align-top">
                       <td className="px-3 py-2 border-r border-b border-gray-800 bg-surface-dark/30">
-                        <div className="text-gray-200 font-medium">Note catégorie</div>
+                        <div className="text-gray-200 font-medium">{t('Note catégorie')}</div>
                       </td>
                       {judges.map((judge) => {
                         const color = judgeColors[judge.key] ?? '#60a5fa'
@@ -195,7 +197,7 @@ export function ResultatsJudgeNotesModal({
                                 onTimecodeLeave={onTimecodeLeave}
                               />
                             ) : (
-                              <div className="text-[11px] text-gray-500">Aucune note</div>
+                              <div className="text-[11px] text-gray-500">{t('Aucune note')}</div>
                             )}
                           </td>
                         )
@@ -209,7 +211,7 @@ export function ResultatsJudgeNotesModal({
 
           <section className="rounded-lg border border-gray-700 overflow-hidden">
             <div className="px-3 py-2 border-b border-gray-700 bg-surface-dark text-xs font-semibold uppercase tracking-wide text-primary-300">
-              Notes générales
+              {t('Notes générales')}
             </div>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-2 p-2">
               {judges.map((judge) => {
@@ -239,7 +241,7 @@ export function ResultatsJudgeNotesModal({
                         onTimecodeLeave={onTimecodeLeave}
                       />
                     ) : (
-                      <div className="text-[11px] text-gray-500">Aucune note</div>
+                      <div className="text-[11px] text-gray-500">{t('Aucune note')}</div>
                     )}
                   </div>
                 )

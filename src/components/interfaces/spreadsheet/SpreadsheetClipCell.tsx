@@ -9,6 +9,7 @@ import {
 import { useProjectStore } from '@/store/useProjectStore'
 import { ClipMiniaturePreview } from '@/components/interfaces/spreadsheet/miniaturePreview'
 import { HoverTextTooltip } from '@/components/ui/HoverTextTooltip'
+import { useI18n } from '@/i18n'
 
 interface SpreadsheetClipCellProps {
   clip: Clip
@@ -41,6 +42,7 @@ export function SpreadsheetClipCell({
   onManualClipBlur,
   onManualClipFieldChange,
 }: SpreadsheetClipCellProps) {
+  const { t } = useI18n()
   const multiPseudoDisplayMode = useProjectStore(
     (state) => state.currentProject?.settings.multiPseudoDisplayMode ?? 'collab_mep',
   )
@@ -145,7 +147,7 @@ export function SpreadsheetClipCell({
             <input
               type="text"
               value={clip.author ?? ''}
-              placeholder="Pseudo"
+              placeholder={t('Pseudo')}
               onClick={(event) => event.stopPropagation()}
               onFocus={handleManualFieldFocus}
               onChange={(event) => onManualClipFieldChange(clip.id, 'author', event.target.value)}
@@ -154,7 +156,7 @@ export function SpreadsheetClipCell({
             <input
               type="text"
               value={clip.displayName ?? ''}
-              placeholder="Nom du clip"
+              placeholder={t('Nom du clip')}
               onClick={(event) => event.stopPropagation()}
               onFocus={handleManualFieldFocus}
               onChange={(event) => onManualClipFieldChange(clip.id, 'displayName', event.target.value)}

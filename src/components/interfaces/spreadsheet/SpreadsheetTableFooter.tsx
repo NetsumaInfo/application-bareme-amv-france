@@ -2,6 +2,7 @@ import { withAlpha } from '@/utils/colors'
 import type { Bareme } from '@/types/bareme'
 import type { Clip } from '@/types/project'
 import type { CategoryGroup } from './types'
+import { useI18n } from '@/i18n'
 
 interface SpreadsheetTableFooterProps {
   clips: Clip[]
@@ -24,6 +25,7 @@ export function SpreadsheetTableFooter({
   hasAnyScoreInBareme,
   getScoreForClip,
 }: SpreadsheetTableFooterProps) {
+  const { t } = useI18n()
   return (
     <tfoot>
       <tr>
@@ -37,7 +39,7 @@ export function SpreadsheetTableFooter({
           colSpan={2}
           className="px-2 py-2 font-bold text-[10px] uppercase tracking-wider text-gray-300 border-r border-gray-600 sticky left-0 z-10 bg-surface-dark"
         >
-          Moyennes
+          {t('Moyennes')}
         </td>
         {categoryGroups.map((group) =>
           group.criteria.map((criterion, index) => {

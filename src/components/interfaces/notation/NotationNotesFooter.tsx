@@ -1,6 +1,7 @@
 import { Clock3 } from 'lucide-react'
 import TimecodeTextarea from '@/components/notes/TimecodeTextarea'
 import type { MutableRefObject } from 'react'
+import { useI18n } from '@/i18n'
 
 interface NotationNotesFooterProps {
   hidden: boolean
@@ -29,22 +30,24 @@ export function NotationNotesFooter({
   onTimecodeHover,
   onTimecodeLeave,
 }: NotationNotesFooterProps) {
+  const { t } = useI18n()
+
   if (hidden) {
     return null
   }
 
   return (
-    <div className="border-t border-gray-700 shrink-0" style={{ background: '#1a1a2e' }}>
+    <div className="border-t border-gray-700 shrink-0 bg-surface">
       <div className="px-3 py-1.5 border-b border-gray-700/60 flex items-center justify-end">
         <button
           type="button"
           onClick={hasVideo ? onInsertTimecode : undefined}
           disabled={!hasVideo}
           className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] border border-primary-500/40 bg-primary-500/10 text-primary-300 hover:bg-primary-500/20 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-primary-500/10 transition-colors"
-          title={hasVideo ? 'Insérer le timecode courant' : 'Timecode indisponible (pas de vidéo)'}
+          title={hasVideo ? t('Insérer le timecode courant') : t('Timecode indisponible (pas de vidéo)')}
         >
           <Clock3 size={12} />
-          Timecode
+          {t('Timecode')}
         </button>
       </div>
 
@@ -53,7 +56,7 @@ export function NotationNotesFooter({
           textareaRef={(el) => {
             globalTextareaRef.current = el
           }}
-          placeholder="Notes generales..."
+          placeholder={t('Notes générales...')}
           value={noteText}
           onChange={onChangeText}
           onFocus={onFocus}

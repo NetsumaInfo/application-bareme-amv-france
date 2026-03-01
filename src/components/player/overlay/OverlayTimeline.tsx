@@ -1,6 +1,7 @@
 import { formatTime } from '@/utils/formatters'
 import type { ChangeEvent } from 'react'
 import type { MarkerTooltip, OverlayTimecodeMarker } from '@/components/player/overlay/types'
+import { useI18n } from '@/i18n'
 
 interface OverlayTimelineProps {
   compactControls: boolean
@@ -23,6 +24,7 @@ export function OverlayTimeline({
   onMarkerJump,
   onMarkerTooltipChange,
 }: OverlayTimelineProps) {
+  const { t } = useI18n()
   return (
     <div className={`flex items-center ${compactControls ? 'gap-2 mb-2' : 'gap-3 mb-4'}`}>
       <span className={`${compactControls ? 'text-xs w-10' : 'text-sm w-14'} text-white font-mono text-right select-none`}>
@@ -48,7 +50,7 @@ export function OverlayTimeline({
               const left = Math.max(0, Math.min(100, (marker.seconds / duration) * 100))
               const tooltipText = marker.previewText?.trim()
                 ? marker.previewText
-                : `${marker.category ?? 'Notes'}`
+                : `${marker.category ?? t('Notes')}`
               return (
                 <button
                   key={marker.key}
@@ -71,7 +73,7 @@ export function OverlayTimeline({
                   title={
                     marker.previewText
                       ? `${marker.raw} - ${marker.previewText}`
-                      : `${marker.raw} - ${marker.category ?? 'Notes globales'}`
+                      : `${marker.raw} - ${marker.category ?? t('Notes globales')}`
                   }
                 />
               )

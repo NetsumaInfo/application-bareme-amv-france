@@ -6,6 +6,7 @@ import { ClipContextMenu } from '@/components/interfaces/spreadsheet/ClipContext
 import { SpreadsheetTable } from '@/components/interfaces/spreadsheet/SpreadsheetTable'
 import { SpreadsheetNotesPanel } from '@/components/interfaces/spreadsheet/SpreadsheetNotesPanel'
 import { SpreadsheetToolbar } from '@/components/interfaces/spreadsheet/SpreadsheetToolbar'
+import { useI18n } from '@/i18n'
 
 interface SpreadsheetLoadedViewProps {
   isDragOver: boolean
@@ -30,13 +31,14 @@ export function SpreadsheetLoadedView({
   mediaInfoClip,
   onCloseMediaInfo,
 }: SpreadsheetLoadedViewProps) {
+  const { t } = useI18n()
   return (
     <div className={`flex flex-col h-full ${isDragOver ? 'ring-2 ring-primary-400 ring-inset' : ''}`}>
       {isDragOver && hasClips && (
         <div className="absolute inset-0 z-40 flex items-center justify-center bg-black/40 pointer-events-none">
           <div className="flex flex-col items-center gap-2 p-6 rounded-xl bg-surface border-2 border-dashed border-primary-400">
             <Download size={28} className="text-primary-400" />
-            <p className="text-primary-400 text-sm font-medium">Déposez pour ajouter des vidéos</p>
+            <p className="text-primary-400 text-sm font-medium">{t('Déposez pour ajouter des vidéos')}</p>
           </div>
         </div>
       )}

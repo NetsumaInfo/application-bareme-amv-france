@@ -4,6 +4,7 @@ import type { ResultatsHeaderProps } from '@/components/interfaces/resultats/typ
 import { ColorSwatchPicker } from '@/components/ui/ColorSwatchPicker'
 import { COLOR_MEMORY_KEYS } from '@/utils/colorPickerStorage'
 import { withAlpha } from '@/utils/colors'
+import { useI18n } from '@/i18n'
 
 export function ResultatsHeader({
   importing,
@@ -15,14 +16,15 @@ export function ResultatsHeader({
   onJudgeColorChange,
   onOpenMemberContextMenu,
 }: ResultatsHeaderProps) {
+  const { t } = useI18n()
   const colorPickerButtonRefs = useRef<Record<string, HTMLButtonElement | null>>({})
 
   const seenNames = new Map<string, number>()
   const getDisplayName = (name: string, isCurrentJudge: boolean) => {
-    const normalized = name.trim() || 'Juge'
+    const normalized = name.trim() || t('Juge')
     const count = seenNames.get(normalized) ?? 0
     seenNames.set(normalized, count + 1)
-    if (isCurrentJudge) return `${normalized} (projet)`
+    if (isCurrentJudge) return `${normalized} (${t('projet')})`
     if (count === 0) return normalized
     return `${normalized} (${count + 1})`
   }
@@ -35,12 +37,12 @@ export function ResultatsHeader({
         className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-surface border border-gray-700 text-gray-300 hover:text-white hover:border-gray-600 transition-colors disabled:opacity-60"
       >
         <Upload size={13} />
-        {importing ? 'Import...' : 'Importer un JE.json'}
+        {importing ? t('Import...') : t('Importer un JE.json')}
       </button>
 
       <div className="flex items-center gap-1.5 text-xs text-gray-400">
         <Users size={13} />
-        {judges.length} juge{judges.length > 1 ? 's' : ''}
+        {t('{count} juge(s)', { count: judges.length })}
       </div>
 
       {judges.map((judge) => {
@@ -64,14 +66,14 @@ export function ResultatsHeader({
                 borderColor: withAlpha(color, active ? 0.7 : 0.45),
                 backgroundColor: withAlpha(color, active ? 0.15 : 0.07),
               }}
-              title="Clic droit pour options"
+              title={t('Clic droit pour options')}
             >
               {displayName}
             </button>
             <ColorSwatchPicker
               value={color}
               onChange={(next) => onJudgeColorChange(judge.key, next)}
-              title={`Couleur de ${displayName}`}
+              title={t('Couleur de {name}', { name: displayName })}
               triggerSize="sm"
               memoryKey={COLOR_MEMORY_KEYS.recentJudgeColors}
               triggerRef={(node) => { colorPickerButtonRefs.current[judge.key] = node }}

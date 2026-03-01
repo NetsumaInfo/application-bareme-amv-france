@@ -6,6 +6,7 @@ import {
   createClipFromVideoMeta,
   mergeImportedVideosWithClips,
 } from '@/utils/clipImport'
+import { useI18n } from '@/i18n'
 import { normalizeFilePath } from '@/utils/path'
 import { useSpreadsheetDropListeners } from '@/components/interfaces/spreadsheet/hooks/useSpreadsheetDropListeners'
 import type { Clip, Project, ProjectSettings } from '@/types/project'
@@ -27,6 +28,7 @@ export function useSpreadsheetImport({
   updateProject,
   updateSettings,
 }: UseSpreadsheetImportParams) {
+  const { t } = useI18n()
   const suppressEmptyManualCleanupRef = useRef(false)
   const isImportingClipsRef = useRef(false)
 
@@ -124,11 +126,11 @@ export function useSpreadsheetImport({
       }
     } catch (error) {
       console.error('Failed to import folder:', error)
-      alert(`Erreur lors de l'import: ${error}`)
+      alert(t("Erreur lors de l'import: {error}", { error: String(error) }))
     } finally {
       endImportingSoon()
     }
-  }, [applyImportedClips, currentProject, endImportingSoon, updateProject])
+  }, [applyImportedClips, currentProject, endImportingSoon, t, updateProject])
 
   const handleImportFiles = useCallback(async () => {
     try {
@@ -144,11 +146,11 @@ export function useSpreadsheetImport({
       applyImportedClips(importedClips)
     } catch (error) {
       console.error('Failed to import files:', error)
-      alert(`Erreur lors de l'import: ${error}`)
+      alert(t("Erreur lors de l'import: {error}", { error: String(error) }))
     } finally {
       endImportingSoon()
     }
-  }, [applyImportedClips, endImportingSoon])
+  }, [applyImportedClips, endImportingSoon, t])
 
   return {
     isDragOver,

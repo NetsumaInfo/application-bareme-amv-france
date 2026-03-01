@@ -41,7 +41,6 @@ export function SpreadsheetCriterionCells({
       {currentBareme.criteria.map((criterion: Criterion) => {
         const critIdx = critIdxMap.get(criterion.id) ?? 0
         const score = note?.scores[criterion.id]
-        const hasError = score && !score.isValid
         const value = score?.value ?? ''
 
         return (
@@ -81,11 +80,7 @@ export function SpreadsheetCriterionCells({
                 }
                 event.stopPropagation()
               }}
-              className={`amv-soft-number w-full px-1 py-0.5 text-center rounded text-xs font-mono transition-colors focus-visible:outline-none ${
-                hasError
-                  ? 'border border-accent bg-accent/10 text-accent-light'
-                  : 'border border-transparent bg-transparent text-white hover:bg-surface-light/50 focus:border-primary-500 focus:bg-surface-dark'
-              } focus:outline-none`}
+              className="amv-soft-number w-full rounded border border-transparent bg-transparent px-1 py-0.5 text-center text-xs font-mono text-white transition-colors hover:bg-surface-light/50 focus:border-primary-500 focus:bg-surface-dark focus:outline-none focus-visible:outline-none"
             />
           </td>
         )

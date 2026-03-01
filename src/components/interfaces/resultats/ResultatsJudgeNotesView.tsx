@@ -8,6 +8,7 @@ import {
 import { withAlpha } from '@/utils/colors'
 import { TimecodeInlineText } from '@/components/notes/TimecodeInlineText'
 import type { Clip } from '@/types/project'
+import { useI18n } from '@/i18n'
 
 type JudgeNoteLike = NoteLike & {
   criterionNotes?: Record<string, string>
@@ -48,15 +49,16 @@ export function ResultatsJudgeNotesView({
   onDetach,
   detached = false,
 }: ResultatsJudgeNotesViewProps) {
+  const { t } = useI18n()
   const selectedClip = clips.find((clip) => clip.id === selectedClipId) ?? clips[0]
   const selectedClipIndex = clips.findIndex((clip) => clip.id === selectedClip?.id)
   const effectiveClipIndex = selectedClipIndex >= 0 ? selectedClipIndex : 0
 
   if (!selectedClip) {
     return (
-      <div className="flex-1 rounded-lg border border-gray-700 bg-surface-dark/40 flex items-center justify-center text-sm text-gray-500">
-        Aucun clip
-      </div>
+        <div className="flex-1 rounded-lg border border-gray-700 bg-surface-dark/40 flex items-center justify-center text-sm text-gray-500">
+        {t('Aucun clip')}
+        </div>
     )
   }
 
@@ -72,7 +74,7 @@ export function ResultatsJudgeNotesView({
           }}
           className="h-8 w-8 rounded-md border border-gray-700 bg-surface-dark text-gray-300 hover:text-white hover:border-gray-600 disabled:opacity-40 disabled:cursor-default"
           disabled={effectiveClipIndex <= 0}
-          title="Clip précédent"
+          title={t('Clip précédent')}
         >
           <ChevronLeft size={16} className="mx-auto" />
         </button>
@@ -103,7 +105,7 @@ export function ResultatsJudgeNotesView({
           }}
           className="h-8 w-8 rounded-md border border-gray-700 bg-surface-dark text-gray-300 hover:text-white hover:border-gray-600 disabled:opacity-40 disabled:cursor-default"
           disabled={effectiveClipIndex >= clips.length - 1}
-          title="Clip suivant"
+          title={t('Clip suivant')}
         >
           <ChevronRight size={16} className="mx-auto" />
         </button>
@@ -115,7 +117,7 @@ export function ResultatsJudgeNotesView({
             onOpenPlayer?.(selectedClip.id)
           }}
           className="h-8 w-8 rounded-md border border-gray-700 bg-surface-dark text-gray-300 hover:text-white hover:border-gray-600 disabled:opacity-40 disabled:cursor-default"
-          title={selectedClip?.filePath ? 'Ouvrir le lecteur vidéo' : 'Aucune vidéo liée'}
+          title={selectedClip?.filePath ? t('Ouvrir le lecteur vidéo') : t('Aucune vidéo liée')}
           disabled={!selectedClip?.filePath}
         >
           <Play size={14} className="mx-auto" />
@@ -126,10 +128,10 @@ export function ResultatsJudgeNotesView({
             type="button"
             onClick={onDetach}
             className="ml-auto h-8 px-2 rounded-md border border-gray-700 bg-surface-dark text-gray-200 text-xs hover:text-white hover:border-gray-600 flex items-center gap-1"
-            title="Ouvrir dans une fenêtre détachée"
+            title={t('Ouvrir dans une fenêtre détachée')}
           >
             <ExternalLink size={14} />
-            Détacher
+            {t('Détacher')}
           </button>
         )}
       </div>
@@ -173,7 +175,7 @@ export function ResultatsJudgeNotesView({
                 <thead>
                   <tr>
                     <th className="w-[170px] min-w-[170px] px-2 py-2 text-left text-[11px] text-gray-400 border-b border-r border-gray-800 bg-surface-dark">
-                      Sous-catégorie
+                      {t('Sous-catégorie')}
                     </th>
                     {judges.map((judge) => {
                       const color = judgeColors[judge.key] ?? '#60a5fa'
@@ -223,7 +225,7 @@ export function ResultatsJudgeNotesView({
                                 onTimecodeLeave={onTimecodeLeave}
                               />
                             ) : (
-                              <div className="text-[11px] text-gray-500">Aucune note</div>
+                              <div className="text-[11px] text-gray-500">{t('Aucune note')}</div>
                             )}
                           </td>
                         )
@@ -232,7 +234,7 @@ export function ResultatsJudgeNotesView({
                   ))}
                   <tr className="align-top">
                     <td className="px-2 py-2 border-r border-b border-gray-800 bg-surface-dark/30">
-                      <div className="text-gray-200 font-medium">Note catégorie</div>
+                        <div className="text-gray-200 font-medium">{t('Note catégorie')}</div>
                     </td>
                     {judges.map((judge) => {
                       const color = judgeColors[judge.key] ?? '#60a5fa'
@@ -255,7 +257,7 @@ export function ResultatsJudgeNotesView({
                               onTimecodeLeave={onTimecodeLeave}
                             />
                           ) : (
-                            <div className="text-[11px] text-gray-500">Aucune note</div>
+                            <div className="text-[11px] text-gray-500">{t('Aucune note')}</div>
                           )}
                         </td>
                       )
@@ -269,7 +271,7 @@ export function ResultatsJudgeNotesView({
 
         <section className="rounded-lg border border-gray-700 overflow-hidden">
           <div className="px-3 py-2 border-b border-gray-700 bg-surface-dark text-xs font-semibold uppercase tracking-wide text-primary-300">
-            Notes générales
+            {t('Notes générales')}
           </div>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-2 p-2">
             {judges.map((judge) => {
@@ -299,7 +301,7 @@ export function ResultatsJudgeNotesView({
                       onTimecodeLeave={onTimecodeLeave}
                     />
                   ) : (
-                    <div className="text-[11px] text-gray-500">Aucune note</div>
+                    <div className="text-[11px] text-gray-500">{t('Aucune note')}</div>
                   )}
                 </div>
               )

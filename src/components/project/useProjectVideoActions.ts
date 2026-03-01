@@ -6,8 +6,10 @@ import {
 } from '@/utils/clipImport'
 import type { Clip } from '@/types/project'
 import * as tauri from '@/services/tauri'
+import { useI18n } from '@/i18n'
 
 export function useProjectVideoActions() {
+  const { t } = useI18n()
   const { currentProject, clips, setClips, updateProject } = useProjectStore()
 
   const buildImportedClipsFromFolder = async (folderPath: string): Promise<Clip[]> => {
@@ -32,7 +34,7 @@ export function useProjectVideoActions() {
       updateProject({ clipsFolderPath: folderPath })
     } catch (errorValue) {
       console.error('Failed to import folder:', errorValue)
-      alert(`Erreur lors de l'import: ${errorValue}`)
+      alert(t("Erreur lors de l'import: {error}", { error: String(errorValue) }))
     }
   }
 
@@ -53,7 +55,7 @@ export function useProjectVideoActions() {
       }
     } catch (errorValue) {
       console.error('Failed to import files:', errorValue)
-      alert(`Erreur lors de l'import: ${errorValue}`)
+      alert(t("Erreur lors de l'import: {error}", { error: String(errorValue) }))
     }
   }
 
@@ -67,7 +69,7 @@ export function useProjectVideoActions() {
 
       const importedClips = await buildImportedClipsFromFolder(folderPath)
       if (importedClips.length === 0) {
-        alert('Aucune vidéo trouvée dans ce dossier.')
+        alert(t('Aucune vidéo trouvée dans ce dossier.'))
         return
       }
 
@@ -75,16 +77,19 @@ export function useProjectVideoActions() {
       const matched = merged.linkedCount
 
       if (matched === 0 && merged.addedCount === 0) {
-        alert('Aucun fichier correspondant trouvé pour relocaliser/lier les vidéos.')
+        alert(t('Aucun fichier correspondant trouvé pour relocaliser/lier les vidéos.'))
         return
       }
 
       setClips(merged.clips)
       updateProject({ clipsFolderPath: folderPath })
-      alert(`Relocalisation terminée: ${matched} liaison(s), ${merged.addedCount} ajout(s).`)
+      alert(t('Relocalisation terminée: {matched} liaison(s), {added} ajout(s).', {
+        matched,
+        added: merged.addedCount,
+      }))
     } catch (errorValue) {
       console.error('Failed to relocate videos:', errorValue)
-      alert(`Erreur lors de la relocalisation: ${errorValue}`)
+      alert(t('Erreur lors de la relocalisation: {error}', { error: String(errorValue) }))
     }
   }
 
@@ -98,7 +103,7 @@ export function useProjectVideoActions() {
 
       const importedClips = await buildImportedClipsFromFolder(folderPath)
       if (importedClips.length === 0) {
-        alert('Aucune vidéo trouvée dans ce dossier.')
+        alert(t('Aucune vidéo trouvée dans ce dossier.'))
         return
       }
 
@@ -106,16 +111,16 @@ export function useProjectVideoActions() {
         appendUnmatched: false,
       })
       if (merged.linkedCount === 0) {
-        alert('Aucune ligne existante n’a pu être liée.')
+        alert(t('Aucune ligne existante n’a pu être liée.'))
         return
       }
 
       setClips(merged.clips)
       updateProject({ clipsFolderPath: folderPath })
-      alert(`Liaison terminée: ${merged.linkedCount} ligne(s) liée(s).`)
+      alert(t('Liaison terminée: {count} ligne(s) liée(s).', { count: merged.linkedCount }))
     } catch (errorValue) {
       console.error('Failed to relink videos:', errorValue)
-      alert(`Erreur lors de la liaison: ${errorValue}`)
+      alert(t('Erreur lors de la liaison: {error}', { error: String(errorValue) }))
     }
   }
 

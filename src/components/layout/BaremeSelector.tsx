@@ -3,11 +3,13 @@ import { ChevronDown, Pencil, Plus } from 'lucide-react'
 import { useNotationStore } from '@/store/useNotationStore'
 import { useProjectStore } from '@/store/useProjectStore'
 import { useUIStore } from '@/store/useUIStore'
+import { useI18n } from '@/i18n'
 
 export function BaremeSelector() {
   const { currentBareme, availableBaremes, setBareme } = useNotationStore()
   const { updateProject, updateSettings } = useProjectStore()
   const { setShowBaremeEditor } = useUIStore()
+  const { t } = useI18n()
   const [open, setOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
 
@@ -34,8 +36,9 @@ export function BaremeSelector() {
       <button
         onClick={() => setOpen((value) => !value)}
         className="flex items-center gap-1 px-2 py-1 text-xs rounded hover:bg-surface-light text-gray-400 hover:text-white transition-colors border border-gray-700/50"
+        title={t('Barème')}
       >
-        <span className="max-w-[100px] truncate">{currentBareme?.name || 'Barème'}</span>
+        <span className="max-w-[100px] truncate">{currentBareme?.name || t('Barème')}</span>
         <ChevronDown size={10} className={`transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>
 
@@ -55,7 +58,7 @@ export function BaremeSelector() {
                 <span className="truncate font-medium">{bareme.name}</span>
               </div>
               <div className="text-[10px] text-gray-500 mt-0.5">
-                {bareme.criteria.length} critères — {bareme.totalPoints} pts
+                {t('{count} critères — {points} pts', { count: bareme.criteria.length, points: bareme.totalPoints })}
               </div>
             </button>
           ))}
@@ -70,7 +73,7 @@ export function BaremeSelector() {
               className="w-full text-left px-3 py-1.5 text-xs text-gray-400 hover:text-white hover:bg-surface-light transition-colors flex items-center gap-2"
             >
               <Pencil size={11} />
-              Gérer les barèmes
+              {t('Gérer les barèmes')}
             </button>
             <button
               onClick={() => {
@@ -81,7 +84,7 @@ export function BaremeSelector() {
               className="w-full text-left px-3 py-1.5 text-xs text-primary-400 hover:text-primary-300 hover:bg-surface-light transition-colors flex items-center gap-2"
             >
               <Plus size={11} />
-              Créer un barème
+              {t('Créer un barème')}
             </button>
           </div>
         </div>

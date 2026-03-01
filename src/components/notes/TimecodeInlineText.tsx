@@ -1,4 +1,5 @@
 import { extractTimecodesFromText, type ParsedTimecode } from '@/utils/timecodes'
+import { useI18n } from '@/i18n'
 
 interface TimecodeInlineTextProps {
   text: string
@@ -15,15 +16,17 @@ export function TimecodeInlineText({
   text,
   color = '#60a5fa',
   className = 'text-[11px] text-gray-200 leading-snug whitespace-pre-wrap break-words',
-  emptyLabel = 'Aucune note',
+  emptyLabel,
   fpsHint,
   onTimecodeSelect,
   onTimecodeHover,
   onTimecodeLeave,
 }: TimecodeInlineTextProps) {
+  const { t } = useI18n()
+  const resolvedEmptyLabel = emptyLabel ?? t('Aucune note')
   const value = text.trim()
   if (!value) {
-    return <div className="text-[11px] text-gray-500">{emptyLabel}</div>
+    return <div className="text-[11px] text-gray-500">{resolvedEmptyLabel}</div>
   }
 
   const items = extractTimecodesFromText(value, undefined, fpsHint)
@@ -67,7 +70,7 @@ export function TimecodeInlineText({
               })
             }}
             onMouseLeave={() => onTimecodeLeave?.()}
-            title={`Aller à ${segment.item.raw}`}
+            title={t('Aller à {timecode}', { timecode: segment.item.raw })}
           >
             {segment.item.raw}
           </button>
@@ -76,4 +79,3 @@ export function TimecodeInlineText({
     </div>
   )
 }
-

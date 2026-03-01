@@ -1,12 +1,13 @@
 {
   "name": "amv-notation",
   "private": true,
-  "version": "0.6.0",
+  "version": "0.7.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
+    "i18n:sync": "node scripts/sync-i18n.mjs",
     "preview": "vite preview",
     "tauri": "tauri"
   },

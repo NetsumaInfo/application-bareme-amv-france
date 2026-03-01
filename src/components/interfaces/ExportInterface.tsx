@@ -1,15 +1,30 @@
-import { useCallback, useMemo, useRef, useState } from 'react'
-import { LayoutTemplate } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import {
+  FileImage,
+  FileJson,
+  FileText,
+  LayoutTemplate,
+  Rows3,
+  Table,
+  Table2,
+} from 'lucide-react'
 import { useNotationStore } from '@/store/useNotationStore'
 import { useProjectStore } from '@/store/useProjectStore'
+import { useUIStore } from '@/store/useUIStore'
 import { getClipPrimaryLabel, getClipSecondaryLabel } from '@/utils/formatters'
 import { ExportOptionsPanel } from '@/components/interfaces/export/ExportOptionsPanel'
 import { ExportPosterOptionsPanel } from '@/components/interfaces/export/ExportPosterOptionsPanel'
 import { ExportPreviewPanel } from '@/components/interfaces/export/ExportPreviewPanel'
 import { ExportPosterPreviewPanel } from '@/components/interfaces/export/ExportPosterPreviewPanel'
 import { createDefaultPosterBlocks, EXPORT_POSTER_FONT_OPTIONS } from '@/components/interfaces/export/posterDefaults'
+import {
+  AppContextMenuItem,
+  AppContextMenuPanel,
+  AppContextMenuSeparator,
+} from '@/components/ui/AppContextMenu'
 import type {
   ExportDensity,
+  ExportJsonMode,
   ExportLayout,
   ExportMode,
   ExportNotesPdfMode,
@@ -24,6 +39,8 @@ import type {
 } from '@/components/interfaces/export/types'
 import { useExportActions } from '@/components/interfaces/export/hooks/useExportActions'
 import { useExportData } from '@/components/interfaces/export/hooks/useExportData'
+import { PRIMARY_COLOR_OPTIONS, getAppThemeBackgroundColor } from '@/utils/appTheme'
+import { useI18n } from '@/i18n'
 
 const ACCENT_PRESETS = ['#3b82f6', '#22c55e', '#f59e0b', '#ef4444', '#a855f7', '#06b6d4']
 const MIN_TOP_COUNT = 1
@@ -71,6 +88,47 @@ function parseSizePreset(raw: string): { width: number; height: number } | null 
   return { width, height }
 }
 
+function getBackgroundHeightPctForWidthPct(
+  widthPct: number,
+  posterWidth: number,
+  posterHeight: number,
+  imageWidth: number,
+  imageHeight: number,
+): number {
+  if (posterWidth <= 0 || posterHeight <= 0 || imageWidth <= 0 || imageHeight <= 0) return widthPct
+  const renderedWidthPx = (posterWidth * widthPct) / 100
+  const renderedHeightPx = (renderedWidthPx * imageHeight) / imageWidth
+  return (renderedHeightPx / posterHeight) * 100
+}
+
+function getBackgroundWidthPctForHeightPct(
+  heightPct: number,
+  posterWidth: number,
+  posterHeight: number,
+  imageWidth: number,
+  imageHeight: number,
+): number {
+  if (posterWidth <= 0 || posterHeight <= 0 || imageWidth <= 0 || imageHeight <= 0) return heightPct
+  const renderedHeightPx = (posterHeight * heightPct) / 100
+  const renderedWidthPx = (renderedHeightPx * imageWidth) / imageHeight
+  return (renderedWidthPx / posterWidth) * 100
+}
+
+function getCoverBackgroundWidthPct(
+  posterWidth: number,
+  posterHeight: number,
+  imageWidth: number,
+  imageHeight: number,
+): number {
+  if (posterWidth <= 0 || posterHeight <= 0 || imageWidth <= 0 || imageHeight <= 0) return 100
+  const posterRatio = posterWidth / posterHeight
+  const imageRatio = imageWidth / imageHeight
+  if (imageRatio >= posterRatio) {
+    return (posterHeight * imageRatio / posterWidth) * 100
+  }
+  return 100
+}
+
 function readImageDimensions(src: string): Promise<{ width: number; height: number } | null> {
   return new Promise((resolve) => {
     const image = new Image()
@@ -90,6 +148,7 @@ function normalizeImageLayer(layer: ExportPosterImageLayer): ExportPosterImageLa
   const maxX = Math.max(0, 100 - widthPct)
   return {
     ...layer,
+    zIndex: Number.isFinite(layer.zIndex) ? Math.max(0, Math.round(layer.zIndex)) : 0,
     widthPct,
     xPct: clamp(layer.xPct, 0, maxX),
     yPct: clamp(layer.yPct, 0, 94),
@@ -114,9 +173,22 @@ function normalizeOptionalText(value: unknown): string {
 }
 
 export default function ExportInterface() {
+  const { t } = useI18n()
+  const createLocalizedPosterBlocks = useCallback((baseTitle: string) => (
+    createDefaultPosterBlocks(baseTitle).map((block) => {
+      if (block.id === 'title') return { ...block, label: t('Titre') }
+      if (block.id === 'subtitle') return { ...block, label: t('Sous-titre'), text: t('Résultats officiels') }
+      if (block.id === 'top') return { ...block, label: t('Bloc TOP') }
+      if (block.id === 'footer') return { ...block, label: t('Pied de page'), text: t('Merci à tous les participants') }
+      return block
+    })
+  ), [t])
   const currentBareme = useNotationStore((state) => state.currentBareme)
   const notes = useNotationStore((state) => state.notes)
+  const getNotesData = useNotationStore((state) => state.getNotesData)
   const { currentProject, clips, importedJudges } = useProjectStore()
+  const getProjectData = useProjectStore((state) => state.getProjectData)
+  const appTheme = useUIStore((state) => state.appTheme)
 
   const [layoutMode, setLayoutMode] = useState<ExportLayout>('poster')
   const [theme, setTheme] = useState<ExportTheme>('dark')
@@ -125,6 +197,8 @@ export default function ExportInterface() {
   const [tableView, setTableView] = useState<ExportTableView>('summary')
   const [pngExportMode, setPngExportMode] = useState<ExportPngMode>('single')
   const [notesPdfMode, setNotesPdfMode] = useState<ExportNotesPdfMode>('both')
+  const [jsonExportMode, setJsonExportMode] = useState<ExportJsonMode>('full_project')
+  const [jsonJudgeKey, setJsonJudgeKey] = useState<string>('current')
   const [pngScale, setPngScale] = useState(3)
   const [selectedJudgeKey, setSelectedJudgeKey] = useState<string>('current')
   const [accent, setAccent] = useState(ACCENT_PRESETS[0])
@@ -141,10 +215,11 @@ export default function ExportInterface() {
   const [tablePrimaryFontSize, setTablePrimaryFontSize] = useState(15)
   const [tableSecondaryFontSize, setTableSecondaryFontSize] = useState(11)
   const [rankBadgeStyle, setRankBadgeStyle] = useState<ExportRankBadgeStyle>('filled')
-  const [title, setTitle] = useState(() => `${currentProject?.name || 'Projet'} - Resultats`)
+  const [title, setTitle] = useState(() => `${currentProject?.name || t('Projet')} - ${t('Résultats')}`)
 
   const [posterWidth, setPosterWidth] = useState(1920)
   const [posterHeight, setPosterHeight] = useState(1080)
+  const [posterBackgroundColor, setPosterBackgroundColor] = useState<string | null>(null)
   const [posterBackgroundImage, setPosterBackgroundImage] = useState<string | null>(null)
   const [posterBackgroundImageDimensions, setPosterBackgroundImageDimensions] = useState<{
     width: number
@@ -157,7 +232,7 @@ export default function ExportInterface() {
   const [posterBackgroundScaleYPct, setPosterBackgroundScaleYPct] = useState(100)
   const [posterOverlayOpacity, setPosterOverlayOpacity] = useState(40)
   const [posterBlocks, setPosterBlocks] = useState<ExportPosterBlock[]>(() => (
-    createDefaultPosterBlocks(`${currentProject?.name || 'Concours AMV'} - Resultats`)
+    createLocalizedPosterBlocks(`${currentProject?.name || t('Concours AMV')} - ${t('Résultats')}`)
   ))
   const [activePosterBlockId, setActivePosterBlockId] = useState<ExportPosterBlockId | null>('top')
   const [posterImages, setPosterImages] = useState<ExportPosterImageLayer[]>([])
@@ -176,6 +251,8 @@ export default function ExportInterface() {
 
   const previewRef = useRef<HTMLDivElement | null>(null)
   const exportPageRefs = useRef<Array<HTMLDivElement | null>>([])
+  const exportContextMenuRef = useRef<HTMLDivElement | null>(null)
+  const [exportContextMenu, setExportContextMenu] = useState<{ x: number; y: number } | null>(null)
 
   const {
     categoryGroups,
@@ -196,6 +273,8 @@ export default function ExportInterface() {
   })
 
   const projectName = currentProject?.name || 'resultats'
+  const notesData = useMemo(() => getNotesData(), [getNotesData])
+  const fullProjectData = useMemo(() => getProjectData(notesData), [getProjectData, notesData])
   const formatScore = useCallback((value: number) => value.toFixed(decimals), [decimals])
   const safePosterWidth = normalizeDimension(posterWidth, MIN_EXPORT_WIDTH, MAX_EXPORT_WIDTH, 1920)
   const safePosterHeight = normalizeDimension(posterHeight, MIN_EXPORT_HEIGHT, MAX_EXPORT_HEIGHT, 1080)
@@ -254,6 +333,32 @@ export default function ExportInterface() {
     return `${Math.round(posterBackgroundImageDimensions.width)}x${Math.round(posterBackgroundImageDimensions.height)} px`
   }, [posterBackgroundImageDimensions])
 
+  const themePosterBackgroundColor = useMemo(
+    () => getAppThemeBackgroundColor(appTheme),
+    [appTheme],
+  )
+
+  const effectivePosterBackgroundColor = useMemo(
+    () => posterBackgroundColor ?? themePosterBackgroundColor,
+    [posterBackgroundColor, themePosterBackgroundColor],
+  )
+
+  const posterBackgroundColorPresets = useMemo(() => (
+    Array.from(new Set([
+      themePosterBackgroundColor,
+      '#000000',
+      '#05070c',
+      '#0f172a',
+      '#111827',
+      '#1f2937',
+      '#334155',
+      '#e7edf4',
+      '#dfe7f0',
+      '#ece6d9',
+      ...PRIMARY_COLOR_OPTIONS.map((option) => option.color),
+    ]))
+  ), [themePosterBackgroundColor])
+
   const activeImageSizeLabel = useMemo(() => {
     if (!activePosterImageId) return null
     const activeImage = posterImages.find((image) => image.id === activePosterImageId)
@@ -266,6 +371,27 @@ export default function ExportInterface() {
     const heightPx = Math.round((safePosterHeight * posterBackgroundScaleYPct) / 100)
     return `${widthPx}x${heightPx} px`
   }, [posterBackgroundScaleXPct, posterBackgroundScaleYPct, safePosterHeight, safePosterWidth])
+
+  useEffect(() => {
+    if (!posterBackgroundImageDimensions) return
+    const nextHeightPct = clamp(
+      getBackgroundHeightPctForWidthPct(
+        posterBackgroundScaleXPct,
+        safePosterWidth,
+        safePosterHeight,
+        posterBackgroundImageDimensions.width,
+        posterBackgroundImageDimensions.height,
+      ),
+      MIN_BG_SCALE,
+      MAX_BG_SCALE,
+    )
+    setPosterBackgroundScaleYPct((prev) => (Math.abs(prev - nextHeightPct) < 0.01 ? prev : nextHeightPct))
+  }, [
+    posterBackgroundImageDimensions,
+    posterBackgroundScaleXPct,
+    safePosterHeight,
+    safePosterWidth,
+  ])
 
   const notesPdfPayload = useMemo(() => {
     const currentJudge = judges.find((judge) => judge.isCurrentJudge) ?? judges[0]
@@ -323,6 +449,11 @@ export default function ExportInterface() {
       }),
     }
   }, [currentBareme?.criteria, displayRows, judges, notesPdfMode, projectName, title])
+
+  const jsonJudgeOptions = useMemo(
+    () => judges.map((judge) => ({ key: judge.key, judgeName: judge.judgeName })),
+    [judges],
+  )
 
   const loadSystemFonts = useCallback(async () => {
     if (loadingSystemFonts) return
@@ -390,6 +521,39 @@ export default function ExportInterface() {
     }))
   }, [])
 
+  const reorderPosterImage = useCallback((imageId: string, direction: 'front' | 'back' | 'forward' | 'backward') => {
+    setPosterImages((prev) => {
+      const ordered = [...prev].sort((a, b) => a.zIndex - b.zIndex)
+      const currentIndex = ordered.findIndex((image) => image.id === imageId)
+      if (currentIndex < 0) return prev
+
+      const targetIndex = (() => {
+        switch (direction) {
+          case 'front':
+            return ordered.length - 1
+          case 'back':
+            return 0
+          case 'forward':
+            return Math.min(ordered.length - 1, currentIndex + 1)
+          case 'backward':
+            return Math.max(0, currentIndex - 1)
+          default:
+            return currentIndex
+        }
+      })()
+
+      if (targetIndex === currentIndex) return prev
+
+      const [moved] = ordered.splice(currentIndex, 1)
+      ordered.splice(targetIndex, 0, moved)
+
+      return ordered.map((image, index) => normalizeImageLayer({
+        ...image,
+        zIndex: index,
+      }))
+    })
+  }, [])
+
   const movePosterImage = useCallback((imageId: string, xPct: number, yPct: number) => {
     setPosterImages((prev) => prev.map((image) => {
       if (image.id !== imageId) return image
@@ -407,10 +571,11 @@ export default function ExportInterface() {
   }, [])
 
   const resetPosterLayout = useCallback(() => {
-    setPosterBlocks(createDefaultPosterBlocks(`${currentProject?.name || 'Concours AMV'} - Resultats`))
+    setPosterBlocks(createLocalizedPosterBlocks(`${currentProject?.name || t('Concours AMV')} - ${t('Résultats')}`))
     setPosterImages([])
     setActivePosterBlockId('top')
     setActivePosterImageId(null)
+    setPosterBackgroundColor(null)
     setPosterBackgroundDragEnabled(false)
     setPosterOverlayOpacity(40)
     setPosterBackgroundPositionXPct(50)
@@ -418,7 +583,7 @@ export default function ExportInterface() {
     setPosterBackgroundScaleXPct(100)
     setPosterBackgroundScaleYPct(100)
     setPosterPreviewZoomPct(100)
-  }, [currentProject?.name])
+  }, [createLocalizedPosterBlocks, currentProject?.name, t])
 
   const handleUploadBackground = useCallback((file: File) => {
     if (!file.type.startsWith('image/')) return
@@ -430,10 +595,36 @@ export default function ExportInterface() {
       setPosterBackgroundDragEnabled(false)
       void readImageDimensions(dataUrl).then((dimensions) => {
         setPosterBackgroundImageDimensions(dimensions)
+        if (!dimensions) return
+        const nextWidthPct = clamp(
+          getCoverBackgroundWidthPct(
+            safePosterWidth,
+            safePosterHeight,
+            dimensions.width,
+            dimensions.height,
+          ),
+          MIN_BG_SCALE,
+          MAX_BG_SCALE,
+        )
+        const nextHeightPct = clamp(
+          getBackgroundHeightPctForWidthPct(
+            nextWidthPct,
+            safePosterWidth,
+            safePosterHeight,
+            dimensions.width,
+            dimensions.height,
+          ),
+          MIN_BG_SCALE,
+          MAX_BG_SCALE,
+        )
+        setPosterBackgroundScaleXPct(nextWidthPct)
+        setPosterBackgroundScaleYPct(nextHeightPct)
+        setPosterBackgroundPositionXPct(50)
+        setPosterBackgroundPositionYPct(50)
       })
     }
     reader.readAsDataURL(file)
-  }, [])
+  }, [safePosterHeight, safePosterWidth])
 
   const handleUploadOverlayImage = useCallback((file: File) => {
     if (!file.type.startsWith('image/')) return
@@ -448,6 +639,7 @@ export default function ExportInterface() {
         src: dataUrl,
         sourceWidth: dimensions?.width,
         sourceHeight: dimensions?.height,
+        zIndex: posterImages.length,
         xPct: 58,
         yPct: 48,
         widthPct: 24,
@@ -502,7 +694,7 @@ export default function ExportInterface() {
     if (layoutMode === 'poster') {
       return {
         scale: 1,
-        backgroundColor: null as string | null,
+        backgroundColor: effectivePosterBackgroundColor,
         pngMode: 'single' as ExportPngMode,
       }
     }
@@ -511,9 +703,9 @@ export default function ExportInterface() {
       backgroundColor: theme === 'light' ? '#ffffff' : '#0f172a',
       pngMode: pngExportMode,
     }
-  }, [layoutMode, pngExportMode, pngScale, theme])
+  }, [effectivePosterBackgroundColor, layoutMode, pngExportMode, pngScale, theme])
 
-  const jsonPayload = useMemo(() => ({
+  const exportSnapshot = useMemo(() => ({
     exportedAt: new Date().toISOString(),
     projectName: currentProject?.name || '',
     judgeCount: judges.length,
@@ -523,6 +715,8 @@ export default function ExportInterface() {
       tableView,
       selectedJudge: selectedJudge?.judgeName ?? null,
       notesPdfMode,
+      jsonExportMode,
+      jsonJudge: judges.find((judge) => judge.key === jsonJudgeKey)?.judgeName ?? null,
       theme,
       density,
       decimals,
@@ -545,6 +739,8 @@ export default function ExportInterface() {
     poster: {
       width: safePosterWidth,
       height: safePosterHeight,
+      backgroundColor: effectivePosterBackgroundColor,
+      backgroundColorMode: posterBackgroundColor ? 'custom' : 'theme',
       hasBackgroundImage: Boolean(posterBackgroundImage),
       backgroundPositionXPct: posterBackgroundPositionXPct,
       backgroundPositionYPct: posterBackgroundPositionYPct,
@@ -591,6 +787,8 @@ export default function ExportInterface() {
     density,
     displayRows,
     exportMode,
+    jsonExportMode,
+    jsonJudgeKey,
     tableView,
     notesPdfMode,
     generatedTopText,
@@ -601,12 +799,14 @@ export default function ExportInterface() {
     normalizedTopCount,
     pngScale,
     pngExportMode,
+    posterBackgroundColor,
     posterBackgroundImage,
     posterBackgroundPositionXPct,
     posterBackgroundPositionYPct,
     posterBackgroundDragEnabled,
     posterBackgroundScaleXPct,
     posterBackgroundScaleYPct,
+    effectivePosterBackgroundColor,
     posterBlocks,
     posterImages,
     posterOverlayOpacity,
@@ -630,33 +830,156 @@ export default function ExportInterface() {
     theme,
   ])
 
+  const jsonPayload = useMemo(() => {
+    const exportedAt = new Date().toISOString()
+    const clipEntries = clips.map((clip) => ({
+      id: clip.id,
+      fileName: clip.fileName,
+      displayName: clip.displayName,
+      author: clip.author,
+      filePath: clip.filePath,
+      duration: clip.duration,
+      order: clip.order,
+      scored: clip.scored,
+      thumbnailTime: clip.thumbnailTime ?? null,
+    }))
+
+    if (jsonExportMode === 'full_project') {
+      return {
+        version: '1.0',
+        type: 'full-project-export',
+        exportedAt,
+        projectName,
+        bareme: currentBareme,
+        projectData: fullProjectData,
+        exportSnapshot,
+      }
+    }
+
+    if (jsonExportMode === 'single_judge') {
+      const targetJudge = judges.find((judge) => judge.key === jsonJudgeKey) ?? judges[0]
+      const judgeNotes = targetJudge?.isCurrentJudge
+        ? notesData
+        : (importedJudges[Number((targetJudge?.key ?? '').replace('imported-', ''))]?.notes ?? {})
+
+      return {
+        version: '1.0',
+        type: 'judge-export',
+        exportedAt,
+        projectName,
+        judgeName: targetJudge?.judgeName ?? currentProject?.judgeName ?? 'juge',
+        judgeKey: targetJudge?.key ?? 'current',
+        baremeId: currentProject?.baremeId ?? currentBareme?.id ?? null,
+        bareme: currentBareme,
+        clips: clipEntries,
+        notes: judgeNotes,
+        exportSnapshot,
+      }
+    }
+
+    return {
+      version: '1.0',
+      type: 'notes-only-export',
+      exportedAt,
+      projectName,
+      baremeId: currentProject?.baremeId ?? currentBareme?.id ?? null,
+      bareme: currentBareme,
+      clips: clipEntries,
+      notes: {
+        currentJudge: {
+          judgeName: currentProject?.judgeName ?? 'juge',
+          notes: notesData,
+        },
+        importedJudges,
+      },
+      exportSnapshot,
+    }
+  }, [
+    clips,
+    currentBareme,
+    currentProject?.baremeId,
+    currentProject?.judgeName,
+    exportSnapshot,
+    fullProjectData,
+    importedJudges,
+    jsonExportMode,
+    jsonJudgeKey,
+    judges,
+    notesData,
+    projectName,
+  ])
+
+  const jsonDefaultFileName = useMemo(() => {
+    if (jsonExportMode === 'full_project') return `${projectName}_projet_complet.json`
+    if (jsonExportMode === 'notes_only') return `${projectName}_notes.json`
+    const judgeName = judges.find((judge) => judge.key === jsonJudgeKey)?.judgeName ?? 'juge'
+    const safeJudge = judgeName.trim().replace(/[<>:"/\\|?*]+/g, '_').replace(/\s+/g, '_') || 'juge'
+    return `${projectName}_${safeJudge}.json`
+  }, [jsonExportMode, jsonJudgeKey, judges, projectName])
+
   const { exporting, exportContainer, exportJson, exportNotesPdf } = useExportActions({
     previewRef,
     exportPageRefs,
     theme,
     projectName,
     jsonPayload,
+    jsonDefaultFileName,
     notesPdfPayload,
   })
+
+  useEffect(() => {
+    if (!exportContextMenu) return
+
+    const handlePointerDown = (event: MouseEvent) => {
+      const target = event.target as Node | null
+      if (target && exportContextMenuRef.current?.contains(target)) return
+      setExportContextMenu(null)
+    }
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setExportContextMenu(null)
+    }
+
+    window.addEventListener('mousedown', handlePointerDown)
+    window.addEventListener('keydown', handleEscape)
+    return () => {
+      window.removeEventListener('mousedown', handlePointerDown)
+      window.removeEventListener('keydown', handleEscape)
+    }
+  }, [exportContextMenu])
 
   if (!currentBareme) {
     return (
       <div className="flex items-center justify-center h-full text-gray-500 text-sm">
-        Aucun barème chargé
+        {t('Aucun barème chargé')}
       </div>
     )
   }
 
   return (
-    <div className="flex flex-col lg:flex-row h-full gap-3 p-3 overflow-hidden">
+    <div
+      className="flex flex-col lg:flex-row h-full gap-3 p-3 overflow-hidden"
+      onContextMenu={(event) => {
+        const target = event.target as HTMLElement
+        if (
+          target.closest('input, textarea, select, button, a, [contenteditable="true"]')
+          || target.closest('[data-native-context="true"]')
+        ) {
+          return
+        }
+        event.preventDefault()
+        event.stopPropagation()
+        setExportContextMenu({ x: event.clientX, y: event.clientY })
+      }}
+    >
       <div className="w-full lg:w-[380px] shrink-0 min-h-0 flex flex-col gap-2">
         <div className="rounded-lg border border-gray-700 bg-surface p-2.5">
           <h3 className="text-sm font-semibold text-white flex items-center gap-1.5">
             <LayoutTemplate size={14} />
-            Studio Export
+            {t('Studio Export')}
           </h3>
           <p className="text-[11px] text-gray-500 mt-1 mb-2">
-            Choisis une sortie classique (tableau) ou créative (affiche).
+            {t('Choisis une sortie classique (tableau) ou créative (affiche).')}
           </p>
           <div className="grid grid-cols-2 gap-2">
             <button
@@ -668,7 +991,7 @@ export default function ExportInterface() {
                   : 'border-gray-700 text-gray-400 hover:text-white'
               }`}
             >
-              Affiche créative
+              {t('Affiche créative')}
             </button>
             <button
               type="button"
@@ -679,7 +1002,7 @@ export default function ExportInterface() {
                   : 'border-gray-700 text-gray-400 hover:text-white'
               }`}
             >
-              Tableau complet
+              {t('Tableau complet')}
             </button>
           </div>
         </div>
@@ -712,6 +1035,9 @@ export default function ExportInterface() {
             accentPresets={ACCENT_PRESETS}
             exporting={exporting}
             notesPdfMode={notesPdfMode}
+            jsonExportMode={jsonExportMode}
+            jsonJudgeKey={jsonJudgeKey}
+            jsonJudgeOptions={jsonJudgeOptions}
             onSetTitle={setTitle}
             onSetExportMode={setExportMode}
             onSetTableView={setTableView}
@@ -729,6 +1055,8 @@ export default function ExportInterface() {
               const safe = Number.isFinite(value) ? value : MIN_ROWS_PER_IMAGE
               setRowsPerImage(clamp(safe, MIN_ROWS_PER_IMAGE, MAX_ROWS_PER_IMAGE))
             }}
+            onSetJsonExportMode={setJsonExportMode}
+            onSetJsonJudgeKey={setJsonJudgeKey}
             onSetAccent={setAccent}
             onSetTableClipColumnWidth={(value) => {
               const safe = Number.isFinite(value) ? value : MIN_TABLE_CLIP_COLUMN_WIDTH
@@ -778,6 +1106,9 @@ export default function ExportInterface() {
             selectedSizePreset={selectedSizePreset}
             posterWidth={safePosterWidth}
             posterHeight={safePosterHeight}
+            backgroundColor={posterBackgroundColor}
+            effectiveBackgroundColor={effectivePosterBackgroundColor}
+            backgroundColorPresets={posterBackgroundColorPresets}
             backgroundImage={posterBackgroundImage}
             backgroundImageSizeLabel={backgroundImageSizeLabel}
             backgroundRenderedSizeLabel={backgroundRenderedSizeLabel}
@@ -794,6 +1125,9 @@ export default function ExportInterface() {
             generatedTopText={generatedTopText}
             exporting={exporting}
             copiedTop={copiedTop}
+            jsonExportMode={jsonExportMode}
+            jsonJudgeKey={jsonJudgeKey}
+            jsonJudgeOptions={jsonJudgeOptions}
             onSelectBlock={(id) => {
               setActivePosterBlockId(id)
               setActivePosterImageId(null)
@@ -807,6 +1141,8 @@ export default function ExportInterface() {
               setPosterBackgroundImageDimensions(null)
               setPosterBackgroundDragEnabled(false)
             }}
+            onSetBackgroundColor={setPosterBackgroundColor}
+            onResetBackgroundColor={() => setPosterBackgroundColor(null)}
             onSetPosterWidth={(value) => setPosterWidth(normalizeDimension(value, MIN_EXPORT_WIDTH, MAX_EXPORT_WIDTH, 1920))}
             onSetPosterHeight={(value) => setPosterHeight(normalizeDimension(value, MIN_EXPORT_HEIGHT, MAX_EXPORT_HEIGHT, 1080))}
             onSetSizePreset={(preset) => {
@@ -816,16 +1152,83 @@ export default function ExportInterface() {
             onSetBackgroundPositionXPct={(value) => setPosterBackgroundPositionXPct(clamp(value, 0, 100))}
             onSetBackgroundPositionYPct={(value) => setPosterBackgroundPositionYPct(clamp(value, 0, 100))}
             onToggleBackgroundDrag={() => setPosterBackgroundDragEnabled((prev) => !prev)}
-            onSetBackgroundScaleXPct={(value) => setPosterBackgroundScaleXPct(clamp(value, MIN_BG_SCALE, MAX_BG_SCALE))}
-            onSetBackgroundScaleYPct={(value) => setPosterBackgroundScaleYPct(clamp(value, MIN_BG_SCALE, MAX_BG_SCALE))}
+            onSetBackgroundScaleXPct={(value) => {
+              const safe = clamp(value, MIN_BG_SCALE, MAX_BG_SCALE)
+              if (posterBackgroundImageDimensions) {
+                const nextHeightPct = clamp(
+                  getBackgroundHeightPctForWidthPct(
+                    safe,
+                    safePosterWidth,
+                    safePosterHeight,
+                    posterBackgroundImageDimensions.width,
+                    posterBackgroundImageDimensions.height,
+                  ),
+                  MIN_BG_SCALE,
+                  MAX_BG_SCALE,
+                )
+                setPosterBackgroundScaleXPct(safe)
+                setPosterBackgroundScaleYPct(nextHeightPct)
+                return
+              }
+              setPosterBackgroundScaleXPct(safe)
+            }}
+            onSetBackgroundScaleYPct={(value) => {
+              const safe = clamp(value, MIN_BG_SCALE, MAX_BG_SCALE)
+              if (posterBackgroundImageDimensions) {
+                const nextWidthPct = clamp(
+                  getBackgroundWidthPctForHeightPct(
+                    safe,
+                    safePosterWidth,
+                    safePosterHeight,
+                    posterBackgroundImageDimensions.width,
+                    posterBackgroundImageDimensions.height,
+                  ),
+                  MIN_BG_SCALE,
+                  MAX_BG_SCALE,
+                )
+                const nextHeightPct = clamp(
+                  getBackgroundHeightPctForWidthPct(
+                    nextWidthPct,
+                    safePosterWidth,
+                    safePosterHeight,
+                    posterBackgroundImageDimensions.width,
+                    posterBackgroundImageDimensions.height,
+                  ),
+                  MIN_BG_SCALE,
+                  MAX_BG_SCALE,
+                )
+                setPosterBackgroundScaleXPct(nextWidthPct)
+                setPosterBackgroundScaleYPct(nextHeightPct)
+                return
+              }
+              setPosterBackgroundScaleYPct(safe)
+            }}
             onSetBackgroundScaleUniform={(value) => {
               const safe = clamp(value, MIN_BG_SCALE, MAX_BG_SCALE)
+              if (posterBackgroundImageDimensions) {
+                const nextHeightPct = clamp(
+                  getBackgroundHeightPctForWidthPct(
+                    safe,
+                    safePosterWidth,
+                    safePosterHeight,
+                    posterBackgroundImageDimensions.width,
+                    posterBackgroundImageDimensions.height,
+                  ),
+                  MIN_BG_SCALE,
+                  MAX_BG_SCALE,
+                )
+                setPosterBackgroundScaleXPct(safe)
+                setPosterBackgroundScaleYPct(nextHeightPct)
+                return
+              }
               setPosterBackgroundScaleXPct(safe)
               setPosterBackgroundScaleYPct(safe)
             }}
             onSetOverlayOpacity={(value) => setPosterOverlayOpacity(clamp(value, 0, 90))}
             onSetPreviewZoomPct={(value) => setPosterPreviewZoomPct(clamp(value, MIN_PREVIEW_ZOOM, MAX_PREVIEW_ZOOM))}
             onSetTopCount={(count) => setTopCount(clamp(Number.isFinite(count) ? count : MIN_TOP_COUNT, MIN_TOP_COUNT, MAX_TOP_COUNT))}
+            onSetJsonExportMode={setJsonExportMode}
+            onSetJsonJudgeKey={setJsonJudgeKey}
             onToggleClipNameInTop={() => setIncludeClipNameInTop((prev) => !prev)}
             onToggleScoreInTop={() => setIncludeScoreInTop((prev) => !prev)}
             onGenerateTopIntoBlock={generateTopIntoBlock}
@@ -836,6 +1239,7 @@ export default function ExportInterface() {
               if (id) setActivePosterBlockId(null)
             }}
             onPatchOverlayImage={patchPosterImage}
+            onReorderOverlayImage={reorderPosterImage}
             onRemoveOverlayImage={removePosterImage}
             onResetPosterLayout={resetPosterLayout}
             onExportPng={() => { exportContainer('png', exportCaptureOptions).catch(() => {}) }}
@@ -880,6 +1284,7 @@ export default function ExportInterface() {
           accent={accent}
           posterWidth={safePosterWidth}
           posterHeight={safePosterHeight}
+          backgroundColor={effectivePosterBackgroundColor}
           backgroundImage={posterBackgroundImage}
           backgroundPositionXPct={posterBackgroundPositionXPct}
           backgroundPositionYPct={posterBackgroundPositionYPct}
@@ -894,6 +1299,17 @@ export default function ExportInterface() {
           activeImageId={activePosterImageId}
           onSelectBlock={setActivePosterBlockId}
           onSelectImage={setActivePosterImageId}
+          onSetPreviewZoomPct={(value) => setPosterPreviewZoomPct(clamp(value, MIN_PREVIEW_ZOOM, MAX_PREVIEW_ZOOM))}
+          onPatchBlock={patchPosterBlock}
+          onPatchImage={patchPosterImage}
+          onRemoveImage={removePosterImage}
+          onReorderImage={reorderPosterImage}
+          onClearBackground={() => {
+            setPosterBackgroundImage(null)
+            setPosterBackgroundImageDimensions(null)
+            setPosterBackgroundDragEnabled(false)
+          }}
+          onToggleBackgroundDrag={() => setPosterBackgroundDragEnabled((prev) => !prev)}
           onMoveBlock={movePosterBlock}
           onMoveImage={movePosterImage}
           onMoveBackground={(xPct, yPct) => {
@@ -902,6 +1318,92 @@ export default function ExportInterface() {
           }}
         />
       )}
+
+      {exportContextMenu ? (
+        <AppContextMenuPanel
+          ref={exportContextMenuRef}
+          x={exportContextMenu.x}
+          y={exportContextMenu.y}
+          minWidthClassName="min-w-[220px]"
+        >
+          <AppContextMenuItem
+            label={t('Tableau complet')}
+            icon={Table}
+            active={layoutMode === 'table'}
+            onClick={() => {
+              setLayoutMode('table')
+              setExportContextMenu(null)
+            }}
+          />
+          <AppContextMenuItem
+            label={t('Affiche créative')}
+            icon={Rows3}
+            active={layoutMode === 'poster'}
+            onClick={() => {
+              setLayoutMode('poster')
+              setExportContextMenu(null)
+            }}
+          />
+
+          {layoutMode === 'table' ? (
+            <>
+              <AppContextMenuSeparator />
+              <AppContextMenuItem
+                label={t('Vue synthèse')}
+                icon={Table2}
+                active={tableView === 'summary'}
+                onClick={() => {
+                  setTableView('summary')
+                  setExportContextMenu(null)
+                }}
+              />
+              <AppContextMenuItem
+                label={t('Vue détaillée')}
+                icon={Table}
+                active={tableView === 'detailed'}
+                onClick={() => {
+                  setTableView('detailed')
+                  setExportContextMenu(null)
+                }}
+              />
+            </>
+          ) : null}
+
+          <AppContextMenuSeparator />
+          <AppContextMenuItem
+            label={t('Exporter PNG')}
+            icon={FileImage}
+            onClick={() => {
+              exportContainer('png', exportCaptureOptions).catch(() => {})
+              setExportContextMenu(null)
+            }}
+          />
+          <AppContextMenuItem
+            label={t('Exporter PDF')}
+            icon={FileText}
+            onClick={() => {
+              exportContainer('pdf', exportCaptureOptions).catch(() => {})
+              setExportContextMenu(null)
+            }}
+          />
+          <AppContextMenuItem
+            label={t('Exporter PDF notes')}
+            icon={FileText}
+            onClick={() => {
+              exportNotesPdf().catch(() => {})
+              setExportContextMenu(null)
+            }}
+          />
+          <AppContextMenuItem
+            label={t('Exporter JSON')}
+            icon={FileJson}
+            onClick={() => {
+              exportJson().catch(() => {})
+              setExportContextMenu(null)
+            }}
+          />
+        </AppContextMenuPanel>
+      ) : null}
     </div>
   )
 }

@@ -1,4 +1,5 @@
 import { getTotalPoints } from '@/components/scoring/baremeEditorUtils'
+import { useI18n } from '@/i18n'
 import type { Criterion } from '@/types/bareme'
 
 interface BaremeEditHeaderFieldsProps {
@@ -22,29 +23,31 @@ export function BaremeEditHeaderFields({
   onDescriptionChange,
   onHideTotalsChange,
 }: BaremeEditHeaderFieldsProps) {
+  const { t } = useI18n()
+
   return (
     <>
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
         <div className="lg:col-span-2">
-          <label className="block text-xs font-medium text-gray-400 mb-1">Nom du barème</label>
+          <label className="block text-xs font-medium text-gray-400 mb-1">{t('Nom du barème')}</label>
           <input
             value={name}
             onChange={(event) => onNameChange(event.target.value)}
-            placeholder="Japan Expo 2025"
+            placeholder={t('Japan Expo 2025')}
             className="w-full px-3 py-2 bg-surface-dark border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:border-primary-500 focus:outline-none text-sm"
             disabled={readOnly}
           />
         </div>
         <div>
-          <label className="block text-xs font-medium text-gray-400 mb-1">Total calculé</label>
+          <label className="block text-xs font-medium text-gray-400 mb-1">{t('Total calculé')}</label>
           <div className="px-3 py-2 rounded-lg border border-gray-700 bg-surface-dark text-sm font-semibold text-white">
-            {getTotalPoints(criteria)} points
+            {t('{count} points', { count: getTotalPoints(criteria) })}
           </div>
         </div>
       </div>
 
       <div>
-        <label className="block text-xs font-medium text-gray-400 mb-1">Description (optionnel)</label>
+        <label className="block text-xs font-medium text-gray-400 mb-1">{t('Description (optionnel)')}</label>
         <input
           value={description}
           onChange={(event) => onDescriptionChange(event.target.value)}
@@ -62,7 +65,7 @@ export function BaremeEditHeaderFields({
             disabled={readOnly}
             className="accent-primary-500"
           />
-          Cacher totaux et résultats tant que tous les clips ne sont pas notés
+          {t('Cacher totaux et résultats tant que tous les clips ne sont pas notés')}
         </label>
       </div>
     </>

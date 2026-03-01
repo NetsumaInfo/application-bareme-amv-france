@@ -1,4 +1,5 @@
 import { X } from 'lucide-react'
+import { useI18n } from '@/i18n'
 
 interface FloatingPlayerHeaderProps {
   isDragging: boolean
@@ -15,6 +16,7 @@ export function FloatingPlayerHeader({
   onMouseDown,
   onClose,
 }: FloatingPlayerHeaderProps) {
+  const { t } = useI18n()
   return (
     <div
       onMouseDown={onMouseDown}
@@ -27,7 +29,7 @@ export function FloatingPlayerHeader({
         <button
           onClick={onClose}
           className="flex items-center justify-center w-4 h-4 rounded hover:bg-gray-700 transition-colors"
-          title="Fermer"
+          title={t('Fermer')}
         >
           <X size={12} className="text-gray-400" />
         </button>

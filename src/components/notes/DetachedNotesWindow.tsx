@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { emit } from '@tauri-apps/api/event'
+import { ChevronLeft, ChevronRight, Play } from 'lucide-react'
 import { useUIStore } from '@/store/useUIStore'
 import { DetachedNotesLoading } from '@/components/notes/DetachedNotesLoading'
 import { DetachedNotesHeader } from '@/components/notes/DetachedNotesHeader'
@@ -18,8 +19,15 @@ import type { ActiveNoteField, ClipPayload } from '@/components/notes/detached/t
 import type { Clip } from '@/types/project'
 import type { Bareme, Criterion } from '@/types/bareme'
 import type { Note } from '@/types/notation'
+import {
+  AppContextMenuItem,
+  AppContextMenuPanel,
+  AppContextMenuSeparator,
+} from '@/components/ui/AppContextMenu'
+import { useI18n } from '@/i18n'
 
 export default function DetachedNotesWindow() {
+  const { t } = useI18n()
   const shortcutBindings = useUIStore((state) => state.shortcutBindings)
   const [clipData, setClipData] = useState<ClipPayload | null>(null)
   const [localNote, setLocalNote] = useState<Note | null>(null)
@@ -32,11 +40,16 @@ export default function DetachedNotesWindow() {
   const clipRef = useRef<Clip | null>(null)
   const clipDataRef = useRef<ClipPayload | null>(null)
   const baremeRef = useRef<Bareme | null>(null)
+  const contextMenuRef = useRef<HTMLDivElement | null>(null)
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null)
 
   const clip = clipData?.clip ?? null
   const bareme = clipData?.bareme ?? null
   const clipFps = useDetachedClipFps(clip)
   const shouldHideTotals = Boolean(clipData?.hideTotals)
+  const totalClips = clipData?.totalClips ?? 0
+  const clipIndex = clipData?.clipIndex ?? 0
+  const hasVideo = Boolean(clip?.filePath)
   useDetachedNotesWindowSetup()
   const {
     framePreview,
@@ -52,6 +65,27 @@ export default function DetachedNotesWindow() {
   useEffect(() => {
     clipDataRef.current = clipData
   }, [clipData])
+
+  useEffect(() => {
+    if (!contextMenu) return
+
+    const handlePointerDown = (event: MouseEvent) => {
+      const target = event.target as Node | null
+      if (target && contextMenuRef.current?.contains(target)) return
+      setContextMenu(null)
+    }
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setContextMenu(null)
+    }
+
+    window.addEventListener('mousedown', handlePointerDown)
+    window.addEventListener('keydown', handleEscape)
+    return () => {
+      window.removeEventListener('mousedown', handlePointerDown)
+      window.removeEventListener('keydown', handleEscape)
+    }
+  }, [contextMenu])
 
   useDetachedNotesDataBridge({
     clipData,
@@ -127,7 +161,20 @@ export default function DetachedNotesWindow() {
   }
 
   return (
-    <div className="flex flex-col w-full h-screen text-gray-200" style={{ background: '#0f0f23' }}>
+    <div
+      className="flex flex-col w-full h-screen text-gray-200 bg-surface-dark"
+      onContextMenu={(event) => {
+        const target = event.target as HTMLElement
+        if (
+          target.closest('input, textarea, select, [contenteditable="true"]')
+          || target.closest('[data-native-context="true"]')
+        ) {
+          return
+        }
+        event.preventDefault()
+        setContextMenu({ x: event.clientX, y: event.clientY })
+      }}
+    >
       <DetachedNotesHeader
         clip={clip}
         clipIndex={clipData.clipIndex}
@@ -181,6 +228,44 @@ export default function DetachedNotesWindow() {
       />
 
       <DetachedFramePreview framePreview={framePreview} />
+
+      {contextMenu ? (
+        <AppContextMenuPanel
+          ref={contextMenuRef}
+          x={contextMenu.x}
+          y={contextMenu.y}
+          minWidthClassName="min-w-[220px]"
+        >
+          <AppContextMenuItem
+            label={t('Clip précédent')}
+            icon={ChevronLeft}
+            disabled={clipIndex === 0}
+            onClick={clipIndex === 0 ? undefined : () => {
+              handleNavigateClip('prev')
+              setContextMenu(null)
+            }}
+          />
+          <AppContextMenuItem
+            label={t('Clip suivant')}
+            icon={ChevronRight}
+            disabled={clipIndex >= totalClips - 1}
+            onClick={clipIndex >= totalClips - 1 ? undefined : () => {
+              handleNavigateClip('next')
+              setContextMenu(null)
+            }}
+          />
+          <AppContextMenuSeparator />
+          <AppContextMenuItem
+            label={hasVideo ? t('Ouvrir le lecteur') : t('Vidéo indisponible')}
+            icon={Play}
+            disabled={!hasVideo}
+            onClick={hasVideo ? () => {
+              emit('notes:open-player').catch(() => {})
+              setContextMenu(null)
+            } : undefined}
+          />
+        </AppContextMenuPanel>
+      ) : null}
     </div>
   )
 }

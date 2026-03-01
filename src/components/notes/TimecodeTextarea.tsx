@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { extractTimecodesFromText, type ParsedTimecode } from '@/utils/timecodes'
+import { useI18n } from '@/i18n'
 
 interface TimecodeTextareaProps {
   value: string
@@ -36,6 +37,7 @@ export default function TimecodeTextarea({
   textareaRef,
   readOnly = false,
 }: TimecodeTextareaProps) {
+  const { t } = useI18n()
   const [scrollTop, setScrollTop] = useState(0)
   const [scrollLeft, setScrollLeft] = useState(0)
   const innerRef = useRef<HTMLTextAreaElement | null>(null)
@@ -155,7 +157,7 @@ export default function TimecodeTextarea({
                     lineHeight: 'inherit',
                     letterSpacing: 'inherit',
                   }}
-                  title={`Aller à ${segment.item.raw}`}
+                  title={t('Aller à {timecode}', { timecode: segment.item.raw })}
                 >
                   {segment.item.raw}
                 </button>

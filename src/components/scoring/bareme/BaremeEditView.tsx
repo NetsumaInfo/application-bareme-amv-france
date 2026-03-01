@@ -2,6 +2,7 @@ import { BaremeCriterionCard } from '@/components/scoring/bareme/BaremeCriterion
 import { BaremeEditCategoriesSummary } from '@/components/scoring/bareme/BaremeEditCategoriesSummary'
 import { BaremeEditHeaderFields } from '@/components/scoring/bareme/BaremeEditHeaderFields'
 import { BaremeQuickActionsBar } from '@/components/scoring/bareme/BaremeQuickActionsBar'
+import { useI18n } from '@/i18n'
 import type { Criterion } from '@/types/bareme'
 
 interface BaremeEditViewProps {
@@ -57,6 +58,8 @@ export function BaremeEditView({
   onApplyGlobalStep,
   onAddCriterion,
 }: BaremeEditViewProps) {
+  const { t } = useI18n()
+
   return (
     <div className="flex flex-col gap-4">
       <BaremeEditHeaderFields
@@ -80,9 +83,9 @@ export function BaremeEditView({
       />
 
       <div className="flex items-center justify-between">
-        <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Critères</span>
+        <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">{t('Critères')}</span>
         <span className="text-[11px] text-gray-500">
-          Barre d’actions fixe en bas
+          {t('Barre d’actions fixe en bas')}
         </span>
       </div>
 

@@ -1,16 +1,20 @@
+import { useMemo } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { X, Settings2 } from 'lucide-react'
-import { createProjectSchema, type CreateProjectFormData } from '@/schemas/projectSchema'
+import { createCreateProjectSchema, type CreateProjectFormData } from '@/schemas/projectSchema'
 import { useProjectStore } from '@/store/useProjectStore'
 import { useNotationStore } from '@/store/useNotationStore'
 import { useUIStore } from '@/store/useUIStore'
 import * as tauri from '@/services/tauri'
+import { useI18n } from '@/i18n'
 
 export default function CreateProjectModal() {
   const { showProjectModal, setShowProjectModal, setShowBaremeEditor } = useUIStore()
   const { createProject, updateSettings } = useProjectStore()
   const { availableBaremes, setBareme } = useNotationStore()
+  const { t } = useI18n()
+  const createProjectSchema = useMemo(() => createCreateProjectSchema(t), [t])
 
   const {
     register,
@@ -66,13 +70,14 @@ export default function CreateProjectModal() {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
-      <div className="bg-surface rounded-xl shadow-2xl w-full max-w-md p-6 border border-gray-700">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" data-context-scope="create-project">
+      <div className="bg-surface rounded-xl shadow-2xl w-full max-w-md p-6 border border-gray-700" data-context-scope="create-project">
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-lg font-semibold text-white">Nouveau concours</h2>
+          <h2 className="text-lg font-semibold text-white">{t('Nouveau concours')}</h2>
           <button
             onClick={onClose}
             className="p-1 rounded hover:bg-surface-light text-gray-400 hover:text-white"
+            title={t('Fermer')}
           >
             <X size={18} />
           </button>
@@ -81,12 +86,12 @@ export default function CreateProjectModal() {
         <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-1.5">
-              Nom du concours
+              {t('Nom du concours')}
             </label>
             <input
               {...register('name')}
               type="text"
-              placeholder="ex: Concours Japan Expo"
+              placeholder={t('ex: Concours Japan Expo')}
               className="w-full px-3 py-2 bg-surface-dark border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:border-primary-500 focus:outline-none text-sm"
               autoFocus
             />
@@ -97,12 +102,12 @@ export default function CreateProjectModal() {
 
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-1.5">
-              Nom du juge
+              {t('Nom du juge')}
             </label>
             <input
               {...register('judgeName')}
               type="text"
-              placeholder="ex: Netsuma"
+              placeholder={t('ex: Netsuma')}
               className="w-full px-3 py-2 bg-surface-dark border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:border-primary-500 focus:outline-none text-sm"
             />
             {errors.judgeName && (
@@ -112,14 +117,14 @@ export default function CreateProjectModal() {
 
           <div>
             <div className="flex items-center justify-between mb-1.5">
-              <label className="text-sm font-medium text-gray-300">Barème</label>
+              <label className="text-sm font-medium text-gray-300">{t('Barème')}</label>
               <button
                 type="button"
                 onClick={() => setShowBaremeEditor(true)}
                 className="flex items-center gap-1 text-xs text-primary-400 hover:text-primary-300"
               >
                 <Settings2 size={12} />
-                Gérer les barèmes
+                {t('Gérer les barèmes')}
               </button>
             </div>
             <select
@@ -128,7 +133,11 @@ export default function CreateProjectModal() {
             >
               {availableBaremes.map((b) => (
                 <option key={b.id} value={b.id}>
-                  {b.name} ({b.criteria.length} critères, {b.totalPoints} pts)
+                  {t('{name} ({count} critères, {points} pts)', {
+                    name: b.name,
+                    count: b.criteria.length,
+                    points: b.totalPoints,
+                  })}
                 </option>
               ))}
             </select>
@@ -143,13 +152,13 @@ export default function CreateProjectModal() {
               onClick={onClose}
               className="px-4 py-2 text-sm rounded-lg bg-surface-light text-gray-300 hover:text-white transition-colors"
             >
-              Annuler
+              {t('Annuler')}
             </button>
             <button
               type="submit"
               className="px-4 py-2 text-sm rounded-lg bg-primary-600 hover:bg-primary-500 text-white font-medium transition-colors"
             >
-              Créer le concours
+              {t('Créer le concours')}
             </button>
           </div>
         </form>

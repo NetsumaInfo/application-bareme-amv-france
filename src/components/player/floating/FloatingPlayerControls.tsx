@@ -12,6 +12,7 @@ import {
 import SubtitleSelector from '@/components/player/SubtitleSelector'
 import AudioTrackSelector from '@/components/player/AudioTrackSelector'
 import AudioDbMeter from '@/components/player/AudioDbMeter'
+import { useI18n } from '@/i18n'
 
 interface FloatingPlayerControlsProps {
   isLoaded: boolean
@@ -40,12 +41,13 @@ export function FloatingPlayerControls({
   onToggleFullscreen,
   onSetMiniatureFrame,
 }: FloatingPlayerControlsProps) {
+  const { t } = useI18n()
   return (
     <div className="flex items-center justify-center gap-1 flex-wrap">
       <button
         onClick={() => onSeekRelative(-5)}
         className="flex items-center justify-center w-6 h-6 rounded hover:bg-gray-700 transition-colors"
-        title="Reculer 5s"
+        title={t('Reculer 5s')}
         disabled={!isLoaded}
       >
         <SkipBack size={14} className="text-gray-300" />
@@ -54,7 +56,7 @@ export function FloatingPlayerControls({
       <button
         onClick={onTogglePause}
         className="flex items-center justify-center w-6 h-6 rounded hover:bg-gray-700 transition-colors"
-        title={isPlaying ? 'Pause' : 'Lecture'}
+        title={isPlaying ? t('Pause') : t('Lecture')}
         disabled={!isLoaded}
       >
         {isPlaying ? (
@@ -67,7 +69,7 @@ export function FloatingPlayerControls({
       <button
         onClick={() => onSeekRelative(5)}
         className="flex items-center justify-center w-6 h-6 rounded hover:bg-gray-700 transition-colors"
-        title="Avancer 5s"
+        title={t('Avancer 5s')}
         disabled={!isLoaded}
       >
         <SkipForward size={14} className="text-gray-300" />
@@ -76,7 +78,7 @@ export function FloatingPlayerControls({
       <button
         onClick={onToggleMuted}
         className="flex items-center justify-center w-6 h-6 rounded hover:bg-gray-700 transition-colors"
-        title={muted ? 'Activer le son' : 'Couper le son'}
+        title={muted ? t('Activer le son') : t('Couper le son')}
       >
         {muted ? (
           <VolumeX size={14} className="text-gray-300" />
@@ -92,7 +94,7 @@ export function FloatingPlayerControls({
       <button
         onClick={onToggleFullscreen}
         className="flex items-center justify-center w-6 h-6 rounded hover:bg-gray-700 transition-colors"
-        title={isFullscreen ? 'Quitter le plein écran' : 'Agrandir'}
+        title={isFullscreen ? t('Quitter le plein écran') : t('Agrandir')}
         disabled={!isLoaded}
       >
         {isFullscreen ? (
@@ -105,7 +107,7 @@ export function FloatingPlayerControls({
         <button
           onClick={onSetMiniatureFrame}
           className="flex items-center justify-center w-6 h-6 rounded hover:bg-gray-700 transition-colors"
-          title="Définir la frame miniature"
+          title={t('Définir la frame miniature')}
           disabled={!isLoaded}
         >
           <ImagePlus size={14} className="text-gray-300" />

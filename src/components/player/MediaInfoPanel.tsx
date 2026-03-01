@@ -3,6 +3,7 @@ import { Copy, X } from 'lucide-react'
 import { useMediaInfoData } from '@/components/player/mediaInfo/useMediaInfoData'
 import { buildMediaInfoSections } from '@/components/player/mediaInfo/mediaInfoSections'
 import { MediaInfoSectionTable } from '@/components/player/mediaInfo/MediaInfoSectionTable'
+import { useI18n } from '@/i18n'
 
 interface MediaInfoPanelProps {
   clipName: string
@@ -11,6 +12,7 @@ interface MediaInfoPanelProps {
 }
 
 export default function MediaInfoPanel({ clipName, filePath, onClose }: MediaInfoPanelProps) {
+  const { t } = useI18n()
   const { info, error } = useMediaInfoData({ filePath })
 
   useEffect(() => {
@@ -21,7 +23,7 @@ export default function MediaInfoPanel({ clipName, filePath, onClose }: MediaInf
     return () => window.removeEventListener('keydown', handleKey)
   }, [onClose])
 
-  const sections = useMemo(() => (info ? buildMediaInfoSections(info) : []), [info])
+  const sections = useMemo(() => (info ? buildMediaInfoSections(info, t) : []), [info, t])
 
   const copyToClipboard = async () => {
     if (!info) return
@@ -45,13 +47,13 @@ export default function MediaInfoPanel({ clipName, filePath, onClose }: MediaInf
       >
         <div className="flex items-center justify-between px-4 py-3 border-b border-gray-700">
           <h3 className="text-sm font-semibold text-white truncate pr-2">
-            MediaInfo - {clipName}
+            {t('MediaInfo')} - {clipName}
           </h3>
           <div className="flex items-center gap-1">
             <button
               onClick={copyToClipboard}
               className="p-1 rounded hover:bg-surface-light text-gray-400 hover:text-white transition-colors shrink-0"
-              title="Copier les infos"
+              title={t('Copier les infos')}
             >
               <Copy size={14} />
             </button>
@@ -68,7 +70,7 @@ export default function MediaInfoPanel({ clipName, filePath, onClose }: MediaInf
           {error ? (
             <p className="text-red-400 text-sm">{error}</p>
           ) : !info ? (
-            <p className="text-gray-500 text-sm">Chargement...</p>
+            <p className="text-gray-500 text-sm">{t('Chargement...')}</p>
           ) : (
             <div className="space-y-4">
               {sections.map((section) => (
