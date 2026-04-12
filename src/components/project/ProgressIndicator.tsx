@@ -1,6 +1,15 @@
 import { useProjectStore } from '@/store/useProjectStore'
-import { getProgressStats } from '@/utils/scoring'
 import { useI18n } from '@/i18n'
+
+function getProgressStats(clips: { id: string; scored: boolean }[]) {
+  const scored = clips.filter((clip) => clip.scored).length
+  return {
+    scored,
+    total: clips.length,
+    remaining: clips.length - scored,
+    percentage: clips.length > 0 ? Math.round((scored / clips.length) * 100) : 0,
+  }
+}
 
 export default function ProgressIndicator() {
   const { clips } = useProjectStore()

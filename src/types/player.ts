@@ -14,16 +14,3 @@ export interface AudioTrack {
   channels?: number
   external?: boolean
 }
-
-export interface PlayerState {
-  isPlaying: boolean
-  currentTime: number
-  duration: number
-  volume: number
-  muted: boolean
-  playbackSpeed: number
-  subtitleTracks: SubtitleTrack[]
-  audioTracks: AudioTrack[]
-  currentSubtitleId: number | null
-  currentAudioId: number | null
-}

@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { getDefaultBaremesFolder } from '@/services/tauri'
 import { useNotationStore } from '@/store/useNotationStore'
 import { useUIStore } from '@/store/useUIStore'
 import { duplicateBareme } from '@/components/scoring/bareme/baremeEditorStateUtils'
@@ -12,7 +13,14 @@ type BaremeEditorMode = 'list' | 'edit'
 
 export function useBaremeEditorState() {
   const { t } = useI18n()
-  const { showBaremeEditor, setShowBaremeEditor } = useUIStore()
+  const {
+    showBaremeEditor,
+    setShowBaremeEditor,
+    requestedBaremeEditorId,
+    setRequestedBaremeEditorId,
+    baremesFolderPath,
+    setBaremesFolderPath,
+  } = useUIStore()
   const { addBareme, availableBaremes, removeBareme } = useNotationStore()
 
   const [mode, setMode] = useState<BaremeEditorMode>('list')
@@ -27,6 +35,7 @@ export function useBaremeEditorState() {
     categoryColors,
     globalStep,
     hideTotalsUntilAllScored,
+    spotlightCriterionId,
     error,
     getCategoryColor,
     startEdit: startEditForm,
@@ -50,6 +59,9 @@ export function useBaremeEditorState() {
   const { handleImportBaremeJson, handleExportBaremeJson } = useBaremeJsonTransfer({
     availableBaremes,
     addBareme,
+    onDropImportSuccess: () => {
+      setMode('list')
+    },
   })
 
   useBaremeEditorEvents({
@@ -58,8 +70,36 @@ export function useBaremeEditorState() {
     setMode,
   })
 
+  useEffect(() => {
+    if (!showBaremeEditor || !requestedBaremeEditorId) return
+    const targetBareme = availableBaremes.find((bareme) => bareme.id === requestedBaremeEditorId)
+    if (!targetBareme) return
+    queueMicrotask(() => {
+      startEditForm(targetBareme)
+      setMode('edit')
+      setRequestedBaremeEditorId(null)
+    })
+  }, [
+    availableBaremes,
+    requestedBaremeEditorId,
+    setRequestedBaremeEditorId,
+    showBaremeEditor,
+    startEditForm,
+  ])
+
+  useEffect(() => {
+    getDefaultBaremesFolder()
+      .then((path) => {
+        setBaremesFolderPath(path)
+      })
+      .catch((errorValue) => {
+        console.error('Failed to load baremes folder path:', errorValue)
+      })
+  }, [setBaremesFolderPath])
+
   const onClose = () => {
     setShowBaremeEditor(false)
+    setRequestedBaremeEditorId(null)
     setMode('list')
     resetForm()
   }
@@ -93,6 +133,7 @@ export function useBaremeEditorState() {
   return {
     showBaremeEditor,
     availableBaremes,
+    baremesFolderPath,
     mode,
     setMode,
     editingBareme,
@@ -105,6 +146,7 @@ export function useBaremeEditorState() {
     categoryColors,
     globalStep,
     hideTotalsUntilAllScored,
+    spotlightCriterionId,
     error,
     getCategoryColor,
     onClose,

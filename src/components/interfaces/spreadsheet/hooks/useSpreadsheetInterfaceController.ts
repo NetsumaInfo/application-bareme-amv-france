@@ -49,7 +49,14 @@ export function useSpreadsheetInterfaceController(): SpreadsheetInterfaceControl
     removeClip,
   } = useProjectStore()
 
-  const { setShowPipVideo, hideAverages, hideTextNotes, setNotesDetached, shortcutBindings } = useUIStore()
+  const {
+    setShowPipVideo,
+    showPipVideo,
+    hideAverages,
+    hideTextNotes,
+    setNotesDetached,
+    shortcutBindings,
+  } = useUIStore()
 
   const cellRefs = useRef<Map<string, HTMLInputElement>>(new Map())
   const rowRefs = useRef<Map<number, HTMLTableRowElement>>(new Map())
@@ -68,7 +75,6 @@ export function useSpreadsheetInterfaceController(): SpreadsheetInterfaceControl
     markDirty,
     setClips,
     updateProject,
-    updateSettings,
   })
 
   const {
@@ -86,6 +92,8 @@ export function useSpreadsheetInterfaceController(): SpreadsheetInterfaceControl
     handleAddManualRow,
     handleManualClipFieldChange,
     handleManualClipBlur,
+    handleStartClipIdentityEdit,
+    handleSwapClipAuthorAndDisplayName,
     handleAttachVideoToClip,
     resetNoVideoTableModal,
     handleCreateNoVideoTable,
@@ -97,7 +105,6 @@ export function useSpreadsheetInterfaceController(): SpreadsheetInterfaceControl
     setClips,
     setCurrentClip,
     removeClip,
-    updateSettings,
   })
 
   const criteriaCount = currentBareme?.criteria.length ?? 0
@@ -111,7 +118,7 @@ export function useSpreadsheetInterfaceController(): SpreadsheetInterfaceControl
     hideTotalsSetting,
     hideTotalsUntilAllScored,
     showMiniatures,
-    showAddRowButton,
+    showQuickActions,
     getCategoryScore,
     hasAnyScoreInGroup,
     hasAnyScoreInBareme,
@@ -160,22 +167,26 @@ export function useSpreadsheetInterfaceController(): SpreadsheetInterfaceControl
     handleToggleScored,
     handleOpenNotes,
     handleAttachVideo,
+    handleRenameClip,
+    handleSwapPseudoAndClipName,
     handleSetMiniatureFromCurrentFrame,
     handleResetMiniature,
     handleToggleMiniatures,
-    handleToggleAddRowButton,
+    handleToggleQuickActions,
     handleShowMediaInfo,
     handleRemoveClip,
   } = useSpreadsheetContextMenuHandlers({
     clips,
     showMiniatures,
-    showAddRowButton,
+    showQuickActions,
     hasAnyLinkedVideo,
     updateSettings,
     setClipScored,
     setCurrentClip,
     setNotesDetached,
     handleAttachVideoToClip,
+    startClipIdentityEdit: handleStartClipIdentityEdit,
+    swapClipAuthorAndDisplayName: handleSwapClipAuthorAndDisplayName,
     setMiniatureFromCurrentFrame,
     setContextMenu,
     setMediaInfoClip,
@@ -192,6 +203,7 @@ export function useSpreadsheetInterfaceController(): SpreadsheetInterfaceControl
 
   const noVideoStateProps = useSpreadsheetNoVideoProps({
     isDragOver,
+    clipNamePattern: currentProject?.settings.clipNamePattern ?? 'pseudo_clip',
     showNoVideoTableModal,
     noVideoTableAccepted,
     noVideoTableInput,
@@ -217,6 +229,7 @@ export function useSpreadsheetInterfaceController(): SpreadsheetInterfaceControl
     hideTotalsUntilAllScored,
     hideAverages,
     showMiniatures,
+    showQuickActions,
     hasAnyLinkedVideo,
     shortcutBindings,
     currentProject,
@@ -229,7 +242,6 @@ export function useSpreadsheetInterfaceController(): SpreadsheetInterfaceControl
     getCategoryScore,
     hasAnyScoreInGroup,
     hasAnyScoreInBareme,
-    showAddRowButton,
     handleAddManualRow,
     setCurrentClip,
     openClipContextMenu,
@@ -247,6 +259,7 @@ export function useSpreadsheetInterfaceController(): SpreadsheetInterfaceControl
     setTextNotes,
     markDirty,
     setShowPipVideo,
+    showPipVideo,
     seek,
     pause,
     showFramePreview,
@@ -258,10 +271,12 @@ export function useSpreadsheetInterfaceController(): SpreadsheetInterfaceControl
     handleToggleScored,
     handleOpenNotes,
     handleAttachVideo,
+    handleRenameClip,
+    handleSwapPseudoAndClipName,
     handleSetMiniatureFromCurrentFrame,
     handleResetMiniature,
     handleToggleMiniatures,
-    handleToggleAddRowButton,
+    handleToggleQuickActions,
     handleShowMediaInfo,
     handleRemoveClip,
     mediaInfoClip,

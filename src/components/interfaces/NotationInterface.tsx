@@ -106,7 +106,13 @@ export default function NotationInterface() {
   }
 
   return (
-    <div className="flex flex-col w-full h-full text-gray-200 bg-surface-dark">
+    <div
+      className="flex flex-col w-full h-full text-gray-200"
+      style={{
+        background:
+          'linear-gradient(180deg, rgb(var(--app-bg-secondary) / 0.96) 0%, rgb(var(--app-bg) / 1) 100%)',
+      }}
+    >
       <NotationClipHeader
         clip={currentClip}
         currentClipIndex={currentClipIndex}
@@ -115,6 +121,7 @@ export default function NotationInterface() {
         totalScore={totalScore}
         totalPoints={currentBareme.totalPoints}
         shouldHideTotals={shouldHideTotals}
+        shortcutBindings={shortcutBindings}
         onNavigate={navigateClip}
         onOpenPlayer={openPlayerAtFront}
       />
@@ -166,6 +173,7 @@ export default function NotationInterface() {
         hasVideo={Boolean(currentClip.filePath)}
         noteText={note?.textNotes ?? ''}
         clipFps={clipFps}
+        shortcutBindings={shortcutBindings}
         globalTextareaRef={globalTextareaRef}
         onInsertTimecode={() => {
           insertCurrentTimecode().catch(() => {})

@@ -1,3 +1,5 @@
+import type { ClipNamePattern } from '@/types/project'
+
 export interface ManualClipEntry {
   author?: string
   displayName: string
@@ -11,32 +13,44 @@ export function sanitizeManualPart(value: string | undefined): string {
     .trim()
 }
 
-export function buildManualFileName(entry: ManualClipEntry): string {
+export function buildManualFileName(
+  entry: ManualClipEntry,
+  pattern: ClipNamePattern = 'pseudo_clip',
+): string {
   const author = sanitizeManualPart(entry.author)
   const display = sanitizeManualPart(entry.displayName)
   if (author && display) {
-    return `${author} - ${display}`
+    return pattern === 'clip_pseudo'
+      ? `${display} - ${author}`
+      : `${author} - ${display}`
   }
   if (author) return author
   return display
 }
 
-export function parseManualClipLine(line: string): ManualClipEntry | null {
+export function parseManualClipLine(
+  line: string,
+  pattern: ClipNamePattern = 'pseudo_clip',
+): ManualClipEntry | null {
   const raw = line.trim()
   if (!raw) return null
 
   const tabParts = raw.split('\t').map((part) => part.trim()).filter(Boolean)
   if (tabParts.length >= 2) {
-    const author = sanitizeManualPart(tabParts[0])
-    const displayName = sanitizeManualPart(tabParts.slice(1).join(' '))
+    const firstPart = sanitizeManualPart(tabParts[0])
+    const secondPart = sanitizeManualPart(tabParts.slice(1).join(' '))
+    const author = pattern === 'clip_pseudo' ? secondPart : firstPart
+    const displayName = pattern === 'clip_pseudo' ? firstPart : secondPart
     if (!displayName) return null
     return { author, displayName }
   }
 
   const withSeparator = raw.match(/^(.+?)\s*[-|;:]\s*(.+)$/)
   if (withSeparator) {
-    const author = sanitizeManualPart(withSeparator[1])
-    const displayName = sanitizeManualPart(withSeparator[2])
+    const firstPart = sanitizeManualPart(withSeparator[1])
+    const secondPart = sanitizeManualPart(withSeparator[2])
+    const author = pattern === 'clip_pseudo' ? secondPart : firstPart
+    const displayName = pattern === 'clip_pseudo' ? firstPart : secondPart
     if (!displayName) return null
     return { author, displayName }
   }

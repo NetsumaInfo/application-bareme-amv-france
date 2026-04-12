@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
-import { ChevronDown, Pencil, Plus } from 'lucide-react'
+import { ChevronDown, Plus, Settings2 } from 'lucide-react'
 import { useNotationStore } from '@/store/useNotationStore'
 import { useProjectStore } from '@/store/useProjectStore'
 import { useUIStore } from '@/store/useUIStore'
+import { HoverTextTooltip } from '@/components/ui/HoverTextTooltip'
 import { useI18n } from '@/i18n'
 
 export function BaremeSelector() {
@@ -33,46 +34,67 @@ export function BaremeSelector() {
 
   return (
     <div className="relative" ref={dropdownRef}>
-      <button
-        onClick={() => setOpen((value) => !value)}
-        className="flex items-center gap-1 px-2 py-1 text-xs rounded hover:bg-surface-light text-gray-400 hover:text-white transition-colors border border-gray-700/50"
-        title={t('Barème')}
-      >
-        <span className="max-w-[100px] truncate">{currentBareme?.name || t('Barème')}</span>
-        <ChevronDown size={10} className={`transition-transform ${open ? 'rotate-180' : ''}`} />
-      </button>
+      <HoverTextTooltip text={t('Barème')}>
+        <button
+          onClick={() => setOpen((value) => !value)}
+          aria-label={t('Barème')}
+          data-open={open ? 'true' : 'false'}
+          className="app-header-trigger gap-1"
+        >
+          <span className="max-w-[150px] truncate font-medium">{currentBareme?.name || t('Barème')}</span>
+          <ChevronDown
+            size={10}
+            className={`app-header-trigger-chevron transition-transform ${open ? 'rotate-180' : ''}`}
+          />
+        </button>
+      </HoverTextTooltip>
 
       {open ? (
-        <div className="absolute top-full right-0 mt-1 w-56 bg-surface border border-gray-700 rounded-lg shadow-xl z-50 py-1">
-          {availableBaremes.map((bareme) => (
-            <button
-              key={bareme.id}
-              onClick={() => handleSelectBareme(bareme)}
-              className={`w-full text-left px-3 py-1.5 text-xs hover:bg-surface-light transition-colors ${
-                bareme.id === currentBareme?.id
-                  ? 'text-primary-400 bg-primary-600/10'
-                  : 'text-gray-300'
-              }`}
-            >
-              <div className="flex items-center gap-1.5">
-                <span className="truncate font-medium">{bareme.name}</span>
-              </div>
-              <div className="text-[10px] text-gray-500 mt-0.5">
-                {t('{count} critères — {points} pts', { count: bareme.criteria.length, points: bareme.totalPoints })}
-              </div>
-            </button>
-          ))}
+        <div className="absolute top-full right-0 z-50 mt-2 w-64 overflow-hidden rounded-[12px] border border-gray-700 bg-surface shadow-xl">
+          <div className="py-1.5">
+            {availableBaremes.map((bareme) => {
+              const isSelected = bareme.id === currentBareme?.id
 
-          <div className="border-t border-gray-700 mt-1 pt-1">
+              return (
+                <button
+                  key={bareme.id}
+                  onClick={() => handleSelectBareme(bareme)}
+                  className={`relative flex w-full items-start justify-between gap-3 px-3 py-2.5 text-left text-xs transition-colors ${
+                    isSelected
+                      ? 'bg-surface-light text-white'
+                      : 'text-gray-300 hover:bg-surface-light'
+                  }`}
+                >
+                  <span
+                    className={`absolute inset-y-1 left-0 w-[2px] rounded-r ${
+                      isSelected ? 'bg-primary-500' : 'bg-transparent'
+                    }`}
+                    aria-hidden="true"
+                  />
+                  <div className="min-w-0 pl-1">
+                    <div className="truncate font-medium">{bareme.name}</div>
+                    <div className="mt-0.5 text-[11px] text-gray-500">
+                      {t('{count} critères — {points} pts', { count: bareme.criteria.length, points: bareme.totalPoints })}
+                    </div>
+                  </div>
+                  <div className="mt-[1px] shrink-0 text-[11px] text-gray-500">
+                    {bareme.totalPoints} pts
+                  </div>
+                </button>
+              )
+            })}
+          </div>
+
+          <div className="border-t border-gray-700 py-1.5">
             <button
               onClick={() => {
                 setOpen(false)
                 setShowBaremeEditor(true)
                 window.dispatchEvent(new CustomEvent('amv:bareme-open-list'))
               }}
-              className="w-full text-left px-3 py-1.5 text-xs text-gray-400 hover:text-white hover:bg-surface-light transition-colors flex items-center gap-2"
+              className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs text-gray-400 transition-colors hover:bg-surface-light hover:text-white"
             >
-              <Pencil size={11} />
+              <Settings2 size={12} />
               {t('Gérer les barèmes')}
             </button>
             <button
@@ -81,7 +103,7 @@ export function BaremeSelector() {
                 setShowBaremeEditor(true)
                 window.dispatchEvent(new CustomEvent('amv:bareme-open-create'))
               }}
-              className="w-full text-left px-3 py-1.5 text-xs text-primary-400 hover:text-primary-300 hover:bg-surface-light transition-colors flex items-center gap-2"
+              className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs font-medium text-primary-300 transition-colors hover:bg-surface-light hover:text-primary-200"
             >
               <Plus size={11} />
               {t('Créer un barème')}

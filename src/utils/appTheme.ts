@@ -130,7 +130,7 @@ const APP_THEME_BACKGROUND_COLORS: Record<AppThemePreset, string> = {
   sand: '#e5ded2',
 }
 
-export function isAppThemePreset(value: unknown): value is AppThemePreset {
+function isAppThemePreset(value: unknown): value is AppThemePreset {
   return typeof value === 'string' && APP_THEME_PRESETS.includes(value as AppThemePreset)
 }
 
@@ -142,7 +142,7 @@ export function normalizeAppThemePreset(value: unknown): AppThemePreset | null {
   return null
 }
 
-export function isPrimaryColorPreset(value: unknown): value is PrimaryColorPreset {
+function isPrimaryColorPreset(value: unknown): value is PrimaryColorPreset {
   return typeof value === 'string' && PRIMARY_COLOR_PRESETS.includes(value as PrimaryColorPreset)
 }
 

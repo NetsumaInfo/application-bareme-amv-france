@@ -44,12 +44,12 @@ export function SpreadsheetClipCell({
 }: SpreadsheetClipCellProps) {
   const { t } = useI18n()
   const multiPseudoDisplayMode = useProjectStore(
-    (state) => state.currentProject?.settings.multiPseudoDisplayMode ?? 'collab_mep',
+    (state) => state.currentProject?.settings.multiPseudoDisplayMode ?? 'all',
   )
 
   const isManual = !clip.filePath
-  const shouldEditManual = isManual
-    && (editingManualClipId === clip.id || (!clip.author?.trim() && !clip.displayName?.trim()))
+  const shouldShowInlineEditor = editingManualClipId === clip.id
+    || (isManual && !clip.author?.trim() && !clip.displayName?.trim())
 
   const focusClip = () => {
     const originalIndex = clips.findIndex((item) => item.id === clip.id)
@@ -120,29 +120,7 @@ export function SpreadsheetClipCell({
         <span className="w-2 flex items-center justify-center shrink-0">
           <span className={`w-1.5 h-1.5 rounded-full ${clip.scored ? 'bg-green-500 opacity-100' : 'opacity-0'}`} />
         </span>
-        {clip.filePath ? (
-          <div className="flex flex-col min-w-0 w-full leading-tight flex-1">
-            <span className={`${allowPseudoWrap ? 'text-primary-300 text-[11px] font-semibold break-words' : 'truncate text-primary-300 text-[11px] font-semibold'}`}>
-              {showPseudoTooltip ? (
-                <HoverTextTooltip text={fullPseudosLabel}>
-                  <span className="inline-flex min-w-0 max-w-full">{pseudoTextNode}</span>
-                </HoverTextTooltip>
-              ) : (
-                pseudoTextNode
-              )}
-            </span>
-            {getClipSecondaryLabel(clip) ? (
-              <span className="truncate text-[9px] text-gray-500">{getClipSecondaryLabel(clip)}</span>
-            ) : null}
-            {showMiniatures ? (
-              <ClipMiniaturePreview
-                clip={clip}
-                enabled={showMiniatures}
-                defaultSeconds={thumbnailDefaultSeconds}
-              />
-            ) : null}
-          </div>
-        ) : shouldEditManual ? (
+        {shouldShowInlineEditor ? (
           <div className="flex flex-col gap-1 min-w-0 w-full flex-1" onBlur={(event) => onManualClipBlur(clip.id, event)}>
             <input
               type="text"
@@ -176,6 +154,13 @@ export function SpreadsheetClipCell({
             </span>
             {getClipSecondaryLabel(clip) ? (
               <span className="truncate text-[9px] text-gray-500">{getClipSecondaryLabel(clip)}</span>
+            ) : null}
+            {clip.filePath && showMiniatures ? (
+              <ClipMiniaturePreview
+                clip={clip}
+                enabled={showMiniatures}
+                defaultSeconds={thumbnailDefaultSeconds}
+              />
             ) : null}
           </div>
         )}

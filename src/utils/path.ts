@@ -21,9 +21,3 @@ export function normalizeFilePath(value: string | null | undefined): string {
   normalized = normalized.replace(/\/+$/, '')
   return normalized.toLowerCase()
 }
-
-export function hasSameFilePath(a: string | null | undefined, b: string | null | undefined): boolean {
-  const left = normalizeFilePath(a)
-  const right = normalizeFilePath(b)
-  return Boolean(left) && left === right
-}

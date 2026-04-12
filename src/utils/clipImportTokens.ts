@@ -1,6 +1,6 @@
 import type { Clip } from '@/types/project'
 
-export function normalizeImportToken(value: string | undefined): string {
+function normalizeImportToken(value: string | undefined): string {
   if (!value) return ''
   return value
     .normalize('NFD')
@@ -10,30 +10,30 @@ export function normalizeImportToken(value: string | undefined): string {
     .trim()
 }
 
-export function getClipAuthorToken(clip: Clip): string {
+function getClipAuthorToken(clip: Clip): string {
   return normalizeImportToken(clip.author)
 }
 
-export function getClipDisplayToken(clip: Clip): string {
+function getClipDisplayToken(clip: Clip): string {
   return normalizeImportToken(clip.displayName || clip.fileName)
 }
 
-export function getClipFullToken(clip: Clip): string {
+function getClipFullToken(clip: Clip): string {
   const author = getClipAuthorToken(clip)
   const display = getClipDisplayToken(clip)
   if (author && display) return `${author} ${display}`.trim()
   return display || author
 }
 
-export function getImportAuthorToken(clip: Clip): string {
+function getImportAuthorToken(clip: Clip): string {
   return normalizeImportToken(clip.author)
 }
 
-export function getImportDisplayToken(clip: Clip): string {
+function getImportDisplayToken(clip: Clip): string {
   return normalizeImportToken(clip.displayName || clip.fileName)
 }
 
-export function getImportFullToken(clip: Clip): string {
+function getImportFullToken(clip: Clip): string {
   const author = getImportAuthorToken(clip)
   const display = getImportDisplayToken(clip)
   if (author && display) return `${author} ${display}`.trim()

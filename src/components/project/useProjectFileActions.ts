@@ -17,6 +17,7 @@ export function useProjectFileActions() {
   } = useProjectStore()
   const { getNotesData } = useNotationStore()
   const { setShowProjectModal } = useUIStore()
+  const projectsFolderPath = useUIStore((state) => state.projectsFolderPath)
 
   const handleNewProject = () => {
     setShowProjectModal(true)
@@ -57,7 +58,7 @@ export function useProjectFileActions() {
     try {
       let filePath = currentProject.filePath
       if (!filePath) {
-        filePath = (await tauri.saveProjectDialog(currentProject.name)) ?? undefined
+        filePath = (await tauri.saveProjectDialog(currentProject.name, projectsFolderPath ?? undefined)) ?? undefined
         if (!filePath) return
         setFilePath(filePath)
       }
@@ -73,7 +74,7 @@ export function useProjectFileActions() {
     if (!currentProject) return
 
     try {
-      const filePath = await tauri.saveProjectDialog(currentProject.name)
+      const filePath = await tauri.saveProjectDialog(currentProject.name, projectsFolderPath ?? undefined)
       if (!filePath) return
 
       setFilePath(filePath)

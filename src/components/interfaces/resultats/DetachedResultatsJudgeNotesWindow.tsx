@@ -3,6 +3,7 @@ import { emit, listen } from '@tauri-apps/api/event'
 import { DetachedFramePreview } from '@/components/notes/DetachedFramePreview'
 import { useDetachedFramePreview } from '@/components/notes/detached/useDetachedFramePreview'
 import { ResultatsJudgeNotesView } from '@/components/interfaces/resultats/ResultatsJudgeNotesView'
+import { useWindowUiSettingsSync } from '@/hooks/useWindowUiSettingsSync'
 import type { Clip } from '@/types/project'
 import type { JudgeSource, CategoryGroup } from '@/utils/results'
 import { useI18n } from '@/i18n'
@@ -17,6 +18,7 @@ interface DetachedJudgeNotesPayload {
 
 export default function DetachedResultatsJudgeNotesWindow() {
   const { t } = useI18n()
+  useWindowUiSettingsSync()
   const [payload, setPayload] = useState<DetachedJudgeNotesPayload | null>(null)
 
   const selectedClip = useMemo(() => {
@@ -61,7 +63,7 @@ export default function DetachedResultatsJudgeNotesWindow() {
   }
 
   return (
-    <div className="flex flex-col h-screen w-full p-3 bg-surface-dark">
+    <div className="flex h-screen w-full flex-col bg-surface-dark p-2">
       <ResultatsJudgeNotesView
         clips={payload.clips}
         selectedClipId={payload.selectedClipId}
@@ -71,6 +73,9 @@ export default function DetachedResultatsJudgeNotesWindow() {
         detached
         onSelectClip={(clipId) => {
           emit('resultats-notes:select-clip', { clipId }).catch(() => {})
+        }}
+        onOpenPlayer={(clipId) => {
+          emit('resultats-notes:open-player', { clipId }).catch(() => {})
         }}
         onJumpToTimecode={(clipId, seconds) => {
           emit('resultats-notes:timecode-jump', { clipId, seconds }).catch(() => {})

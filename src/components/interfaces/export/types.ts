@@ -70,11 +70,3 @@ export interface ExportPosterImageLayer {
   rotationDeg: number
   visible: boolean
 }
-
-export interface ExportTableMetaVisibility {
-  project: boolean
-  clips: boolean
-  judges: boolean
-  mode: boolean
-  date: boolean
-}

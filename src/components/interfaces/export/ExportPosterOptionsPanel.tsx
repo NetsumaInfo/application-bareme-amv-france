@@ -1,6 +1,9 @@
-import { useRef } from 'react'
+import { useRef, type RefObject } from 'react'
 import { ArrowDown, ArrowUp, Brush, Copy, ImagePlus, RefreshCw, Type } from 'lucide-react'
 import { ExportActions } from '@/components/interfaces/export/ExportActions'
+import { AppCheckbox } from '@/components/ui/AppCheckbox'
+import { AppRangeSlider } from '@/components/ui/AppRangeSlider'
+import { AppSelect } from '@/components/ui/AppSelect'
 import { COLOR_MEMORY_KEYS } from '@/utils/colorPickerStorage'
 import { ColorSwatchPicker } from '@/components/ui/ColorSwatchPicker'
 import { useI18n } from '@/i18n'
@@ -92,7 +95,25 @@ const SIZE_PRESETS = [
   { value: '2048x1152', label: '2K paysage (2048x1152)' },
 ]
 
-export function ExportPosterOptionsPanel({
+function useExportPosterOptionsPanelController(props: ExportPosterOptionsPanelProps) {
+  const { t } = useI18n()
+  const bgFileInputRef = useRef<HTMLInputElement | null>(null)
+  const overlayFileInputRef = useRef<HTMLInputElement | null>(null)
+  const renderContent = () => renderExportPosterOptionsPanel({
+    ...props,
+    t,
+    bgFileInputRef,
+    overlayFileInputRef,
+  })
+  return { renderContent }
+}
+
+export function ExportPosterOptionsPanel(props: ExportPosterOptionsPanelProps) {
+  const { renderContent } = useExportPosterOptionsPanelController(props)
+  return renderContent()
+}
+
+function renderExportPosterOptionsPanel({
   blocks,
   activeBlockId,
   images,
@@ -162,10 +183,14 @@ export function ExportPosterOptionsPanel({
   onExportPng,
   onExportPdf,
   onExportJson,
-}: ExportPosterOptionsPanelProps) {
-  const { t } = useI18n()
-  const bgFileInputRef = useRef<HTMLInputElement | null>(null)
-  const overlayFileInputRef = useRef<HTMLInputElement | null>(null)
+  t,
+  bgFileInputRef,
+  overlayFileInputRef,
+}: ExportPosterOptionsPanelProps & {
+  t: ReturnType<typeof useI18n>['t']
+  bgFileInputRef: RefObject<HTMLInputElement | null>
+  overlayFileInputRef: RefObject<HTMLInputElement | null>
+}) {
   const fallbackBlock = blocks[0]
   const activeBlock = blocks.find((block) => block.id === activeBlockId) ?? fallbackBlock
   const activeImage = images.find((image) => image.id === activeImageId) ?? null
@@ -183,18 +208,19 @@ export function ExportPosterOptionsPanel({
       <div className="space-y-3">
         <section className="rounded-lg border border-gray-700/80 bg-surface-dark/40 p-2.5 space-y-2">
           <div className="text-[11px] font-semibold text-gray-200">{t('Taille export')}</div>
-          <select
+          <AppSelect
             value={selectedSizePreset}
-            onChange={(event) => onSetSizePreset(event.target.value)}
-            className="w-full px-2 py-1.5 rounded border border-gray-700 bg-surface-dark text-xs text-white focus:border-primary-500 focus:outline-none"
-          >
-            <option value="custom">{t('Custom')}</option>
-            {SIZE_PRESETS.map((preset) => (
-              <option key={preset.value} value={preset.value}>
-                {preset.label}
-              </option>
-            ))}
-          </select>
+            onChange={onSetSizePreset}
+            ariaLabel={t('Taille export')}
+            className="w-full"
+            options={[
+              { value: 'custom', label: t('Custom') },
+              ...SIZE_PRESETS.map((preset) => ({
+                value: preset.value,
+                label: preset.label,
+              })),
+            ]}
+          />
           <div className="grid grid-cols-2 gap-2">
             <div>
               <label className="block text-[11px] text-gray-400 mb-1">{t('Largeur (px)')}</label>
@@ -224,13 +250,12 @@ export function ExportPosterOptionsPanel({
           </p>
           <div>
             <label className="block text-[11px] text-gray-400 mb-1">{t('Zoom aperçu')}: {Math.round(previewZoomPct)}%</label>
-            <input
-              type="range"
+            <AppRangeSlider
               min={25}
               max={250}
               value={previewZoomPct}
-              onChange={(event) => onSetPreviewZoomPct(Number(event.target.value))}
-              className="w-full"
+              onChange={onSetPreviewZoomPct}
+              ariaLabel={t('Zoom aperçu')}
             />
           </div>
         </section>
@@ -366,71 +391,65 @@ export function ExportPosterOptionsPanel({
           </p>
           <div>
             <label className="block text-[11px] text-gray-400 mb-1">{t('Position X')}: {Math.round(backgroundPositionXPct)}%</label>
-            <input
-              type="range"
+            <AppRangeSlider
               min={0}
               max={100}
               value={backgroundPositionXPct}
-              onChange={(event) => onSetBackgroundPositionXPct(Number(event.target.value))}
-              className="w-full"
+              onChange={onSetBackgroundPositionXPct}
+              ariaLabel={t('Position X')}
             />
           </div>
           <div>
             <label className="block text-[11px] text-gray-400 mb-1">{t('Position Y')}: {Math.round(backgroundPositionYPct)}%</label>
-            <input
-              type="range"
+            <AppRangeSlider
               min={0}
               max={100}
               value={backgroundPositionYPct}
-              onChange={(event) => onSetBackgroundPositionYPct(Number(event.target.value))}
-              className="w-full"
+              onChange={onSetBackgroundPositionYPct}
+              ariaLabel={t('Position Y')}
             />
           </div>
           <div>
             <label className="block text-[11px] text-gray-400 mb-1">
               {t('Zoom fond global')}: {Math.round((backgroundScaleXPct + backgroundScaleYPct) / 2)}%
             </label>
-            <input
-              type="range"
+            <AppRangeSlider
               min={20}
               max={250}
               value={(backgroundScaleXPct + backgroundScaleYPct) / 2}
-              onChange={(event) => onSetBackgroundScaleUniform(Number(event.target.value))}
-              className="w-full"
+              onChange={onSetBackgroundScaleUniform}
+              ariaLabel={t('Zoom fond global')}
             />
           </div>
           <div>
             <label className="block text-[11px] text-gray-400 mb-1">{t('Largeur fond')}: {Math.round(backgroundScaleXPct)}%</label>
-            <input
-              type="range"
+            <AppRangeSlider
               min={20}
               max={250}
               value={backgroundScaleXPct}
-              onChange={(event) => onSetBackgroundScaleXPct(Number(event.target.value))}
-              className="w-full"
+              onChange={onSetBackgroundScaleXPct}
+              ariaLabel={t('Largeur fond')}
             />
           </div>
           <div>
             <label className="block text-[11px] text-gray-400 mb-1">{t('Hauteur fond')}: {Math.round(backgroundScaleYPct)}%</label>
-            <input
-              type="range"
+            <AppRangeSlider
               min={20}
               max={250}
               value={backgroundScaleYPct}
-              onChange={(event) => onSetBackgroundScaleYPct(Number(event.target.value))}
-              className="w-full"
+              onChange={onSetBackgroundScaleYPct}
+              ariaLabel={t('Hauteur fond')}
             />
           </div>
           <div>
             <label className="block text-[11px] text-gray-400 mb-1">{t('Opacité du voile')}: {overlayOpacity}%</label>
-            <input
-              type="range"
+            <AppRangeSlider
               min={0}
               max={90}
               step={1}
               value={overlayOpacity}
-              onChange={(event) => onSetOverlayOpacity(Number(event.target.value))}
-              className="w-full"
+              onChange={onSetOverlayOpacity}
+              ariaLabel={t('Opacité du voile')}
             />
           </div>
         </section>
@@ -469,27 +488,24 @@ export function ExportPosterOptionsPanel({
           </div>
           {images.length > 0 && (
             <>
-              <select
+              <AppSelect
                 value={activeImage?.id ?? ''}
-                onChange={(event) => onSelectOverlayImage(event.target.value || null)}
-                className="w-full px-2 py-1.5 rounded border border-gray-700 bg-surface-dark text-xs text-white focus:border-primary-500 focus:outline-none"
-              >
-                {images.map((image) => (
-                  <option key={image.id} value={image.id}>
-                    {image.label}
-                  </option>
-                ))}
-              </select>
+                onChange={(id) => onSelectOverlayImage(id || null)}
+                ariaLabel={t('Images superposées')}
+                className="w-full"
+                options={images.map((image) => ({
+                  value: image.id,
+                  label: image.label,
+                }))}
+              />
               {activeImage && (
                 <div className="space-y-2">
-                  <label className="flex items-center gap-1.5 text-[11px] text-gray-300">
-                    <input
-                      type="checkbox"
-                      checked={activeImage.visible}
-                      onChange={() => onPatchOverlayImage(activeImage.id, { visible: !activeImage.visible })}
-                    />
-                    {t('Afficher cette image')}
-                  </label>
+                  <AppCheckbox
+                    checked={activeImage.visible}
+                    onChange={(visible) => onPatchOverlayImage(activeImage.id, { visible })}
+                    label={t('Afficher cette image')}
+                    className="gap-1.5"
+                  />
                   <p className="text-[11px] text-gray-400">
                     {t('Déplacement: glisser dans l’aperçu ou ajuster avec les curseurs.')}
                   </p>
@@ -540,57 +556,52 @@ export function ExportPosterOptionsPanel({
                   </div>
                   <div>
                     <label className="block text-[11px] text-gray-400 mb-1">{t('Position X')}: {Math.round(activeImage.xPct)}%</label>
-                    <input
-                      type="range"
+                    <AppRangeSlider
                       min={0}
                       max={100}
                       value={activeImage.xPct}
-                      onChange={(event) => onPatchOverlayImage(activeImage.id, { xPct: Number(event.target.value) })}
-                      className="w-full"
+                      onChange={(xPct) => onPatchOverlayImage(activeImage.id, { xPct })}
+                      ariaLabel={t('Position X')}
                     />
                   </div>
                   <div>
                     <label className="block text-[11px] text-gray-400 mb-1">{t('Position Y')}: {Math.round(activeImage.yPct)}%</label>
-                    <input
-                      type="range"
+                    <AppRangeSlider
                       min={0}
                       max={94}
                       value={activeImage.yPct}
-                      onChange={(event) => onPatchOverlayImage(activeImage.id, { yPct: Number(event.target.value) })}
-                      className="w-full"
+                      onChange={(yPct) => onPatchOverlayImage(activeImage.id, { yPct })}
+                      ariaLabel={t('Position Y')}
                     />
                   </div>
                   <div>
                     <label className="block text-[11px] text-gray-400 mb-1">{t('Taille')}: {Math.round(activeImage.widthPct)}%</label>
-                    <input
-                      type="range"
+                    <AppRangeSlider
                       min={4}
                       max={95}
                       value={activeImage.widthPct}
-                      onChange={(event) => onPatchOverlayImage(activeImage.id, { widthPct: Number(event.target.value) })}
-                      className="w-full"
+                      onChange={(widthPct) => onPatchOverlayImage(activeImage.id, { widthPct })}
+                      ariaLabel={t('Taille')}
                     />
                   </div>
                   <div>
                     <label className="block text-[11px] text-gray-400 mb-1">{t('Opacité')}: {Math.round(activeImage.opacity)}%</label>
-                    <input
-                      type="range"
+                    <AppRangeSlider
                       min={0}
                       max={100}
                       value={activeImage.opacity}
-                      onChange={(event) => onPatchOverlayImage(activeImage.id, { opacity: Number(event.target.value) })}
-                      className="w-full"
+                      onChange={(opacity) => onPatchOverlayImage(activeImage.id, { opacity })}
+                      ariaLabel={t('Opacité')}
                     />
                   </div>
                   <div>
                     <label className="block text-[11px] text-gray-400 mb-1">{t('Rotation')}: {Math.round(activeImage.rotationDeg)}°</label>
-                    <input
-                      type="range"
+                    <AppRangeSlider
                       min={-180}
                       max={180}
                       value={activeImage.rotationDeg}
-                      onChange={(event) => onPatchOverlayImage(activeImage.id, { rotationDeg: Number(event.target.value) })}
-                      className="w-full"
+                      onChange={(rotationDeg) => onPatchOverlayImage(activeImage.id, { rotationDeg })}
+                      ariaLabel={t('Rotation')}
                     />
                   </div>
                 </div>
@@ -618,14 +629,8 @@ export function ExportPosterOptionsPanel({
             </div>
             <div className="space-y-1">
               <label className="block text-[11px] text-gray-400 mb-1">{t('Inclure')}</label>
-              <label className="flex items-center gap-1.5 text-[11px] text-gray-300">
-                <input type="checkbox" checked={includeClipNameInTop} onChange={onToggleClipNameInTop} />
-                {t('Nom du clip')}
-              </label>
-              <label className="flex items-center gap-1.5 text-[11px] text-gray-300">
-                <input type="checkbox" checked={includeScoreInTop} onChange={onToggleScoreInTop} />
-                {t('Score')}
-              </label>
+              <AppCheckbox checked={includeClipNameInTop} onChange={onToggleClipNameInTop} label={t('Nom du clip')} className="gap-1.5" />
+              <AppCheckbox checked={includeScoreInTop} onChange={onToggleScoreInTop} label={t('Score')} className="gap-1.5" />
             </div>
           </div>
           <div className="rounded border border-gray-700 bg-surface-dark px-2 py-1.5 text-[11px] text-gray-300 whitespace-pre-wrap max-h-28 overflow-auto">
@@ -657,26 +662,23 @@ export function ExportPosterOptionsPanel({
             </div>
             <div>
               <label className="block text-[11px] text-gray-400 mb-1">{t('Bloc actif')}</label>
-              <select
+              <AppSelect
                 value={activeBlock.id}
-                onChange={(event) => onSelectBlock(event.target.value as ExportPosterBlockId)}
-                className="w-full px-2 py-1.5 rounded border border-gray-700 bg-surface-dark text-xs text-white focus:border-primary-500 focus:outline-none"
-              >
-                {blocks.map((block) => (
-                  <option key={block.id} value={block.id}>
-                    {block.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <label className="flex items-center gap-1.5 text-[11px] text-gray-300">
-              <input
-                type="checkbox"
-                checked={activeBlock.visible}
-                onChange={() => onPatchBlock(activeBlock.id, { visible: !activeBlock.visible })}
+                onChange={onSelectBlock}
+                ariaLabel={t('Bloc actif')}
+                className="w-full"
+                options={blocks.map((block) => ({
+                  value: block.id,
+                  label: block.label,
+                }))}
               />
-              {t('Afficher ce bloc')}
-            </label>
+            </div>
+            <AppCheckbox
+              checked={activeBlock.visible}
+              onChange={(visible) => onPatchBlock(activeBlock.id, { visible })}
+              label={t('Afficher ce bloc')}
+              className="gap-1.5"
+            />
             <div>
               <label className="block text-[11px] text-gray-400 mb-1">{t('Texte')}</label>
               <textarea
@@ -710,17 +712,17 @@ export function ExportPosterOptionsPanel({
             </div>
             <div>
               <label className="block text-[11px] text-gray-400 mb-1">{t('Police')}</label>
-              <select
+              <AppSelect
                 value={activeBlock.fontFamily}
-                onChange={(event) => onPatchBlock(activeBlock.id, { fontFamily: event.target.value })}
-                className="w-full px-2 py-1.5 rounded border border-gray-700 bg-surface-dark text-xs text-white focus:border-primary-500 focus:outline-none"
-              >
-                {fontOptions.map((font) => (
-                  <option key={`${font.label}-${font.value}`} value={font.value}>
-                    {font.label}
-                  </option>
-                ))}
-              </select>
+                onChange={(fontFamily) => onPatchBlock(activeBlock.id, { fontFamily })}
+                ariaLabel={t('Police')}
+                className="w-full"
+                maxMenuHeight={340}
+                options={fontOptions.map((font) => ({
+                  value: font.value,
+                  label: font.label,
+                }))}
+              />
             </div>
             <div>
               <label className="block text-[11px] text-gray-400 mb-1">{t('Police manuelle')}</label>
@@ -736,28 +738,29 @@ export function ExportPosterOptionsPanel({
               <div className="grid grid-cols-2 gap-2">
                 <div>
                   <label className="block text-[11px] text-gray-400 mb-1">{t('Poids')}</label>
-                  <select
+                  <AppSelect
                     value={activeBlock.fontWeight}
-                    onChange={(event) => onPatchBlock(activeBlock.id, { fontWeight: Number(event.target.value) as ExportPosterBlock['fontWeight'] })}
-                    className="w-full px-2 py-1.5 rounded border border-gray-700 bg-surface-dark text-xs text-white focus:border-primary-500 focus:outline-none"
-                  >
-                    <option value={400}>400</option>
-                    <option value={500}>500</option>
-                    <option value={600}>600</option>
-                    <option value={700}>700</option>
-                    <option value={800}>800</option>
-                    <option value={900}>900</option>
-                  </select>
+                    onChange={(fontWeight) => onPatchBlock(activeBlock.id, { fontWeight: fontWeight as ExportPosterBlock['fontWeight'] })}
+                    ariaLabel={t('Poids')}
+                    className="w-full"
+                    options={[
+                      { value: 400, label: '400' },
+                      { value: 500, label: '500' },
+                      { value: 600, label: '600' },
+                      { value: 700, label: '700' },
+                      { value: 800, label: '800' },
+                      { value: 900, label: '900' },
+                    ]}
+                  />
                 </div>
                 <div>
                   <label className="block text-[11px] text-gray-400 mb-1">{t('Taille : {value}px', { value: activeBlock.fontSize })}</label>
-                  <input
-                    type="range"
+                  <AppRangeSlider
                     min={12}
                     max={180}
                     value={activeBlock.fontSize}
-                    onChange={(event) => onPatchBlock(activeBlock.id, { fontSize: Number(event.target.value) })}
-                    className="w-full"
+                    onChange={(fontSize) => onPatchBlock(activeBlock.id, { fontSize })}
+                    ariaLabel={t('Taille : {value}px', { value: activeBlock.fontSize })}
                   />
                 </div>
               </div>
@@ -766,38 +769,35 @@ export function ExportPosterOptionsPanel({
               <div className="text-[11px] font-medium text-gray-300">{t('Disposition')}</div>
               <div>
                 <label className="block text-[11px] text-gray-400 mb-1">{t('Largeur : {value}%', { value: activeBlock.widthPct })}</label>
-                <input
-                  type="range"
-                  min={20}
-                  max={95}
-                  value={activeBlock.widthPct}
-                  onChange={(event) => onPatchBlock(activeBlock.id, { widthPct: Number(event.target.value) })}
-                  className="w-full"
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="block text-[11px] text-gray-400 mb-1">{t('Position X : {value}%', { value: Math.round(activeBlock.xPct) })}</label>
-                  <input
-                    type="range"
-                    min={0}
-                    max={100}
-                    value={activeBlock.xPct}
-                    onChange={(event) => onPatchBlock(activeBlock.id, { xPct: Number(event.target.value) })}
-                    className="w-full"
+                  <AppRangeSlider
+                    min={20}
+                    max={95}
+                    value={activeBlock.widthPct}
+                    onChange={(widthPct) => onPatchBlock(activeBlock.id, { widthPct })}
+                    ariaLabel={t('Largeur : {value}%', { value: activeBlock.widthPct })}
                   />
                 </div>
-                <div>
-                  <label className="block text-[11px] text-gray-400 mb-1">{t('Position Y : {value}%', { value: Math.round(activeBlock.yPct) })}</label>
-                  <input
-                    type="range"
-                    min={0}
-                    max={94}
-                    value={activeBlock.yPct}
-                    onChange={(event) => onPatchBlock(activeBlock.id, { yPct: Number(event.target.value) })}
-                    className="w-full"
-                  />
-                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="block text-[11px] text-gray-400 mb-1">{t('Position X : {value}%', { value: Math.round(activeBlock.xPct) })}</label>
+                    <AppRangeSlider
+                      min={0}
+                      max={100}
+                      value={activeBlock.xPct}
+                      onChange={(xPct) => onPatchBlock(activeBlock.id, { xPct })}
+                      ariaLabel={t('Position X : {value}%', { value: Math.round(activeBlock.xPct) })}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] text-gray-400 mb-1">{t('Position Y : {value}%', { value: Math.round(activeBlock.yPct) })}</label>
+                    <AppRangeSlider
+                      min={0}
+                      max={94}
+                      value={activeBlock.yPct}
+                      onChange={(yPct) => onPatchBlock(activeBlock.id, { yPct })}
+                      ariaLabel={t('Position Y : {value}%', { value: Math.round(activeBlock.yPct) })}
+                    />
+                  </div>
               </div>
               <div>
                 <label className="block text-[11px] text-gray-400 mb-1">{t('Alignement')}</label>
@@ -852,17 +852,19 @@ export function ExportPosterOptionsPanel({
                 </div>
                 <div>
                   <label className="block text-[11px] text-gray-400 mb-1">{t('Ombre')}</label>
-                  <select
+                  <AppSelect
                     value={activeBlock.shadowStyle}
-                    onChange={(event) => onPatchBlock(activeBlock.id, { shadowStyle: event.target.value as ExportPosterBlock['shadowStyle'] })}
-                    className="w-full px-2 py-1.5 rounded border border-gray-700 bg-surface-dark text-xs text-white focus:border-primary-500 focus:outline-none"
-                  >
-                    <option value="none">{t('Aucune')}</option>
-                    <option value="soft">{t('Douce')}</option>
-                    <option value="strong">{t('Forte')}</option>
-                    <option value="outline">{t('Contour')}</option>
-                    <option value="glow">{t('Glow')}</option>
-                  </select>
+                    onChange={(shadowStyle) => onPatchBlock(activeBlock.id, { shadowStyle })}
+                    ariaLabel={t('Ombre')}
+                    className="w-full"
+                    options={[
+                      { value: 'none', label: t('Aucune') },
+                      { value: 'soft', label: t('Douce') },
+                      { value: 'strong', label: t('Forte') },
+                      { value: 'outline', label: t('Contour') },
+                      { value: 'glow', label: t('Glow') },
+                    ]}
+                  />
                 </div>
               </div>
               <div>

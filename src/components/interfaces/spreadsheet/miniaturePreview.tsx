@@ -86,6 +86,18 @@ export function ClipMiniaturePreview({ clip, enabled, defaultSeconds }: ClipMini
   const loading = statusState.key === cacheKey ? statusState.loading : false
   const failed = statusState.key === cacheKey ? statusState.failed : false
   const resolvedImage = cachedImage ?? image
+  const markPreviewLoading = (nextKey: string) => {
+    setImageState({ key: nextKey, value: null })
+    setStatusState({ key: nextKey, loading: true, failed: false })
+  }
+  const markPreviewFailure = (nextKey: string) => {
+    setImageState({ key: nextKey, value: null })
+    setStatusState({ key: nextKey, loading: false, failed: true })
+  }
+  const markPreviewLoaded = (nextKey: string, value: string) => {
+    setImageState({ key: nextKey, value })
+    setStatusState({ key: nextKey, loading: false, failed: false })
+  }
 
   useEffect(() => {
     const node = containerRef.current
@@ -109,26 +121,22 @@ export function ClipMiniaturePreview({ clip, enabled, defaultSeconds }: ClipMini
     let active = true
     queueMicrotask(() => {
       if (!active) return
-      setImageState({ key: cacheKey, value: null })
-      setStatusState({ key: cacheKey, loading: true, failed: false })
+      markPreviewLoading(cacheKey)
     })
 
     enqueueMiniaturePreviewRequest(cacheKey, clip.filePath, seconds)
       .then((result) => {
         if (!active) return
         if (!result) {
-          setImageState({ key: cacheKey, value: null })
-          setStatusState({ key: cacheKey, loading: false, failed: true })
+          markPreviewFailure(cacheKey)
           return
         }
         putMiniatureInCache(cacheKey, result)
-        setImageState({ key: cacheKey, value: result })
-        setStatusState({ key: cacheKey, loading: false, failed: false })
+        markPreviewLoaded(cacheKey, result)
       })
       .catch(() => {
         if (!active) return
-        setImageState({ key: cacheKey, value: null })
-        setStatusState({ key: cacheKey, loading: false, failed: true })
+        markPreviewFailure(cacheKey)
       })
 
     return () => {

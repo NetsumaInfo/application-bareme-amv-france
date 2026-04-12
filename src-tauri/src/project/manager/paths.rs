@@ -1,6 +1,9 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
+const PROJECTS_FOLDER_SETTING_KEY: &str = "projectsFolderPath";
+const BAREMES_FOLDER_SETTING_KEY: &str = "baremesFolderPath";
+
 pub fn ensure_directory_exists(path: &Path) -> Result<(), String> {
     fs::create_dir_all(path).map_err(|e| e.to_string())
 }
@@ -21,8 +24,31 @@ pub fn projects_folder() -> Result<PathBuf, String> {
     Ok(folder)
 }
 
+fn configured_folder(setting_key: &str) -> Option<PathBuf> {
+    let settings_path = settings_file_path().ok()?;
+    let content = fs::read_to_string(settings_path).ok()?;
+    let settings = serde_json::from_str::<serde_json::Value>(&content).ok()?;
+    let folder = settings
+        .get(setting_key)
+        .and_then(|value| value.as_str())?
+        .trim();
+
+    if folder.is_empty() {
+        None
+    } else {
+        Some(PathBuf::from(folder))
+    }
+}
+
+pub fn configured_projects_folder() -> Option<PathBuf> {
+    configured_folder(PROJECTS_FOLDER_SETTING_KEY)
+}
+
 pub fn baremes_folder() -> Result<PathBuf, String> {
-    let folder = projects_folder()?.join("Baremes");
+    let folder = match configured_folder(BAREMES_FOLDER_SETTING_KEY) {
+        Some(folder) => folder,
+        None => projects_folder()?.join("Baremes"),
+    };
     ensure_directory_exists(&folder)?;
     Ok(folder)
 }

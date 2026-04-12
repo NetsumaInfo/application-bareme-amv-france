@@ -31,7 +31,12 @@ fn is_json_file(path: &PathBuf) -> bool {
 }
 
 pub fn default_projects_folder() -> Result<String, String> {
-    Ok(paths::projects_folder()?.to_string_lossy().to_string())
+    let folder = match paths::configured_projects_folder() {
+        Some(folder) => folder,
+        None => paths::projects_folder()?,
+    };
+    paths::ensure_directory_exists(&folder)?;
+    Ok(folder.to_string_lossy().to_string())
 }
 
 pub fn list_projects(folder_path: String) -> Result<Vec<ProjectSummary>, String> {

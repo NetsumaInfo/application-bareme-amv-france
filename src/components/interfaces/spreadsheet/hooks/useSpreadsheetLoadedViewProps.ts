@@ -20,9 +20,9 @@ interface UseSpreadsheetLoadedViewPropsParams {
   hideTotalsUntilAllScored: boolean
   hideAverages: boolean
   showMiniatures: boolean
+  showQuickActions: boolean
   hasAnyLinkedVideo: boolean
   shortcutBindings: Record<ShortcutAction, string>
-  showAddRowButton: boolean
   currentProject: Project | null
   editingManualClipId: string | null
   cellRefs: MutableRefObject<Map<string, HTMLInputElement>>
@@ -54,6 +54,7 @@ interface UseSpreadsheetLoadedViewPropsParams {
   setTextNotes: (clipId: string, text: string) => void
   markDirty: () => void
   setShowPipVideo: (show: boolean) => void
+  showPipVideo: boolean
   framePreview: {
     visible: boolean
     left: number
@@ -67,10 +68,12 @@ interface UseSpreadsheetLoadedViewPropsParams {
   handleToggleScored: (clip: Clip) => void
   handleOpenNotes: (clip: Clip) => void
   handleAttachVideo: (clip: Clip) => void
+  handleRenameClip: (clip: Clip) => void
+  handleSwapPseudoAndClipName: (clip: Clip) => void
   handleSetMiniatureFromCurrentFrame: (clip: Clip) => void
   handleResetMiniature: (clip: Clip) => void
   handleToggleMiniatures: () => void
-  handleToggleAddRowButton: () => void
+  handleToggleQuickActions: () => void
   handleShowMediaInfo: (clip: Clip) => void
   handleRemoveClip: (clip: Clip) => void
   mediaInfoClip: { name: string; path: string } | null
@@ -88,9 +91,9 @@ export function useSpreadsheetLoadedViewProps({
   hideTotalsUntilAllScored,
   hideAverages,
   showMiniatures,
+  showQuickActions,
   hasAnyLinkedVideo,
   shortcutBindings,
-  showAddRowButton,
   currentProject,
   editingManualClipId,
   cellRefs,
@@ -122,6 +125,7 @@ export function useSpreadsheetLoadedViewProps({
   setTextNotes,
   markDirty,
   setShowPipVideo,
+  showPipVideo,
   framePreview,
   contextMenu,
   contextClip,
@@ -129,10 +133,12 @@ export function useSpreadsheetLoadedViewProps({
   handleToggleScored,
   handleOpenNotes,
   handleAttachVideo,
+  handleRenameClip,
+  handleSwapPseudoAndClipName,
   handleSetMiniatureFromCurrentFrame,
   handleResetMiniature,
   handleToggleMiniatures,
-  handleToggleAddRowButton,
+  handleToggleQuickActions,
   handleShowMediaInfo,
   handleRemoveClip,
   mediaInfoClip,
@@ -196,17 +202,19 @@ export function useSpreadsheetLoadedViewProps({
     contextClip,
     currentClip,
     showMiniatures,
+    showQuickActions,
     hasAnyLinkedVideo,
-    showAddRowButton,
     shortcutBindings,
     contextMenuRef,
     handleToggleScored,
     handleOpenNotes,
     handleAttachVideo,
+    handleRenameClip,
+    handleSwapPseudoAndClipName,
     handleSetMiniatureFromCurrentFrame,
     handleResetMiniature,
     handleToggleMiniatures,
-    handleToggleAddRowButton,
+    handleToggleQuickActions,
     handleShowMediaInfo,
     handleRemoveClip,
   })
@@ -214,10 +222,22 @@ export function useSpreadsheetLoadedViewProps({
   return {
     isDragOver,
     hasClips: clips.length > 0,
+    showQuickActions,
     toolbarProps: {
+      currentClip,
       onAddManualRow: handleAddManualRow,
-      onToggleAddManualRowButton: handleToggleAddRowButton,
-      showAddManualRowButton: showAddRowButton,
+      onToggleScored: handleToggleScored,
+      onOpenNotes: handleOpenNotes,
+      onAttachVideo: handleAttachVideo,
+      onRenameClip: handleRenameClip,
+      onSwapPseudoAndClipName: handleSwapPseudoAndClipName,
+      onToggleMiniatures: handleToggleMiniatures,
+      onShowMediaInfo: handleShowMediaInfo,
+      onRemoveClip: handleRemoveClip,
+      onTogglePipVideo: () => setShowPipVideo(!showPipVideo),
+      showMiniatures,
+      hasAnyLinkedVideo,
+      showPipVideo,
     },
     tableProps,
     notesPanelProps,

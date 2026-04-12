@@ -1,9 +1,16 @@
 import { getClipPrimaryLabel, getClipSecondaryLabel } from '@/utils/formatters'
 import { withAlpha } from '@/utils/colors'
-import { getGroupStep } from '@/components/interfaces/resultats/scoreDistribution'
 import type { CategoryGroup, JudgeSource } from '@/utils/results'
 import type { ResultatsRow } from '@/components/interfaces/resultats/types'
 import { useI18n } from '@/i18n'
+
+function getGroupStep(criteria: Array<{ step?: number | null }>): number {
+  const steps = criteria
+    .map((criterion) => Number(criterion.step))
+    .filter((value) => Number.isFinite(value) && value > 0)
+  if (steps.length === 0) return 0.5
+  return Math.min(...steps)
+}
 
 interface ResultatsGlobalJudgeColorTableProps {
   canSortByScore: boolean
@@ -172,11 +179,7 @@ export function ResultatsGlobalJudgeColorTable({
                   onContextMenu={(event) => {
                     event.preventDefault()
                     event.stopPropagation()
-                    const width = 220
-                    const height = 210
-                    const x = Math.max(8, Math.min(event.clientX, window.innerWidth - width - 8))
-                    const y = Math.max(8, Math.min(event.clientY, window.innerHeight - height - 8))
-                    onOpenClipContextMenu(row.clip.id, x, y)
+                    onOpenClipContextMenu(row.clip.id, event.clientX, event.clientY)
                   }}
                 >
                   <div className="flex flex-col min-w-0 leading-tight">
@@ -210,11 +213,7 @@ export function ResultatsGlobalJudgeColorTable({
                           onContextMenu={(event) => {
                             event.preventDefault()
                             event.stopPropagation()
-                            const width = 225
-                            const height = 170
-                            const x = Math.max(8, Math.min(event.clientX, window.innerWidth - width - 8))
-                            const y = Math.max(8, Math.min(event.clientY, window.innerHeight - height - 8))
-                            onOpenClipContextMenu(row.clip.id, x, y)
+                            onOpenClipContextMenu(row.clip.id, event.clientX, event.clientY)
                           }}
                           onChange={(event) => {
                             onSetDraftCell(key, event.target.value)

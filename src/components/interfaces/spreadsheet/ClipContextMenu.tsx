@@ -1,15 +1,10 @@
 import type { RefObject } from 'react'
 import {
   CheckSquare2,
-  Clapperboard,
-  Eye,
-  EyeOff,
-  FileText,
-  Image,
   ImagePlus,
   Info,
   Link2,
-  Table2,
+  TextCursorInput,
   Trash2,
 } from 'lucide-react'
 import type { Clip } from '@/types/project'
@@ -20,6 +15,7 @@ import {
 } from '@/components/ui/AppContextMenu'
 import { formatShortcutDisplay, type ShortcutAction } from '@/utils/shortcuts'
 import { useI18n } from '@/i18n'
+import { UI_ICONS } from '@/components/ui/actionIcons'
 
 interface ContextMenuPosition {
   clipId: string
@@ -32,17 +28,19 @@ interface ClipContextMenuProps {
   contextClip: Clip | null
   currentClipId?: string
   showMiniatures: boolean
+  showQuickActions: boolean
   hasAnyLinkedVideo: boolean
-  showAddRowButton: boolean
   shortcutBindings: Record<ShortcutAction, string>
   contextMenuRef: RefObject<HTMLDivElement | null>
   onToggleScored: (clip: Clip) => void
   onOpenNotes: (clip: Clip) => void
   onAttachVideo: (clip: Clip) => void
+  onRenameClip: (clip: Clip) => void
+  onSwapPseudoAndClipName: (clip: Clip) => void
   onSetMiniatureFromCurrentFrame: (clip: Clip) => void
   onResetMiniature: (clip: Clip) => void
   onToggleMiniatures: () => void
-  onToggleAddRowButton: () => void
+  onToggleQuickActions: () => void
   onShowMediaInfo: (clip: Clip) => void
   onRemoveClip: (clip: Clip) => void
 }
@@ -52,21 +50,29 @@ export function ClipContextMenu({
   contextClip,
   currentClipId,
   showMiniatures,
+  showQuickActions,
   hasAnyLinkedVideo,
-  showAddRowButton,
   shortcutBindings,
   contextMenuRef,
   onToggleScored,
   onOpenNotes,
   onAttachVideo,
+  onRenameClip,
+  onSwapPseudoAndClipName,
   onSetMiniatureFromCurrentFrame,
   onResetMiniature,
   onToggleMiniatures,
-  onToggleAddRowButton,
+  onToggleQuickActions,
   onShowMediaInfo,
   onRemoveClip,
 }: ClipContextMenuProps) {
   const { t } = useI18n()
+  const notesIcon = UI_ICONS.detailedNotesSecondary
+  const miniaturesIcon = UI_ICONS.miniatures
+  const showIcon = UI_ICONS.show
+  const hideIcon = UI_ICONS.hide
+  const renameIcon = TextCursorInput
+  const swapIcon = UI_ICONS.swap
 
   if (!contextMenu) return null
 
@@ -75,7 +81,7 @@ export function ClipContextMenu({
       ref={contextMenuRef}
       x={contextMenu.x}
       y={contextMenu.y}
-      minWidthClassName="min-w-[220px]"
+      minWidthClassName="min-w-[198px]"
     >
       {contextClip && (
         <>
@@ -87,9 +93,8 @@ export function ClipContextMenu({
           <AppContextMenuSeparator />
           <AppContextMenuItem
             onClick={() => onOpenNotes(contextClip)}
-            label={t('Notes du clip')}
-            icon={Clapperboard}
-            iconSecondary={FileText}
+            label={t('Notes détaillées')}
+            icon={notesIcon}
           />
           {!contextClip.filePath && (
             <AppContextMenuItem
@@ -98,19 +103,29 @@ export function ClipContextMenu({
               icon={Link2}
             />
           )}
+          <AppContextMenuItem
+            onClick={() => onRenameClip(contextClip)}
+            label={t('Renommer')}
+            icon={renameIcon}
+          />
+          <AppContextMenuItem
+            onClick={() => onSwapPseudoAndClipName(contextClip)}
+            label={t('Échanger pseudo et nom du clip')}
+            icon={swapIcon}
+          />
           {showMiniatures && currentClipId === contextClip.id && contextClip.filePath && (
             <>
               <AppContextMenuSeparator />
               <AppContextMenuItem
                 onClick={() => onSetMiniatureFromCurrentFrame(contextClip)}
-                label={t('Définir miniature (frame courante)')}
+                label={t('Définir miniature')}
                 icon={ImagePlus}
                 shortcut={formatShortcutDisplay(shortcutBindings.setMiniatureFrame, t)}
               />
               <AppContextMenuItem
                 onClick={() => onResetMiniature(contextClip)}
                 label={t('Réinitialiser miniature')}
-                icon={Image}
+                icon={miniaturesIcon}
               />
             </>
           )}
@@ -120,24 +135,23 @@ export function ClipContextMenu({
       {hasAnyLinkedVideo ? (
         <AppContextMenuItem
           onClick={onToggleMiniatures}
-          label={showMiniatures ? t('Masquer miniatures') : t('Afficher miniatures')}
-          icon={Image}
-          iconSecondary={showMiniatures ? EyeOff : Eye}
+          label={showMiniatures ? t('Masquer les miniatures') : t('Afficher les miniatures')}
+          icon={miniaturesIcon}
+          iconSecondary={showMiniatures ? hideIcon : showIcon}
           shortcut={formatShortcutDisplay(shortcutBindings.toggleMiniatures, t)}
         />
       ) : (
         <AppContextMenuItem
           label={t('Miniatures indisponibles (pas de vidéo)')}
-          icon={Image}
+          icon={miniaturesIcon}
           disabled
         />
       )}
       <AppContextMenuSeparator />
       <AppContextMenuItem
-        onClick={onToggleAddRowButton}
-        label={showAddRowButton ? t('Masquer bouton') : t('Afficher bouton')}
-        icon={Table2}
-        iconSecondary={showAddRowButton ? EyeOff : Eye}
+        onClick={onToggleQuickActions}
+        label={showQuickActions ? t('Masquer les actions rapides') : t('Afficher les actions rapides')}
+        icon={showQuickActions ? hideIcon : showIcon}
       />
       <AppContextMenuSeparator />
       <AppContextMenuItem
@@ -149,7 +163,7 @@ export function ClipContextMenu({
       <AppContextMenuSeparator />
       <AppContextMenuItem
         onClick={() => contextClip && onRemoveClip(contextClip)}
-        label={contextClip?.filePath ? t('Supprimer la vidéo') : t('Supprimer la ligne')}
+        label={contextClip?.filePath ? t('Supprimer la vidéo du participant') : t('Supprimer le participant')}
         icon={Trash2}
         danger
       />

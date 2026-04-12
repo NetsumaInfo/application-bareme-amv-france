@@ -1,6 +1,7 @@
 import { useCallback } from 'react'
 import type { Dispatch, SetStateAction } from 'react'
 import { useProjectStore } from '@/store/useProjectStore'
+import { useClipDeletionStore } from '@/store/useClipDeletionStore'
 import * as tauri from '@/services/tauri'
 import { getClipPrimaryLabel } from '@/utils/formatters'
 import type { Clip, Project } from '@/types/project'
@@ -8,13 +9,15 @@ import type { Clip, Project } from '@/types/project'
 interface UseSpreadsheetContextMenuHandlersOptions {
   clips: Clip[]
   showMiniatures: boolean
-  showAddRowButton: boolean
+  showQuickActions: boolean
   hasAnyLinkedVideo: boolean
   updateSettings: (settings: Partial<Project['settings']>) => void
   setClipScored: (clipId: string, scored: boolean) => void
   setCurrentClip: (index: number) => void
   setNotesDetached: (detached: boolean) => void
   handleAttachVideoToClip: (clipId: string) => Promise<void>
+  startClipIdentityEdit: (clipId: string) => void
+  swapClipAuthorAndDisplayName: (clipId: string) => void
   setMiniatureFromCurrentFrame: (clipId: string) => Promise<void>
   setContextMenu: Dispatch<SetStateAction<{ clipId: string; x: number; y: number } | null>>
   setMediaInfoClip: Dispatch<SetStateAction<{ name: string; path: string } | null>>
@@ -23,19 +26,21 @@ interface UseSpreadsheetContextMenuHandlersOptions {
 export function useSpreadsheetContextMenuHandlers({
   clips,
   showMiniatures,
-  showAddRowButton,
+  showQuickActions,
   hasAnyLinkedVideo,
   updateSettings,
   setClipScored,
   setCurrentClip,
   setNotesDetached,
   handleAttachVideoToClip,
+  startClipIdentityEdit,
+  swapClipAuthorAndDisplayName,
   setMiniatureFromCurrentFrame,
   setContextMenu,
   setMediaInfoClip,
 }: UseSpreadsheetContextMenuHandlersOptions) {
   const setClipThumbnailTime = useProjectStore((state) => state.setClipThumbnailTime)
-  const removeClip = useProjectStore((state) => state.removeClip)
+  const requestClipDeletion = useClipDeletionStore((state) => state.requestClipDeletion)
 
   const closeContextMenu = useCallback(() => {
     setContextMenu(null)
@@ -58,6 +63,16 @@ export function useSpreadsheetContextMenuHandlers({
     closeContextMenu()
   }, [closeContextMenu, handleAttachVideoToClip])
 
+  const handleRenameClip = useCallback((clip: Clip) => {
+    startClipIdentityEdit(clip.id)
+    closeContextMenu()
+  }, [closeContextMenu, startClipIdentityEdit])
+
+  const handleSwapPseudoAndClipName = useCallback((clip: Clip) => {
+    swapClipAuthorAndDisplayName(clip.id)
+    closeContextMenu()
+  }, [closeContextMenu, swapClipAuthorAndDisplayName])
+
   const handleSetMiniatureFromCurrentFrame = useCallback((clip: Clip) => {
     setMiniatureFromCurrentFrame(clip.id).catch(() => {})
     closeContextMenu()
@@ -77,10 +92,10 @@ export function useSpreadsheetContextMenuHandlers({
     closeContextMenu()
   }, [closeContextMenu, hasAnyLinkedVideo, showMiniatures, updateSettings])
 
-  const handleToggleAddRowButton = useCallback(() => {
-    updateSettings({ showAddRowButton: !showAddRowButton })
+  const handleToggleQuickActions = useCallback(() => {
+    updateSettings({ showQuickActions: !showQuickActions })
     closeContextMenu()
-  }, [closeContextMenu, showAddRowButton, updateSettings])
+  }, [closeContextMenu, showQuickActions, updateSettings])
 
   const handleShowMediaInfo = useCallback((clip: Clip) => {
     if (!clip.filePath) return
@@ -89,19 +104,21 @@ export function useSpreadsheetContextMenuHandlers({
   }, [closeContextMenu, setMediaInfoClip])
 
   const handleRemoveClip = useCallback((clip: Clip) => {
-    removeClip(clip.id)
+    requestClipDeletion(clip.id)
     closeContextMenu()
-  }, [closeContextMenu, removeClip])
+  }, [closeContextMenu, requestClipDeletion])
 
   return {
     closeContextMenu,
     handleToggleScored,
     handleOpenNotes,
     handleAttachVideo,
+    handleRenameClip,
+    handleSwapPseudoAndClipName,
     handleSetMiniatureFromCurrentFrame,
     handleResetMiniature,
     handleToggleMiniatures,
-    handleToggleAddRowButton,
+    handleToggleQuickActions,
     handleShowMediaInfo,
     handleRemoveClip,
   }

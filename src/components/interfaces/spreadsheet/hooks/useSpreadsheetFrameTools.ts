@@ -3,6 +3,12 @@ import * as tauri from '@/services/tauri'
 import { formatPreciseTimecode } from '@/utils/formatters'
 import { normalizeShortcutFromEvent } from '@/utils/shortcuts'
 import { computeFramePreviewPlacement } from '@/utils/framePreviewPosition'
+import { getCurrentZoomScale } from '@/hooks/useZoomScale'
+import {
+  FRAME_PREVIEW_BASE_WIDTH,
+  FRAME_PREVIEW_FALLBACK_BASE_WIDTH,
+  getFramePreviewCaptureWidth,
+} from '@/utils/framePreviewQuality'
 import { snapToFrameSeconds } from '@/utils/timecodes'
 import type { Clip } from '@/types/project'
 import type { ShortcutAction } from '@/utils/shortcuts'
@@ -82,13 +88,23 @@ export function useSpreadsheetFrameTools({
 
   const showFramePreview = useCallback(async (params: { seconds: number; anchorRect: DOMRect }) => {
     if (!currentClip?.filePath) return
+    const previewCaptureWidth = getFramePreviewCaptureWidth(FRAME_PREVIEW_BASE_WIDTH)
+    const zoomScale = getCurrentZoomScale()
+    const normalizedAnchorRect = new DOMRect(
+      params.anchorRect.left / zoomScale,
+      params.anchorRect.top / zoomScale,
+      params.anchorRect.width / zoomScale,
+      params.anchorRect.height / zoomScale,
+    )
 
     const placement = computeFramePreviewPlacement({
-      anchorRect: params.anchorRect,
+      anchorRect: normalizedAnchorRect,
       previewWidth: 236,
       previewHeight: 136,
+      viewportWidth: window.innerWidth,
+      viewportHeight: window.innerHeight,
     })
-    const cacheKey = `${currentClip.filePath}|${params.seconds.toFixed(3)}`
+    const cacheKey = `${currentClip.filePath}|${params.seconds.toFixed(3)}|${previewCaptureWidth}`
     const requestId = ++hoverRequestRef.current
 
     const cached = framePreviewCacheRef.current.get(cacheKey)
@@ -111,7 +127,13 @@ export function useSpreadsheetFrameTools({
       loading: true,
     })
 
-    const image = await tauri.playerGetFramePreview(currentClip.filePath, params.seconds, 236).catch(() => null)
+    const image =
+      await tauri.playerGetFramePreview(currentClip.filePath, params.seconds, previewCaptureWidth).catch(() => null)
+      ?? await tauri.playerGetFramePreview(
+        currentClip.filePath,
+        params.seconds,
+        getFramePreviewCaptureWidth(FRAME_PREVIEW_FALLBACK_BASE_WIDTH),
+      ).catch(() => null)
     if (hoverRequestRef.current !== requestId) return
     if (image) {
       framePreviewCacheRef.current.set(cacheKey, image)

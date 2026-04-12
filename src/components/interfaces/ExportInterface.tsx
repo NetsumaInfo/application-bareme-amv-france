@@ -172,7 +172,7 @@ function normalizeOptionalText(value: unknown): string {
   return typeof value === 'string' ? value.trim() : ''
 }
 
-export default function ExportInterface() {
+function useExportInterfaceController() {
   const { t } = useI18n()
   const createLocalizedPosterBlocks = useCallback((baseTitle: string) => (
     createDefaultPosterBlocks(baseTitle).map((block) => {
@@ -394,7 +394,6 @@ export default function ExportInterface() {
   ])
 
   const notesPdfPayload = useMemo(() => {
-    const currentJudge = judges.find((judge) => judge.isCurrentJudge) ?? judges[0]
     const criterionNameById = new Map(
       (currentBareme?.criteria ?? []).map((criterion) => [criterion.id, criterion.name]),
     )
@@ -403,8 +402,7 @@ export default function ExportInterface() {
       mode: notesPdfMode,
       title: title.trim() || `${projectName} - Notes`,
       entries: displayRows.map((row) => {
-        const generalNoteSource = currentJudge?.notes[row.clip.id] as { textNotes?: string } | undefined
-        const generalNote = normalizeOptionalText(generalNoteSource?.textNotes)
+        const generalNote = normalizeOptionalText(currentProject?.resultNotes?.[row.clip.id])
 
         const judgesEntries = judges.map((judge) => {
           const note = judge.notes[row.clip.id] as {
@@ -448,7 +446,7 @@ export default function ExportInterface() {
         }
       }),
     }
-  }, [currentBareme?.criteria, displayRows, judges, notesPdfMode, projectName, title])
+  }, [currentBareme?.criteria, currentProject?.resultNotes, displayRows, judges, notesPdfMode, projectName, title])
 
   const jsonJudgeOptions = useMemo(
     () => judges.map((judge) => ({ key: judge.key, judgeName: judge.judgeName })),
@@ -949,14 +947,16 @@ export default function ExportInterface() {
   }, [exportContextMenu])
 
   if (!currentBareme) {
-    return (
-      <div className="flex items-center justify-center h-full text-gray-500 text-sm">
-        {t('Aucun barème chargé')}
-      </div>
-    )
+    return {
+      renderContent: () => (
+        <div className="flex items-center justify-center h-full text-gray-500 text-sm">
+          {t('Aucun barème chargé')}
+        </div>
+      ),
+    }
   }
 
-  return (
+  const renderContent = () => (
     <div
       className="flex flex-col lg:flex-row h-full gap-3 p-3 overflow-hidden"
       onContextMenu={(event) => {
@@ -1406,4 +1406,11 @@ export default function ExportInterface() {
       ) : null}
     </div>
   )
+
+  return { renderContent }
+}
+
+export default function ExportInterface() {
+  const { renderContent } = useExportInterfaceController()
+  return renderContent()
 }

@@ -1,4 +1,5 @@
 import { ArrowDown, ArrowUp } from 'lucide-react'
+import { HoverTextTooltip } from '@/components/ui/HoverTextTooltip'
 import { useI18n } from '@/i18n'
 import { CATEGORY_COLOR_PRESETS, sanitizeColor, withAlpha } from '@/utils/colors'
 
@@ -7,8 +8,8 @@ interface BaremeEditCategoriesSummaryProps {
   categoryStats: Map<string, { count: number; total: number }>
   categoryOrder: string[]
   categoryColors: Record<string, string>
-  getCategoryColor: (category: string) => string
   onMoveCategory: (category: string, direction: 'up' | 'down') => void
+  compact?: boolean
 }
 
 export function BaremeEditCategoriesSummary({
@@ -16,15 +17,23 @@ export function BaremeEditCategoriesSummary({
   categoryStats,
   categoryOrder,
   categoryColors,
-  getCategoryColor,
   onMoveCategory,
+  compact = false,
 }: BaremeEditCategoriesSummaryProps) {
   const { t } = useI18n()
 
+  const visibleCategories = categoryOrder.filter((category) => {
+    const stat = categoryStats.get(category)
+    return Boolean(stat)
+  })
+
+  if (visibleCategories.length === 0) return null
+
   return (
-    <>
-      <div className="flex flex-wrap gap-2">
-        {Array.from(categoryStats.entries()).map(([category, stat], index) => {
+    <div className={compact ? '' : 'rounded-xl border border-gray-700/70 bg-surface-dark/28 px-3 py-2.5'}>
+      <div className={`${compact ? 'flex flex-nowrap overflow-x-auto gap-1 pr-1 scrollbar-thin' : 'flex flex-wrap gap-2'}`}>
+        {visibleCategories.map((category, index) => {
+          const stat = categoryStats.get(category) ?? { count: 0, total: 0 }
           const color =
             category === 'Général'
               ? '#94a3b8'
@@ -32,72 +41,57 @@ export function BaremeEditCategoriesSummary({
                   categoryColors[category],
                   CATEGORY_COLOR_PRESETS[index % CATEGORY_COLOR_PRESETS.length],
                 )
+
           return (
-            <span
+            <div
               key={category}
-              className="text-[11px] px-2 py-1 rounded border"
+              className={`inline-flex items-center rounded-lg border ${
+                compact ? 'shrink-0 gap-1 px-1.5 py-0.5' : 'gap-2 px-2.5 py-1.5'
+              }`}
               style={{
-                borderColor: withAlpha(color, 0.45),
-                backgroundColor: withAlpha(color, 0.18),
-                color,
+                borderColor: withAlpha(color, compact ? 0.26 : 0.32),
+                backgroundColor: withAlpha(color, compact ? 0.08 : 0.1),
               }}
             >
-              {t('{category}: {count} crit. • /{total}', {
-                category,
-                count: stat.count,
-                total: stat.total,
-              })}
-            </span>
+              <span className={`${compact ? 'text-[10px]' : 'text-[11px]'} font-semibold tracking-[0.01em]`} style={{ color }}>
+                {category}
+              </span>
+              <span className={`${compact ? 'text-[10px]' : 'text-[11px]'} text-gray-300 tabular-nums`}>
+                {t('{count} crit. • /{total}', {
+                  count: stat.count,
+                  total: stat.total,
+                })}
+              </span>
+              {!readOnly && categoryOrder.length > 1 ? (
+                <div className={`inline-flex items-center ${compact ? 'gap-0' : 'ml-0.5 gap-0.5'}`}>
+                  <HoverTextTooltip text={t('Monter {category}', { category })}>
+                    <button
+                      type="button"
+                      onClick={() => onMoveCategory(category, 'up')}
+                      disabled={index === 0}
+                      aria-label={t('Monter {category}', { category })}
+                      className={`${compact ? 'p-[2px]' : 'p-0.5'} rounded text-gray-500 transition-colors hover:bg-surface hover:text-white disabled:cursor-not-allowed disabled:opacity-30`}
+                    >
+                      <ArrowUp size={compact ? 10 : 12} />
+                    </button>
+                  </HoverTextTooltip>
+                  <HoverTextTooltip text={t('Descendre {category}', { category })}>
+                    <button
+                      type="button"
+                      onClick={() => onMoveCategory(category, 'down')}
+                      disabled={index >= visibleCategories.length - 1}
+                      aria-label={t('Descendre {category}', { category })}
+                      className={`${compact ? 'p-[2px]' : 'p-0.5'} rounded text-gray-500 transition-colors hover:bg-surface hover:text-white disabled:cursor-not-allowed disabled:opacity-30`}
+                    >
+                      <ArrowDown size={compact ? 10 : 12} />
+                    </button>
+                  </HoverTextTooltip>
+                </div>
+              ) : null}
+            </div>
           )
         })}
       </div>
-
-      {categoryOrder.length > 1 ? (
-        <div className="rounded-lg border border-gray-700 bg-surface-dark/40 px-3 py-2">
-          <div className="text-[11px] text-gray-400 mb-2">{t('Ordre des catégories')}</div>
-          <div className="flex flex-wrap gap-2">
-            {categoryOrder.map((category, index) => {
-              const color = getCategoryColor(category)
-              return (
-                <div
-                  key={`order-${category}`}
-                  className="inline-flex items-center gap-1.5 rounded border px-2 py-1"
-                  style={{
-                    borderColor: withAlpha(color, 0.45),
-                    backgroundColor: withAlpha(color, 0.14),
-                  }}
-                >
-                  <span className="text-[11px] font-medium" style={{ color }}>
-                    {category}
-                  </span>
-                  {!readOnly ? (
-                    <>
-                      <button
-                        type="button"
-                        onClick={() => onMoveCategory(category, 'up')}
-                        disabled={index === 0}
-                        className="p-0.5 rounded text-gray-400 hover:text-white hover:bg-surface transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-                        title={t('Monter {category}', { category })}
-                      >
-                        <ArrowUp size={12} />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => onMoveCategory(category, 'down')}
-                        disabled={index >= categoryOrder.length - 1}
-                        className="p-0.5 rounded text-gray-400 hover:text-white hover:bg-surface transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-                        title={t('Descendre {category}', { category })}
-                      >
-                        <ArrowDown size={12} />
-                      </button>
-                    </>
-                  ) : null}
-                </div>
-              )
-            })}
-          </div>
-        </div>
-      ) : null}
-    </>
+    </div>
   )
 }

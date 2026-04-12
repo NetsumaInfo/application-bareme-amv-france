@@ -1,6 +1,7 @@
-import { useState } from 'react'
-import type { MouseEvent, ReactNode } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import type { HTMLAttributes, MouseEvent, ReactNode } from 'react'
 import { createPortal } from 'react-dom'
+import { useZoomScale } from '@/hooks/useZoomScale'
 
 interface HoverTextTooltipProps {
   text: string
@@ -9,30 +10,32 @@ interface HoverTextTooltipProps {
   maxWidthPx?: number
 }
 
-interface TooltipState {
-  visible: boolean
-  left: number
-  top: number
-}
-
 function getTooltipPosition(
-  event: MouseEvent<HTMLElement>,
-  maxWidthPx: number,
+  pointerX: number,
+  pointerY: number,
+  tooltipWidth: number,
+  tooltipHeight: number,
+  zoomScale: number,
 ): { left: number; top: number } {
   const margin = 10
-  const offsetX = 14
   const offsetY = 18
-  const approxHeight = 52
+  const normalizedPointerX = pointerX / zoomScale
+  const normalizedPointerY = pointerY / zoomScale
 
-  let left = event.clientX + offsetX
-  let top = event.clientY + offsetY
+  let left = normalizedPointerX - tooltipWidth / 2
+  let top = normalizedPointerY + offsetY
 
   if (typeof window !== 'undefined') {
-    if (left + maxWidthPx > window.innerWidth - margin) {
-      left = Math.max(margin, window.innerWidth - maxWidthPx - margin)
+    const viewportW = window.innerWidth
+    const viewportH = window.innerHeight
+    if (left < margin) {
+      left = margin
     }
-    if (top + approxHeight > window.innerHeight - margin) {
-      top = Math.max(margin, event.clientY - approxHeight - 10)
+    if (left + tooltipWidth > viewportW - margin) {
+      left = Math.max(margin, viewportW - tooltipWidth - margin)
+    }
+    if (top + tooltipHeight > viewportH - margin) {
+      top = Math.max(margin, normalizedPointerY - tooltipHeight - 10)
     }
   }
 
@@ -46,44 +49,109 @@ export function HoverTextTooltip({
   maxWidthPx = 320,
 }: HoverTextTooltipProps) {
   const safeText = text.trim()
-  const [state, setState] = useState<TooltipState>({ visible: false, left: 0, top: 0 })
+  const tooltipRef = useRef<HTMLDivElement | null>(null)
+  const suppressedTitlesRef = useRef<Array<{ element: HTMLElement; title: string }>>([])
+  const pointerRef = useRef({ x: 0, y: 0 })
+  const [visible, setVisible] = useState(false)
+  const zoomScale = useZoomScale()
+
+  const suppressNativeTitles = useCallback((root: HTMLElement) => {
+    const entries: Array<{ element: HTMLElement; title: string }> = []
+    const candidates = [
+      root,
+      ...Array.from(root.querySelectorAll<HTMLElement>('[title]')),
+    ]
+
+    for (const element of candidates) {
+      const title = element.getAttribute('title')
+      if (!title) continue
+      entries.push({ element, title })
+      element.removeAttribute('title')
+    }
+
+    suppressedTitlesRef.current = entries
+  }, [])
+
+  const restoreNativeTitles = useCallback(() => {
+    for (const entry of suppressedTitlesRef.current) {
+      entry.element.setAttribute('title', entry.title)
+    }
+    suppressedTitlesRef.current = []
+  }, [])
+
+  const showTooltip = (event: MouseEvent<HTMLElement>) => {
+    suppressNativeTitles(event.currentTarget)
+    pointerRef.current = { x: event.clientX, y: event.clientY }
+    setVisible(true)
+  }
+
+  const moveTooltip = (event: MouseEvent<HTMLElement>) => {
+    if (!visible) return
+    pointerRef.current = { x: event.clientX, y: event.clientY }
+    applyTooltipPosition(event.clientX, event.clientY)
+  }
+
+  const hideTooltip = () => {
+    restoreNativeTitles()
+    setVisible(false)
+  }
+
+  const applyTooltipPosition = useCallback((pointerX: number, pointerY: number) => {
+    const node = tooltipRef.current
+    if (!node) return
+
+    const pos = getTooltipPosition(pointerX, pointerY, node.offsetWidth, node.offsetHeight, zoomScale)
+    node.style.left = `${pos.left}px`
+    node.style.top = `${pos.top}px`
+    node.style.visibility = 'visible'
+  }, [zoomScale])
+
+  useLayoutEffect(() => {
+    if (!visible) return
+    applyTooltipPosition(pointerRef.current.x, pointerRef.current.y)
+  }, [applyTooltipPosition, safeText, visible])
+
+  useEffect(() => {
+    if (!visible) return
+    const handleViewportChange = () => {
+      applyTooltipPosition(pointerRef.current.x, pointerRef.current.y)
+    }
+    window.addEventListener('resize', handleViewportChange)
+    window.addEventListener('scroll', handleViewportChange, true)
+    return () => {
+      window.removeEventListener('resize', handleViewportChange)
+      window.removeEventListener('scroll', handleViewportChange, true)
+    }
+  }, [applyTooltipPosition, visible])
+
+  useEffect(() => restoreNativeTitles, [restoreNativeTitles])
 
   if (!safeText) {
     return <>{children}</>
   }
 
-  const showTooltip = (event: MouseEvent<HTMLElement>) => {
-    const pos = getTooltipPosition(event, maxWidthPx)
-    setState({ visible: true, left: pos.left, top: pos.top })
-  }
-
-  const moveTooltip = (event: MouseEvent<HTMLElement>) => {
-    if (!state.visible) return
-    const pos = getTooltipPosition(event, maxWidthPx)
-    setState((prev) => ({ ...prev, left: pos.left, top: pos.top }))
-  }
-
-  const hideTooltip = () => {
-    setState((prev) => ({ ...prev, visible: false }))
-  }
-
-  const tooltip = state.visible ? (
+  const tooltip = visible ? (
     <div
+      ref={tooltipRef}
+      role="tooltip"
       className="fixed z-[10010] pointer-events-none rounded-md border border-gray-700 bg-surface px-2 py-1 text-[11px] text-gray-100 shadow-xl leading-snug w-max whitespace-normal break-words"
-      style={{ left: state.left, top: state.top, maxWidth: `${maxWidthPx}px` }}
+      style={{ left: 0, top: 0, maxWidth: `${maxWidthPx}px`, visibility: 'hidden' }}
     >
       {safeText}
     </div>
   ) : null
 
+  const triggerProps: HTMLAttributes<HTMLElement> = {
+    onMouseEnter: showTooltip,
+    onMouseMove: moveTooltip,
+    onMouseLeave: hideTooltip,
+  }
+
   return (
     <>
       <span
-        className={className}
-        onMouseEnter={showTooltip}
-        onMouseMove={moveTooltip}
-        onMouseLeave={hideTooltip}
-        onBlur={hideTooltip}
+        className={className ?? 'contents'}
+        {...triggerProps}
       >
         {children}
       </span>

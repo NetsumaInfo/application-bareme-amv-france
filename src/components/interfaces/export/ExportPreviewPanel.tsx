@@ -101,7 +101,12 @@ interface ExportTableCardProps {
   pageLabel?: string
 }
 
-function ExportTableCard({
+function ExportTableCard(props: ExportTableCardProps) {
+  const { t } = useI18n()
+  return renderExportTableCard({ ...props, t })
+}
+
+function renderExportTableCard({
   rows,
   rankByClipId,
   isLight,
@@ -127,8 +132,8 @@ function ExportTableCard({
   formatScore,
   maxTableBodyHeight,
   stickyHeader,
-}: ExportTableCardProps) {
-  const { t } = useI18n()
+  t,
+}: ExportTableCardProps & { t: ReturnType<typeof useI18n>['t'] }) {
   const tableBorderColor = isLight ? '#d1d5db' : '#334155'
   const bodyBorderColor = isLight ? '#e5e7eb' : '#334155'
   const rowHeightPx = Math.max(44, Math.round(rowHeight))

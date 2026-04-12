@@ -1,4 +1,5 @@
 import type { MutableRefObject, ReactNode } from 'react'
+import { HoverTextTooltip } from '@/components/ui/HoverTextTooltip'
 
 interface OverlayTrackOption {
   key: string | number
@@ -34,19 +35,21 @@ export function OverlayTrackSelector({
 }: OverlayTrackSelectorProps) {
   return (
     <div ref={containerRef} className="relative">
-      <button
-        onClick={() => enabled && onToggle()}
-        className={`${compactControls ? 'p-1.5' : 'p-2.5'} rounded-full hover:bg-white/20 transition-colors ${
-          enabled
-            ? active
-              ? 'text-primary-400'
-              : 'text-white/80 hover:text-white'
-            : 'text-white/30 cursor-default'
-        }`}
-        title={enabled ? buttonTitle : disabledTitle}
-      >
-        {icon}
-      </button>
+      <HoverTextTooltip text={enabled ? buttonTitle : disabledTitle}>
+        <button
+          onClick={() => enabled && onToggle()}
+          aria-label={enabled ? buttonTitle : disabledTitle}
+          className={`${compactControls ? 'p-1.5' : 'p-2.5'} rounded-full hover:bg-white/20 transition-colors ${
+            enabled
+              ? active
+                ? 'text-primary-400'
+                : 'text-white/80 hover:text-white'
+              : 'text-white/30 cursor-default'
+          }`}
+        >
+          {icon}
+        </button>
+      </HoverTextTooltip>
       {open && enabled && (
         <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 min-w-[180px] bg-black/90 border border-white/20 rounded-lg shadow-xl py-1 z-50 backdrop-blur-sm">
           {options.map((option) => (

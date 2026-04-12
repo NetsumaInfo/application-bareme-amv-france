@@ -3,8 +3,10 @@ import { OverlayTopBar } from '@/components/player/overlay/OverlayTopBar'
 import { OverlayBottomControls } from '@/components/player/overlay/OverlayBottomControls'
 import { OverlayNoVideoState } from '@/components/player/overlay/OverlayNoVideoState'
 import { useFullscreenOverlayState } from '@/components/player/overlay/useFullscreenOverlayState'
+import { useWindowUiSettingsSync } from '@/hooks/useWindowUiSettingsSync'
 
 export default function FullscreenOverlay() {
+  useWindowUiSettingsSync()
   const {
     clipInfo,
     compactControls,
@@ -19,6 +21,7 @@ export default function FullscreenOverlay() {
     markerTooltip,
     setMarkerTooltip,
     showAudioDb,
+    shortcutBindings,
     subtitleTracks,
     audioTracks,
     subMenuOpen,
@@ -53,6 +56,7 @@ export default function FullscreenOverlay() {
       onMouseEnter={resetHideTimer}
       onMouseDown={resetHideTimer}
       style={{ cursor: isPlayerFullscreen && !controlsVisible ? 'none' : 'default' }}
+      role="presentation"
     >
       <OverlayTopBar
         clipInfo={clipInfo}
@@ -80,6 +84,7 @@ export default function FullscreenOverlay() {
         volume={volume}
         isMuted={isMuted}
         showAudioDb={showAudioDb}
+        shortcutBindings={shortcutBindings}
         subtitleTracks={subtitleTracks}
         audioTracks={audioTracks}
         currentSubtitleId={currentSubtitleId}

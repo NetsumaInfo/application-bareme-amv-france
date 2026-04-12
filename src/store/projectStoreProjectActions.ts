@@ -20,6 +20,7 @@ export function createProjectEntity(name: string, judgeName: string, baremeId: s
     baremeId,
     clipsFolderPath: '',
     settings: { ...DEFAULT_PROJECT_SETTINGS },
+    resultNotes: {},
   }
 }
 

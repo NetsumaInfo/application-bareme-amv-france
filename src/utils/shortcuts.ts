@@ -30,10 +30,18 @@ export type ShortcutAction =
   | 'notesFieldUp'
   | 'notesFieldDown'
 
-export interface ShortcutDefinition {
+interface ShortcutDefinition {
   action: ShortcutAction
   label: string
   defaultShortcut: string
+}
+
+type ContextualShortcutId = 'openPlayerFromList' | 'showSubcategoryComments'
+
+interface ContextualShortcutDefinition {
+  id: ContextualShortcutId
+  label: string
+  shortcut: string
 }
 
 export const SHORTCUT_DEFINITIONS: ShortcutDefinition[] = [
@@ -69,12 +77,33 @@ export const SHORTCUT_DEFINITIONS: ShortcutDefinition[] = [
   { action: 'notesFieldDown', label: 'Champ en-dessous (notes)', defaultShortcut: 'ctrl+arrowdown' },
 ]
 
+export const CONTEXTUAL_SHORTCUT_DEFINITIONS: ContextualShortcutDefinition[] = [
+  {
+    id: 'openPlayerFromList',
+    label: 'Ouvrir le lecteur depuis la liste',
+    shortcut: 'Double clic',
+  },
+  {
+    id: 'showSubcategoryComments',
+    label: 'Afficher les commentaires d’une sous-catégorie',
+    shortcut: 'Ctrl + clic',
+  },
+]
+
 export const DEFAULT_SHORTCUT_BINDINGS = SHORTCUT_DEFINITIONS.reduce<Record<ShortcutAction, string>>(
   (acc, entry) => {
     acc[entry.action] = entry.defaultShortcut
     return acc
   },
   {} as Record<ShortcutAction, string>,
+)
+
+const SHORTCUT_DEFINITION_MAP = SHORTCUT_DEFINITIONS.reduce<Record<ShortcutAction, ShortcutDefinition>>(
+  (acc, definition) => {
+    acc[definition.action] = definition
+    return acc
+  },
+  {} as Record<ShortcutAction, ShortcutDefinition>,
 )
 
 function normalizeKeyToken(rawKey: string): string | null {
@@ -174,4 +203,47 @@ export function formatShortcutDisplay(shortcut: string, translate?: (key: string
       return mapped
     })
     .join(' + ')
+}
+
+function getShortcutDefinition(action: ShortcutAction): ShortcutDefinition {
+  return SHORTCUT_DEFINITION_MAP[action]
+}
+
+export function getShortcutBinding(
+  action: ShortcutAction,
+  shortcutBindings?: Partial<Record<ShortcutAction, string>>,
+): string {
+  return shortcutBindings?.[action] ?? DEFAULT_SHORTCUT_BINDINGS[action]
+}
+
+export function formatShortcutDisplayForAction(
+  action: ShortcutAction,
+  shortcutBindings?: Partial<Record<ShortcutAction, string>>,
+  translate?: (key: string) => string,
+): string {
+  return formatShortcutDisplay(getShortcutBinding(action, shortcutBindings), translate)
+}
+
+export function formatShortcutAnnotation(
+  label: string,
+  shortcut: string,
+  translate?: (key: string) => string,
+): string {
+  if (!shortcut) return label
+  return `${label} (${formatShortcutDisplay(shortcut, translate)})`
+}
+
+export function formatShortcutAnnotationForAction(
+  action: ShortcutAction,
+  shortcutBindings?: Partial<Record<ShortcutAction, string>>,
+  translate?: (key: string) => string,
+  label?: string,
+): string {
+  const definition = getShortcutDefinition(action)
+  const resolvedLabel = label ?? (translate ? translate(definition.label) : definition.label)
+  return formatShortcutAnnotation(
+    resolvedLabel,
+    getShortcutBinding(action, shortcutBindings),
+    translate,
+  )
 }

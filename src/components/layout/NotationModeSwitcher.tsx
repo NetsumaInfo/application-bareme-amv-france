@@ -1,7 +1,7 @@
-import { FileText, Table } from 'lucide-react'
 import { useUIStore } from '@/store/useUIStore'
 import type { InterfaceMode } from '@/types/notation'
 import { useI18n } from '@/i18n'
+import { UI_ICONS } from '@/components/ui/actionIcons'
 
 function hasSpreadsheetView(mode: InterfaceMode): boolean {
   return mode === 'spreadsheet' || mode === 'dual'
@@ -12,6 +12,8 @@ function hasNotationView(mode: InterfaceMode): boolean {
 }
 
 export function NotationModeSwitcher() {
+  const SpreadsheetIcon = UI_ICONS.spreadsheet
+  const NotesIcon = UI_ICONS.generalNote
   const { currentTab, currentInterface, switchInterface } = useUIStore()
   const { t } = useI18n()
   if (currentTab !== 'notation') return null
@@ -46,31 +48,31 @@ export function NotationModeSwitcher() {
   }
 
   return (
-    <div className="flex items-center bg-surface-dark rounded-lg p-0.5 gap-0.5 border border-gray-700/70">
+    <div className="flex items-center overflow-hidden rounded-md bg-surface-dark p-0">
       <button
         onClick={toggleSpreadsheet}
-        className={`px-3 py-1 text-xs rounded-md transition-all ${
+        className={`h-5 rounded-l-[5px] px-2 text-[11px] leading-none transition-all ${
           spreadsheetActive
-            ? 'bg-primary-600 text-white shadow-sm'
-            : 'text-gray-400 hover:text-white hover:bg-surface-light'
+            ? 'bg-primary-600/80 text-white shadow-sm'
+            : 'text-gray-400 hover:bg-white/5 hover:text-white'
         }`}
       >
-        <span className="inline-flex items-center gap-1.5">
-          <Table size={13} />
+        <span className="inline-flex items-center gap-1">
+          <SpreadsheetIcon size={11} />
           <span>{t('Tableur')}</span>
         </span>
       </button>
       <button
         onClick={toggleNotation}
-        className={`px-3 py-1 text-xs rounded-md transition-all ${
+        className={`h-5 rounded-r-[5px] px-2 text-[11px] leading-none transition-all ${
           notationActive
-            ? 'bg-primary-600 text-white shadow-sm'
-            : 'text-gray-400 hover:text-white hover:bg-surface-light'
+            ? 'bg-primary-600/80 text-white shadow-sm'
+            : 'text-gray-400 hover:bg-white/5 hover:text-white'
         }`}
       >
-        <span className="inline-flex items-center gap-1.5">
-          <FileText size={13} />
-          <span>{t('Notation')}</span>
+        <span className="inline-flex items-center gap-1">
+          <NotesIcon size={11} />
+          <span>{t('Commentaires')}</span>
         </span>
       </button>
     </div>

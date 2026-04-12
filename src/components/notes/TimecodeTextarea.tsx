@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { extractTimecodesFromText, type ParsedTimecode } from '@/utils/timecodes'
+import { HoverTextTooltip } from '@/components/ui/HoverTextTooltip'
 import { useI18n } from '@/i18n'
 
 interface TimecodeTextareaProps {
@@ -79,18 +80,21 @@ export default function TimecodeTextarea({
 
   const segments = useMemo(() => {
     if (!value || timecodes.length === 0) {
-      return [{ type: 'text' as const, value }]
+      return [{ type: 'text' as const, value, start: 0 }]
     }
-    const list: Array<{ type: 'text'; value: string } | { type: 'time'; item: ParsedTimecode }> = []
+    const list: Array<
+      | { type: 'text'; value: string; start: number }
+      | { type: 'time'; item: ParsedTimecode }
+    > = []
     let cursor = 0
     for (const item of timecodes) {
       const start = item.index
       const end = item.index + item.raw.length
-      if (start > cursor) list.push({ type: 'text', value: value.slice(cursor, start) })
+      if (start > cursor) list.push({ type: 'text', value: value.slice(cursor, start), start: cursor })
       list.push({ type: 'time', item })
       cursor = end
     }
-    if (cursor < value.length) list.push({ type: 'text', value: value.slice(cursor) })
+    if (cursor < value.length) list.push({ type: 'text', value: value.slice(cursor), start: cursor })
     return list
   }, [value, timecodes])
 
@@ -111,7 +115,7 @@ export default function TimecodeTextarea({
         spellCheck={false}
         rows={rows}
         style={style}
-        className={`relative z-[1] w-full px-2 py-1.5 text-[11px] leading-[1.4] bg-surface-dark border border-gray-700 rounded text-transparent caret-gray-200 placeholder:text-gray-600 focus:border-primary-500 focus:outline-none resize-none min-h-[42px] overflow-x-hidden ${textareaClassName}`}
+        className={`relative z-[1] min-h-[42px] w-full resize-none overflow-x-hidden rounded border border-transparent bg-surface-dark px-2 py-1.5 text-[11px] leading-[1.4] text-transparent caret-gray-200 placeholder:text-gray-600 focus:border-primary-500/25 focus:outline-none ${textareaClassName}`}
       />
       {value.trim().length > 0 && (
         <div
@@ -126,41 +130,44 @@ export default function TimecodeTextarea({
               wordBreak: 'break-word',
             }}
           >
-            {segments.map((segment, index) => {
+            {segments.map((segment) => {
               if (segment.type === 'text') {
-                return <span key={`text-${index}`}>{segment.value}</span>
+                return <span key={`text-${segment.start}`}>{segment.value}</span>
               }
               return (
-                <button
-                  key={`time-${segment.item.index}-${segment.item.raw}-${index}`}
-                  type="button"
-                  onMouseDown={(event) => {
-                    event.preventDefault()
-                  }}
-                  onClick={(event) => {
-                    event.preventDefault()
-                    event.stopPropagation()
-                    onTimecodeSelect(segment.item)
-                  }}
-                  onMouseEnter={(event) => {
-                    if (!onTimecodeHover) return
-                    onTimecodeHover({
-                      item: segment.item,
-                      anchorRect: (event.currentTarget as HTMLButtonElement).getBoundingClientRect(),
-                    })
-                  }}
-                  onMouseLeave={() => onTimecodeLeave?.()}
-                  className="pointer-events-auto inline m-0 p-0 bg-transparent border-0 underline underline-offset-2 decoration-dotted decoration-1 align-baseline leading-[1.4] hover:brightness-110 transition-colors"
-                  style={{
-                    color,
-                    font: 'inherit',
-                    lineHeight: 'inherit',
-                    letterSpacing: 'inherit',
-                  }}
-                  title={t('Aller à {timecode}', { timecode: segment.item.raw })}
+                <HoverTextTooltip
+                  key={`time-${segment.item.index}-${segment.item.raw}`}
+                  text={t('Aller à {timecode}', { timecode: segment.item.raw })}
                 >
-                  {segment.item.raw}
-                </button>
+                  <button
+                    type="button"
+                    onMouseDown={(event) => {
+                      event.preventDefault()
+                    }}
+                    onClick={(event) => {
+                      event.preventDefault()
+                      event.stopPropagation()
+                      onTimecodeSelect(segment.item)
+                    }}
+                    onMouseEnter={(event) => {
+                      if (!onTimecodeHover) return
+                      onTimecodeHover({
+                        item: segment.item,
+                        anchorRect: (event.currentTarget as HTMLButtonElement).getBoundingClientRect(),
+                      })
+                    }}
+                    onMouseLeave={() => onTimecodeLeave?.()}
+                    className="pointer-events-auto inline m-0 p-0 bg-transparent border-0 underline underline-offset-2 decoration-dotted decoration-1 align-baseline leading-[1.4] hover:brightness-110 transition-colors"
+                    style={{
+                      color,
+                      font: 'inherit',
+                      lineHeight: 'inherit',
+                      letterSpacing: 'inherit',
+                    }}
+                  >
+                    {segment.item.raw}
+                  </button>
+                </HoverTextTooltip>
               )
             })}
           </div>

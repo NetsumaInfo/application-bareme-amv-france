@@ -1,7 +1,8 @@
-import { forwardRef, useLayoutEffect, useRef, useState } from 'react'
+import { forwardRef, useCallback, useLayoutEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import type { LucideIcon } from 'lucide-react'
+import { useZoomScale } from '@/hooks/useZoomScale'
 
 interface AppContextMenuPanelProps {
   x: number
@@ -22,11 +23,18 @@ interface AppContextMenuItemProps {
   onClick?: () => void
 }
 
-function clampMenuPosition(x: number, y: number, menuWidth = 210, menuHeight = 220) {
+function clampMenuPosition(
+  x: number,
+  y: number,
+  viewportWidth: number,
+  viewportHeight: number,
+  menuWidth = 184,
+  menuHeight = 220,
+) {
   let adjustedX = x
   let adjustedY = y
-  if (adjustedX + menuWidth > window.innerWidth - 8) adjustedX = window.innerWidth - menuWidth - 8
-  if (adjustedY + menuHeight > window.innerHeight - 8) adjustedY = window.innerHeight - menuHeight - 8
+  if (adjustedX + menuWidth > viewportWidth - 8) adjustedX = viewportWidth - menuWidth - 8
+  if (adjustedY + menuHeight > viewportHeight - 8) adjustedY = viewportHeight - menuHeight - 8
   if (adjustedX < 8) adjustedX = 8
   if (adjustedY < 8) adjustedY = 8
   return { left: adjustedX, top: adjustedY }
@@ -36,28 +44,39 @@ export const AppContextMenuPanel = forwardRef<HTMLDivElement, AppContextMenuPane
   function AppContextMenuPanel({
     x,
     y,
-    minWidthClassName = 'min-w-[210px]',
+    minWidthClassName = 'min-w-[184px]',
     className = '',
     children,
   }, ref) {
+    const zoomScale = useZoomScale()
     const internalRef = useRef<HTMLDivElement | null>(null)
-    const [position, setPosition] = useState(() => clampMenuPosition(x, y))
+    const getViewport = useCallback(() => ({
+      width: window.innerWidth * zoomScale,
+      height: window.innerHeight * zoomScale,
+    }), [zoomScale])
+    const [position, setPosition] = useState(() => {
+      const viewport = getViewport()
+      return clampMenuPosition(x, y, viewport.width, viewport.height)
+    })
 
     useLayoutEffect(() => {
       const updatePosition = () => {
+        const viewport = getViewport()
         const node = internalRef.current
         if (!node) {
-          setPosition(clampMenuPosition(x, y))
+          setPosition(clampMenuPosition(x, y, viewport.width, viewport.height))
           return
         }
 
-        setPosition(clampMenuPosition(x, y, node.offsetWidth, node.offsetHeight))
+        setPosition(
+          clampMenuPosition(x, y, viewport.width, viewport.height, node.offsetWidth, node.offsetHeight),
+        )
       }
 
       updatePosition()
       window.addEventListener('resize', updatePosition)
       return () => window.removeEventListener('resize', updatePosition)
-    }, [x, y, children, minWidthClassName, className])
+    }, [x, y, children, minWidthClassName, className, getViewport])
 
     const setRefs = (node: HTMLDivElement | null) => {
       internalRef.current = node
@@ -71,13 +90,15 @@ export const AppContextMenuPanel = forwardRef<HTMLDivElement, AppContextMenuPane
     const content = (
       <div
         ref={setRefs}
-        className={`fixed z-[100] ${minWidthClassName} overflow-hidden rounded-lg border border-slate-600/80 bg-[linear-gradient(180deg,rgba(17,24,39,0.98),rgba(9,14,29,0.98))] shadow-[0_10px_30px_rgba(2,6,23,0.42)] backdrop-blur-xl ${className}`}
+        className={`fixed z-[100] ${minWidthClassName} overflow-hidden rounded-md border border-slate-700/70 bg-[linear-gradient(180deg,rgba(20,24,36,0.98),rgba(12,16,26,0.98))] shadow-[0_14px_32px_rgba(2,6,23,0.34)] backdrop-blur-xl ${className}`}
         style={position}
         onClick={(event) => event.stopPropagation()}
+        onKeyDown={(event) => event.stopPropagation()}
         onContextMenu={(event) => {
           event.preventDefault()
           event.stopPropagation()
         }}
+        role="presentation"
       >
         <div className="p-0.5">{children}</div>
       </div>
@@ -92,7 +113,7 @@ export const AppContextMenuPanel = forwardRef<HTMLDivElement, AppContextMenuPane
 )
 
 export function AppContextMenuSeparator() {
-  return <div className="my-0.5 h-px bg-slate-700/80" />
+  return <div className="my-0.5 h-px bg-white/7" />
 }
 
 export function AppContextMenuItem({
@@ -109,46 +130,58 @@ export function AppContextMenuItem({
   const textClassName = disabled
     ? 'text-slate-500'
     : danger
-      ? 'text-rose-400'
+      ? 'text-rose-300'
       : active
-        ? 'text-sky-300'
+        ? 'text-primary-200'
         : 'text-slate-200'
   const hoverClassName = disabled
     ? ''
     : active
-      ? 'bg-sky-500/12'
-      : 'hover:bg-white/6'
+      ? 'bg-primary-500/10'
+      : 'hover:bg-white/4'
 
   return (
     <button
       type="button"
       onClick={onClick}
       disabled={!isClickable}
-      className={`group flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left transition-colors ${hoverClassName} ${disabled ? 'cursor-not-allowed' : ''}`}
+      className={`group flex w-full items-center gap-1.5 rounded-md px-1.5 py-1.5 text-left transition-colors ${hoverClassName} ${disabled ? 'cursor-not-allowed' : ''}`}
     >
       {(Icon || IconSecondary) ? (
         <span
-          className={`flex h-[26px] min-w-[26px] items-center justify-center rounded-md border ${
+          className={`relative flex h-6 min-w-6 items-center justify-center rounded-md ${
             disabled
-              ? 'border-slate-700/80 bg-slate-900/70 text-slate-500'
+              ? 'text-slate-500'
               : danger
-                ? 'border-rose-500/20 bg-rose-500/10 text-rose-300'
+                ? 'text-rose-300'
                 : active
-                  ? 'border-sky-500/30 bg-sky-500/14 text-sky-300'
-                  : 'border-slate-700/80 bg-slate-900/70 text-slate-300 group-hover:text-white'
+                  ? 'text-primary-200'
+                  : 'text-slate-400 group-hover:text-slate-200'
           }`}
         >
-          <span className="flex items-center gap-1">
-            {Icon ? <Icon size={13} /> : null}
-            {IconSecondary ? <IconSecondary size={13} /> : null}
-          </span>
+          {Icon ? <Icon size={13.5} strokeWidth={1.85} /> : null}
+          {IconSecondary ? (
+            <span
+              className={`absolute -bottom-0.5 -right-0.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-[rgb(var(--color-surface-dark)/0.96)] ${
+                disabled
+                  ? 'text-slate-500'
+                  : danger
+                    ? 'text-rose-300'
+                    : active
+                      ? 'text-primary-200'
+                      : 'text-slate-300'
+              }`}
+            >
+              <IconSecondary size={8} strokeWidth={1.85} />
+            </span>
+          ) : null}
         </span>
       ) : null}
 
-      <span className={`flex-1 text-[12px] leading-[1.15rem] ${textClassName}`}>{label}</span>
+      <span className={`flex-1 text-[10.5px] font-medium leading-4 ${textClassName}`}>{label}</span>
 
       {shortcut ? (
-        <span className={`text-[9px] ${disabled ? 'text-slate-600' : 'text-slate-500'}`}>{shortcut}</span>
+        <span className={`text-[9px] leading-none ${disabled ? 'text-slate-600' : 'text-slate-500'}`}>{shortcut}</span>
       ) : null}
     </button>
   )

@@ -12,6 +12,8 @@ import { normalizeProjectDataInput } from '@/store/projectStoreNormalization'
 import {
   normalizeThumbnailTime,
   removeClipAndAdjustSelection,
+  restoreRemovedClip,
+  type RemovedClipHistoryEntry,
   updateClipScoredState,
   updateClipThumbnail,
 } from '@/store/projectStoreClipActions'
@@ -28,11 +30,13 @@ interface ProjectStore {
   currentClipIndex: number
   importedJudges: ImportedJudgeData[]
   isDirty: boolean
+  removedClipsHistory: RemovedClipHistoryEntry[]
 
   createProject: (name: string, judgeName: string, baremeId: string) => void
   setProjectFromData: (data: ProjectData) => void
   updateProject: (updates: Partial<Project>) => void
   updateSettings: (settings: Partial<ProjectSettings>) => void
+  setResultNote: (clipId: string, text: string) => void
   setClips: (clips: Clip[]) => void
   setClipThumbnailTime: (clipId: string, seconds: number | null) => void
   setCurrentClip: (index: number) => void
@@ -44,6 +48,7 @@ interface ProjectStore {
   addImportedJudge: (judge: ImportedJudgeData) => void
   removeImportedJudge: (index: number) => void
   setImportedJudges: (judges: ImportedJudgeData[]) => void
+  restoreLastRemovedClip: () => boolean
   markDirty: () => void
   markClean: () => void
   setFilePath: (path: string) => void
@@ -57,6 +62,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
   currentClipIndex: 0,
   importedJudges: [],
   isDirty: false,
+  removedClipsHistory: [],
 
   createProject: (name: string, judgeName: string, baremeId: string) => {
     const project = createProjectEntity(name, judgeName, baremeId)
@@ -66,6 +72,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
       currentClipIndex: 0,
       importedJudges: [],
       isDirty: true,
+      removedClipsHistory: [],
     })
   },
 
@@ -77,6 +84,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
       importedJudges,
       currentClipIndex: 0,
       isDirty: false,
+      removedClipsHistory: [],
     })
   },
 
@@ -94,6 +102,19 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
     if (!current) return
     set({
       currentProject: mergeProjectSettings(current, settings),
+      isDirty: true,
+    })
+  },
+
+  setResultNote: (clipId: string, text: string) => {
+    const current = get().currentProject
+    if (!current || !clipId) return
+    const nextResultNotes = {
+      ...current.resultNotes,
+      [clipId]: text,
+    }
+    set({
+      currentProject: mergeProjectUpdates(current, { resultNotes: nextResultNotes }),
       isDirty: true,
     })
   },
@@ -165,9 +186,15 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
   },
 
   removeClip: (clipId: string) => {
-    const { clips, currentClipIndex } = get()
+    const { clips, currentClipIndex, removedClipsHistory } = get()
     const nextState = removeClipAndAdjustSelection(clips, currentClipIndex, clipId)
-    set({ ...nextState, isDirty: true })
+    if (!nextState.removedEntry) return
+    set({
+      clips: nextState.clips,
+      currentClipIndex: nextState.currentClipIndex,
+      removedClipsHistory: [...removedClipsHistory, nextState.removedEntry].slice(-100),
+      isDirty: true,
+    })
   },
 
   addImportedJudge: (judge) =>
@@ -187,6 +214,21 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
       importedJudges: judges,
       isDirty: true,
     }),
+
+  restoreLastRemovedClip: () => {
+    const { clips, removedClipsHistory } = get()
+    if (removedClipsHistory.length === 0) return false
+
+    const entry = removedClipsHistory[removedClipsHistory.length - 1]
+    const restoredState = restoreRemovedClip(clips, entry)
+    set({
+      clips: restoredState.clips,
+      currentClipIndex: restoredState.currentClipIndex,
+      removedClipsHistory: removedClipsHistory.slice(0, -1),
+      isDirty: true,
+    })
+    return true
+  },
 
   markDirty: () => set({ isDirty: true }),
   markClean: () => set({ isDirty: false }),
@@ -212,6 +254,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
       currentClipIndex: 0,
       importedJudges: [],
       isDirty: false,
+      removedClipsHistory: [],
     })
   },
 }))

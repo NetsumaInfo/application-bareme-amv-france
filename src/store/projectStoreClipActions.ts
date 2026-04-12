@@ -1,5 +1,11 @@
 import type { Clip } from '@/types/project'
 
+export interface RemovedClipHistoryEntry {
+  clip: Clip
+  removedIndex: number
+  previousCurrentClipIndex: number
+}
+
 export function normalizeThumbnailTime(seconds: number | null): number | null {
   const normalized = seconds === null ? null : Number(seconds)
   if (normalized === null) return null
@@ -31,9 +37,18 @@ export function removeClipAndAdjustSelection(
   clips: Clip[],
   currentClipIndex: number,
   clipId: string,
-): { clips: Clip[]; currentClipIndex: number } {
-  const nextClips = clips.filter((clip) => clip.id !== clipId)
+): { clips: Clip[]; currentClipIndex: number; removedEntry: RemovedClipHistoryEntry | null } {
   const removedIndex = clips.findIndex((clip) => clip.id === clipId)
+  if (removedIndex < 0) {
+    return {
+      clips,
+      currentClipIndex,
+      removedEntry: null,
+    }
+  }
+
+  const removedClip = clips[removedIndex]
+  const nextClips = clips.filter((clip) => clip.id !== clipId)
   let nextIndex = currentClipIndex
 
   if (removedIndex <= currentClipIndex && currentClipIndex > 0) {
@@ -46,5 +61,32 @@ export function removeClipAndAdjustSelection(
   return {
     clips: nextClips,
     currentClipIndex: nextIndex,
+    removedEntry: {
+      clip: removedClip,
+      removedIndex,
+      previousCurrentClipIndex: currentClipIndex,
+    },
+  }
+}
+
+export function restoreRemovedClip(
+  clips: Clip[],
+  entry: RemovedClipHistoryEntry,
+): { clips: Clip[]; currentClipIndex: number } {
+  const existingIndex = clips.findIndex((clip) => clip.id === entry.clip.id)
+  if (existingIndex >= 0) {
+    return {
+      clips,
+      currentClipIndex: existingIndex,
+    }
+  }
+
+  const insertIndex = Math.max(0, Math.min(entry.removedIndex, clips.length))
+  const nextClips = [...clips]
+  nextClips.splice(insertIndex, 0, entry.clip)
+
+  return {
+    clips: nextClips,
+    currentClipIndex: insertIndex,
   }
 }

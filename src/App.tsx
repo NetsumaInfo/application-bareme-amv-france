@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useState } from 'react'
+import { Suspense, lazy, useEffect, useMemo, useState } from 'react'
 import { appWindow } from '@tauri-apps/api/window'
 import AppLayout from '@/components/layout/AppLayout'
-import FullscreenOverlay from '@/components/player/FullscreenOverlay'
-import DetachedNotesWindow from '@/components/notes/DetachedNotesWindow'
-import DetachedResultatsJudgeNotesWindow from '@/components/interfaces/resultats/DetachedResultatsJudgeNotesWindow'
+
+const FullscreenOverlay = lazy(() => import('@/components/player/FullscreenOverlay'))
+const DetachedNotesWindow = lazy(() => import('@/components/notes/DetachedNotesWindow'))
+const DetachedResultatsJudgeNotesWindow = lazy(() => import('@/components/interfaces/resultats/DetachedResultatsJudgeNotesWindow'))
 
 type WindowKind = 'main' | 'overlay' | 'notes' | 'resultats-notes'
 
@@ -94,15 +95,27 @@ function App() {
   }, [windowKind])
 
   if (windowKind === 'overlay') {
-    return <FullscreenOverlay />
+    return (
+      <Suspense fallback={null}>
+        <FullscreenOverlay />
+      </Suspense>
+    )
   }
 
   if (windowKind === 'notes') {
-    return <DetachedNotesWindow />
+    return (
+      <Suspense fallback={null}>
+        <DetachedNotesWindow />
+      </Suspense>
+    )
   }
 
   if (windowKind === 'resultats-notes') {
-    return <DetachedResultatsJudgeNotesWindow />
+    return (
+      <Suspense fallback={null}>
+        <DetachedResultatsJudgeNotesWindow />
+      </Suspense>
+    )
   }
 
   return <AppLayout />

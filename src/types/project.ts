@@ -7,6 +7,7 @@ export interface Project {
   baremeId: string
   clipsFolderPath: string
   settings: ProjectSettings
+  resultNotes: Record<string, string>
   filePath?: string
 }
 
@@ -33,12 +34,14 @@ export interface ProjectSettings {
   hideFinalScoreUntilEnd: boolean
   hideTotals: boolean
   showMiniatures: boolean
+  showQuickActions: boolean
   multiPseudoDisplayMode: MultiPseudoDisplayMode
-  showAddRowButton: boolean
+  clipNamePattern: ClipNamePattern
   thumbnailDefaultTimeSec: number
 }
 
 export type MultiPseudoDisplayMode = 'collab_mep' | 'first_three' | 'all'
+export type ClipNamePattern = 'pseudo_clip' | 'clip_pseudo'
 
 export interface ProjectData {
   version: string
@@ -92,8 +95,9 @@ export const DEFAULT_PROJECT_SETTINGS: ProjectSettings = {
   judgeColors: {},
   hideFinalScoreUntilEnd: false,
   hideTotals: false,
-  showMiniatures: false,
-  multiPseudoDisplayMode: 'collab_mep',
-  showAddRowButton: false,
+  showMiniatures: true,
+  showQuickActions: true,
+  multiPseudoDisplayMode: 'all',
+  clipNamePattern: 'pseudo_clip',
   thumbnailDefaultTimeSec: 10,
 }

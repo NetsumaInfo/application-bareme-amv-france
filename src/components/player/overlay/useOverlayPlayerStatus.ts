@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { appWindow } from '@tauri-apps/api/window'
 import * as tauri from '@/services/tauri'
+import { usePlayerStatusPolling } from '@/hooks/usePlayerStatusPolling'
 
 export function useOverlayPlayerStatus() {
   const [isPlayerFullscreen, setIsPlayerFullscreen] = useState(false)
@@ -8,36 +9,18 @@ export function useOverlayPlayerStatus() {
   const [currentTime, setCurrentTime] = useState(0)
   const [duration, setDuration] = useState(0)
   const [volume, setVolume] = useState(0)
-  const wasFullscreenRef = useRef(false)
 
   useEffect(() => {
-    const timer = setInterval(() => {
-      tauri.playerSyncOverlay().catch(() => {})
-    }, 120)
-    return () => clearInterval(timer)
+    tauri.playerSyncOverlay().catch(() => {})
   }, [])
 
-  useEffect(() => {
-    const poll = async () => {
-      try {
-        const [status, fullscreen] = await Promise.all([
-          tauri.playerGetStatus(),
-          tauri.playerIsFullscreen().catch(() => false),
-        ])
-        setIsPlaying(status.is_playing)
-        setCurrentTime(status.current_time)
-        setDuration(status.duration)
-        setVolume(status.volume)
-        setIsPlayerFullscreen(fullscreen)
-        wasFullscreenRef.current = fullscreen
-      } catch {
-        // Player not available
-      }
-    }
-    const interval = setInterval(poll, 250)
-    poll()
-    return () => clearInterval(interval)
-  }, [])
+  usePlayerStatusPolling((status, fullscreen) => {
+    setIsPlaying(status.is_playing)
+    setCurrentTime(status.current_time)
+    setDuration(status.duration)
+    setVolume(status.volume)
+    setIsPlayerFullscreen(fullscreen)
+  })
 
   useEffect(() => {
     if (!isPlayerFullscreen) return

@@ -35,11 +35,10 @@ cd src-tauri && cargo build    # Build Rust backend
   - `useProjectStore` - Project data, clips array, currentClipIndex, dirty flag, navigation, `removeClip()`
   - `usePlayerStore` - Playback state synced from mpv via 250ms polling (isPlaying, currentTime, duration, volume, tracks, isDetached)
   - `useNotationStore` - Scores (`notes: Record<clipId, Note>`), bareme, validation. `updateCriterion()` validates + recalculates
-  - `useUIStore` - Interface mode (`spreadsheet | modern | notation | resultats | export`), sidebar state, modal flags, zoom level, floating video state
+  - `useUIStore` - Interface mode (`spreadsheet | notation | dual`), tab state (`notation | resultats | export`), sidebar state, modal flags, zoom level, floating video state
 
-- **5 interfaces** read/write the same stores - switching is seamless:
+- **4 interfaces** read/write the same stores - switching is seamless:
   - Spreadsheet (table with keyboard nav, PiP floating video, right-click context menu for clip deletion, 3-way sorting)
-  - Modern (cards, sliders, ScoreRing SVG)
   - Notation (compact panel alongside fullscreen video)
   - Resultats (aggregate scores from multiple judges, import JE.json files, 3-way sorting)
   - Export (customizable PDF/PNG export with theme, density, sorting options)
@@ -114,7 +113,7 @@ Common shortcuts:
 - `Ctrl+S`: Save project
 - `Ctrl+N`: New project
 - `Ctrl+O`: Open project
-- `Ctrl+1/2/3`: Switch interfaces (Spreadsheet/Modern/Notation)
+- `Ctrl+1/2/3`: Switch top-level tabs (Notation/Resultats/Export)
 - `F11`: Toggle fullscreen video
 - `Space`: Play/pause
 - `←`/`→`: Seek -5s/+5s
@@ -165,7 +164,7 @@ src/
   components/
     layout/       # AppLayout (WelcomeScreen + layouts), Header, Sidebar, ContextMenu
     player/       # VideoPlayer, FloatingVideoPlayer (PiP), PlayerControls, FullscreenOverlay, SubtitleSelector, AudioTrackSelector
-    interfaces/   # SpreadsheetInterface, ModernInterface, NotationInterface, ResultatsInterface, ExportInterface, InterfaceSwitcher
+    interfaces/   # SpreadsheetInterface, NotationInterface, ResultatsInterface, ExportInterface, InterfaceSwitcher
     project/      # ProjectManager, CreateProjectModal, VideoList, ProgressIndicator
     settings/     # SettingsPanel (3 tabs: General, Notation, Lecteur)
     scoring/      # BaremeEditor (create/edit custom baremes)

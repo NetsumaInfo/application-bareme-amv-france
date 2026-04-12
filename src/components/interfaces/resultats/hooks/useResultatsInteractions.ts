@@ -64,6 +64,7 @@ export function useResultatsInteractions({
 
   const {
     importing,
+    isJsonDragOver,
     handleImportJudgeJson,
     removeImportedJudge: removeImportedJudgeRaw,
     renameImportedJudge: renameImportedJudgeRaw,
@@ -103,6 +104,7 @@ export function useResultatsInteractions({
 
   return {
     importing,
+    isJsonDragOver,
     criterionDraftCells,
     selectedClipId,
     selectedClip,

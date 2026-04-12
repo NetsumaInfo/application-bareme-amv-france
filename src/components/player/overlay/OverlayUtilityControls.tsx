@@ -12,7 +12,12 @@ import AudioDbMeter from '@/components/player/AudioDbMeter'
 import type { TrackItem } from '@/services/tauri'
 import type { ClipInfo } from '@/components/player/overlay/types'
 import { OverlayTrackSelector } from '@/components/player/overlay/OverlayTrackSelector'
+import { HoverTextTooltip } from '@/components/ui/HoverTextTooltip'
 import { useI18n } from '@/i18n'
+import {
+  formatShortcutAnnotationForAction,
+  type ShortcutAction,
+} from '@/utils/shortcuts'
 
 interface OverlayUtilityControlsProps {
   controlsRowWidth: number
@@ -22,6 +27,7 @@ interface OverlayUtilityControlsProps {
   isMuted: boolean
   volume: number
   showAudioDb: boolean
+  shortcutBindings: Partial<Record<ShortcutAction, string>>
   clipInfo: ClipInfo
   subtitleTracks: TrackItem[]
   audioTracks: TrackItem[]
@@ -50,6 +56,7 @@ export function OverlayUtilityControls({
   isMuted,
   volume,
   showAudioDb,
+  shortcutBindings,
   clipInfo,
   subtitleTracks,
   audioTracks,
@@ -70,6 +77,13 @@ export function OverlayUtilityControls({
   onToggleFullscreen,
 }: OverlayUtilityControlsProps) {
   const { t } = useI18n()
+  const miniatureLabel = formatShortcutAnnotationForAction('setMiniatureFrame', shortcutBindings, t)
+  const fullscreenLabel = formatShortcutAnnotationForAction(
+    isPlayerFullscreen ? 'exitFullscreen' : 'fullscreen',
+    shortcutBindings,
+    t,
+    isPlayerFullscreen ? t('Quitter le plein écran') : t('Agrandir'),
+  )
   const rootRef = useRef<HTMLDivElement | null>(null)
   const [utilityWidth, setUtilityWidth] = useState(0)
   const subtitleOptions = [
@@ -165,24 +179,28 @@ export function OverlayUtilityControls({
         onMouseEnter={openVolumePanel}
         onMouseLeave={closeVolumePanel}
       >
-        <button
-          onClick={iconOnlyAudio ? () => setVolumePanelOpen((prev) => !prev) : onToggleMute}
-          className={`${compactControls ? 'p-1.5' : 'p-2.5'} rounded-full hover:bg-white/20 text-white/80 hover:text-white transition-colors shrink-0`}
-          title={isMuted ? t('Activer le son') : t('Couper le son')}
-        >
-          {isMuted || volume === 0 ? <VolumeX size={compactControls ? 16 : 22} /> : <Volume2 size={compactControls ? 16 : 22} />}
-        </button>
+        <HoverTextTooltip text={isMuted ? t('Activer le son') : t('Couper le son')}>
+          <button
+            onClick={iconOnlyAudio ? () => setVolumePanelOpen((prev) => !prev) : onToggleMute}
+            aria-label={isMuted ? t('Activer le son') : t('Couper le son')}
+            className={`${compactControls ? 'p-1.5' : 'p-2.5'} rounded-full hover:bg-white/20 text-white/80 hover:text-white transition-colors shrink-0`}
+          >
+            {isMuted || volume === 0 ? <VolumeX size={compactControls ? 16 : 22} /> : <Volume2 size={compactControls ? 16 : 22} />}
+          </button>
+        </HoverTextTooltip>
 
         {iconOnlyAudio && volumePanelOpen && (
           <div className="absolute bottom-full right-0 mb-2 min-w-[170px] bg-black/90 border border-white/20 rounded-lg shadow-xl p-2 z-50 backdrop-blur-sm">
             <div className="flex items-center gap-2">
-              <button
-                onClick={onToggleMute}
-                className="p-1.5 rounded-full hover:bg-white/20 text-white/80 hover:text-white transition-colors shrink-0"
-                title={isMuted ? t('Activer le son') : t('Couper le son')}
-              >
-                {isMuted || volume === 0 ? <VolumeX size={14} /> : <Volume2 size={14} />}
-              </button>
+              <HoverTextTooltip text={isMuted ? t('Activer le son') : t('Couper le son')}>
+                <button
+                  onClick={onToggleMute}
+                  aria-label={isMuted ? t('Activer le son') : t('Couper le son')}
+                  className="p-1.5 rounded-full hover:bg-white/20 text-white/80 hover:text-white transition-colors shrink-0"
+                >
+                  {isMuted || volume === 0 ? <VolumeX size={14} /> : <Volume2 size={14} />}
+                </button>
+              </HoverTextTooltip>
               <input
                 type="range"
                 min={0}
@@ -253,24 +271,28 @@ export function OverlayUtilityControls({
       </div>
 
       {clipInfo.miniaturesEnabled && (
-        <button
-          onClick={onSetMiniatureFrame}
-          className={`${compactControls ? 'p-1.5' : 'p-2.5'} rounded-full hover:bg-white/20 text-white/80 hover:text-white transition-colors shrink-0`}
-          title={t('Définir la frame miniature')}
-        >
-          <ImagePlus size={compactControls ? 16 : 22} />
-        </button>
+        <HoverTextTooltip text={miniatureLabel}>
+          <button
+            onClick={onSetMiniatureFrame}
+            aria-label={miniatureLabel}
+            className={`${compactControls ? 'p-1.5' : 'p-2.5'} rounded-full hover:bg-white/20 text-white/80 hover:text-white transition-colors shrink-0`}
+          >
+            <ImagePlus size={compactControls ? 16 : 22} />
+          </button>
+        </HoverTextTooltip>
       )}
 
-      <button
-        onClick={isPlayerFullscreen ? onExitFullscreen : onToggleFullscreen}
-        className={`${compactControls ? 'p-1.5 ml-1' : 'p-2.5 ml-2'} rounded-full hover:bg-white/20 text-white/80 hover:text-white transition-colors shrink-0`}
-        title={isPlayerFullscreen ? t('Quitter le plein écran (Échap)') : t('Agrandir (F11)')}
-      >
-        {isPlayerFullscreen
-          ? <Minimize2 size={compactControls ? 16 : 22} />
-          : <Maximize2 size={compactControls ? 16 : 22} />}
-      </button>
+      <HoverTextTooltip text={fullscreenLabel}>
+        <button
+          onClick={isPlayerFullscreen ? onExitFullscreen : onToggleFullscreen}
+          aria-label={fullscreenLabel}
+          className={`${compactControls ? 'p-1.5 ml-1' : 'p-2.5 ml-2'} rounded-full hover:bg-white/20 text-white/80 hover:text-white transition-colors shrink-0`}
+        >
+          {isPlayerFullscreen
+            ? <Minimize2 size={compactControls ? 16 : 22} />
+            : <Maximize2 size={compactControls ? 16 : 22} />}
+        </button>
+      </HoverTextTooltip>
 
     </div>
   )

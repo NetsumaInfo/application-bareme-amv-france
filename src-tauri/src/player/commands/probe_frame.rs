@@ -37,7 +37,7 @@ pub(super) fn probe_frame_preview_with_ffmpeg(path: &str, seconds: f64, width: u
             "-vf",
             &scale,
             "-q:v",
-            "7",
+            "2",
             "-f",
             "image2pipe",
             "-vcodec",

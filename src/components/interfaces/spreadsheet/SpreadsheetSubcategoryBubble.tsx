@@ -1,6 +1,7 @@
 import type { RefObject } from 'react'
 import { useMemo } from 'react'
 import InlineTimecodeText from '@/components/notes/InlineTimecodeText'
+import { getZoomedViewport } from '@/hooks/useZoomScale'
 
 interface SpreadsheetSubcategoryBubbleCriterion {
   id: string
@@ -15,7 +16,7 @@ interface SpreadsheetSubcategoryBubbleCategory {
   criteria: SpreadsheetSubcategoryBubbleCriterion[]
 }
 
-export interface SpreadsheetSubcategoryBubbleData {
+interface SpreadsheetSubcategoryBubbleData {
   clipId: string
   clipLabel: string
   clipSubLabel: string | null
@@ -48,8 +49,9 @@ export function SpreadsheetSubcategoryBubble({
 }: SpreadsheetSubcategoryBubbleProps) {
   const style = useMemo(() => {
     if (!bubble) return undefined
-    const maxLeft = Math.max(12, window.innerWidth - BUBBLE_WIDTH - 12)
-    const maxTop = Math.max(12, window.innerHeight - BUBBLE_MIN_HEIGHT - 12)
+    const vp = getZoomedViewport()
+    const maxLeft = Math.max(12, vp.width - BUBBLE_WIDTH - 12)
+    const maxTop = Math.max(12, vp.height - BUBBLE_MIN_HEIGHT - 12)
     const left = Math.min(Math.max(12, bubble.x + 14), maxLeft)
     const top = Math.min(Math.max(12, bubble.y + 14), maxTop)
     return { left, top, width: BUBBLE_WIDTH }
@@ -66,6 +68,7 @@ export function SpreadsheetSubcategoryBubble({
       onMouseLeave={onMouseLeave}
       onWheel={(event) => event.stopPropagation()}
       onMouseDown={(event) => event.stopPropagation()}
+      role="presentation"
     >
       <div className="px-3 py-2 border-b border-gray-700/70 bg-surface-light/40 flex items-start justify-between gap-2">
         <div className="min-w-0">

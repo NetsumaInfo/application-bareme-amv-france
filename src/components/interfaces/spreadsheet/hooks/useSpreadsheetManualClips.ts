@@ -6,8 +6,9 @@ import {
   createManualClip,
   parseManualClipLine,
 } from '@/utils/clipImport'
+import { buildManualFileName } from '@/utils/manualClipParser'
 import { useI18n } from '@/i18n'
-import type { Clip, ProjectSettings } from '@/types/project'
+import type { Clip } from '@/types/project'
 
 interface UseSpreadsheetManualClipsParams {
   isDragOver: boolean
@@ -17,7 +18,6 @@ interface UseSpreadsheetManualClipsParams {
   setClips: (clips: Clip[]) => void
   setCurrentClip: (index: number) => void
   removeClip: (clipId: string) => void
-  updateSettings: (settings: Partial<ProjectSettings>) => void
 }
 
 export function useSpreadsheetManualClips({
@@ -28,7 +28,6 @@ export function useSpreadsheetManualClips({
   setClips,
   setCurrentClip,
   removeClip,
-  updateSettings,
 }: UseSpreadsheetManualClipsParams) {
   const { t } = useI18n()
   const [showNoVideoTableModal, setShowNoVideoTableModal] = useState(false)
@@ -54,15 +53,18 @@ export function useSpreadsheetManualClips({
       .trim()
   }, [])
 
+  const getClipNamePattern = useCallback(() => (
+    useProjectStore.getState().currentProject?.settings.clipNamePattern ?? 'pseudo_clip'
+  ), [])
+
   const handleAddManualRow = useCallback(() => {
     const latestClips = useProjectStore.getState().clips
-    const newClip = createManualClip({ displayName: '' }, latestClips.length)
+    const newClip = createManualClip({ displayName: '' }, latestClips.length, getClipNamePattern())
     setClips([...latestClips, newClip])
-    updateSettings({ showAddRowButton: true })
     markDirty()
     setCurrentClip(latestClips.length)
     setEditingManualClipId(newClip.id)
-  }, [markDirty, setClips, setCurrentClip, updateSettings])
+  }, [getClipNamePattern, markDirty, setClips, setCurrentClip])
 
   const handleManualClipFieldChange = useCallback((clipId: string, field: 'author' | 'displayName', value: string) => {
     const latestClips = useProjectStore.getState().clips
@@ -72,18 +74,61 @@ export function useSpreadsheetManualClips({
       const nextDisplay = field === 'displayName' ? value : clip.displayName
       const rawAuthor = nextAuthor
       const rawDisplay = nextDisplay
+      const keepSourceFileName = Boolean(clip.filePath?.trim())
       return {
         ...clip,
         author: rawAuthor || undefined,
         displayName: rawDisplay,
-        fileName: rawAuthor && rawDisplay
-          ? `${rawAuthor} - ${rawDisplay}`
-          : rawDisplay || rawAuthor || clip.fileName,
+        fileName: keepSourceFileName
+          ? clip.fileName
+          : (
+              buildManualFileName(
+                { author: rawAuthor, displayName: rawDisplay },
+                getClipNamePattern(),
+              ) || clip.fileName
+            ),
       }
     })
     setClips(next)
     markDirty()
-  }, [markDirty, setClips])
+  }, [getClipNamePattern, markDirty, setClips])
+
+  const handleStartClipIdentityEdit = useCallback((clipId: string) => {
+    const pending = pendingManualCleanupTimeoutsRef.current.get(clipId)
+    if (pending) {
+      clearTimeout(pending)
+      pendingManualCleanupTimeoutsRef.current.delete(clipId)
+    }
+    setEditingManualClipId(clipId)
+  }, [])
+
+  const handleSwapClipAuthorAndDisplayName = useCallback((clipId: string) => {
+    const latestClips = useProjectStore.getState().clips
+    let didUpdate = false
+    const next = latestClips.map((clip) => {
+      if (clip.id !== clipId) return clip
+      didUpdate = true
+      const swappedAuthor = clip.displayName ?? ''
+      const swappedDisplayName = clip.author ?? ''
+      const keepSourceFileName = Boolean(clip.filePath?.trim())
+      return {
+        ...clip,
+        author: swappedAuthor.trim() ? swappedAuthor : undefined,
+        displayName: swappedDisplayName,
+        fileName: keepSourceFileName
+          ? clip.fileName
+          : (
+              buildManualFileName(
+                { author: swappedAuthor, displayName: swappedDisplayName },
+                getClipNamePattern(),
+              ) || clip.fileName
+            ),
+      }
+    })
+    if (!didUpdate) return
+    setClips(next)
+    markDirty()
+  }, [getClipNamePattern, markDirty, setClips])
 
   const handleManualClipBlur = useCallback((clipId: string, event: FocusEvent<HTMLDivElement>) => {
     if (suppressEmptyManualCleanupRef.current || isDragOver) return
@@ -101,7 +146,26 @@ export function useSpreadsheetManualClips({
 
       const latestClips = useProjectStore.getState().clips
       const targetClip = latestClips.find((clip) => clip.id === clipId)
-      if (!targetClip || targetClip.filePath) return
+      if (!targetClip) return
+
+      if (targetClip.filePath) {
+        const normalizedAuthor = (targetClip.author ?? '').trim()
+        const normalizedDisplay = targetClip.displayName.trim()
+        setClips(
+          latestClips.map((clip) => {
+            if (clip.id !== clipId) return clip
+            return {
+              ...clip,
+              author: normalizedAuthor || undefined,
+              displayName: normalizedDisplay,
+            }
+          }),
+        )
+        if (editingManualClipId === clipId) {
+          setEditingManualClipId(null)
+        }
+        return
+      }
 
       const normalizedAuthor = normalizeManualLabel(targetClip.author)
       const normalizedDisplay = normalizeManualLabel(targetClip.displayName)
@@ -122,9 +186,10 @@ export function useSpreadsheetManualClips({
             ...clip,
             author: normalizedAuthor || undefined,
             displayName: normalizedDisplay,
-            fileName: normalizedAuthor && normalizedDisplay
-              ? `${normalizedAuthor} - ${normalizedDisplay}`
-              : normalizedDisplay || normalizedAuthor || clip.fileName,
+            fileName: buildManualFileName(
+              { author: normalizedAuthor, displayName: normalizedDisplay },
+              getClipNamePattern(),
+            ) || clip.fileName,
           }
         }),
       )
@@ -136,7 +201,7 @@ export function useSpreadsheetManualClips({
 
     pendingManualCleanupTimeoutsRef.current.set(clipId, timeout)
 
-  }, [editingManualClipId, isDragOver, isImportingClipsRef, normalizeManualLabel, removeClip, setClips, suppressEmptyManualCleanupRef])
+  }, [editingManualClipId, getClipNamePattern, isDragOver, isImportingClipsRef, normalizeManualLabel, removeClip, setClips, suppressEmptyManualCleanupRef])
 
   const handleAttachVideoToClip = useCallback(async (clipId: string) => {
     const filePaths = await tauri.openVideoFilesDialog().catch(() => null)
@@ -151,7 +216,8 @@ export function useSpreadsheetManualClips({
       return
     }
 
-    const imported = createClipFromFilePath(targetPath, 0)
+    const clipNamePattern = getClipNamePattern()
+    const imported = createClipFromFilePath(targetPath, 0, clipNamePattern)
     const next = latestClips.map((clip) => {
       if (clip.id !== clipId) return clip
       const existingAuthor = normalizeManualLabel(clip.author)
@@ -169,7 +235,7 @@ export function useSpreadsheetManualClips({
     setClips(next)
     markDirty()
     setEditingManualClipId(null)
-  }, [markDirty, normalizeManualLabel, setClips, t])
+  }, [getClipNamePattern, markDirty, normalizeManualLabel, setClips, t])
 
   const resetNoVideoTableModal = useCallback(() => {
     setShowNoVideoTableModal(false)
@@ -184,17 +250,17 @@ export function useSpreadsheetManualClips({
       .map((line) => line.trim())
       .filter(Boolean)
 
+    const clipNamePattern = getClipNamePattern()
     const entries = lines
-      .map((line) => parseManualClipLine(line))
+      .map((line) => parseManualClipLine(line, clipNamePattern))
       .filter((entry): entry is NonNullable<typeof entry> => Boolean(entry))
 
     const manualClips = (entries.length > 0 ? entries : [{ displayName: '' }]).map((entry, index) =>
-      createManualClip(entry, index))
+      createManualClip(entry, index, clipNamePattern))
     setClips(manualClips)
-    updateSettings({ showAddRowButton: true })
     markDirty()
     resetNoVideoTableModal()
-  }, [markDirty, noVideoTableInput, resetNoVideoTableModal, setClips, updateSettings])
+  }, [getClipNamePattern, markDirty, noVideoTableInput, resetNoVideoTableModal, setClips])
 
   return {
     showNoVideoTableModal,
@@ -211,6 +277,8 @@ export function useSpreadsheetManualClips({
     handleAddManualRow,
     handleManualClipFieldChange,
     handleManualClipBlur,
+    handleStartClipIdentityEdit,
+    handleSwapClipAuthorAndDisplayName,
     handleAttachVideoToClip,
     resetNoVideoTableModal,
     handleCreateNoVideoTable,

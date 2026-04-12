@@ -9,6 +9,8 @@ import {
 } from '@/i18n'
 import { useUIStore } from '@/store/useUIStore'
 import { LanguageFlagIcon } from '@/components/layout/LanguageFlagIcon'
+import { HoverTextTooltip } from '@/components/ui/HoverTextTooltip'
+import { useZoomScale } from '@/hooks/useZoomScale'
 
 interface LanguageSwitcherProps {
   compact?: boolean
@@ -25,6 +27,7 @@ export function LanguageSwitcher({
   const [open, setOpen] = useState(false)
   const rootRef = useRef<HTMLDivElement | null>(null)
   const menuRef = useRef<HTMLDivElement | null>(null)
+  const zoomScale = useZoomScale()
   const [menuPosition, setMenuPosition] = useState<{
     left: number
     top: number
@@ -58,8 +61,9 @@ export function LanguageSwitcher({
 
       const rect = trigger.getBoundingClientRect()
       const width = compact ? 224 : Math.max(220, rect.width)
-      const viewportWidth = window.innerWidth
-      const viewportHeight = window.innerHeight
+      // With CSS zoom, rect coords are zoomed but window.inner* are not → scale them.
+      const viewportWidth = window.innerWidth * zoomScale
+      const viewportHeight = window.innerHeight * zoomScale
       const estimatedHeight = 360
       const placeUp = rect.bottom + 12 + estimatedHeight > viewportHeight && rect.top > estimatedHeight * 0.45
 
@@ -81,40 +85,45 @@ export function LanguageSwitcher({
       window.removeEventListener('resize', updatePosition)
       document.removeEventListener('scroll', updatePosition, true)
     }
-  }, [align, compact, open])
+  }, [align, compact, open, zoomScale])
 
   const currentNativeLabel = APP_LANGUAGE_NATIVE_LABELS[language]
   const currentOption = APP_LANGUAGE_OPTIONS.find((option) => option.value === language) ?? APP_LANGUAGE_OPTIONS[0]
   return (
     <div ref={rootRef} className="relative inline-flex">
-      <button
-        type="button"
-        onClick={() => setOpen((value) => !value)}
-        className={`inline-flex items-center rounded-lg border border-gray-700 bg-surface-dark text-gray-200 transition-colors hover:border-gray-600 hover:text-white ${
-          compact ? 'h-8 gap-1.5 px-2' : 'h-9 gap-2.5 px-3 text-xs'
-        }`}
-        title={`${t('Changer la langue')} · ${currentNativeLabel}`}
-        aria-haspopup="menu"
-        aria-expanded={open}
-      >
-        {compact ? (
-          <span className="inline-flex h-5 min-w-[1.8rem] items-center justify-center rounded-md border border-white/10 bg-surface px-1.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-white">
-            {APP_LANGUAGE_SHORT_LABELS[currentOption.value]}
-          </span>
-        ) : (
-          <LanguageFlagIcon language={currentOption.value} size="md" />
-        )}
-        {!compact ? <span className="max-w-[8rem] truncate text-xs font-medium">{currentNativeLabel}</span> : null}
-        <ChevronDown
-          size={compact ? 11 : 12}
-          className={`shrink-0 text-gray-500 transition-transform ${open ? 'rotate-180' : ''}`}
-        />
-      </button>
+      <HoverTextTooltip text={`${t('Changer la langue')} · ${currentNativeLabel}`}>
+        <button
+          type="button"
+          onClick={() => setOpen((value) => !value)}
+          data-open={open ? 'true' : 'false'}
+          className={
+            compact
+              ? 'app-header-trigger gap-1 px-2'
+              : 'inline-flex h-9 items-center gap-2.5 rounded-lg bg-black/18 px-3 text-xs text-gray-200 transition-colors ring-1 ring-inset ring-primary-400/10 hover:bg-white/[0.04] hover:text-white'
+          }
+          aria-label={`${t('Changer la langue')} · ${currentNativeLabel}`}
+          aria-haspopup="menu"
+          aria-expanded={open}
+        >
+          {compact ? (
+            <span className="inline-flex min-w-[1.55rem] items-center justify-center text-[11px] font-semibold uppercase tracking-[0.06em] text-current">
+              {APP_LANGUAGE_SHORT_LABELS[currentOption.value]}
+            </span>
+          ) : (
+            <LanguageFlagIcon language={currentOption.value} size="md" />
+          )}
+          {!compact ? <span className="max-w-[8rem] truncate text-xs font-medium">{currentNativeLabel}</span> : null}
+          <ChevronDown
+            size={compact ? 13 : 12}
+            className={`shrink-0 transition-transform ${compact ? 'app-header-trigger-chevron' : 'text-gray-500'} ${open ? 'rotate-180' : ''}`}
+          />
+        </button>
+      </HoverTextTooltip>
 
       {open ? createPortal(
         <div
           ref={menuRef}
-          className="fixed z-[2000] rounded-xl border border-gray-700 bg-surface p-2 shadow-2xl"
+          className="fixed z-[2000] rounded-xl bg-surface p-2 shadow-2xl ring-1 ring-inset ring-primary-400/10"
           style={{
             left: `${menuPosition.left}px`,
             top: `${menuPosition.top}px`,

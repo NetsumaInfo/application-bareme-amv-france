@@ -11,6 +11,7 @@ import { useI18n } from '@/i18n'
 interface SpreadsheetLoadedViewProps {
   isDragOver: boolean
   hasClips: boolean
+  showQuickActions: boolean
   toolbarProps: ComponentProps<typeof SpreadsheetToolbar>
   tableProps: ComponentProps<typeof SpreadsheetTable>
   notesPanelProps: ComponentProps<typeof SpreadsheetNotesPanel> | null
@@ -23,6 +24,7 @@ interface SpreadsheetLoadedViewProps {
 export function SpreadsheetLoadedView({
   isDragOver,
   hasClips,
+  showQuickActions,
   toolbarProps,
   tableProps,
   notesPanelProps,
@@ -43,7 +45,7 @@ export function SpreadsheetLoadedView({
         </div>
       )}
 
-      <SpreadsheetToolbar {...toolbarProps} />
+      {showQuickActions && <SpreadsheetToolbar {...toolbarProps} />}
       <SpreadsheetTable {...tableProps} />
 
       {notesPanelProps && <SpreadsheetNotesPanel {...notesPanelProps} />}

@@ -1,9 +1,11 @@
 import { useMemo } from 'react'
 import type { ComponentProps } from 'react'
 import type { NoVideoState } from '@/components/interfaces/spreadsheet/NoVideoState'
+import type { ClipNamePattern } from '@/types/project'
 
 interface UseSpreadsheetNoVideoPropsParams {
   isDragOver: boolean
+  clipNamePattern: ClipNamePattern
   showNoVideoTableModal: boolean
   noVideoTableAccepted: boolean
   noVideoTableInput: string
@@ -20,6 +22,7 @@ interface UseSpreadsheetNoVideoPropsParams {
 
 export function useSpreadsheetNoVideoProps({
   isDragOver,
+  clipNamePattern,
   showNoVideoTableModal,
   noVideoTableAccepted,
   noVideoTableInput,
@@ -35,6 +38,7 @@ export function useSpreadsheetNoVideoProps({
 }: UseSpreadsheetNoVideoPropsParams): ComponentProps<typeof NoVideoState> {
   return useMemo(() => ({
     isDragOver,
+    clipNamePattern,
     showNoVideoTableModal,
     noVideoTableAccepted,
     noVideoTableInput,
@@ -57,6 +61,7 @@ export function useSpreadsheetNoVideoProps({
     handleImportFiles,
     handleImportFolder,
     isDragOver,
+    clipNamePattern,
     noVideoTableAccepted,
     noVideoTableError,
     noVideoTableInput,

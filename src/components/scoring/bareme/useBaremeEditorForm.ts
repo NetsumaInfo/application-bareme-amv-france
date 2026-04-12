@@ -1,6 +1,11 @@
 import { useCallback, useMemo, useState } from 'react'
 import { CATEGORY_COLOR_PRESETS, sanitizeColor } from '@/utils/colors'
-import { getCriterionCategoryLabel, getCriterionMax, normalizeCriterion } from '@/components/scoring/baremeEditorUtils'
+import {
+  emptyCriterion,
+  getCriterionCategoryLabel,
+  getCriterionMax,
+  normalizeCriterion,
+} from '@/components/scoring/baremeEditorUtils'
 import {
   addCriterionItem,
   applyGlobalStepValue,
@@ -12,13 +17,14 @@ import {
   moveCriterionItem,
   removeCriterionItem,
   setCategoryColorValue,
+  updateCriterionCategoryItem,
   updateCriterionItem,
   validateCriteriaBeforeSave,
 } from '@/components/scoring/bareme/baremeEditorStateUtils'
 import type { Bareme, Criterion } from '@/types/bareme'
 
 interface UseBaremeEditorFormParams {
-  addBareme: (bareme: Bareme) => void
+  addBareme: (bareme: Bareme) => Bareme
 }
 
 export function useBaremeEditorForm({ addBareme }: UseBaremeEditorFormParams) {
@@ -29,6 +35,7 @@ export function useBaremeEditorForm({ addBareme }: UseBaremeEditorFormParams) {
   const [categoryColors, setCategoryColors] = useState<Record<string, string>>({})
   const [globalStep, setGlobalStep] = useState(0.5)
   const [hideTotalsUntilAllScored, setHideTotalsUntilAllScored] = useState(false)
+  const [spotlightCriterionId, setSpotlightCriterionId] = useState<string | null>(null)
   const [error, setError] = useState('')
 
   const readOnly = editingBareme?.isOfficial === true
@@ -71,6 +78,7 @@ export function useBaremeEditorForm({ addBareme }: UseBaremeEditorFormParams) {
     setCategoryColors({})
     setGlobalStep(0.5)
     setHideTotalsUntilAllScored(false)
+    setSpotlightCriterionId(null)
     setError('')
   }, [])
 
@@ -90,11 +98,14 @@ export function useBaremeEditorForm({ addBareme }: UseBaremeEditorFormParams) {
         : 0.5,
     )
     setHideTotalsUntilAllScored(Boolean(bareme.hideTotalsUntilAllScored))
+    setSpotlightCriterionId(null)
     setError('')
   }, [])
 
   const addCriterion = useCallback(() => {
-    setCriteria((prev) => addCriterionItem(prev))
+    const nextCriterion = emptyCriterion()
+    setCriteria((prev) => addCriterionItem(prev, nextCriterion))
+    setSpotlightCriterionId(nextCriterion.id)
   }, [])
 
   const removeCriterion = useCallback((index: number) => {
@@ -114,7 +125,7 @@ export function useBaremeEditorForm({ addBareme }: UseBaremeEditorFormParams) {
   }, [])
 
   const updateCategoryForCriterion = useCallback((index: number, rawCategory: string) => {
-    setCriteria((prev) => updateCriterionItem(prev, index, { category: rawCategory }))
+    setCriteria((prev) => updateCriterionCategoryItem(prev, index, rawCategory))
   }, [])
 
   const commitCategoryColor = useCallback((rawCategory: string) => {
@@ -188,6 +199,7 @@ export function useBaremeEditorForm({ addBareme }: UseBaremeEditorFormParams) {
     categoryColors,
     globalStep,
     hideTotalsUntilAllScored,
+    spotlightCriterionId,
     error,
     getCategoryColor,
     startEdit,

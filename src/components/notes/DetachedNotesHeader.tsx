@@ -1,6 +1,12 @@
 import { ChevronLeft, ChevronRight, Play } from 'lucide-react'
+import { HoverTextTooltip } from '@/components/ui/HoverTextTooltip'
+import { getClipPrimaryLabel, getClipSecondaryLabel } from '@/utils/formatters'
 import type { Clip } from '@/types/project'
 import { useI18n } from '@/i18n'
+import {
+  formatShortcutAnnotationForAction,
+  type ShortcutAction,
+} from '@/utils/shortcuts'
 
 interface DetachedNotesHeaderProps {
   clip: Clip
@@ -10,6 +16,7 @@ interface DetachedNotesHeaderProps {
   shouldHideTotals: boolean
   totalScore: number
   totalPoints: number
+  shortcutBindings: Partial<Record<ShortcutAction, string>>
   onNavigate: (direction: 'prev' | 'next') => void
   onOpenPlayer: () => void
 }
@@ -22,43 +29,52 @@ export function DetachedNotesHeader({
   shouldHideTotals,
   totalScore,
   totalPoints,
+  shortcutBindings,
   onNavigate,
   onOpenPlayer,
 }: DetachedNotesHeaderProps) {
   const { t } = useI18n()
+  const primaryLabel = getClipPrimaryLabel(clip)
+  const secondaryLabel = getClipSecondaryLabel(clip)
+  const prevClipLabel = formatShortcutAnnotationForAction('prevClip', shortcutBindings, t)
+  const nextClipLabel = formatShortcutAnnotationForAction('nextClip', shortcutBindings, t)
   return (
     <>
       <div className="flex items-center justify-between px-3 py-2 border-b border-gray-700 shrink-0 bg-surface">
-        <button
-          onClick={() => onNavigate('prev')}
-          disabled={clipIndex === 0}
-          className="p-1 rounded hover:bg-surface-light text-gray-400 hover:text-white disabled:opacity-30 transition-colors"
-        >
-          <ChevronLeft size={16} />
-        </button>
+        <HoverTextTooltip text={prevClipLabel}>
+          <button
+            onClick={() => onNavigate('prev')}
+            disabled={clipIndex === 0}
+            aria-label={prevClipLabel}
+            className="p-1 rounded hover:bg-surface-light text-gray-400 hover:text-white disabled:opacity-30 transition-colors"
+          >
+            <ChevronLeft size={16} />
+          </button>
+        </HoverTextTooltip>
         <div
           className="text-center min-w-0 flex-1 px-2"
           onDoubleClick={hasVideo ? onOpenPlayer : undefined}
-          title={hasVideo ? t('Double clic pour ouvrir le lecteur') : t('Aucune vidéo liée à cette ligne')}
         >
           <div className="flex items-center justify-center gap-2 min-w-0 text-[11px] leading-none">
-            <button
-              onClick={(event) => {
-                event.stopPropagation()
-                if (!hasVideo) return
-                onOpenPlayer()
-              }}
-              disabled={!hasVideo}
-              className="p-0.5 rounded hover:bg-surface-light text-gray-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors shrink-0"
-              title={hasVideo ? t('Ouvrir la vidéo') : t('Vidéo indisponible')}
-            >
-              <Play size={13} />
-            </button>
-            <span className="font-semibold text-white truncate max-w-[38%]">{clip.displayName}</span>
-            {clip.author && (
+            <HoverTextTooltip text={hasVideo ? t('Ouvrir la vidéo') : t('Vidéo indisponible')}>
+              <button
+                onClick={(event) => {
+                  event.stopPropagation()
+                  if (!hasVideo) return
+                  onOpenPlayer()
+                }}
+                disabled={!hasVideo}
+                aria-label={hasVideo ? t('Ouvrir la vidéo') : t('Vidéo indisponible')}
+                className="p-0.5 rounded hover:bg-surface-light text-gray-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors shrink-0"
+              >
+                <Play size={13} />
+              </button>
+            </HoverTextTooltip>
+            <span className="font-semibold text-primary-300 truncate max-w-[38%]">{primaryLabel}</span>
+            {secondaryLabel && (
               <>
                 <span className="text-gray-600">-</span>
-                <span className="text-primary-400 truncate max-w-[32%]">{clip.author}</span>
+                <span className="text-gray-500 truncate max-w-[32%]">{secondaryLabel}</span>
               </>
             )}
             <span className="text-gray-500 shrink-0">
@@ -66,13 +82,16 @@ export function DetachedNotesHeader({
             </span>
           </div>
         </div>
-        <button
-          onClick={() => onNavigate('next')}
-          disabled={clipIndex >= totalClips - 1}
-          className="p-1 rounded hover:bg-surface-light text-gray-400 hover:text-white disabled:opacity-30 transition-colors"
-        >
-          <ChevronRight size={16} />
-        </button>
+        <HoverTextTooltip text={nextClipLabel}>
+          <button
+            onClick={() => onNavigate('next')}
+            disabled={clipIndex >= totalClips - 1}
+            aria-label={nextClipLabel}
+            className="p-1 rounded hover:bg-surface-light text-gray-400 hover:text-white disabled:opacity-30 transition-colors"
+          >
+            <ChevronRight size={16} />
+          </button>
+        </HoverTextTooltip>
       </div>
 
       {!shouldHideTotals && (

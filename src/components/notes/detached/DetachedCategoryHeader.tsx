@@ -22,9 +22,13 @@ export function DetachedCategoryHeader({
   return (
     <button
       onClick={onToggle}
-      className="w-full flex items-center justify-between px-3 py-2 text-left transition-colors hover:brightness-110"
+      className="w-full flex items-center justify-between px-3 py-2 text-left transition-colors border-l-[3px] border-b border-white/5 hover:bg-surface-light/85"
       style={{
-        backgroundColor: isExpanded ? withAlpha(color, 0.18) : withAlpha(color, 0.08),
+        borderLeftColor: color,
+        backgroundColor: isExpanded
+          ? 'rgb(var(--color-surface-light) / 0.92)'
+          : 'rgb(var(--color-surface) / 0.82)',
+        boxShadow: isExpanded ? `inset 0 1px 0 ${withAlpha(color, 0.12)}` : 'none',
       }}
     >
       <div className="flex items-center gap-2">
@@ -44,13 +48,13 @@ export function DetachedCategoryHeader({
         ) : (
           <span className="text-xs font-mono font-bold text-gray-600">-</span>
         )}
-        <span
-          className="text-[10px] transition-transform"
-          style={{
-            color: withAlpha(color, 0.6),
-            transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
-          }}
-        >
+          <span
+            className="text-[10px] transition-transform"
+            style={{
+              color: withAlpha(color, 0.72),
+              transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
+            }}
+          >
           ▼
         </span>
       </div>

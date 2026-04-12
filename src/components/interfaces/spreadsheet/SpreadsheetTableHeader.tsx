@@ -37,7 +37,7 @@ export function SpreadsheetTableHeader({
 }: SpreadsheetTableHeaderProps) {
   const { t } = useI18n()
   const multiPseudoDisplayMode = useProjectStore(
-    (state) => state.currentProject?.settings.multiPseudoDisplayMode ?? 'collab_mep',
+    (state) => state.currentProject?.settings.multiPseudoDisplayMode ?? 'all',
   )
   const pseudoColumnWidthClass =
     multiPseudoDisplayMode === 'collab_mep'

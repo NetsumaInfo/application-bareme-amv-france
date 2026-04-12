@@ -1,13 +1,15 @@
-import { Table, FileText } from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
 import type { InterfaceMode } from '@/types/notation'
 import type { TranslateFn } from '@/i18n'
+import { UI_ICONS } from '@/components/ui/actionIcons'
 
-export type SettingsTab = 'general' | 'notation' | 'raccourcis'
+export type SettingsTab = 'project' | 'notation' | 'application' | 'raccourcis'
 
 export function getSettingsTabs(t: TranslateFn): { id: SettingsTab; label: string }[] {
   return [
-    { id: 'general', label: t('Général') },
+    { id: 'project', label: t('Projet') },
     { id: 'notation', label: t('Notation') },
+    { id: 'application', label: t('Application') },
     { id: 'raccourcis', label: t('Raccourcis') },
   ]
 }
@@ -15,12 +17,12 @@ export function getSettingsTabs(t: TranslateFn): { id: SettingsTab; label: strin
 export function getInterfaceOptions(t: TranslateFn): {
   mode: InterfaceMode
   label: string
-  icon: typeof Table
-  iconSecondary?: typeof Table
+  icon: LucideIcon
+  iconSecondary?: LucideIcon
 }[] {
   return [
-    { mode: 'spreadsheet', label: t('Tableur'), icon: Table },
-    { mode: 'notation', label: t('Notes'), icon: FileText },
-    { mode: 'dual', label: t('Tableur + Notes'), icon: Table, iconSecondary: FileText },
+    { mode: 'spreadsheet', label: t('Tableur'), icon: UI_ICONS.spreadsheet },
+    { mode: 'notation', label: t('Commentaires'), icon: UI_ICONS.generalNote },
+    { mode: 'dual', label: t('Tableur + Commentaires'), icon: UI_ICONS.spreadsheet, iconSecondary: UI_ICONS.generalNote },
   ]
 }

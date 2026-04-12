@@ -1,5 +1,7 @@
 import { invoke } from '@tauri-apps/api/tauri'
 
+let lastGeometryKey: string | null = null
+
 export async function playerLoad(path: string): Promise<void> {
   await invoke('player_load', { path })
 }
@@ -32,11 +34,7 @@ export async function playerSetVolume(volume: number): Promise<void> {
   await invoke('player_set_volume', { volume })
 }
 
-export async function playerSetSpeed(speed: number): Promise<void> {
-  await invoke('player_set_speed', { speed })
-}
-
-export interface PlayerStatus {
+interface PlayerStatus {
   is_playing: boolean
   current_time: number
   duration: number
@@ -56,7 +54,7 @@ export interface TrackItem {
   external: boolean
 }
 
-export interface TrackListResult {
+interface TrackListResult {
   audio_tracks: TrackItem[]
   subtitle_tracks: TrackItem[]
 }
@@ -73,12 +71,20 @@ export async function playerSetAudioTrack(id: number): Promise<void> {
   await invoke('player_set_audio_track', { id })
 }
 
-export async function playerIsAvailable(): Promise<boolean> {
-  return await invoke('player_is_available')
-}
-
 export async function playerSetGeometry(x: number, y: number, width: number, height: number): Promise<void> {
-  await invoke('player_set_geometry', { x, y, width, height })
+  const nextKey = `${x}:${y}:${width}:${height}`
+  if (lastGeometryKey === nextKey) {
+    return
+  }
+  lastGeometryKey = nextKey
+  try {
+    await invoke('player_set_geometry', { x, y, width, height })
+  } catch (error) {
+    if (lastGeometryKey === nextKey) {
+      lastGeometryKey = null
+    }
+    throw error
+  }
 }
 
 export async function playerShow(): Promise<void> {
@@ -87,10 +93,6 @@ export async function playerShow(): Promise<void> {
 
 export async function playerHide(): Promise<void> {
   await invoke('player_hide')
-}
-
-export async function playerHideSurface(): Promise<void> {
-  await invoke('player_hide_surface')
 }
 
 export async function playerSetFullscreen(fullscreen: boolean): Promise<void> {

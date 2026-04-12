@@ -79,7 +79,13 @@ export function NotationCategoriesAccordion({
             />
 
             {isExpanded && (
-              <div className="px-2 py-1.5 space-y-1" style={{ backgroundColor: withAlpha(color, 0.04) }}>
+              <div
+                className="px-2 py-1.5 space-y-1 border-b border-white/5"
+                style={{
+                  background:
+                    `linear-gradient(180deg, rgb(var(--color-surface-dark) / 0.94) 0%, ${withAlpha(color, 0.03)} 100%)`,
+                }}
+              >
                 {criteria.map((criterion) => {
                   const flatIndex = flatCriteria.findIndex((item) => item.id === criterion.id)
                   const score = note?.scores[criterion.id]
@@ -130,8 +136,8 @@ export function NotationCategoriesAccordion({
                   className="mt-1"
                   textareaClassName="min-h-[36px]"
                   style={{
-                    backgroundColor: withAlpha(color, 0.05),
-                    borderColor: withAlpha(color, 0.2),
+                    backgroundColor: 'rgb(var(--color-surface-dark) / 0.78)',
+                    borderColor: 'rgb(var(--color-primary-500) / 0.24)',
                   }}
                   color={color}
                   fpsHint={clipFps ?? undefined}

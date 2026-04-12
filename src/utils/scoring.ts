@@ -1,7 +1,7 @@
 import type { Criterion, Bareme } from '@/types/bareme'
 import type { Note } from '@/types/notation'
 
-export interface ValidationResult {
+interface ValidationResult {
   isValid: boolean
   errors: string[]
 }
@@ -90,16 +90,4 @@ export function isNoteComplete(note: Note, bareme: Bareme): boolean {
     if (score.value === undefined || score.value === null || score.value === '') return false
   }
   return true
-}
-
-export function getProgressStats(
-  clips: { id: string; scored: boolean }[],
-) {
-  const scored = clips.filter((c) => c.scored).length
-  return {
-    scored,
-    total: clips.length,
-    remaining: clips.length - scored,
-    percentage: clips.length > 0 ? Math.round((scored / clips.length) * 100) : 0,
-  }
 }

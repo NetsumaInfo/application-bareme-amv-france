@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+current_branch="$(git branch --show-current)"
+if [[ "$current_branch" != "temp" ]]; then
+  exit 0
+fi
+
+remote_name="$(git config --get branch.temp.remote || printf 'origin')"
+
+git push "$remote_name" HEAD:temp

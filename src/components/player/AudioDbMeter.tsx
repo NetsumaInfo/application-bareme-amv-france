@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react'
-import * as tauri from '@/services/tauri'
+import { useMemo } from 'react'
+import { useRealtimeAudioLevels } from '@/hooks/useRealtimeAudioLevels'
 import { useI18n } from '@/i18n'
 
 interface AudioDbMeterProps {
@@ -40,33 +40,7 @@ function valueColorClass(db: number): string {
 
 export default function AudioDbMeter({ enabled, compact, tiny, muted, className }: AudioDbMeterProps) {
   const { t } = useI18n()
-  const [levels, setLevels] = useState<tauri.AudioLevels>({
-    left_db: -90,
-    right_db: -90,
-    overall_db: -90,
-    available: false,
-  })
-
-  useEffect(() => {
-    if (!enabled) return
-
-    let active = true
-    const poll = async () => {
-      try {
-        const data = await tauri.playerGetAudioLevels()
-        if (active) setLevels(data)
-      } catch {
-        // Ignore polling errors to keep UI responsive.
-      }
-    }
-
-    poll()
-    const timer = setInterval(poll, 220)
-    return () => {
-      active = false
-      clearInterval(timer)
-    }
-  }, [enabled])
+  const levels = useRealtimeAudioLevels(enabled)
 
   const leftPercent = useMemo(() => dbToPercent(levels.left_db), [levels.left_db])
   const rightPercent = useMemo(() => dbToPercent(levels.right_db), [levels.right_db])
@@ -78,7 +52,10 @@ export default function AudioDbMeter({ enabled, compact, tiny, muted, className 
   if (!enabled) return null
 
   return (
-    <div className={`flex items-center gap-1.5 ${tiny ? 'min-w-[66px]' : compact ? 'min-w-[108px]' : 'min-w-[122px]'} ${className || ''}`}>
+    <div
+      className={`flex items-center gap-1.5 ${tiny ? 'min-w-[66px]' : compact ? 'min-w-[108px]' : 'min-w-[122px]'} ${className || ''}`}
+      title={muted ? t('Muet') : `${formatDb(levels.overall_db)} dB`}
+    >
       <span className={`${compact ? 'text-[10px]' : 'text-[10px]'} text-gray-500 font-mono`}>L</span>
       <div className={`relative ${tiny ? 'w-8 h-1.5' : compact ? 'w-12 h-2' : 'w-14 h-2'} rounded-full bg-white/15 overflow-hidden`}>
         <div

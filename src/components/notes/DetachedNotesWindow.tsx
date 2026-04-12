@@ -26,9 +26,7 @@ import {
 } from '@/components/ui/AppContextMenu'
 import { useI18n } from '@/i18n'
 
-export default function DetachedNotesWindow() {
-  const { t } = useI18n()
-  const shortcutBindings = useUIStore((state) => state.shortcutBindings)
+function useDetachedNotesWindowState() {
   const [clipData, setClipData] = useState<ClipPayload | null>(null)
   const [localNote, setLocalNote] = useState<Note | null>(null)
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null)
@@ -42,6 +40,52 @@ export default function DetachedNotesWindow() {
   const baremeRef = useRef<Bareme | null>(null)
   const contextMenuRef = useRef<HTMLDivElement | null>(null)
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null)
+
+  return {
+    clipData,
+    setClipData,
+    localNote,
+    setLocalNote,
+    expandedCategory,
+    setExpandedCategory,
+    inputRefs,
+    expandedCriterionNotes,
+    setExpandedCriterionNotes,
+    categoryTextareaRefs,
+    globalTextareaRef,
+    activeNoteFieldRef,
+    clipRef,
+    clipDataRef,
+    baremeRef,
+    contextMenuRef,
+    contextMenu,
+    setContextMenu,
+  }
+}
+
+export default function DetachedNotesWindow() {
+  const { t } = useI18n()
+  const shortcutBindings = useUIStore((state) => state.shortcutBindings)
+  const {
+    clipData,
+    setClipData,
+    localNote,
+    setLocalNote,
+    expandedCategory,
+    setExpandedCategory,
+    inputRefs,
+    expandedCriterionNotes,
+    setExpandedCriterionNotes,
+    categoryTextareaRefs,
+    globalTextareaRef,
+    activeNoteFieldRef,
+    clipRef,
+    clipDataRef,
+    baremeRef,
+    contextMenuRef,
+    contextMenu,
+    setContextMenu,
+  } = useDetachedNotesWindowState()
 
   const clip = clipData?.clip ?? null
   const bareme = clipData?.bareme ?? null
@@ -60,11 +104,11 @@ export default function DetachedNotesWindow() {
   useEffect(() => {
     clipRef.current = clip
     baremeRef.current = bareme
-  }, [clip, bareme])
+  }, [bareme, baremeRef, clip, clipRef])
 
   useEffect(() => {
     clipDataRef.current = clipData
-  }, [clipData])
+  }, [clipData, clipDataRef])
 
   useEffect(() => {
     if (!contextMenu) return
@@ -85,7 +129,7 @@ export default function DetachedNotesWindow() {
       window.removeEventListener('mousedown', handlePointerDown)
       window.removeEventListener('keydown', handleEscape)
     }
-  }, [contextMenu])
+  }, [contextMenu, contextMenuRef, setContextMenu])
 
   useDetachedNotesDataBridge({
     clipData,
@@ -183,6 +227,7 @@ export default function DetachedNotesWindow() {
         shouldHideTotals={shouldHideTotals}
         totalScore={totalScore}
         totalPoints={bareme.totalPoints}
+        shortcutBindings={shortcutBindings}
         onNavigate={handleNavigateClip}
         onOpenPlayer={() => {
           emit('notes:open-player').catch(() => {})
@@ -218,6 +263,7 @@ export default function DetachedNotesWindow() {
         globalNotes={localNote?.textNotes ?? ''}
         hasVideo={Boolean(clip.filePath)}
         clipFps={clipFps}
+        shortcutBindings={shortcutBindings}
         onInsertTimecode={() => {
           insertCurrentTimecode().catch(() => {})
         }}

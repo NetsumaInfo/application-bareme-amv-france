@@ -1,4 +1,5 @@
 import { getTotalPoints } from '@/components/scoring/baremeEditorUtils'
+import { AppCheckbox } from '@/components/ui/AppCheckbox'
 import { useI18n } from '@/i18n'
 import type { Criterion } from '@/types/bareme'
 
@@ -57,16 +58,13 @@ export function BaremeEditHeaderFields({
       </div>
 
       <div className="flex flex-wrap items-center gap-4 rounded-lg border border-gray-700 bg-surface-dark/50 px-3 py-2">
-        <label className="flex items-center gap-2 text-xs text-gray-300">
-          <input
-            type="checkbox"
-            checked={hideTotalsUntilAllScored}
-            onChange={(event) => onHideTotalsChange(event.target.checked)}
-            disabled={readOnly}
-            className="accent-primary-500"
-          />
-          {t('Cacher totaux et résultats tant que tous les clips ne sont pas notés')}
-        </label>
+        <AppCheckbox
+          checked={hideTotalsUntilAllScored}
+          onChange={onHideTotalsChange}
+          disabled={readOnly}
+          label={t('Cacher totaux et résultats tant que tous les clips ne sont pas notés')}
+          className="text-xs"
+        />
       </div>
     </>
   )

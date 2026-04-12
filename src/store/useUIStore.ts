@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { emit } from '@tauri-apps/api/event'
-import type { InterfaceMode, AppTab } from '@/types/notation'
+import type { InterfaceMode, LegacyInterfaceMode, AppTab } from '@/types/notation'
 import type { ShortcutAction } from '@/utils/shortcuts'
 import { DEFAULT_SHORTCUT_BINDINGS } from '@/utils/shortcuts'
 import {
@@ -9,6 +9,7 @@ import {
   type PrimaryColorPreset,
 } from '@/utils/appTheme'
 import { applyLanguageToDocument, detectSystemLanguage, type AppLanguage } from '@/i18n/config'
+import { emitUiSettingsUpdated } from '@/utils/uiSettingsEvents'
 import * as tauri from '@/services/tauri'
 
 type ZoomMode = 'fixed' | 'navigable'
@@ -18,16 +19,19 @@ function readAudioDbPref(): boolean {
   return false
 }
 
-function normalizeInterfaceMode(mode: InterfaceMode): InterfaceMode {
+function normalizeInterfaceMode(mode: LegacyInterfaceMode): InterfaceMode {
   return mode === 'modern' ? 'notation' : mode
 }
 
 interface PersistedUiSettings {
   shortcutBindings?: Record<ShortcutAction, string>
   showAudioDb?: boolean
+  confirmClipDeletion?: boolean
   appTheme?: AppThemePreset
   primaryColorPreset?: PrimaryColorPreset
   language?: AppLanguage
+  projectsFolderPath?: string | null
+  baremesFolderPath?: string | null
 }
 
 async function persistUserSettingsPatch(patch: PersistedUiSettings) {
@@ -53,10 +57,13 @@ interface UIStore {
   hideAverages: boolean
   hideTextNotes: boolean
   showAudioDb: boolean
+  confirmClipDeletion: boolean
   sidebarCollapsed: boolean
   showProjectModal: boolean
   showBaremeEditor: boolean
+  requestedBaremeEditorId: string | null
   projectsFolderPath: string | null
+  baremesFolderPath: string | null
   showPipVideo: boolean
   zoomLevel: number
   zoomMode: ZoomMode
@@ -72,10 +79,15 @@ interface UIStore {
   toggleAverages: () => void
   toggleTextNotes: () => void
   toggleAudioDb: () => void
+  toggleConfirmClipDeletion: () => void
   toggleSidebar: () => void
   setShowProjectModal: (show: boolean) => void
   setShowBaremeEditor: (show: boolean) => void
-  setProjectsFolderPath: (path: string) => void
+  setRequestedBaremeEditorId: (baremeId: string | null) => void
+  setProjectsFolderPath: (path: string | null) => void
+  setProjectsFolderPathPreference: (path: string) => Promise<void>
+  setBaremesFolderPath: (path: string | null) => void
+  setBaremesFolderPathPreference: (path: string) => Promise<void>
   setShowPipVideo: (show: boolean) => void
   setZoomLevel: (level: number) => void
   setZoomMode: (mode: ZoomMode) => void
@@ -99,15 +111,18 @@ export const useUIStore = create<UIStore>((set) => ({
   hideAverages: false,
   hideTextNotes: false,
   showAudioDb: readAudioDbPref(),
+  confirmClipDeletion: true,
   sidebarCollapsed: false,
   showProjectModal: false,
   showBaremeEditor: false,
+  requestedBaremeEditorId: null,
   projectsFolderPath: null,
+  baremesFolderPath: null,
   showPipVideo: true,
   zoomLevel: 100,
   zoomMode: 'fixed',
   appTheme: 'midnight',
-  primaryColorPreset: 'ocean',
+  primaryColorPreset: 'petrol',
   language: defaultLanguage,
   shortcutBindings: { ...DEFAULT_SHORTCUT_BINDINGS },
   isNotesDetached: false,
@@ -122,12 +137,41 @@ export const useUIStore = create<UIStore>((set) => ({
       const next = !state.showAudioDb
       persistUserSettingsPatch({ showAudioDb: next }).catch(() => {})
       broadcastAudioDbSetting(next)
+      emitUiSettingsUpdated({ showAudioDb: next })
       return { showAudioDb: next }
+    }),
+  toggleConfirmClipDeletion: () =>
+    set((state) => {
+      const next = !state.confirmClipDeletion
+      persistUserSettingsPatch({ confirmClipDeletion: next }).catch(() => {})
+      emitUiSettingsUpdated({ confirmClipDeletion: next })
+      return { confirmClipDeletion: next }
     }),
   toggleSidebar: () => set((s) => ({ sidebarCollapsed: !s.sidebarCollapsed })),
   setShowProjectModal: (show) => set({ showProjectModal: show }),
-  setShowBaremeEditor: (show) => set({ showBaremeEditor: show }),
+  setShowBaremeEditor: (show) => set((state) => ({
+    showBaremeEditor: show,
+    requestedBaremeEditorId: show ? state.requestedBaremeEditorId : null,
+  })),
+  setRequestedBaremeEditorId: (baremeId) => set({ requestedBaremeEditorId: baremeId }),
   setProjectsFolderPath: (path) => set({ projectsFolderPath: path }),
+  setProjectsFolderPathPreference: async (path) => {
+    const next = path.trim()
+    if (!next) return
+    await tauri.ensureDirectoryExists(next)
+    await persistUserSettingsPatch({ projectsFolderPath: next })
+    emitUiSettingsUpdated({ projectsFolderPath: next })
+    set({ projectsFolderPath: next })
+  },
+  setBaremesFolderPath: (path) => set({ baremesFolderPath: path }),
+  setBaremesFolderPathPreference: async (path) => {
+    const next = path.trim()
+    if (!next) return
+    await tauri.ensureDirectoryExists(next)
+    await persistUserSettingsPatch({ baremesFolderPath: next })
+    emitUiSettingsUpdated({ baremesFolderPath: next })
+    set({ baremesFolderPath: next })
+  },
   setShowPipVideo: (show) => set({ showPipVideo: show }),
   setZoomLevel: (level) => set({ zoomLevel: level }),
   setZoomMode: (mode) => set({ zoomMode: mode }),
@@ -135,28 +179,33 @@ export const useUIStore = create<UIStore>((set) => ({
     set(() => {
       applyAppearanceToDocument(theme, useUIStore.getState().primaryColorPreset)
       persistUserSettingsPatch({ appTheme: theme }).catch(() => {})
+      emitUiSettingsUpdated({ appTheme: theme })
       return { appTheme: theme }
     }),
   setPrimaryColorPreset: (preset) =>
     set(() => {
       applyAppearanceToDocument(useUIStore.getState().appTheme, preset)
       persistUserSettingsPatch({ primaryColorPreset: preset }).catch(() => {})
+      emitUiSettingsUpdated({ primaryColorPreset: preset })
       return { primaryColorPreset: preset }
     }),
   setLanguage: (language) =>
     set(() => {
       applyLanguageToDocument(language)
       persistUserSettingsPatch({ language }).catch(() => {})
+      emitUiSettingsUpdated({ language })
       return { language }
     }),
   setShortcut: (action, shortcut) =>
     set((state) => {
       const next = { ...state.shortcutBindings, [action]: shortcut }
       persistUserSettingsPatch({ shortcutBindings: next }).catch(() => {})
+      emitUiSettingsUpdated({ shortcutBindings: next })
       return { shortcutBindings: next }
     }),
   resetShortcuts: () => {
     persistUserSettingsPatch({ shortcutBindings: { ...DEFAULT_SHORTCUT_BINDINGS } }).catch(() => {})
+    emitUiSettingsUpdated({ shortcutBindings: { ...DEFAULT_SHORTCUT_BINDINGS } })
     set({ shortcutBindings: { ...DEFAULT_SHORTCUT_BINDINGS } })
   },
   setNotesDetached: (detached) => set({ isNotesDetached: detached }),
@@ -165,5 +214,5 @@ export const useUIStore = create<UIStore>((set) => ({
   resetZoom: () => set({ zoomLevel: 100 }),
 }))
 
-applyAppearanceToDocument('midnight', 'ocean')
+applyAppearanceToDocument('midnight', 'petrol')
 applyLanguageToDocument(defaultLanguage)

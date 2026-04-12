@@ -1,8 +1,10 @@
+import { FileText } from 'lucide-react'
 import type { ReactNode } from 'react'
 import type {
   ResultatsGlobalVariant,
   ResultatsMainView,
 } from '@/components/interfaces/resultats/types'
+import { HoverTextTooltip } from '@/components/ui/HoverTextTooltip'
 import { useI18n } from '@/i18n'
 
 interface ResultatsViewModeControlsProps {
@@ -10,6 +12,8 @@ interface ResultatsViewModeControlsProps {
   onMainViewChange: (view: ResultatsMainView) => void
   globalVariant: ResultatsGlobalVariant
   onGlobalVariantChange: (variant: ResultatsGlobalVariant) => void
+  notesPanelHidden: boolean
+  onToggleNotesPanel: () => void
 }
 
 function SegmentedButton({
@@ -25,10 +29,10 @@ function SegmentedButton({
     <button
       type="button"
       onClick={onClick}
-      className={`px-2.5 py-1.5 rounded-md text-xs border transition-colors ${
+      className={`inline-flex h-6 items-center rounded-md px-2 text-[11px] transition-colors ${
         active
-          ? 'bg-primary-600/18 border-primary-500/55 text-primary-200'
-          : 'bg-surface-dark border-gray-700 text-gray-300 hover:text-white hover:border-gray-600'
+          ? 'bg-surface-dark/80 text-white'
+          : 'text-gray-400 hover:bg-white/5 hover:text-white'
       }`}
     >
       {children}
@@ -41,11 +45,13 @@ export function ResultatsViewModeControls({
   onMainViewChange,
   globalVariant,
   onGlobalVariantChange,
+  notesPanelHidden,
+  onToggleNotesPanel,
 }: ResultatsViewModeControlsProps) {
   const { t } = useI18n()
   return (
-    <div className="rounded-lg border border-gray-700 bg-surface-dark/60 p-2">
-      <div className="flex flex-wrap items-center gap-2">
+    <div className="flex min-w-0 flex-wrap items-center gap-0.5">
+      <div className="flex min-w-0 flex-wrap items-center gap-0.5">
         <SegmentedButton active={mainView === 'judge'} onClick={() => onMainViewChange('judge')}>
           {t('Tableau par juge')}
         </SegmentedButton>
@@ -58,18 +64,36 @@ export function ResultatsViewModeControls({
         <SegmentedButton active={mainView === 'judgeNotes'} onClick={() => onMainViewChange('judgeNotes')}>
           {t('Notes des juges')}
         </SegmentedButton>
-      </div>
 
-      {mainView === 'global' && (
-        <div className="mt-2 flex flex-wrap items-center gap-2">
-          <SegmentedButton active={globalVariant === 'detailed'} onClick={() => onGlobalVariantChange('detailed')}>
-            {t('Détaillé')}
-          </SegmentedButton>
-          <SegmentedButton active={globalVariant === 'category'} onClick={() => onGlobalVariantChange('category')}>
-            {t('Par catégorie')}
-          </SegmentedButton>
-        </div>
-      )}
+        {mainView === 'global' && (
+          <div
+            className="ml-1 flex items-center gap-0.5 rounded-md border-l-2 pl-2"
+            style={{ borderColor: 'rgb(var(--color-primary-500) / 0.7)' }}
+          >
+            <SegmentedButton active={globalVariant === 'detailed'} onClick={() => onGlobalVariantChange('detailed')}>
+              {t('Détaillé')}
+            </SegmentedButton>
+            <SegmentedButton active={globalVariant === 'category'} onClick={() => onGlobalVariantChange('category')}>
+              {t('Par catégorie')}
+            </SegmentedButton>
+          </div>
+        )}
+
+        <HoverTextTooltip text={notesPanelHidden ? t('Afficher note générale') : t('Masquer note générale')}>
+          <button
+            type="button"
+            onClick={onToggleNotesPanel}
+            aria-label={notesPanelHidden ? t('Afficher note générale') : t('Masquer note générale')}
+            className={`ml-1 inline-flex h-6 w-6 items-center justify-center rounded-md transition-colors ${
+              notesPanelHidden
+                ? 'text-gray-500 hover:bg-white/5 hover:text-white'
+                : 'bg-surface-dark/80 text-gray-200 hover:bg-white/5 hover:text-white'
+            }`}
+          >
+            <FileText size={14} />
+          </button>
+        </HoverTextTooltip>
+      </div>
     </div>
   )
 }

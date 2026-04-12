@@ -1,5 +1,5 @@
-import type { ChangeEvent } from 'react'
 import { formatTime } from '@/utils/formatters'
+import { AppRangeSlider } from '@/components/ui/AppRangeSlider'
 import type { NoteTimecodeMarker } from '@/utils/timecodes'
 import { useI18n } from '@/i18n'
 
@@ -26,25 +26,20 @@ export default function PlayerSeekBar({
   const markerSizeClass = compact ? 'w-1.5 h-1.5' : 'w-2 h-2'
   const markerYOffsetClass = compact ? '-translate-y-1/2' : '-translate-y-1/2'
 
-  const handleSeekChange = (event: ChangeEvent<HTMLInputElement>) => {
-    onSeek(Number(event.target.value))
-  }
-
   return (
     <div className="flex items-center gap-2">
       <span className={`text-gray-400 font-mono ${compact ? 'text-[8px] w-7 text-right shrink-0' : 'text-[10px] w-10 text-right'}`}>
         {formatTime(currentTime)}
       </span>
       <div className="relative flex-1">
-        <input
-          type="range"
+        <AppRangeSlider
           min={0}
           max={duration || 100}
           step={0.1}
           value={currentTime}
-          onChange={handleSeekChange}
-          className="w-full h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-primary-500"
+          onChange={onSeek}
           disabled={!isLoaded}
+          ariaLabel={t('Lecture')}
         />
         {duration > 0 && noteMarkers.length > 0 && (
           <div className="pointer-events-none absolute left-0 right-0 top-1/2 -translate-y-1/2 h-0">

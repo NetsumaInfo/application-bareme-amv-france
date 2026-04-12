@@ -23,7 +23,7 @@ interface UseAppShortcutMapsOptions {
   setCurrentClipMiniatureFrame: () => Promise<void>
   undoLastChange: () => void
   currentTab: 'notation' | 'resultats' | 'export'
-  currentInterface: 'spreadsheet' | 'modern' | 'notation' | 'dual'
+  currentInterface: 'spreadsheet' | 'notation' | 'dual'
   appRootRef: RefObject<HTMLDivElement | null>
 }
 

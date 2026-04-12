@@ -13,9 +13,10 @@ export function useProjectVideoActions() {
   const { currentProject, clips, setClips, updateProject } = useProjectStore()
 
   const buildImportedClipsFromFolder = async (folderPath: string): Promise<Clip[]> => {
-    const latestClips = useProjectStore.getState().clips
+    const { clips: latestClips, currentProject: latestProject } = useProjectStore.getState()
+    const clipNamePattern = latestProject?.settings.clipNamePattern ?? 'pseudo_clip'
     const videos = await tauri.scanVideoFolder(folderPath)
-    return videos.map((video, index) => createClipFromVideoMeta(video, latestClips.length + index))
+    return videos.map((video, index) => createClipFromVideoMeta(video, latestClips.length + index, clipNamePattern))
   }
 
   const handleImportFolder = async () => {
@@ -46,8 +47,9 @@ export function useProjectVideoActions() {
       const filePaths = await tauri.openVideoFilesDialog()
       if (!filePaths || filePaths.length === 0) return
 
+      const clipNamePattern = useProjectStore.getState().currentProject?.settings.clipNamePattern ?? 'pseudo_clip'
       const importedClips: Clip[] = filePaths.map((filePath, index) =>
-        createClipFromFilePath(filePath, latestClips.length + index),
+        createClipFromFilePath(filePath, latestClips.length + index, clipNamePattern),
       )
       const merged = mergeImportedVideosWithClips(latestClips, importedClips)
       if (merged.addedCount > 0 || merged.linkedCount > 0) {

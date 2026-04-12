@@ -31,7 +31,6 @@ L’application est conçue pour une utilisation fluide en jury, avec lecteur vi
 L’application propose 5 interfaces qui partagent le même état global (Zustand) :
 
 - **Spreadsheet** (tableur)
-- **Modern** (cartes)
 - **Notation**
 - **Resultats**
 - **Export**
@@ -94,6 +93,12 @@ L’application propose 5 interfaces qui partagent le même état global (Zustan
 - Création, ouverture, sauvegarde de projets JSON
 - Autosave dans le dossier Documents utilisateur
 - Import vidéo par dossier ou sélection multi-fichiers
+- Import tabulaire depuis l’accueil par glisser-déposer :
+  - **CSV**
+  - **TSV**
+  - **XLSX**
+- Détection automatique du juge, des clips, des notes et du barème à partir du fichier importé
+- Préremplissage de la modale de création de projet après drop, puis entrée directe dans le projet
 
 ## Prérequis
 
@@ -198,11 +203,10 @@ src/                    Frontend React
       hooks/            Hooks lecteur
       mediaInfo/        Composants panneau MediaInfo
       overlay/          Composants overlay plein écran
-    interfaces/         SpreadsheetInterface, ModernInterface,
+    interfaces/         SpreadsheetInterface,
                         NotationInterface, ResultatsInterface,
                         ExportInterface, InterfaceSwitcher
       spreadsheet/      Sous-composants tableur + hooks
-      modern/           Sous-composants vue moderne
       notation/         Sous-composants vue notes
       resultats/        Vues résultats (Global, Détaillé, Juge,
                         TopLists, ContextMenus) + hooks

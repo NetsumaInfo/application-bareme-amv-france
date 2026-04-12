@@ -2,7 +2,11 @@ import { Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, Maximize2, Minimi
 import SubtitleSelector from '@/components/player/SubtitleSelector'
 import AudioTrackSelector from '@/components/player/AudioTrackSelector'
 import AudioDbMeter from '@/components/player/AudioDbMeter'
+import { HoverTextTooltip } from '@/components/ui/HoverTextTooltip'
+import { AppRangeSlider } from '@/components/ui/AppRangeSlider'
+import { useUIStore } from '@/store/useUIStore'
 import { useI18n } from '@/i18n'
+import { formatShortcutAnnotationForAction } from '@/utils/shortcuts'
 
 interface PlayerMainControlsProps {
   isLoaded: boolean
@@ -44,49 +48,79 @@ export default function PlayerMainControls({
   onToggleFullscreen,
 }: PlayerMainControlsProps) {
   const { t } = useI18n()
+  const shortcutBindings = useUIStore((state) => state.shortcutBindings)
+  const frameBackLabel = formatShortcutAnnotationForAction('frameBack', shortcutBindings, t)
+  const seekBackLabel = formatShortcutAnnotationForAction('seekBack', shortcutBindings, t)
+  const togglePauseLabel = formatShortcutAnnotationForAction(
+    'togglePause',
+    shortcutBindings,
+    t,
+    isPlaying ? t('Pause') : t('Lecture'),
+  )
+  const seekForwardLabel = formatShortcutAnnotationForAction('seekForward', shortcutBindings, t)
+  const frameForwardLabel = formatShortcutAnnotationForAction('frameForward', shortcutBindings, t)
+  const screenshotLabel = formatShortcutAnnotationForAction('screenshot', shortcutBindings, t)
+  const miniatureLabel = formatShortcutAnnotationForAction('setMiniatureFrame', shortcutBindings, t)
+  const fullscreenLabel = formatShortcutAnnotationForAction(
+    isFullscreen ? 'exitFullscreen' : 'fullscreen',
+    shortcutBindings,
+    t,
+    isFullscreen ? t('Quitter le plein écran') : t('Plein écran'),
+  )
 
   return (
     <div className="flex items-center justify-between">
       <div className="flex items-center gap-1">
-        <button
-          onClick={onFrameBackStep}
-          className="p-1 rounded hover:bg-surface-light text-gray-400 hover:text-white transition-colors"
-          disabled={!isLoaded}
-          title={t('Image précédente (,)')}
-        >
-          <ChevronLeft size={14} />
-        </button>
-        <button
-          onClick={onSeekBack}
-          className="p-1 rounded hover:bg-surface-light text-gray-400 hover:text-white transition-colors"
-          disabled={!isLoaded}
-          title={t('Reculer 5s')}
-        >
-          <SkipBack size={14} />
-        </button>
-        <button
-          onClick={onTogglePause}
-          className="p-1.5 rounded-full bg-primary-600 hover:bg-primary-500 text-white transition-colors"
-          disabled={!isLoaded}
-        >
-          {isPlaying ? <Pause size={14} /> : <Play size={14} />}
-        </button>
-        <button
-          onClick={onSeekForward}
-          className="p-1 rounded hover:bg-surface-light text-gray-400 hover:text-white transition-colors"
-          disabled={!isLoaded}
-          title={t('Avancer 5s')}
-        >
-          <SkipForward size={14} />
-        </button>
-        <button
-          onClick={onFrameStep}
-          className="p-1 rounded hover:bg-surface-light text-gray-400 hover:text-white transition-colors"
-          disabled={!isLoaded}
-          title={t('Image suivante (.)')}
-        >
-          <ChevronRight size={14} />
-        </button>
+        <HoverTextTooltip text={frameBackLabel}>
+          <button
+            onClick={onFrameBackStep}
+            aria-label={frameBackLabel}
+            className="p-1 rounded hover:bg-surface-light text-gray-400 hover:text-white transition-colors"
+            disabled={!isLoaded}
+          >
+            <ChevronLeft size={14} />
+          </button>
+        </HoverTextTooltip>
+        <HoverTextTooltip text={seekBackLabel}>
+          <button
+            onClick={onSeekBack}
+            aria-label={seekBackLabel}
+            className="p-1 rounded hover:bg-surface-light text-gray-400 hover:text-white transition-colors"
+            disabled={!isLoaded}
+          >
+            <SkipBack size={14} />
+          </button>
+        </HoverTextTooltip>
+        <HoverTextTooltip text={togglePauseLabel}>
+          <button
+            onClick={onTogglePause}
+            aria-label={togglePauseLabel}
+            className="p-1.5 rounded-full bg-primary-600 hover:bg-primary-500 text-white transition-colors"
+            disabled={!isLoaded}
+          >
+            {isPlaying ? <Pause size={14} /> : <Play size={14} />}
+          </button>
+        </HoverTextTooltip>
+        <HoverTextTooltip text={seekForwardLabel}>
+          <button
+            onClick={onSeekForward}
+            aria-label={seekForwardLabel}
+            className="p-1 rounded hover:bg-surface-light text-gray-400 hover:text-white transition-colors"
+            disabled={!isLoaded}
+          >
+            <SkipForward size={14} />
+          </button>
+        </HoverTextTooltip>
+        <HoverTextTooltip text={frameForwardLabel}>
+          <button
+            onClick={onFrameStep}
+            aria-label={frameForwardLabel}
+            className="p-1 rounded hover:bg-surface-light text-gray-400 hover:text-white transition-colors"
+            disabled={!isLoaded}
+          >
+            <ChevronRight size={14} />
+          </button>
+        </HoverTextTooltip>
       </div>
 
       <div className="flex items-center gap-1">
@@ -96,49 +130,53 @@ export default function PlayerMainControls({
         >
           {muted || volume === 0 ? <VolumeX size={14} /> : <Volume2 size={14} />}
         </button>
-        <input
-          type="range"
+        <AppRangeSlider
           min={0}
           max={100}
           value={muted ? 0 : volume}
-          onChange={(event) => {
-            onSetVolume(Number(event.target.value))
-          }}
-          className="w-16 h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-primary-500"
+          onChange={onSetVolume}
+          className="w-16"
+          ariaLabel={t('Volume')}
         />
 
         <AudioDbMeter enabled={showAudioDb} compact muted={muted || volume === 0} className="ml-1" />
         <SubtitleSelector />
         <AudioTrackSelector />
 
-        <button
-          onClick={onScreenshot}
-          className="p-1 rounded hover:bg-surface-light text-gray-400 hover:text-white transition-colors"
-          disabled={!isLoaded}
-          title={t("Capture d'écran (Ctrl+Shift+G)")}
-        >
-          <Camera size={14} />
-        </button>
-
-        {miniaturesEnabled && (
+        <HoverTextTooltip text={screenshotLabel}>
           <button
-            onClick={onSetMiniatureFrame}
+            onClick={onScreenshot}
+            aria-label={screenshotLabel}
             className="p-1 rounded hover:bg-surface-light text-gray-400 hover:text-white transition-colors"
             disabled={!isLoaded}
-            title={t('Définir la frame miniature (Ctrl+Shift+M)')}
           >
-            <ImagePlus size={14} />
+            <Camera size={14} />
           </button>
+        </HoverTextTooltip>
+
+        {miniaturesEnabled && (
+          <HoverTextTooltip text={miniatureLabel}>
+            <button
+              onClick={onSetMiniatureFrame}
+              aria-label={miniatureLabel}
+              className="p-1 rounded hover:bg-surface-light text-gray-400 hover:text-white transition-colors"
+              disabled={!isLoaded}
+            >
+              <ImagePlus size={14} />
+            </button>
+          </HoverTextTooltip>
         )}
 
-        <button
-          onClick={onToggleFullscreen}
-          className="p-1 rounded hover:bg-surface-light text-gray-400 hover:text-white transition-colors ml-1"
-          disabled={!isLoaded}
-          title={isFullscreen ? t('Quitter le plein écran (F11)') : t('Plein écran (F11)')}
-        >
-          {isFullscreen ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
-        </button>
+        <HoverTextTooltip text={fullscreenLabel}>
+          <button
+            onClick={onToggleFullscreen}
+            aria-label={fullscreenLabel}
+            className="p-1 rounded hover:bg-surface-light text-gray-400 hover:text-white transition-colors ml-1"
+            disabled={!isLoaded}
+          >
+            {isFullscreen ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
+          </button>
+        </HoverTextTooltip>
       </div>
     </div>
   )

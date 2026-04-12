@@ -8,7 +8,7 @@ export function SettingsToggle({
   return (
     <button
       onClick={onChange}
-      className={`relative w-9 h-5 rounded-full transition-colors flex-shrink-0 ${checked ? 'bg-primary-600' : 'bg-gray-700'
+      className={`relative h-5 w-9 rounded-full transition-colors flex-shrink-0 ring-1 ring-inset ${checked ? 'bg-primary-600 ring-primary-400/10' : 'bg-gray-700 ring-primary-400/10'
         }`}
     >
       <span

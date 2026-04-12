@@ -1,8 +1,33 @@
 import { getClipPrimaryLabel, getClipSecondaryLabel } from '@/utils/formatters'
 import { withAlpha } from '@/utils/colors'
-import { getGroupStep } from '@/components/interfaces/resultats/scoreDistribution'
-import type { ResultatsTableProps } from '@/components/interfaces/resultats/types'
+import type { CategoryGroup, JudgeSource } from '@/utils/results'
+import type { ResultatsRow } from '@/components/interfaces/resultats/types'
 import { useI18n } from '@/i18n'
+
+function getGroupStep(criteria: Array<{ step?: number | null }>): number {
+  const steps = criteria
+    .map((criterion) => Number(criterion.step))
+    .filter((value) => Number.isFinite(value) && value > 0)
+  if (steps.length === 0) return 0.5
+  return Math.min(...steps)
+}
+
+interface ResultatsTableProps {
+  canSortByScore: boolean
+  currentBaremeTotalPoints: number
+  categoryGroups: CategoryGroup[]
+  judges: JudgeSource[]
+  rows: ResultatsRow[]
+  selectedClipId: string | null
+  draftCells: Record<string, string>
+  onSelectClip: (clipId: string) => void
+  onOpenClipInNotation: (clipId: string) => void
+  onOpenClipContextMenu: (clipId: string, x: number, y: number) => void
+  getCellKey: (clipId: string, category: string, judgeKey: string) => string
+  onSetDraftCell: (key: string, value: string) => void
+  onCommitDraftCell: (clipId: string, category: string, judgeKey: string) => void
+  onClearDraftCell: (key: string) => void
+}
 
 export function ResultatsTable({
   canSortByScore,
@@ -127,11 +152,7 @@ export function ResultatsTable({
                   onContextMenu={(event) => {
                     event.preventDefault()
                     event.stopPropagation()
-                    const width = 220
-                    const height = 210
-                    const x = Math.max(8, Math.min(event.clientX, window.innerWidth - width - 8))
-                    const y = Math.max(8, Math.min(event.clientY, window.innerHeight - height - 8))
-                    onOpenClipContextMenu(row.clip.id, x, y)
+                    onOpenClipContextMenu(row.clip.id, event.clientX, event.clientY)
                   }}
                 >
                   <div className="flex flex-col min-w-0 leading-tight">
@@ -165,11 +186,7 @@ export function ResultatsTable({
                           onContextMenu={(event) => {
                             event.preventDefault()
                             event.stopPropagation()
-                            const width = 225
-                            const height = 170
-                            const x = Math.max(8, Math.min(event.clientX, window.innerWidth - width - 8))
-                            const y = Math.max(8, Math.min(event.clientY, window.innerHeight - height - 8))
-                            onOpenClipContextMenu(row.clip.id, x, y)
+                            onOpenClipContextMenu(row.clip.id, event.clientX, event.clientY)
                           }}
                           onChange={(event) => {
                             onSetDraftCell(key, event.target.value)

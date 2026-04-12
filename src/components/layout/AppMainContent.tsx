@@ -1,5 +1,5 @@
 import { lazy, Suspense } from 'react'
-import { AnimatePresence, motion } from 'motion/react'
+import { AnimatePresence, LazyMotion, domAnimation, m, useReducedMotion } from 'motion/react'
 import Header from '@/components/layout/Header'
 import { WelcomeScreen } from '@/components/layout/WelcomeScreen'
 import type { Project } from '@/types/project'
@@ -34,6 +34,8 @@ export function AppMainContent({
   currentTab,
   onOpenSettings,
 }: AppMainContentProps) {
+  const prefersReducedMotion = useReducedMotion()
+
   return (
     <>
       <Header onOpenSettings={onOpenSettings} />
@@ -41,22 +43,24 @@ export function AppMainContent({
       {!currentProject ? (
         <WelcomeScreen />
       ) : (
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={currentTab}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.12 }}
-            className="flex flex-col flex-1 overflow-hidden"
-          >
-            <Suspense fallback={<TabLoadingFallback />}>
-              {currentTab === 'notation' ? <NotationTabContent /> : null}
-              {currentTab === 'resultats' ? <ResultatsInterface /> : null}
-              {currentTab === 'export' ? <ExportInterface /> : null}
-            </Suspense>
-          </motion.div>
-        </AnimatePresence>
+        <LazyMotion features={domAnimation}>
+          <AnimatePresence mode="wait">
+            <m.div
+              key={currentTab}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: prefersReducedMotion ? 0 : 0.12 }}
+              className="flex flex-col flex-1 overflow-hidden"
+            >
+              <Suspense fallback={<TabLoadingFallback />}>
+                {currentTab === 'notation' ? <NotationTabContent /> : null}
+                {currentTab === 'resultats' ? <ResultatsInterface /> : null}
+                {currentTab === 'export' ? <ExportInterface /> : null}
+              </Suspense>
+            </m.div>
+          </AnimatePresence>
+        </LazyMotion>
       )}
     </>
   )

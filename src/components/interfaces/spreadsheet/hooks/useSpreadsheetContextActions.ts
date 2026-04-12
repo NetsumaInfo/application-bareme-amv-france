@@ -29,11 +29,7 @@ export function useSpreadsheetContextActions({
   const contextMenuRef = useRef<HTMLDivElement | null>(null)
 
   const openClipContextMenu = useCallback((clipId: string, x: number, y: number) => {
-    const width = 210
-    const height = 248
-    const paddedX = Math.max(8, Math.min(x, window.innerWidth - width - 8))
-    const paddedY = Math.max(8, Math.min(y, window.innerHeight - height - 8))
-    setContextMenu({ clipId, x: paddedX, y: paddedY })
+    setContextMenu({ clipId, x, y })
   }, [])
 
   useEffect(() => {

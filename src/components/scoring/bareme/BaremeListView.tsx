@@ -1,10 +1,12 @@
 import { Copy, Download, Plus, Trash2, Upload } from 'lucide-react'
+import { HoverTextTooltip } from '@/components/ui/HoverTextTooltip'
 import { useI18n } from '@/i18n'
 import { CATEGORY_COLOR_PRESETS, sanitizeColor, withAlpha } from '@/utils/colors'
 import type { Bareme } from '@/types/bareme'
 
 interface BaremeListViewProps {
   availableBaremes: Bareme[]
+  baremesFolderPath: string | null
   onCreate: () => void
   onImportJson: () => void
   onEdit: (bareme: Bareme) => void
@@ -15,6 +17,7 @@ interface BaremeListViewProps {
 
 export function BaremeListView({
   availableBaremes,
+  baremesFolderPath,
   onCreate,
   onImportJson,
   onEdit,
@@ -96,34 +99,53 @@ export function BaremeListView({
                 >
                   {bareme.isOfficial ? t('Voir') : t('Modifier')}
                 </button>
-                <button
-                  onClick={() => onDuplicate(bareme)}
-                  className="p-1 rounded text-gray-400 hover:text-white hover:bg-surface-light transition-colors"
-                  title={t('Dupliquer')}
-                >
-                  <Copy size={14} />
-                </button>
-                <button
-                  onClick={() => onExportJson(bareme)}
-                  className="p-1 rounded text-gray-400 hover:text-white hover:bg-surface-light transition-colors"
-                  title={t('Exporter JSON')}
-                >
-                  <Download size={14} />
-                </button>
-                {!bareme.isOfficial && (
+                <HoverTextTooltip text={t('Dupliquer')}>
                   <button
-                    onClick={() => onDelete(bareme.id)}
-                    className="p-1 rounded text-gray-500 hover:text-accent hover:bg-surface-light transition-colors"
-                    title={t('Supprimer')}
+                    onClick={() => onDuplicate(bareme)}
+                    aria-label={t('Dupliquer')}
+                    className="p-1 rounded text-gray-400 hover:text-white hover:bg-surface-light transition-colors"
                   >
-                    <Trash2 size={14} />
+                    <Copy size={14} />
                   </button>
+                </HoverTextTooltip>
+                <HoverTextTooltip text={t('Exporter JSON')}>
+                  <button
+                    onClick={() => onExportJson(bareme)}
+                    aria-label={t('Exporter JSON')}
+                    className="p-1 rounded text-gray-400 hover:text-white hover:bg-surface-light transition-colors"
+                  >
+                    <Download size={14} />
+                  </button>
+                </HoverTextTooltip>
+                {!bareme.isOfficial && (
+                  <HoverTextTooltip text={t('Supprimer')}>
+                    <button
+                      onClick={() => onDelete(bareme.id)}
+                      aria-label={t('Supprimer')}
+                      className="p-1 rounded text-gray-500 hover:text-accent hover:bg-surface-light transition-colors"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </HoverTextTooltip>
                 )}
               </div>
             </div>
           </div>
         )
       })}
+
+      {baremesFolderPath ? (
+        <div className="pt-1">
+          <HoverTextTooltip text={baremesFolderPath}>
+            <p className="text-[11px] text-gray-500 truncate">
+              {t('Dossier des barèmes : {path}', { path: baremesFolderPath })}
+            </p>
+          </HoverTextTooltip>
+          <p className="text-[11px] text-gray-600 mt-1">
+            {t('Les barèmes personnalisés sont enregistrés automatiquement dans ce dossier.')}
+          </p>
+        </div>
+      ) : null}
     </div>
   )
 }

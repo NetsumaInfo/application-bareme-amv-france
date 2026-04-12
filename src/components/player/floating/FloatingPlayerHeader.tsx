@@ -1,4 +1,5 @@
 import { X } from 'lucide-react'
+import { HoverTextTooltip } from '@/components/ui/HoverTextTooltip'
 import { useI18n } from '@/i18n'
 
 interface FloatingPlayerHeaderProps {
@@ -23,16 +24,19 @@ export function FloatingPlayerHeader({
       className={`flex items-center justify-between bg-gradient-to-r from-gray-900 to-gray-800 px-3 py-1.5 cursor-move select-none ${
         isDragging ? 'opacity-100' : 'opacity-90 hover:opacity-100'
       }`}
+      role="presentation"
     >
       <span className="text-[10px] font-medium text-gray-400">{title}</span>
       {isHovering && (
-        <button
-          onClick={onClose}
-          className="flex items-center justify-center w-4 h-4 rounded hover:bg-gray-700 transition-colors"
-          title={t('Fermer')}
-        >
-          <X size={12} className="text-gray-400" />
-        </button>
+        <HoverTextTooltip text={t('Fermer')}>
+          <button
+            onClick={onClose}
+            aria-label={t('Fermer')}
+            className="flex items-center justify-center w-4 h-4 rounded hover:bg-gray-700 transition-colors"
+          >
+            <X size={12} className="text-gray-400" />
+          </button>
+        </HoverTextTooltip>
       )}
     </div>
   )

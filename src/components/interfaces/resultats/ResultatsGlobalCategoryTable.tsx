@@ -39,22 +39,22 @@ export function ResultatsGlobalCategoryTable({
   thumbnailDefaultSeconds,
 }: ResultatsGlobalCategoryTableProps) {
   const { t } = useI18n()
-  const judgeBandMinWidth = Math.max(220, (judges.length + 1) * 76)
+  const judgeBandMinWidth = Math.max(184, (judges.length + 1) * 68)
 
   return (
-    <div className="flex-1 overflow-auto rounded-lg border border-gray-700">
-      <table className="w-full min-w-max border-collapse text-xs">
+    <div className="min-h-0 flex-1 overflow-auto">
+      <table className="w-full min-w-max border-collapse text-[11px]">
         <thead className="sticky top-0 z-10">
           <tr>
             <th
               rowSpan={2}
-              className="px-2 py-1.5 text-center text-[10px] font-medium text-gray-500 border-r border-b border-gray-700 w-8 bg-surface-dark sticky left-0 z-20"
+              className="sticky left-0 z-20 w-8 border-b border-r border-gray-700/60 bg-surface px-2 py-1 text-center text-[10px] font-medium text-gray-500"
             >
               #
             </th>
             <th
               rowSpan={2}
-              className="px-1.5 py-1.5 text-left text-[10px] font-medium text-gray-500 border-r border-b border-gray-700 min-w-[104px] max-w-[152px] bg-surface-dark sticky left-8 z-20"
+              className="sticky left-8 z-20 min-w-[104px] max-w-[152px] border-b border-r border-gray-700/60 bg-surface px-1.5 py-1 text-left text-[10px] font-medium text-gray-500"
             >
               {t('Clip')}
             </th>
@@ -62,11 +62,11 @@ export function ResultatsGlobalCategoryTable({
               <th
                 key={group.category}
                 colSpan={1}
-                className="px-2 py-1.5 text-center text-[10px] font-bold uppercase tracking-wider border-r border-b min-w-[240px]"
+                className="min-w-[220px] border-b border-r px-2 py-1 text-center text-[10px] font-semibold"
                 style={{
                   color: group.color,
-                  backgroundColor: withAlpha(group.color, 0.16),
-                  borderColor: withAlpha(group.color, 0.3),
+                  backgroundColor: withAlpha(group.color, 0.12),
+                  borderColor: withAlpha(group.color, 0.24),
                   minWidth: `${judgeBandMinWidth}px`,
                 }}
               >
@@ -74,7 +74,7 @@ export function ResultatsGlobalCategoryTable({
                 <div className="text-gray-500 font-normal">/{group.totalMax}</div>
               </th>
             ))}
-            <th className="px-2 py-1.5 text-center text-[10px] font-bold uppercase tracking-wider border-r border-b border-gray-700 min-w-[100px] bg-surface-dark">
+            <th className="min-w-[88px] border-b border-r border-gray-700/60 bg-surface px-2 py-1 text-center text-[10px] font-semibold">
               {t('Total final')}
               <div className="text-gray-500 font-normal">/{currentBaremeTotalPoints}</div>
             </th>
@@ -84,31 +84,31 @@ export function ResultatsGlobalCategoryTable({
               <th
                 key={`${group.category}-heads`}
                 colSpan={1}
-                className="px-0 py-0 border-r border-b border-gray-700"
+                className="border-b border-r border-gray-700/60 px-0 py-0"
                 style={{ minWidth: `${judgeBandMinWidth}px` }}
               >
                 <div
                   className="grid"
-                  style={{ gridTemplateColumns: `repeat(${judges.length + 1}, minmax(72px, 1fr))` }}
+                  style={{ gridTemplateColumns: `repeat(${judges.length + 1}, minmax(64px, 1fr))` }}
                 >
                   {judges.map((judge) => (
                     <div
                       key={`${group.category}-${judge.key}-head`}
-                      className="px-2 py-1 text-center text-[9px] border-r border-gray-700/70 truncate"
+                      className="truncate border-r border-gray-700/50 px-1.5 py-1 text-center text-[9px]"
                       style={{
                         color: judgeColors[judge.key] ?? '#60a5fa',
-                        backgroundColor: withAlpha(judgeColors[judge.key] ?? '#60a5fa', 0.08),
+                        backgroundColor: withAlpha(judgeColors[judge.key] ?? '#60a5fa', 0.03),
                       }}
                       title={judge.judgeName}
                     >
                       {judge.judgeName}
                     </div>
                   ))}
-                  <div className="px-2 py-1 text-center text-[9px] text-gray-500 bg-surface-dark">{t('Moy.')}</div>
+                  <div className="bg-surface px-1.5 py-1 text-center text-[9px] text-gray-500">{t('Moy.')}</div>
                 </div>
               </th>
             ))}
-            <th className="px-2 py-1 text-center text-[9px] text-gray-500 border-r border-b border-gray-700 bg-surface-dark">
+            <th className="border-b border-r border-gray-700/60 bg-surface px-2 py-1 text-center text-[9px] text-gray-500">
               {t('Moy.')}
             </th>
           </tr>
@@ -123,17 +123,17 @@ export function ResultatsGlobalCategoryTable({
                 onClick={() => onSelectClip(row.clip.id)}
                 className={`cursor-pointer transition-colors ${
                   isSelected
-                    ? 'bg-primary-600/12'
+                    ? 'bg-white/[0.04]'
                     : index % 2 === 0
-                      ? 'bg-surface-dark/20'
+                      ? 'bg-surface-dark/10'
                       : 'bg-transparent'
-                } hover:bg-primary-600/8`}
+                } hover:bg-white/[0.03]`}
               >
-                <td className="px-2 py-1 text-center text-[10px] text-gray-500 border-r border-gray-800 sticky left-0 z-10 bg-surface-dark">
+                <td className="sticky left-0 z-10 border-r border-gray-800/60 bg-surface px-2 py-1 text-center text-[10px] text-gray-500">
                   {index + 1}
                 </td>
                 <td
-                  className="px-1.5 py-1 border-r border-gray-800 sticky left-8 z-10 bg-surface-dark min-w-[104px] max-w-[152px]"
+                  className="sticky left-8 z-10 min-w-[104px] max-w-[152px] border-r border-gray-800/60 bg-surface px-1.5 py-1"
                   onDoubleClick={(event) => {
                     event.stopPropagation()
                     onOpenClipInNotation(row.clip.id)
@@ -141,15 +141,11 @@ export function ResultatsGlobalCategoryTable({
                   onContextMenu={(event) => {
                     event.preventDefault()
                     event.stopPropagation()
-                    const width = 220
-                    const height = 210
-                    const x = Math.max(8, Math.min(event.clientX, window.innerWidth - width - 8))
-                    const y = Math.max(8, Math.min(event.clientY, window.innerHeight - height - 8))
-                    onOpenClipContextMenu(row.clip.id, x, y)
+                    onOpenClipContextMenu(row.clip.id, event.clientX, event.clientY)
                   }}
                 >
                   <div className="flex flex-col min-w-0 leading-tight">
-                    <span className="truncate text-primary-300 text-[11px] font-semibold">{getClipPrimaryLabel(row.clip)}</span>
+                    <span className="truncate text-[11px] font-semibold text-primary-300">{getClipPrimaryLabel(row.clip)}</span>
                     {getClipSecondaryLabel(row.clip) && (
                       <span className="truncate text-[8px] text-gray-500">{getClipSecondaryLabel(row.clip)}</span>
                     )}
@@ -167,12 +163,12 @@ export function ResultatsGlobalCategoryTable({
                   return (
                     <td
                       key={`${row.clip.id}-${group.category}-judge-values`}
-                      className="px-0 py-0 border-r border-gray-800 font-mono text-white/90"
+                      className="border-r border-gray-800/60 px-0 py-0 font-mono text-white/90"
                       style={{ minWidth: `${judgeBandMinWidth}px` }}
                     >
                       <div
                         className="grid"
-                        style={{ gridTemplateColumns: `repeat(${judges.length + 1}, minmax(72px, 1fr))` }}
+                        style={{ gridTemplateColumns: `repeat(${judges.length + 1}, minmax(64px, 1fr))` }}
                       >
                         {judges.map((judge, judgeIndex) => {
                           const note = judge.notes[row.clip.id] as NoteLike | undefined
@@ -181,7 +177,7 @@ export function ResultatsGlobalCategoryTable({
                           return (
                             <div
                               key={`${row.clip.id}-${group.category}-${judge.key}`}
-                              className="px-2 py-1 text-center border-r border-gray-800/70"
+                              className="border-r border-gray-800/50 px-1.5 py-1 text-center"
                               style={{ color: judgeColors[judge.key] ?? '#60a5fa' }}
                             >
                               {hasScore ? value.toFixed(1) : '-'}
@@ -204,7 +200,7 @@ export function ResultatsGlobalCategoryTable({
                   )
                 })}
 
-                <td className="px-2 py-1 text-center border-r border-gray-700 font-mono font-bold text-white">
+                <td className="border-r border-gray-700/60 px-2 py-1 text-center font-mono font-bold text-white">
                   {row.averageTotal.toFixed(1)}
                 </td>
               </tr>

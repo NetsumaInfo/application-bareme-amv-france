@@ -3,7 +3,13 @@ import { createPortal } from 'react-dom'
 import { Subtitles } from 'lucide-react'
 import { usePlayerStore } from '@/store/usePlayerStore'
 import * as tauri from '@/services/tauri'
+import { HoverTextTooltip } from '@/components/ui/HoverTextTooltip'
 import { useI18n } from '@/i18n'
+import { useZoomScale } from '@/hooks/useZoomScale'
+
+function clamp(value: number, min: number, max: number) {
+  return Math.min(max, Math.max(min, value))
+}
 
 export default function SubtitleSelector() {
   const { t } = useI18n()
@@ -18,21 +24,41 @@ export default function SubtitleSelector() {
   const buttonRef = useRef<HTMLButtonElement | null>(null)
   const menuRef = useRef<HTMLDivElement | null>(null)
 
+  const zoomScale = useZoomScale()
+
   const updateMenuPosition = useCallback(() => {
     const button = buttonRef.current
     if (!button) return
 
     const rect = button.getBoundingClientRect()
+    const normalizedRect = {
+      left: rect.left / zoomScale,
+      right: rect.right / zoomScale,
+      top: rect.top / zoomScale,
+      bottom: rect.bottom / zoomScale,
+      width: rect.width / zoomScale,
+    }
     const width = 220
     const viewportPadding = 8
-    const left = Math.min(
-      window.innerWidth - width - viewportPadding,
-      Math.max(viewportPadding, rect.left + rect.width / 2 - width / 2),
+    const viewportWidth = window.innerWidth
+    const viewportHeight = window.innerHeight
+    const menuHeight = menuRef.current?.offsetHeight ?? Math.min(360, Math.max(96, (subtitleTracks.length + 1) * 30 + 8))
+    const spaceBelow = viewportHeight - normalizedRect.bottom - viewportPadding
+    const spaceAbove = normalizedRect.top - viewportPadding
+    const openUpwards = spaceBelow < menuHeight && spaceAbove > spaceBelow
+    const left = clamp(
+      normalizedRect.left + normalizedRect.width / 2 - width / 2,
+      viewportPadding,
+      viewportWidth - width - viewportPadding,
     )
-    const top = Math.min(window.innerHeight - viewportPadding, rect.bottom + 8)
+    const top = clamp(
+      openUpwards ? normalizedRect.top - menuHeight - 8 : normalizedRect.bottom + 8,
+      viewportPadding,
+      viewportHeight - menuHeight - viewportPadding,
+    )
 
     setMenuStyle({ top, left, width })
-  }, [])
+  }, [subtitleTracks.length, zoomScale])
 
   useEffect(() => {
     if (!open) return
@@ -109,24 +135,26 @@ export default function SubtitleSelector() {
 
   return (
     <div ref={containerRef} className="relative">
-      <button
-        ref={buttonRef}
-        onClick={() => {
-          if (!hasTracks) return
-          if (!open) updateMenuPosition()
-          setOpen(!open)
-        }}
-        className={`flex items-center justify-center w-6 h-6 rounded transition-colors ${
-          hasTracks
-            ? isActive
-              ? 'text-primary-400 hover:bg-white/20'
-              : 'text-gray-400 hover:bg-white/20 hover:text-white'
-            : 'text-gray-600 cursor-default'
-        }`}
-        title={hasTracks ? t('Sous-titres') : t('Pas de sous-titres')}
-      >
-        <Subtitles size={14} />
-      </button>
+      <HoverTextTooltip text={hasTracks ? t('Sous-titres') : t('Pas de sous-titres')}>
+        <button
+          ref={buttonRef}
+          onClick={() => {
+            if (!hasTracks) return
+            if (!open) updateMenuPosition()
+            setOpen(!open)
+          }}
+          aria-label={hasTracks ? t('Sous-titres') : t('Pas de sous-titres')}
+          className={`flex items-center justify-center w-6 h-6 rounded transition-colors ${
+            hasTracks
+              ? isActive
+                ? 'text-primary-400 hover:bg-white/20'
+                : 'text-gray-400 hover:bg-white/20 hover:text-white'
+              : 'text-gray-600 cursor-default'
+          }`}
+        >
+          <Subtitles size={14} />
+        </button>
+      </HoverTextTooltip>
       {menu}
     </div>
   )

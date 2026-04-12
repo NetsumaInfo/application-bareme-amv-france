@@ -1,5 +1,6 @@
 import { X } from 'lucide-react'
 import type { ClipInfo } from '@/components/player/overlay/types'
+import { HoverTextTooltip } from '@/components/ui/HoverTextTooltip'
 import { useI18n } from '@/i18n'
 
 interface OverlayTopBarProps {
@@ -39,13 +40,15 @@ export function OverlayTopBar({
             </p>
           )}
         </div>
-        <button
-          onClick={onClose}
-          className={`${compactControls ? 'p-1.5' : 'p-2'} rounded-full hover:bg-white/20 text-white/80 hover:text-white transition-colors shrink-0`}
-          title={t('Fermer le lecteur')}
-        >
-          <X size={compactControls ? 14 : 18} />
-        </button>
+        <HoverTextTooltip text={t('Fermer le lecteur')}>
+          <button
+            onClick={onClose}
+            aria-label={t('Fermer le lecteur')}
+            className={`${compactControls ? 'p-1.5' : 'p-2'} rounded-full hover:bg-white/20 text-white/80 hover:text-white transition-colors shrink-0`}
+          >
+            <X size={compactControls ? 14 : 18} />
+          </button>
+        </HoverTextTooltip>
       </div>
     </div>
   )

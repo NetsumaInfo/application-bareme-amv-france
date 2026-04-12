@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
-import { FolderPlus, Check, Circle, CheckSquare2, Clapperboard, FileText, Trash2 } from 'lucide-react'
+import { FolderPlus, Check, Circle, CheckSquare2, Trash2 } from 'lucide-react'
 import { useProjectStore } from '@/store/useProjectStore'
+import { useClipDeletionStore } from '@/store/useClipDeletionStore'
 import { useNotationStore } from '@/store/useNotationStore'
 import { useUIStore } from '@/store/useUIStore'
 import * as tauri from '@/services/tauri'
@@ -8,18 +9,23 @@ import { getClipPrimaryLabel, getClipSecondaryLabel } from '@/utils/formatters'
 import { createClipFromVideoMeta, mergeImportedVideosWithClips } from '@/utils/clipImport'
 import type { Clip } from '@/types/project'
 import { useI18n } from '@/i18n'
+import { HoverTextTooltip } from '@/components/ui/HoverTextTooltip'
 import {
   AppContextMenuItem,
   AppContextMenuPanel,
   AppContextMenuSeparator,
 } from '@/components/ui/AppContextMenu'
+import { UI_ICONS } from '@/components/ui/actionIcons'
 
 export default function VideoList() {
   const { t } = useI18n()
-  const { clips, currentClipIndex, setCurrentClip, setClips, currentProject, updateProject, setClipScored, removeClip } =
+  const detailedNotesIcon = UI_ICONS.detailedNotes
+  const detailedNotesSecondaryIcon = UI_ICONS.detailedNotesSecondary
+  const { clips, currentClipIndex, setCurrentClip, setClips, currentProject, updateProject, setClipScored } =
     useProjectStore()
   const { isClipComplete } = useNotationStore()
   const setNotesDetached = useUIStore((state) => state.setNotesDetached)
+  const requestClipDeletion = useClipDeletionStore((state) => state.requestClipDeletion)
   const [contextMenu, setContextMenu] = useState<{ clipId: string; x: number; y: number } | null>(null)
   const contextMenuRef = useRef<HTMLDivElement | null>(null)
 
@@ -41,8 +47,9 @@ export default function VideoList() {
 
       const videos = await tauri.scanVideoFolder(folderPath)
       const latestClips = useProjectStore.getState().clips
+      const clipNamePattern = useProjectStore.getState().currentProject?.settings.clipNamePattern ?? 'pseudo_clip'
       const importedClips: Clip[] = videos.map((video, index) =>
-        createClipFromVideoMeta(video, latestClips.length + index),
+        createClipFromVideoMeta(video, latestClips.length + index, clipNamePattern),
       )
       const merged = mergeImportedVideosWithClips(latestClips, importedClips)
       if (merged.addedCount > 0 || merged.linkedCount > 0) {
@@ -64,13 +71,15 @@ export default function VideoList() {
           {t('Clips')} ({clips.length})
         </h3>
         {currentProject && (
-          <button
-            onClick={handleImportFolder}
-            className="p-1 rounded hover:bg-surface-light text-gray-400 hover:text-white transition-colors"
-            title={t('Importer un dossier de vidéos')}
-          >
-            <FolderPlus size={14} />
-          </button>
+          <HoverTextTooltip text={t('Importer un dossier de vidéos')}>
+            <button
+              onClick={handleImportFolder}
+              aria-label={t('Importer un dossier de vidéos')}
+              className="p-1 rounded hover:bg-surface-light text-gray-400 hover:text-white transition-colors"
+            >
+              <FolderPlus size={14} />
+            </button>
+          </HoverTextTooltip>
         )}
       </div>
 
@@ -94,11 +103,7 @@ export default function VideoList() {
               onContextMenu={(event) => {
                 event.preventDefault()
                 event.stopPropagation()
-                const width = 220
-                const height = 152
-                const x = Math.max(8, Math.min(event.clientX, window.innerWidth - width - 8))
-                const y = Math.max(8, Math.min(event.clientY, window.innerHeight - height - 8))
-                setContextMenu({ clipId: clip.id, x, y })
+                setContextMenu({ clipId: clip.id, x: event.clientX, y: event.clientY })
               }}
               className={`w-full text-left px-3 py-2 text-xs flex items-center gap-2 border-b border-gray-800 transition-colors ${
                 isActive
@@ -130,7 +135,7 @@ export default function VideoList() {
           ref={contextMenuRef}
           x={contextMenu.x}
           y={contextMenu.y}
-          minWidthClassName="min-w-[220px]"
+          minWidthClassName="min-w-[198px]"
         >
           {(() => {
             const clip = clips.find((item) => item.id === contextMenu.clipId)
@@ -153,9 +158,9 @@ export default function VideoList() {
                     tauri.openNotesWindow().then(() => setNotesDetached(true)).catch(() => {})
                     setContextMenu(null)
                   }}
-                  label={t('Notes du clip')}
-                  icon={Clapperboard}
-                  iconSecondary={FileText}
+                  label={t('Notes détaillées')}
+                  icon={detailedNotesIcon}
+                  iconSecondary={detailedNotesSecondaryIcon}
                 />
                 <AppContextMenuSeparator />
               </>
@@ -163,10 +168,10 @@ export default function VideoList() {
           })()}
           <AppContextMenuItem
             onClick={() => {
-              removeClip(contextMenu.clipId)
+              requestClipDeletion(contextMenu.clipId)
               setContextMenu(null)
             }}
-            label={t('Supprimer la vidéo')}
+            label={t('Supprimer la vidéo du participant')}
             icon={Trash2}
             danger
           />

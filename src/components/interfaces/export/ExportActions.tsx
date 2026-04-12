@@ -5,6 +5,7 @@ import type {
   ExportNotesPdfMode,
   ExportPngMode,
 } from '@/components/interfaces/export/types'
+import { AppSelect } from '@/components/ui/AppSelect'
 import { useI18n } from '@/i18n'
 
 interface ExportActionsProps {
@@ -52,15 +53,17 @@ export function ExportActions({
           <div className="text-[11px] font-semibold text-gray-200">{t('Sortie PNG')}</div>
           <div>
             <label className="block text-xs text-gray-400 mb-1">{t('Mode')}</label>
-            <select
+            <AppSelect
               value={pngExportMode}
-              onChange={(event) => onSetPngExportMode(event.target.value as ExportPngMode)}
-              className="w-full px-2 py-1.5 rounded border border-gray-700 bg-surface-dark text-xs text-white focus:border-primary-500 focus:outline-none"
-            >
-              <option value="single">{t('Image unique')}</option>
-              <option value="paged">{t('Plusieurs images')}</option>
-              <option value="both">{t('Les deux')}</option>
-            </select>
+              onChange={onSetPngExportMode}
+              ariaLabel={t('Mode')}
+              className="w-full"
+              options={[
+                { value: 'single', label: t('Image unique') },
+                { value: 'paged', label: t('Plusieurs images') },
+                { value: 'both', label: t('Les deux') },
+              ]}
+            />
           </div>
           {(pngExportMode === 'paged' || pngExportMode === 'both') && (
             <div>
@@ -97,15 +100,17 @@ export function ExportActions({
       {notesPdfMode && onSetNotesPdfMode && onExportNotesPdf && (
         <div className="rounded border border-gray-700/80 bg-surface-dark/40 p-2.5 space-y-2">
           <div className="text-[11px] font-semibold text-gray-200">{t('Export notes (PDF)')}</div>
-          <select
+          <AppSelect
             value={notesPdfMode}
-            onChange={(event) => onSetNotesPdfMode(event.target.value as ExportNotesPdfMode)}
-            className="w-full px-2 py-1.5 rounded border border-gray-700 bg-surface-dark text-xs text-white focus:border-primary-500 focus:outline-none"
-          >
-            <option value="general">{t('Notes générales')}</option>
-            <option value="judges">{t('Notes des juges')}</option>
-            <option value="both">{t('Générales + juges')}</option>
-          </select>
+            onChange={onSetNotesPdfMode}
+            ariaLabel={t('Export notes (PDF)')}
+            className="w-full"
+            options={[
+              { value: 'general', label: t('Notes générales') },
+              { value: 'judges', label: t('Notes des juges') },
+              { value: 'both', label: t('Générales + juges') },
+            ]}
+          />
           <button
             onClick={onExportNotesPdf}
             disabled={exporting}
@@ -119,27 +124,28 @@ export function ExportActions({
       {jsonExportMode && onSetJsonExportMode && (
         <div className="rounded border border-gray-700/80 bg-surface-dark/40 p-2.5 space-y-2">
           <div className="text-[11px] font-semibold text-gray-200">{t('Export JSON')}</div>
-          <select
+          <AppSelect
             value={jsonExportMode}
-            onChange={(event) => onSetJsonExportMode(event.target.value as ExportJsonMode)}
-            className="w-full px-2 py-1.5 rounded border border-gray-700 bg-surface-dark text-xs text-white focus:border-primary-500 focus:outline-none"
-          >
-            <option value="full_project">{t('Tout le projet')}</option>
-            <option value="single_judge">{t('Par juge')}</option>
-            <option value="notes_only">{t('Notes uniquement')}</option>
-          </select>
+            onChange={onSetJsonExportMode}
+            ariaLabel={t('Export JSON')}
+            className="w-full"
+            options={[
+              { value: 'full_project', label: t('Tout le projet') },
+              { value: 'single_judge', label: t('Par juge') },
+              { value: 'notes_only', label: t('Notes uniquement') },
+            ]}
+          />
           {jsonExportMode === 'single_judge' && jsonJudgeKey && jsonJudgeOptions && onSetJsonJudgeKey && (
-            <select
+            <AppSelect
               value={jsonJudgeKey}
-              onChange={(event) => onSetJsonJudgeKey(event.target.value)}
-              className="w-full px-2 py-1.5 rounded border border-gray-700 bg-surface-dark text-xs text-white focus:border-primary-500 focus:outline-none"
-            >
-              {jsonJudgeOptions.map((judge) => (
-                <option key={judge.key} value={judge.key}>
-                  {judge.judgeName}
-                </option>
-              ))}
-            </select>
+              onChange={onSetJsonJudgeKey}
+              ariaLabel={t('Juge')}
+              className="w-full"
+              options={jsonJudgeOptions.map((judge) => ({
+                value: judge.key,
+                label: judge.judgeName,
+              }))}
+            />
           )}
         </div>
       )}

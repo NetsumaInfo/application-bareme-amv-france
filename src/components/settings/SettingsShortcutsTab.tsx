@@ -1,4 +1,5 @@
 import {
+  CONTEXTUAL_SHORTCUT_DEFINITIONS,
   SHORTCUT_DEFINITIONS,
   formatShortcutDisplay,
   type ShortcutAction,
@@ -59,18 +60,14 @@ export function SettingsShortcutsTab({
           {t('Raccourcis contextuels')}
         </div>
         <div className="space-y-1 text-[11px] text-gray-400">
-          <div className="flex items-center justify-between gap-2">
-            <span>{t('Ouvrir le lecteur depuis la liste')}</span>
-            <kbd className="px-1.5 py-0.5 rounded text-[10px] font-mono bg-surface text-gray-400 border border-gray-700">
-              {t('Double clic')}
-            </kbd>
-          </div>
-          <div className="flex items-center justify-between gap-2">
-            <span>{t('Afficher les commentaires d’une sous-catégorie')}</span>
-            <kbd className="px-1.5 py-0.5 rounded text-[10px] font-mono bg-surface text-gray-400 border border-gray-700">
-              {t('Ctrl + clic')}
-            </kbd>
-          </div>
+          {CONTEXTUAL_SHORTCUT_DEFINITIONS.map((shortcut) => (
+            <div key={shortcut.id} className="flex items-center justify-between gap-2">
+              <span>{t(shortcut.label)}</span>
+              <kbd className="px-1.5 py-0.5 rounded text-[10px] font-mono bg-surface text-gray-400 border border-gray-700">
+                {t(shortcut.shortcut)}
+              </kbd>
+            </div>
+          ))}
         </div>
       </div>
 

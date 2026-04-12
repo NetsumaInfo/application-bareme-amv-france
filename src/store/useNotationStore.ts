@@ -30,7 +30,7 @@ interface NotationStore {
   availableBaremes: Bareme[]
 
   setBareme: (bareme: Bareme) => void
-  addBareme: (bareme: Bareme) => void
+  addBareme: (bareme: Bareme) => Bareme
   removeBareme: (baremeId: string) => void
   loadCustomBaremes: (items: unknown[]) => void
   updateCriterion: (clipId: string, criterionId: string, value: number | string | boolean) => void
@@ -58,10 +58,14 @@ export const useNotationStore = create<NotationStore>((set, get) => ({
 
   addBareme: (bareme: Bareme) => {
     const { availableBaremes } = get()
-    set({ availableBaremes: upsertBaremeList(availableBaremes, bareme) })
-    if (!bareme.isOfficial) {
-      tauri.saveBareme(bareme, bareme.id).catch(() => {})
+    const { nextAvailableBaremes, persistedBareme } = upsertBaremeList(availableBaremes, bareme)
+    set({ availableBaremes: nextAvailableBaremes })
+    if (!persistedBareme.isOfficial) {
+      tauri.saveBareme(persistedBareme, persistedBareme.id).catch((errorValue) => {
+        console.error('Failed to persist bareme:', errorValue)
+      })
     }
+    return persistedBareme
   },
 
   removeBareme: (baremeId: string) => {
@@ -75,7 +79,9 @@ export const useNotationStore = create<NotationStore>((set, get) => ({
       currentBareme: currentBareme?.id === baremeId ? OFFICIAL_BAREME : currentBareme,
     })
     if (shouldDeleteFile) {
-      tauri.deleteBareme(baremeId).catch(() => {})
+      tauri.deleteBareme(baremeId).catch((errorValue) => {
+        console.error('Failed to delete bareme file:', errorValue)
+      })
     }
   },
 

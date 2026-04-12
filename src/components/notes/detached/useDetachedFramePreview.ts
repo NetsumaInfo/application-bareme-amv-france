@@ -1,6 +1,11 @@
 import { useCallback, useRef, useState } from 'react'
 import * as tauri from '@/services/tauri'
 import { computeFramePreviewPlacement } from '@/utils/framePreviewPosition'
+import {
+  FRAME_PREVIEW_BASE_WIDTH,
+  FRAME_PREVIEW_FALLBACK_BASE_WIDTH,
+  getFramePreviewCaptureWidth,
+} from '@/utils/framePreviewQuality'
 
 interface FramePreviewState {
   visible: boolean
@@ -34,12 +39,13 @@ export function useDetachedFramePreview(clipFilePath?: string) {
 
   const showFramePreview = useCallback(async ({ seconds, anchorRect }: ShowFramePreviewParams) => {
     const targetPath = clipFilePath ?? null
+    const previewCaptureWidth = getFramePreviewCaptureWidth(FRAME_PREVIEW_BASE_WIDTH)
     const placement = computeFramePreviewPlacement({
       anchorRect,
       previewWidth: 236,
       previewHeight: 136,
     })
-    const cacheKey = `${targetPath ?? '__current__'}|${seconds.toFixed(3)}`
+    const cacheKey = `${targetPath ?? '__current__'}|${seconds.toFixed(3)}|${previewCaptureWidth}`
     const requestId = ++hoverRequestRef.current
 
     const cached = framePreviewCacheRef.current.get(cacheKey)
@@ -63,8 +69,12 @@ export function useDetachedFramePreview(clipFilePath?: string) {
     })
 
     const image =
-      await tauri.playerGetFramePreview(targetPath, seconds, 236).catch(() => null)
-      ?? await tauri.playerGetFramePreview(targetPath, seconds, 164).catch(() => null)
+      await tauri.playerGetFramePreview(targetPath, seconds, previewCaptureWidth).catch(() => null)
+      ?? await tauri.playerGetFramePreview(
+        targetPath,
+        seconds,
+        getFramePreviewCaptureWidth(FRAME_PREVIEW_FALLBACK_BASE_WIDTH),
+      ).catch(() => null)
     if (hoverRequestRef.current !== requestId) return
     if (image) {
       framePreviewCacheRef.current.set(cacheKey, image)

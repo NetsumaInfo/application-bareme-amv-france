@@ -7,12 +7,17 @@ import {
   FileDown,
   FolderPlus,
   ChevronDown,
+  Upload,
 } from 'lucide-react'
+import { HoverTextTooltip } from '@/components/ui/HoverTextTooltip'
 import { useProjectMenuActions } from '@/components/project/useProjectMenuActions'
+import { useUIStore } from '@/store/useUIStore'
 import { useI18n } from '@/i18n'
+import { formatShortcutDisplayForAction } from '@/utils/shortcuts'
 
 export default function ProjectManager() {
   const { t } = useI18n()
+  const shortcutBindings = useUIStore((state) => state.shortcutBindings)
   const {
     currentProject,
     handleNewProject,
@@ -50,31 +55,34 @@ export default function ProjectManager() {
 
   return (
     <div className="relative" ref={menuRef}>
-      <button
-        onClick={() => setOpen(!open)}
-        className="flex items-center px-2 py-1.5 text-xs rounded hover:bg-surface-light text-gray-300 hover:text-white transition-colors"
-        title={t('Menu fichier')}
-      >
-        <span className="hidden sm:inline">{t('Fichier')}</span>
-        <ChevronDown
-          size={10}
-          className={`transition-transform ${open ? 'rotate-180' : ''}`}
-        />
-      </button>
+      <HoverTextTooltip text={t('Menu fichier')}>
+        <button
+          onClick={() => setOpen(!open)}
+          aria-label={t('Menu fichier')}
+          data-open={open ? 'true' : 'false'}
+          className="app-header-trigger gap-1"
+        >
+          <span className="hidden sm:inline">{t('Fichier')}</span>
+          <ChevronDown
+            size={10}
+            className={`app-header-trigger-chevron transition-transform ${open ? 'rotate-180' : ''}`}
+          />
+        </button>
+      </HoverTextTooltip>
 
       {open && (
-        <div className="absolute top-full right-0 mt-1 w-52 bg-surface border border-gray-700 rounded-lg shadow-xl z-50 py-1">
+        <div className="absolute top-full right-0 z-50 mt-1 w-64 max-w-[calc(100vw-1rem)] overflow-hidden rounded-lg border border-gray-700 bg-surface py-1 shadow-xl">
           <SectionLabel>{t('Concours')}</SectionLabel>
           <MenuItem
             icon={<FilePlus size={13} />}
             label={t('Nouveau concours')}
-            shortcut="Ctrl+N"
+            shortcut={formatShortcutDisplayForAction('newProject', shortcutBindings, t)}
             onClick={() => closeAndRun(handleNewProject)}
           />
           <MenuItem
             icon={<FolderOpen size={13} />}
             label={t('Ouvrir...')}
-            shortcut="Ctrl+O"
+            shortcut={formatShortcutDisplayForAction('openProject', shortcutBindings, t)}
             onClick={() => closeAndRun(handleOpenProject)}
           />
 
@@ -107,12 +115,13 @@ export default function ProjectManager() {
               <MenuItem
                 icon={<Save size={13} />}
                 label={t('Sauvegarder')}
-                shortcut="Ctrl+S"
+                shortcut={formatShortcutDisplayForAction('save', shortcutBindings, t)}
                 onClick={() => closeAndRun(handleSave)}
               />
               <MenuItem
                 icon={<Save size={13} />}
                 label={t('Sauvegarder sous...')}
+                shortcut={formatShortcutDisplayForAction('saveAs', shortcutBindings, t)}
                 onClick={() => closeAndRun(handleSaveAs)}
               />
               <div className="border-t border-gray-700 my-1" />
@@ -123,7 +132,7 @@ export default function ProjectManager() {
                 onClick={() => closeAndRun(handleExport)}
               />
               <MenuItem
-                icon={<FileDown size={13} />}
+                icon={<Upload size={13} />}
                 label={t('Exporter notation ({filename})', { filename: exportJudgeFilename })}
                 onClick={() => closeAndRun(handleExportJudgeNotes)}
               />
@@ -160,9 +169,9 @@ function MenuItem({
       className="w-full text-left px-3 py-1.5 text-xs text-gray-300 hover:text-white hover:bg-surface-light transition-colors flex items-center gap-2"
     >
       <span className="text-gray-500">{icon}</span>
-      <span className="flex-1">{label}</span>
+      <span className="min-w-0 flex-1 truncate">{label}</span>
       {shortcut && (
-        <span className="text-[10px] text-gray-600">{shortcut}</span>
+        <span className="shrink-0 text-[10px] text-gray-600">{shortcut}</span>
       )}
     </button>
   )

@@ -7,7 +7,7 @@ import zh from '@/i18n/locales/zh.json'
 import es from '@/i18n/locales/es.json'
 
 export type TranslationParams = Record<string, string | number | null | undefined>
-export type TranslationDictionary = Record<string, string>
+type TranslationDictionary = Record<string, string>
 
 const dictionaries: Record<AppLanguage, TranslationDictionary> = {
   fr,
@@ -30,8 +30,4 @@ export function translateKey(language: AppLanguage, key: string, params?: Transl
   const dictionary = dictionaries[language]
   const template = dictionary[key] || key
   return interpolate(template, params)
-}
-
-export function getDictionary(language: AppLanguage): TranslationDictionary {
-  return dictionaries[language]
 }

@@ -1,5 +1,5 @@
 import type { Clip } from '@/types/project'
-import type { JudgeSource, CategoryGroup } from '@/utils/results'
+import type { JudgeSource } from '@/utils/results'
 
 export type ResultatsMainView = 'judge' | 'global' | 'top' | 'judgeNotes'
 export type ResultatsGlobalVariant = 'detailed' | 'category'
@@ -12,29 +12,10 @@ export interface ResultatsRow {
 }
 
 export interface ResultatsHeaderProps {
-  importing: boolean
   judges: JudgeSource[]
   selectedJudgeKey: string
   judgeColors: Record<string, string>
-  onImportJudgeJson: () => void
   onSelectJudge: (judgeKey: string) => void
   onJudgeColorChange: (judgeKey: string, color: string) => void
   onOpenMemberContextMenu: (judgeKey: string, x: number, y: number) => void
-}
-
-export interface ResultatsTableProps {
-  canSortByScore: boolean
-  currentBaremeTotalPoints: number
-  categoryGroups: CategoryGroup[]
-  judges: JudgeSource[]
-  rows: ResultatsRow[]
-  selectedClipId: string | null
-  draftCells: Record<string, string>
-  onSelectClip: (clipId: string) => void
-  onOpenClipInNotation: (clipId: string) => void
-  onOpenClipContextMenu: (clipId: string, x: number, y: number) => void
-  getCellKey: (clipId: string, category: string, judgeKey: string) => string
-  onSetDraftCell: (key: string, value: string) => void
-  onCommitDraftCell: (clipId: string, category: string, judgeKey: string) => void
-  onClearDraftCell: (key: string) => void
 }

@@ -4,6 +4,7 @@ import { useUIStore } from '@/store/useUIStore'
 import * as tauri from '@/services/tauri'
 import { listRecentProjectPaths, rememberRecentProjectPath, setRecentProjectPaths } from '@/services/recentProjects'
 import { loadAndApplyProjectFile } from '@/services/projectSession'
+import { HoverTextTooltip } from '@/components/ui/HoverTextTooltip'
 import { useI18n } from '@/i18n'
 
 interface ProjectListItem {
@@ -11,6 +12,12 @@ interface ProjectListItem {
   judgeName: string
   updatedAt: string
   filePath: string
+}
+
+interface WelcomeScreenState {
+  projects: ProjectListItem[]
+  folderPath: string
+  loading: boolean
 }
 
 function mapSummaryToProjectListItem(project: tauri.ProjectSummary): ProjectListItem {
@@ -29,17 +36,36 @@ function parseIsoDate(value: string): number {
 
 export function WelcomeScreen() {
   const { setShowProjectModal, setProjectsFolderPath } = useUIStore()
+  const configuredProjectsFolderPath = useUIStore((state) => state.projectsFolderPath)
   const { t, formatDate } = useI18n()
-  const [projects, setProjects] = useState<ProjectListItem[]>([])
-  const [folderPath, setFolderPath] = useState<string>('')
-  const [loading, setLoading] = useState(true)
+  const [{ projects, folderPath, loading }, setScreenState] = useState<WelcomeScreenState>({
+    projects: [],
+    folderPath: '',
+    loading: true,
+  })
+  const applyLoadedProjects = useCallback((nextFolderPath: string, nextProjects: ProjectListItem[]) => {
+    setScreenState({
+      projects: nextProjects,
+      folderPath: nextFolderPath,
+      loading: false,
+    })
+  }, [])
+  const finishLoading = useCallback(() => {
+    setScreenState((current) => ({
+      ...current,
+      loading: false,
+    }))
+  }, [])
+
+  useEffect(() => {
+    if (!folderPath) return
+    setProjectsFolderPath(folderPath)
+  }, [folderPath, setProjectsFolderPath])
 
   useEffect(() => {
     const loadProjects = async () => {
       try {
         const folder = await tauri.getDefaultProjectsFolder()
-        setFolderPath(folder)
-        setProjectsFolderPath(folder)
 
         const list = await tauri.listProjectsInFolder(folder)
         const byPath = new Map<string, ProjectListItem>(
@@ -88,15 +114,14 @@ export function WelcomeScreen() {
         if (validRecentPaths.length !== recentPaths.length) {
           await setRecentProjectPaths(validRecentPaths)
         }
-        setProjects(mergedProjects)
+        applyLoadedProjects(folder, mergedProjects)
       } catch (error) {
         console.error('Failed to load projects:', error)
-      } finally {
-        setLoading(false)
+        finishLoading()
       }
     }
     loadProjects()
-  }, [setProjectsFolderPath, t])
+  }, [applyLoadedProjects, configuredProjectsFolderPath, finishLoading, t])
 
   const openProjectFromFile = useCallback(async (filePath: string) => {
     try {
@@ -120,10 +145,9 @@ export function WelcomeScreen() {
   }
 
   return (
-    <div className="flex-1 flex items-center justify-center" data-context-scope="welcome">
+    <div className="relative flex-1 flex items-center justify-center" data-context-scope="welcome">
       <div className="w-full max-w-md px-6">
         <div className="text-center mb-8">
-          <h2 className="text-xl font-bold text-white mb-1">AMV Notation</h2>
           <p className="text-gray-500 text-sm">{t('Outil de notation pour compétitions AMV')}</p>
         </div>
 
@@ -184,9 +208,11 @@ export function WelcomeScreen() {
 
         {folderPath && (
           <div className="mt-6 text-center">
-            <p className="text-[9px] text-gray-600 truncate" title={folderPath}>
-              {t('Dossier : {path}', { path: folderPath })}
-            </p>
+            <HoverTextTooltip text={folderPath}>
+              <p className="text-[9px] text-gray-600 truncate">
+                {t('Dossier : {path}', { path: folderPath })}
+              </p>
+            </HoverTextTooltip>
           </div>
         )}
       </div>

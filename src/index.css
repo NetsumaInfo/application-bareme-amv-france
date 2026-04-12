@@ -119,6 +119,7 @@
   --scrollbar-thumb-hover: 92 108 129;
 }
 
+:root[data-app-theme='pearl'],
 :root[data-app-theme='mist'] {
   color-scheme: light;
   --app-bg: 223 232 241;
@@ -145,6 +146,7 @@
   --scrollbar-thumb-hover: 120 108 92;
 }
 
+:root[data-app-theme='sand'],
 :root[data-app-theme='linen'] {
   color-scheme: light;
   --app-bg: 223 219 210;
@@ -216,6 +218,111 @@
   --color-primary-800: 23 39 61;
   --color-primary-900: 20 34 52;
   --color-primary-950: 11 19 31;
+}
+
+@layer components {
+  .app-header-trigger {
+    @apply inline-flex h-6 items-center rounded-md px-2 text-xs font-medium transition-colors duration-150;
+    background-color: rgb(var(--color-surface-dark) / 0.92);
+    color: rgb(var(--app-text) / 0.78);
+  }
+
+  .app-header-trigger:hover,
+  .app-header-trigger[data-open='true'] {
+    background-color: rgb(var(--color-surface-light) / 0.92);
+    color: rgb(var(--app-text));
+  }
+
+  .app-header-trigger:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px rgb(var(--color-primary-500) / 0.32);
+  }
+
+  .app-header-trigger-icon {
+    @apply w-6 justify-center px-0;
+  }
+
+  .app-header-trigger-chevron {
+    color: rgb(var(--app-text) / 0.42);
+  }
+
+  .app-header-trigger[data-open='true'] .app-header-trigger-chevron {
+    color: rgb(var(--app-text) / 0.68);
+  }
+
+  .app-range-slider {
+    height: 0.375rem;
+    cursor: pointer;
+    appearance: none;
+    border-radius: 9999px;
+    background:
+      linear-gradient(
+        to right,
+        var(--app-range-accent, rgb(var(--color-primary-500) / 0.92)) 0%,
+        var(--app-range-accent, rgb(var(--color-primary-500) / 0.92)) var(--app-range-value),
+        rgb(var(--color-surface-light) / 0.78) var(--app-range-value),
+        rgb(var(--color-surface-light) / 0.78) 100%
+      );
+  }
+
+  .app-range-slider:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px rgb(var(--color-primary-500) / 0.28);
+  }
+
+  .app-range-slider:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+
+  .app-range-slider::-webkit-slider-runnable-track {
+    height: 0.375rem;
+    border-radius: 9999px;
+    background: transparent;
+  }
+
+  .app-range-slider::-webkit-slider-thumb {
+    width: 0.875rem;
+    height: 0.875rem;
+    margin-top: -0.25rem;
+    appearance: none;
+    border: 2px solid var(--app-range-accent, rgb(var(--color-primary-500)));
+    border-radius: 9999px;
+    background: rgb(var(--app-text));
+    box-shadow: 0 6px 14px rgb(0 0 0 / 0.28);
+  }
+
+  .app-range-slider::-moz-range-track {
+    height: 0.375rem;
+    border-radius: 9999px;
+    background: rgb(var(--color-surface-light) / 0.78);
+  }
+
+  .app-range-slider::-moz-range-progress {
+    height: 0.375rem;
+    border-radius: 9999px;
+    background: var(--app-range-accent, rgb(var(--color-primary-500) / 0.92));
+  }
+
+  .app-range-slider::-moz-range-thumb {
+    width: 0.875rem;
+    height: 0.875rem;
+    border: 2px solid var(--app-range-accent, rgb(var(--color-primary-500)));
+    border-radius: 9999px;
+    background: rgb(var(--app-text));
+    box-shadow: 0 6px 14px rgb(0 0 0 / 0.28);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
 }
 
 :root[data-primary-color='sage'] {
@@ -398,37 +505,83 @@ body {
   color: rgb(var(--app-text));
 }
 
+.bareme-quick-actions-bar {
+  background: rgb(var(--color-surface) / 0.94);
+  border-color: rgb(148 163 184 / 0.14);
+  box-shadow:
+    0 -10px 20px rgb(0 0 0 / 0.1),
+    0 1px 0 rgb(255 255 255 / 0.035) inset;
+  backdrop-filter: blur(14px);
+}
+
+.bareme-quick-actions-bar::before {
+  content: '';
+  position: absolute;
+  inset: 0 1rem auto;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgb(255 255 255 / 0.08) 50%,
+    transparent 100%
+  );
+  opacity: 1;
+  pointer-events: none;
+}
+
+.bareme-criterion-card {
+  scroll-margin-block: 8.5rem;
+  transition:
+    border-color 180ms ease,
+    box-shadow 220ms ease,
+    background-color 220ms ease;
+}
+
+.bareme-criterion-card--spotlight {
+  background-color: rgb(var(--color-surface-dark) / 0.52);
+}
+
 :root[data-app-theme='porcelain'] .text-white,
+:root[data-app-theme='pearl'] .text-white,
 :root[data-app-theme='mist'] .text-white,
 :root[data-app-theme='ivory'] .text-white,
+:root[data-app-theme='sand'] .text-white,
 :root[data-app-theme='linen'] .text-white {
   color: rgb(15 23 42) !important;
 }
 
 :root[data-app-theme='porcelain'] .text-gray-200,
+:root[data-app-theme='pearl'] .text-gray-200,
 :root[data-app-theme='mist'] .text-gray-200,
 :root[data-app-theme='ivory'] .text-gray-200,
+:root[data-app-theme='sand'] .text-gray-200,
 :root[data-app-theme='linen'] .text-gray-200 {
   color: rgb(30 41 59) !important;
 }
 
 :root[data-app-theme='porcelain'] .text-gray-300,
+:root[data-app-theme='pearl'] .text-gray-300,
 :root[data-app-theme='mist'] .text-gray-300,
 :root[data-app-theme='ivory'] .text-gray-300,
+:root[data-app-theme='sand'] .text-gray-300,
 :root[data-app-theme='linen'] .text-gray-300 {
   color: rgb(51 65 85) !important;
 }
 
 :root[data-app-theme='porcelain'] .text-gray-400,
+:root[data-app-theme='pearl'] .text-gray-400,
 :root[data-app-theme='mist'] .text-gray-400,
 :root[data-app-theme='ivory'] .text-gray-400,
+:root[data-app-theme='sand'] .text-gray-400,
 :root[data-app-theme='linen'] .text-gray-400 {
   color: rgb(71 85 105) !important;
 }
 
 :root[data-app-theme='porcelain'] .text-gray-500,
+:root[data-app-theme='pearl'] .text-gray-500,
 :root[data-app-theme='mist'] .text-gray-500,
 :root[data-app-theme='ivory'] .text-gray-500,
+:root[data-app-theme='sand'] .text-gray-500,
 :root[data-app-theme='linen'] .text-gray-500 {
   color: rgb(100 116 139) !important;
 }
@@ -436,12 +589,18 @@ body {
 :root[data-app-theme='porcelain'] .border-gray-700,
 :root[data-app-theme='porcelain'] .border-gray-600,
 :root[data-app-theme='porcelain'] .border-gray-800,
+:root[data-app-theme='pearl'] .border-gray-700,
+:root[data-app-theme='pearl'] .border-gray-600,
+:root[data-app-theme='pearl'] .border-gray-800,
 :root[data-app-theme='mist'] .border-gray-700,
 :root[data-app-theme='mist'] .border-gray-600,
 :root[data-app-theme='mist'] .border-gray-800,
 :root[data-app-theme='ivory'] .border-gray-700,
 :root[data-app-theme='ivory'] .border-gray-600,
 :root[data-app-theme='ivory'] .border-gray-800,
+:root[data-app-theme='sand'] .border-gray-700,
+:root[data-app-theme='sand'] .border-gray-600,
+:root[data-app-theme='sand'] .border-gray-800,
 :root[data-app-theme='linen'] .border-gray-700,
 :root[data-app-theme='linen'] .border-gray-600,
 :root[data-app-theme='linen'] .border-gray-800 {
@@ -449,26 +608,34 @@ body {
 }
 
 :root[data-app-theme='porcelain'] .hover\:text-white:hover,
+:root[data-app-theme='pearl'] .hover\:text-white:hover,
 :root[data-app-theme='mist'] .hover\:text-white:hover,
 :root[data-app-theme='ivory'] .hover\:text-white:hover,
+:root[data-app-theme='sand'] .hover\:text-white:hover,
 :root[data-app-theme='linen'] .hover\:text-white:hover {
   color: rgb(15 23 42) !important;
 }
 
 :root[data-app-theme='porcelain'] .hover\:border-gray-600:hover,
 :root[data-app-theme='porcelain'] .hover\:border-gray-500:hover,
+:root[data-app-theme='pearl'] .hover\:border-gray-600:hover,
+:root[data-app-theme='pearl'] .hover\:border-gray-500:hover,
 :root[data-app-theme='mist'] .hover\:border-gray-600:hover,
 :root[data-app-theme='mist'] .hover\:border-gray-500:hover,
 :root[data-app-theme='ivory'] .hover\:border-gray-600:hover,
 :root[data-app-theme='ivory'] .hover\:border-gray-500:hover,
+:root[data-app-theme='sand'] .hover\:border-gray-600:hover,
+:root[data-app-theme='sand'] .hover\:border-gray-500:hover,
 :root[data-app-theme='linen'] .hover\:border-gray-600:hover,
 :root[data-app-theme='linen'] .hover\:border-gray-500:hover {
   border-color: rgb(148 163 184) !important;
 }
 
 :root[data-app-theme='porcelain'] .bg-black\/60,
+:root[data-app-theme='pearl'] .bg-black\/60,
 :root[data-app-theme='mist'] .bg-black\/60,
 :root[data-app-theme='ivory'] .bg-black\/60,
+:root[data-app-theme='sand'] .bg-black\/60,
 :root[data-app-theme='linen'] .bg-black\/60 {
   background-color: rgb(15 23 42 / 0.45) !important;
 }
@@ -476,12 +643,18 @@ body {
 :root[data-app-theme='porcelain'] .shadow-2xl,
 :root[data-app-theme='porcelain'] .shadow-xl,
 :root[data-app-theme='porcelain'] .shadow-lg,
+:root[data-app-theme='pearl'] .shadow-2xl,
+:root[data-app-theme='pearl'] .shadow-xl,
+:root[data-app-theme='pearl'] .shadow-lg,
 :root[data-app-theme='mist'] .shadow-2xl,
 :root[data-app-theme='mist'] .shadow-xl,
 :root[data-app-theme='mist'] .shadow-lg,
 :root[data-app-theme='ivory'] .shadow-2xl,
 :root[data-app-theme='ivory'] .shadow-xl,
 :root[data-app-theme='ivory'] .shadow-lg,
+:root[data-app-theme='sand'] .shadow-2xl,
+:root[data-app-theme='sand'] .shadow-xl,
+:root[data-app-theme='sand'] .shadow-lg,
 :root[data-app-theme='linen'] .shadow-2xl,
 :root[data-app-theme='linen'] .shadow-xl,
 :root[data-app-theme='linen'] .shadow-lg {
@@ -497,15 +670,19 @@ body {
 }
 
 :root[data-app-theme='porcelain'] .appearance-theme-card-label,
+:root[data-app-theme='pearl'] .appearance-theme-card-label,
 :root[data-app-theme='mist'] .appearance-theme-card-label,
 :root[data-app-theme='ivory'] .appearance-theme-card-label,
+:root[data-app-theme='sand'] .appearance-theme-card-label,
 :root[data-app-theme='linen'] .appearance-theme-card-label {
   color: rgb(30 41 59);
 }
 
 :root[data-app-theme='porcelain'] .appearance-theme-card-description,
+:root[data-app-theme='pearl'] .appearance-theme-card-description,
 :root[data-app-theme='mist'] .appearance-theme-card-description,
 :root[data-app-theme='ivory'] .appearance-theme-card-description,
+:root[data-app-theme='sand'] .appearance-theme-card-description,
 :root[data-app-theme='linen'] .appearance-theme-card-description {
   color: rgb(71 85 105);
 }
@@ -515,8 +692,10 @@ body {
 }
 
 :root[data-app-theme='porcelain'] .appearance-accent-pill,
+:root[data-app-theme='pearl'] .appearance-accent-pill,
 :root[data-app-theme='mist'] .appearance-accent-pill,
 :root[data-app-theme='ivory'] .appearance-accent-pill,
+:root[data-app-theme='sand'] .appearance-accent-pill,
 :root[data-app-theme='linen'] .appearance-accent-pill {
   color: rgb(30 41 59);
 }

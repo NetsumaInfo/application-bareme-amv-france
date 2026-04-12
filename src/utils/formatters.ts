@@ -1,3 +1,5 @@
+import type { ClipNamePattern } from '@/types/project'
+
 export function formatTime(seconds: number): string {
   if (!seconds || isNaN(seconds)) return '0:00'
 
@@ -27,19 +29,14 @@ export function formatPreciseTimecode(seconds: number): string {
   return `${timePart}.${millis.toString().padStart(3, '0')}`
 }
 
-export function formatScore(score: number, maxScore: number): string {
-  return `${score}/${maxScore}`
-}
-
-export function formatPercentage(value: number): string {
-  return `${Math.round(value)}%`
-}
-
 export function generateId(): string {
   return crypto.randomUUID()
 }
 
-export function parseClipName(fileName: string): { displayName: string; author?: string } {
+export function parseClipName(
+  fileName: string,
+  pattern: ClipNamePattern = 'pseudo_clip',
+): { displayName: string; author?: string } {
   const withoutExt = fileName.replace(/\.[^.]+$/, '')
   const dashIndex = withoutExt.indexOf('-')
 
@@ -47,8 +44,15 @@ export function parseClipName(fileName: string): { displayName: string; author?:
   let rawName: string
 
   if (dashIndex > 0) {
-    author = withoutExt.substring(0, dashIndex).replace(/_/g, ' ').trim()
-    rawName = withoutExt.substring(dashIndex + 1)
+    const firstPart = withoutExt.substring(0, dashIndex).replace(/_/g, ' ').trim()
+    const secondPart = withoutExt.substring(dashIndex + 1).replace(/_/g, ' ').trim()
+    if (pattern === 'clip_pseudo') {
+      rawName = firstPart
+      author = secondPart
+    } else {
+      author = firstPart
+      rawName = secondPart
+    }
   } else {
     rawName = withoutExt
   }

@@ -1,4 +1,5 @@
 import type {
+  ClipNamePattern,
   Clip,
   ImportedJudgeCriterionScore,
   ImportedJudgeData,
@@ -29,6 +30,23 @@ function normalizeJudgeColors(raw: unknown): Record<string, string> {
     acc[key] = sanitizeColor(value)
     return acc
   }, {})
+}
+
+function normalizeTextMap(raw: unknown): Record<string, string> {
+  if (!raw || typeof raw !== 'object') return {}
+  return Object.entries(raw as Record<string, unknown>).reduce<Record<string, string>>((acc, [key, value]) => {
+    if (!key.trim() || typeof value !== 'string') return acc
+    acc[key] = value
+    return acc
+  }, {})
+}
+
+function normalizeClipNamePattern(rawSettings: Record<string, unknown>): ClipNamePattern {
+  const rawPattern = rawSettings.clipNamePattern ?? rawSettings.clip_name_pattern
+  if (rawPattern === 'pseudo_clip' || rawPattern === 'clip_pseudo') {
+    return rawPattern
+  }
+  return DEFAULT_PROJECT_SETTINGS.clipNamePattern
 }
 
 function normalizeImportedJudges(rawImportedJudges: unknown[]): ImportedJudgeData[] {
@@ -139,6 +157,7 @@ export function normalizeProjectDataInput(data: ProjectData): NormalizedProjectD
 
     return DEFAULT_PROJECT_SETTINGS.multiPseudoDisplayMode
   })()
+  const normalizedClipNamePattern = normalizeClipNamePattern(rawSettings)
 
   const project: Project = {
     id: (rawProject.id as string) || generateId(),
@@ -202,15 +221,17 @@ export function normalizeProjectDataInput(data: ProjectData): NormalizedProjectD
           : typeof rawSettings.show_miniatures === 'boolean'
             ? rawSettings.show_miniatures
             : DEFAULT_PROJECT_SETTINGS.showMiniatures,
+      showQuickActions:
+        typeof rawSettings.showQuickActions === 'boolean'
+          ? rawSettings.showQuickActions
+          : typeof rawSettings.show_quick_actions === 'boolean'
+            ? rawSettings.show_quick_actions
+            : DEFAULT_PROJECT_SETTINGS.showQuickActions,
       multiPseudoDisplayMode: normalizedMultiPseudoDisplayMode,
-      showAddRowButton:
-        typeof rawSettings.showAddRowButton === 'boolean'
-          ? rawSettings.showAddRowButton
-          : typeof rawSettings.show_add_row_button === 'boolean'
-            ? rawSettings.show_add_row_button
-            : DEFAULT_PROJECT_SETTINGS.showAddRowButton,
+      clipNamePattern: normalizedClipNamePattern,
       thumbnailDefaultTimeSec: clampedThumbnailDefaultTime,
     },
+    resultNotes: normalizeTextMap(rawProject.resultNotes ?? rawProject.result_notes),
     filePath:
       (rawProject.filePath as string | undefined) ||
       (rawProject.file_path as string | undefined),
@@ -223,7 +244,7 @@ export function normalizeProjectDataInput(data: ProjectData): NormalizedProjectD
       (rawClip.fileName as string) ||
       (rawClip.file_name as string) ||
       ''
-    const parsed = parseClipName(fileName)
+    const parsed = parseClipName(fileName, normalizedClipNamePattern)
     const maybeThumbnailTime = Number(rawClip.thumbnailTime ?? rawClip.thumbnail_time)
     const thumbnailTime = Number.isFinite(maybeThumbnailTime) && maybeThumbnailTime >= 0
       ? maybeThumbnailTime

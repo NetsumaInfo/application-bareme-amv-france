@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef } from 'react'
 import { usePlayerStore } from '@/store/usePlayerStore'
 import { useProjectStore } from '@/store/useProjectStore'
 import * as tauri from '@/services/tauri'
+import { usePlayerStatusPolling } from '@/hooks/usePlayerStatusPolling'
 import { buildScreenshotName } from '@/utils/screenshot'
 
 export function usePlayer() {
@@ -22,7 +23,6 @@ export function usePlayer() {
   } = usePlayerStore()
   const { clips, currentClipIndex } = useProjectStore()
   const currentClip = clips[currentClipIndex]
-  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const lastNonZeroVolumeRef = useRef(80)
 
   useEffect(() => {
@@ -31,36 +31,21 @@ export function usePlayer() {
     }
   }, [volume])
 
-  // Poll player status every 250ms
   useEffect(() => {
     // Muted by default - set volume to 0 on init
     tauri.playerSetVolume(0).catch(() => {})
-
-    const poll = async () => {
-      try {
-        const [status, fullscreen] = await Promise.all([
-          tauri.playerGetStatus(),
-          tauri.playerIsFullscreen().catch(() => false),
-        ])
-        const state = usePlayerStore.getState()
-        state.syncStatus({
-          isPlaying: status.is_playing,
-          currentTime: status.current_time,
-          duration: status.duration,
-          volume: status.volume,
-          isFullscreen: fullscreen,
-        })
-      } catch {
-        // Player not available
-      }
-    }
-
-    poll()
-    pollRef.current = setInterval(poll, 250)
-    return () => {
-      if (pollRef.current) clearInterval(pollRef.current)
-    }
   }, [])
+
+  usePlayerStatusPolling((status, fullscreen) => {
+    const state = usePlayerStore.getState()
+    state.syncStatus({
+      isPlaying: status.is_playing,
+      currentTime: status.current_time,
+      duration: status.duration,
+      volume: status.volume,
+      isFullscreen: fullscreen,
+    })
+  })
 
   const togglePause = useCallback(async () => {
     try {

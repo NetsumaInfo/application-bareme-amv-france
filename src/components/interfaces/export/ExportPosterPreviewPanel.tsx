@@ -179,6 +179,7 @@ function PosterCanvasScene({
         if (event.target !== event.currentTarget) return
         onOpenBackgroundContextMenu(event)
       }}
+      role="presentation"
     >
       {!backgroundImage && (
         <>
@@ -242,6 +243,7 @@ function PosterCanvasScene({
                 if (!interactive) return
                 onOpenImageContextMenu(event, image)
               }}
+              role="presentation"
             >
               <img
                 src={image.src}
@@ -283,6 +285,7 @@ function PosterCanvasScene({
               if (!interactive) return
               onOpenBlockContextMenu(event, block)
             }}
+            role="presentation"
           >
             <div
               className="whitespace-pre-wrap break-words"
@@ -305,7 +308,7 @@ function PosterCanvasScene({
   )
 }
 
-export function ExportPosterPreviewPanel({
+function useExportPosterPreviewPanelController({
   previewRef,
   accent,
   posterWidth,
@@ -424,7 +427,7 @@ export function ExportPosterPreviewPanel({
     } as PosterElementContextMenu)
   }
 
-  return (
+  const renderContent = () => (
     <div className="flex-1 min-h-0 overflow-auto">
       <div className="text-xs text-gray-500 mb-2 flex items-center gap-1.5">
         <Download size={12} />
@@ -693,4 +696,11 @@ export function ExportPosterPreviewPanel({
       </div>
     </div>
   )
+
+  return { renderContent }
+}
+
+export function ExportPosterPreviewPanel(props: ExportPosterPreviewPanelProps) {
+  const { renderContent } = useExportPosterPreviewPanelController(props)
+  return renderContent()
 }

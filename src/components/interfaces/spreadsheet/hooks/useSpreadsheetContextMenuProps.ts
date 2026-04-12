@@ -8,17 +8,19 @@ interface UseSpreadsheetContextMenuPropsParams {
   contextClip: Clip | null
   currentClip: Clip | undefined
   showMiniatures: boolean
+  showQuickActions: boolean
   hasAnyLinkedVideo: boolean
-  showAddRowButton: boolean
   shortcutBindings: Record<ShortcutAction, string>
   contextMenuRef: MutableRefObject<HTMLDivElement | null>
   handleToggleScored: (clip: Clip) => void
   handleOpenNotes: (clip: Clip) => void
   handleAttachVideo: (clip: Clip) => void
+  handleRenameClip: (clip: Clip) => void
+  handleSwapPseudoAndClipName: (clip: Clip) => void
   handleSetMiniatureFromCurrentFrame: (clip: Clip) => void
   handleResetMiniature: (clip: Clip) => void
   handleToggleMiniatures: () => void
-  handleToggleAddRowButton: () => void
+  handleToggleQuickActions: () => void
   handleShowMediaInfo: (clip: Clip) => void
   handleRemoveClip: (clip: Clip) => void
 }
@@ -28,17 +30,19 @@ export function buildSpreadsheetContextMenuProps({
   contextClip,
   currentClip,
   showMiniatures,
+  showQuickActions,
   hasAnyLinkedVideo,
-  showAddRowButton,
   shortcutBindings,
   contextMenuRef,
   handleToggleScored,
   handleOpenNotes,
   handleAttachVideo,
+  handleRenameClip,
+  handleSwapPseudoAndClipName,
   handleSetMiniatureFromCurrentFrame,
   handleResetMiniature,
   handleToggleMiniatures,
-  handleToggleAddRowButton,
+  handleToggleQuickActions,
   handleShowMediaInfo,
   handleRemoveClip,
 }: UseSpreadsheetContextMenuPropsParams): ComponentProps<typeof ClipContextMenu> {
@@ -47,17 +51,19 @@ export function buildSpreadsheetContextMenuProps({
     contextClip,
     currentClipId: currentClip?.id,
     showMiniatures,
+    showQuickActions,
     hasAnyLinkedVideo,
-    showAddRowButton,
     shortcutBindings,
     contextMenuRef,
     onToggleScored: handleToggleScored,
     onOpenNotes: handleOpenNotes,
     onAttachVideo: handleAttachVideo,
+    onRenameClip: handleRenameClip,
+    onSwapPseudoAndClipName: handleSwapPseudoAndClipName,
     onSetMiniatureFromCurrentFrame: handleSetMiniatureFromCurrentFrame,
     onResetMiniature: handleResetMiniature,
     onToggleMiniatures: handleToggleMiniatures,
-    onToggleAddRowButton: handleToggleAddRowButton,
+    onToggleQuickActions: handleToggleQuickActions,
     onShowMediaInfo: handleShowMediaInfo,
     onRemoveClip: handleRemoveClip,
   }

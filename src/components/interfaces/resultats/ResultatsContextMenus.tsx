@@ -1,14 +1,5 @@
 import type { MutableRefObject } from 'react'
-import {
-  Clapperboard,
-  Eye,
-  EyeOff,
-  FileText,
-  Pencil,
-  Play,
-  Trash2,
-  Upload,
-} from 'lucide-react'
+import { Pencil, Trash2, Upload } from 'lucide-react'
 import type { Clip } from '@/types/project'
 import {
   AppContextMenuItem,
@@ -16,6 +7,7 @@ import {
   AppContextMenuSeparator,
 } from '@/components/ui/AppContextMenu'
 import { useI18n } from '@/i18n'
+import { UI_ICONS } from '@/components/ui/actionIcons'
 
 interface MenuPosition {
   x: number
@@ -76,6 +68,12 @@ export function ResultatsContextMenus({
   onToggleGeneralNotes,
 }: ResultatsContextMenusProps) {
   const { t } = useI18n()
+  const playerIcon = UI_ICONS.player
+  const detailedNotesIcon = UI_ICONS.detailedNotes
+  const detailedNotesSecondaryIcon = UI_ICONS.detailedNotesSecondary
+  const generalNoteIcon = UI_ICONS.generalNote
+  const showIcon = UI_ICONS.show
+  const hideIcon = UI_ICONS.hide
   const canRemoveSelectedJudge = Boolean(memberContextMenu?.judgeKey.startsWith('imported-'))
 
   return (
@@ -85,7 +83,7 @@ export function ResultatsContextMenus({
           ref={memberContextMenuRef}
           x={memberContextMenu.x}
           y={memberContextMenu.y}
-          minWidthClassName="min-w-[205px]"
+          minWidthClassName="min-w-[188px]"
         >
           <AppContextMenuItem
             onClick={() => {
@@ -117,7 +115,7 @@ export function ResultatsContextMenus({
           ref={clipContextMenuRef}
           x={clipContextMenu.x}
           y={clipContextMenu.y}
-          minWidthClassName="min-w-[225px]"
+          minWidthClassName="min-w-[198px]"
         >
           {(() => {
             const clip = clips.find((item) => item.id === clipContextMenu.clipId)
@@ -132,7 +130,7 @@ export function ResultatsContextMenus({
                         onCloseClipMenu()
                       }}
                       label={t('Ouvrir le lecteur')}
-                      icon={Play}
+                      icon={playerIcon}
                     />
                     <AppContextMenuSeparator />
                   </>
@@ -143,8 +141,8 @@ export function ResultatsContextMenus({
                     onCloseClipMenu()
                   }}
                   label={t('Notes détaillées des juges')}
-                  icon={Clapperboard}
-                  iconSecondary={FileText}
+                  icon={detailedNotesIcon}
+                  iconSecondary={detailedNotesSecondaryIcon}
                 />
                 <AppContextMenuSeparator />
                 <AppContextMenuItem
@@ -153,8 +151,8 @@ export function ResultatsContextMenus({
                     onCloseClipMenu()
                   }}
                   label={hideGeneralNotes ? t('Afficher note générale') : t('Masquer note générale')}
-                  icon={FileText}
-                  iconSecondary={hideGeneralNotes ? Eye : EyeOff}
+                  icon={generalNoteIcon}
+                  iconSecondary={hideGeneralNotes ? showIcon : hideIcon}
                 />
                 <AppContextMenuSeparator />
               </>
@@ -165,7 +163,7 @@ export function ResultatsContextMenus({
               onRemoveClip(clipContextMenu.clipId)
               onCloseClipMenu()
             }}
-            label={clips.find((item) => item.id === clipContextMenu.clipId)?.filePath ? t('Supprimer la vidéo') : t('Supprimer la ligne')}
+            label={clips.find((item) => item.id === clipContextMenu.clipId)?.filePath ? t('Supprimer la vidéo du participant') : t('Supprimer le participant')}
             icon={Trash2}
             danger
           />
@@ -177,7 +175,7 @@ export function ResultatsContextMenus({
           ref={emptyContextMenuRef}
           x={emptyContextMenu.x}
           y={emptyContextMenu.y}
-          minWidthClassName="min-w-[235px]"
+          minWidthClassName="min-w-[202px]"
         >
           <AppContextMenuItem
             onClick={() => {
@@ -185,8 +183,8 @@ export function ResultatsContextMenus({
               onCloseEmptyMenu()
             }}
             label={hideGeneralNotes ? t('Afficher note générale') : t('Masquer note générale')}
-            icon={FileText}
-            iconSecondary={hideGeneralNotes ? Eye : EyeOff}
+            icon={generalNoteIcon}
+            iconSecondary={hideGeneralNotes ? showIcon : hideIcon}
           />
           <AppContextMenuSeparator />
           <AppContextMenuItem
@@ -194,7 +192,7 @@ export function ResultatsContextMenus({
               onImportJudgeJson()
               onCloseEmptyMenu()
             }}
-            label={t('Importer un JE.json')}
+            label={t('Importer un juge')}
             icon={Upload}
           />
           {selectedClip ? (
@@ -207,7 +205,7 @@ export function ResultatsContextMenus({
                     onCloseEmptyMenu()
                   }}
                   label={t('Ouvrir le lecteur (clip sélectionné)')}
-                  icon={Play}
+                  icon={playerIcon}
                 />
               ) : null}
               <AppContextMenuItem
@@ -216,8 +214,8 @@ export function ResultatsContextMenus({
                   onCloseEmptyMenu()
                 }}
                 label={t('Notes détaillées des juges (clip sélectionné)')}
-                icon={Clapperboard}
-                iconSecondary={FileText}
+                icon={detailedNotesIcon}
+                iconSecondary={detailedNotesSecondaryIcon}
               />
             </>
           ) : null}

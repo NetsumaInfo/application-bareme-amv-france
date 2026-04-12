@@ -1,7 +1,12 @@
 import { ChevronLeft, ChevronRight, Play } from 'lucide-react'
+import { HoverTextTooltip } from '@/components/ui/HoverTextTooltip'
 import { getClipPrimaryLabel, getClipSecondaryLabel } from '@/utils/formatters'
 import type { Clip } from '@/types/project'
 import { useI18n } from '@/i18n'
+import {
+  formatShortcutAnnotationForAction,
+  type ShortcutAction,
+} from '@/utils/shortcuts'
 
 interface NotationClipHeaderProps {
   clip: Clip
@@ -11,6 +16,7 @@ interface NotationClipHeaderProps {
   totalScore: number
   totalPoints: number
   shouldHideTotals: boolean
+  shortcutBindings: Partial<Record<ShortcutAction, string>>
   onNavigate: (direction: 'next' | 'prev') => void
   onOpenPlayer: () => void
 }
@@ -23,39 +29,46 @@ export function NotationClipHeader({
   totalScore,
   totalPoints,
   shouldHideTotals,
+  shortcutBindings,
   onNavigate,
   onOpenPlayer,
 }: NotationClipHeaderProps) {
   const { t } = useI18n()
+  const prevClipLabel = formatShortcutAnnotationForAction('prevClip', shortcutBindings, t)
+  const nextClipLabel = formatShortcutAnnotationForAction('nextClip', shortcutBindings, t)
   return (
     <>
-      <div className="flex items-center justify-between px-3 py-2 border-b border-gray-700 shrink-0 bg-surface">
-        <button
-          onClick={() => onNavigate('prev')}
-          disabled={currentClipIndex === 0}
-          className="p-1 rounded hover:bg-surface-light text-gray-400 hover:text-white disabled:opacity-30 transition-colors"
-        >
-          <ChevronLeft size={16} />
-        </button>
+      <div className="flex items-center justify-between border-b border-gray-700/80 bg-surface px-3 py-1.5 shrink-0">
+        <HoverTextTooltip text={prevClipLabel}>
+          <button
+            onClick={() => onNavigate('prev')}
+            disabled={currentClipIndex === 0}
+            aria-label={prevClipLabel}
+            className="inline-flex h-5 w-5 items-center justify-center rounded-md text-gray-400 transition-colors hover:bg-white/5 hover:text-white disabled:opacity-30"
+          >
+            <ChevronLeft size={14} />
+          </button>
+        </HoverTextTooltip>
         <div
           className="text-center min-w-0 flex-1 px-2"
           onDoubleClick={hasVideo ? onOpenPlayer : undefined}
-          title={hasVideo ? t('Double clic pour ouvrir le lecteur') : t('Aucune vidéo liée à cette ligne')}
         >
-          <div className="flex items-center justify-center gap-2 min-w-0 text-[11px] leading-none">
-            <button
-              onClick={(event) => {
-                event.stopPropagation()
-                if (!hasVideo) return
-                onOpenPlayer()
-              }}
-              disabled={!hasVideo}
-              className="p-0.5 rounded hover:bg-surface-light text-gray-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors shrink-0"
-              title={hasVideo ? t('Ouvrir la vidéo') : t('Vidéo indisponible')}
-            >
-              <Play size={13} />
-            </button>
-            <span className="font-semibold text-white truncate max-w-[40%]">
+          <div className="flex items-center justify-center gap-1.5 min-w-0 text-[10px] leading-none">
+            <HoverTextTooltip text={hasVideo ? t('Ouvrir la vidéo') : t('Vidéo indisponible')}>
+              <button
+                onClick={(event) => {
+                  event.stopPropagation()
+                  if (!hasVideo) return
+                  onOpenPlayer()
+                }}
+                disabled={!hasVideo}
+                aria-label={hasVideo ? t('Ouvrir la vidéo') : t('Vidéo indisponible')}
+                className="inline-flex h-4.5 w-4.5 items-center justify-center rounded-md text-gray-400 transition-colors hover:bg-white/5 hover:text-white disabled:cursor-not-allowed disabled:opacity-30 shrink-0"
+              >
+                <Play size={11.5} />
+              </button>
+            </HoverTextTooltip>
+            <span className="text-[11px] font-semibold text-white truncate max-w-[40%]">
               {getClipPrimaryLabel(clip)}
             </span>
             {getClipSecondaryLabel(clip) && (
@@ -70,13 +83,16 @@ export function NotationClipHeader({
           </div>
         </div>
         <div className="flex items-center gap-1">
-          <button
-            onClick={() => onNavigate('next')}
-            disabled={currentClipIndex >= totalClips - 1}
-            className="p-1 rounded hover:bg-surface-light text-gray-400 hover:text-white disabled:opacity-30 transition-colors"
-          >
-            <ChevronRight size={16} />
-          </button>
+          <HoverTextTooltip text={nextClipLabel}>
+            <button
+              onClick={() => onNavigate('next')}
+              disabled={currentClipIndex >= totalClips - 1}
+              aria-label={nextClipLabel}
+              className="inline-flex h-5 w-5 items-center justify-center rounded-md text-gray-400 transition-colors hover:bg-white/5 hover:text-white disabled:opacity-30"
+            >
+              <ChevronRight size={14} />
+            </button>
+          </HoverTextTooltip>
         </div>
       </div>
 

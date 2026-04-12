@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { emit, listen } from '@tauri-apps/api/event'
 import { useNotationStore } from '@/store/useNotationStore'
 import { useProjectStore } from '@/store/useProjectStore'
+import { useClipDeletionStore } from '@/store/useClipDeletionStore'
 import { useUIStore } from '@/store/useUIStore'
 import * as tauri from '@/services/tauri'
 import { ResultatsHeader } from '@/components/interfaces/resultats/ResultatsHeader'
@@ -33,25 +34,38 @@ type RenameJudgeDialog = {
   title: string
 }
 
-export default function ResultatsInterface() {
+interface ResultatsViewState {
+  mainView: ResultatsMainView
+  globalVariant: ResultatsGlobalVariant
+  selectedJudgeKey: string
+  isJudgeNotesDetached: boolean
+}
+
+interface RenameJudgeState {
+  dialog: RenameJudgeDialog | null
+  value: string
+  error: string | null
+}
+
+function useResultatsInterfaceController() {
   const { t } = useI18n()
   const currentBareme = useNotationStore((state) => state.currentBareme)
   const notes = useNotationStore((state) => state.notes)
   const updateCriterion = useNotationStore((state) => state.updateCriterion)
-  const setTextNotes = useNotationStore((state) => state.setTextNotes)
-  const { setShowPipVideo, hideTextNotes, toggleTextNotes } = useUIStore()
+  const { setShowPipVideo, shortcutBindings } = useUIStore()
 
   const {
     currentProject,
     clips,
     importedJudges,
     setImportedJudges,
+    setResultNote,
     updateProject,
     updateSettings,
     markDirty,
     setCurrentClip,
-    removeClip,
   } = useProjectStore()
+  const requestClipDeletion = useClipDeletionStore((state) => state.requestClipDeletion)
   const hideTotalsSetting = Boolean(currentProject?.settings.hideTotals)
   const hideTotalsUntilAllScored = shouldHideResultsUntilAllScored(
     currentProject,
@@ -79,13 +93,29 @@ export default function ResultatsInterface() {
     canSortByScore,
   })
 
-  const [mainView, setMainView] = useState<ResultatsMainView>('global')
-  const [globalVariant, setGlobalVariant] = useState<ResultatsGlobalVariant>('detailed')
-  const [selectedJudgeKey, setSelectedJudgeKey] = useState<string>('current')
-  const [isJudgeNotesDetached, setIsJudgeNotesDetached] = useState(false)
-  const [renameJudgeDialog, setRenameJudgeDialog] = useState<RenameJudgeDialog | null>(null)
-  const [renameJudgeValue, setRenameJudgeValue] = useState('')
-  const [renameJudgeError, setRenameJudgeError] = useState<string | null>(null)
+  const [viewState, setViewState] = useState<ResultatsViewState>({
+    mainView: 'global',
+    globalVariant: 'detailed',
+    selectedJudgeKey: 'current',
+    isJudgeNotesDetached: false,
+  })
+  const [renameJudgeState, setRenameJudgeState] = useState<RenameJudgeState>({
+    dialog: null,
+    value: '',
+    error: null,
+  })
+  const [hideResultNotes, setHideResultNotes] = useState(false)
+  const {
+    mainView,
+    globalVariant,
+    selectedJudgeKey,
+    isJudgeNotesDetached,
+  } = viewState
+  const {
+    dialog: renameJudgeDialog,
+    value: renameJudgeValue,
+    error: renameJudgeError,
+  } = renameJudgeState
   const defaultPickerColor = readStoredColor(COLOR_MEMORY_KEYS.defaultColor)
   const judgeColors = judges.reduce<Record<string, string>>((acc, judge, index) => {
     const configured = currentProject?.settings.judgeColors?.[judge.key]
@@ -103,7 +133,6 @@ export default function ResultatsInterface() {
   const selectedJudgeIndex = judges.findIndex((judge) => judge.key === effectiveSelectedJudgeKey)
   const effectiveJudgeIndex = selectedJudgeIndex >= 0 ? selectedJudgeIndex : 0
   const selectedJudge = judges[effectiveJudgeIndex]
-  const currentJudge = judges.find((judge) => judge.isCurrentJudge) ?? null
   const resolveImportedJudgeIndex = useCallback((judgeKey: string): number | null => {
     if (!judgeKey.startsWith('imported-')) return null
     const parsed = Number(judgeKey.replace('imported-', ''))
@@ -114,17 +143,45 @@ export default function ResultatsInterface() {
     const targetJudge = judges.find((judge) => judge.key === judgeKey)
     if (!targetJudge) return
 
-    setRenameJudgeDialog({
-      judgeKey,
-      title: judgeKey === 'current' ? t('Renommer le juge du projet') : t('Renommer le juge importé'),
+    setRenameJudgeState({
+      dialog: {
+        judgeKey,
+        title: judgeKey === 'current' ? t('Renommer le juge du projet') : t('Renommer le juge importé'),
+      },
+      value: targetJudge.judgeName,
+      error: null,
     })
-    setRenameJudgeValue(targetJudge.judgeName)
-    setRenameJudgeError(null)
   }, [judges, t])
   const closeRenameJudgeDialog = useCallback(() => {
-    setRenameJudgeDialog(null)
-    setRenameJudgeValue('')
-    setRenameJudgeError(null)
+    setRenameJudgeState({
+      dialog: null,
+      value: '',
+      error: null,
+    })
+  }, [])
+  const setMainView = useCallback((nextMainView: ResultatsMainView) => {
+    setViewState((current) => ({
+      ...current,
+      mainView: nextMainView,
+    }))
+  }, [])
+  const setGlobalVariant = useCallback((nextGlobalVariant: ResultatsGlobalVariant) => {
+    setViewState((current) => ({
+      ...current,
+      globalVariant: nextGlobalVariant,
+    }))
+  }, [])
+  const setSelectedJudgeKey = useCallback((nextSelectedJudgeKey: string) => {
+    setViewState((current) => ({
+      ...current,
+      selectedJudgeKey: nextSelectedJudgeKey,
+    }))
+  }, [])
+  const setIsJudgeNotesDetached = useCallback((detached: boolean) => {
+    setViewState((current) => ({
+      ...current,
+      isJudgeNotesDetached: detached,
+    }))
   }, [])
   const openClipContextMenu = (clipId: string, x: number, y: number) => {
     setMemberContextMenu(null)
@@ -133,11 +190,11 @@ export default function ResultatsInterface() {
   }
 
   const {
-    importing,
     criterionDraftCells,
     selectedClipId,
     selectedClip,
     selectedClipFps,
+    isJsonDragOver,
     memberContextMenu,
     clipContextMenu,
     emptyContextMenu,
@@ -174,7 +231,10 @@ export default function ResultatsInterface() {
 
     const nextName = renameJudgeValue.trim()
     if (!nextName) {
-      setRenameJudgeError('Le nom du juge ne peut pas être vide.')
+      setRenameJudgeState((current) => ({
+        ...current,
+        error: 'Le nom du juge ne peut pas être vide.',
+      }))
       return
     }
 
@@ -194,13 +254,19 @@ export default function ResultatsInterface() {
       judgeIndex !== importedIndex && judge.judgeName.trim().toLowerCase() === nextName.toLowerCase()
     ))
     if (hasDuplicate) {
-      setRenameJudgeError('Un juge importé avec ce nom existe déjà.')
+      setRenameJudgeState((current) => ({
+        ...current,
+        error: 'Un juge importé avec ce nom existe déjà.',
+      }))
       return
     }
 
     const renamed = renameImportedJudge(importedIndex, nextName)
     if (!renamed) {
-      setRenameJudgeError('Impossible de renommer ce juge.')
+      setRenameJudgeState((current) => ({
+        ...current,
+        error: 'Impossible de renommer ce juge.',
+      }))
       return
     }
 
@@ -249,6 +315,12 @@ export default function ResultatsInterface() {
       setSelectedClipId(clipId)
     }).then(pushUnlisten)
 
+    listen<{ clipId?: string }>('resultats-notes:open-player', (event) => {
+      const clipId = event.payload?.clipId
+      if (!clipId) return
+      openClipInNotation(clipId).catch(() => {})
+    }).then(pushUnlisten)
+
     listen<{ clipId?: string; seconds?: number }>('resultats-notes:timecode-jump', (event) => {
       const clipId = event.payload?.clipId
       const seconds = Number(event.payload?.seconds ?? NaN)
@@ -266,32 +338,46 @@ export default function ResultatsInterface() {
         unlisten()
       }
     }
-  }, [emitDetachedJudgeNotesData, jumpToTimecodeInNotation, setSelectedClipId])
+  }, [
+    emitDetachedJudgeNotesData,
+    jumpToTimecodeInNotation,
+    openClipInNotation,
+    setIsJudgeNotesDetached,
+    setSelectedClipId,
+  ])
 
   useEffect(() => {
     if (!isJudgeNotesDetached) return
     emitDetachedJudgeNotesData()
   }, [emitDetachedJudgeNotesData, isJudgeNotesDetached])
 
+  const selectedResultNoteText = selectedClip
+    ? (currentProject?.resultNotes?.[selectedClip.id] ?? '')
+    : ''
+
   if (!currentBareme) {
-    return (
-      <div className="flex items-center justify-center h-full text-gray-500 text-sm">
-        {t('Aucun barème chargé')}
-      </div>
-    )
+    return {
+      renderContent: () => (
+        <div className="flex items-center justify-center h-full text-gray-500 text-sm">
+          {t('Aucun barème chargé')}
+        </div>
+      ),
+    }
   }
 
   if (clips.length === 0) {
-    return (
-      <div className="flex items-center justify-center h-full text-gray-500 text-sm">
-        {t('Aucun clip dans le projet')}
-      </div>
-    )
+    return {
+      renderContent: () => (
+        <div className="flex items-center justify-center h-full text-gray-500 text-sm">
+          {t('Aucun clip dans le projet')}
+        </div>
+      ),
+    }
   }
 
-  return (
+  const renderContent = () => (
     <div
-      className="flex flex-col h-full p-3 gap-3"
+      className="relative flex h-full flex-col gap-0.5 px-1.5 pb-1.5"
       onContextMenu={(event) => {
         const target = event.target as HTMLElement
         if (
@@ -302,42 +388,49 @@ export default function ResultatsInterface() {
         }
         event.preventDefault()
         event.stopPropagation()
-        const width = 230
-        const height = selectedClip ? 210 : 58
-        const x = Math.max(8, Math.min(event.clientX, window.innerWidth - width - 8))
-        const y = Math.max(8, Math.min(event.clientY, window.innerHeight - height - 8))
         setMemberContextMenu(null)
         setClipContextMenu(null)
-        setEmptyContextMenu({ x, y })
+        setEmptyContextMenu({ x: event.clientX, y: event.clientY })
       }}
     >
-      <ResultatsHeader
-        importing={importing}
-        judges={judges}
-        selectedJudgeKey={effectiveSelectedJudgeKey}
-        judgeColors={judgeColors}
-        onImportJudgeJson={() => { handleImportJudgeJson().catch(() => {}) }}
-        onSelectJudge={setSelectedJudgeKey}
-        onJudgeColorChange={(judgeKey, color) => {
-          const next = {
-            ...(currentProject?.settings.judgeColors ?? {}),
-            [judgeKey]: sanitizeColor(color),
-          }
-          updateSettings({ judgeColors: next })
-        }}
-        onOpenMemberContextMenu={(judgeKey, x, y) => {
-          setClipContextMenu(null)
-          setEmptyContextMenu(null)
-          setMemberContextMenu({ judgeKey, x, y })
-        }}
-      />
+      {isJsonDragOver && (
+        <div className="pointer-events-none absolute inset-1.5 z-50 flex items-center justify-center rounded-lg border border-dashed border-primary-400/80 bg-black/45 backdrop-blur-sm">
+          <div className="rounded-md border border-white/10 bg-surface-dark/95 px-4 py-3 text-center shadow-xl">
+            <div className="text-sm font-semibold text-white">{t('Déposez vos fichiers JSON de juge')}</div>
+            <div className="mt-1 text-[11px] text-gray-400">{t('Importer un juge')}</div>
+          </div>
+        </div>
+      )}
 
-      <ResultatsViewModeControls
-        mainView={mainView}
-        onMainViewChange={setMainView}
-        globalVariant={globalVariant}
-        onGlobalVariantChange={setGlobalVariant}
-      />
+      <div className="flex items-start justify-between gap-3 border-b border-gray-700/50 pb-1">
+        <ResultatsViewModeControls
+          mainView={mainView}
+          onMainViewChange={setMainView}
+          globalVariant={globalVariant}
+          onGlobalVariantChange={setGlobalVariant}
+          notesPanelHidden={hideResultNotes}
+          onToggleNotesPanel={() => setHideResultNotes((current) => !current)}
+        />
+
+        <ResultatsHeader
+          judges={judges}
+          selectedJudgeKey={effectiveSelectedJudgeKey}
+          judgeColors={judgeColors}
+          onSelectJudge={setSelectedJudgeKey}
+          onJudgeColorChange={(judgeKey, color) => {
+            const next = {
+              ...(currentProject?.settings.judgeColors ?? {}),
+              [judgeKey]: sanitizeColor(color),
+            }
+            updateSettings({ judgeColors: next })
+          }}
+          onOpenMemberContextMenu={(judgeKey, x, y) => {
+            setClipContextMenu(null)
+            setEmptyContextMenu(null)
+            setMemberContextMenu({ judgeKey, x, y })
+          }}
+        />
+      </div>
 
       {mainView === 'judge' && selectedJudge && (
         <ResultatsJudgeTable
@@ -442,17 +535,14 @@ export default function ResultatsInterface() {
       )}
 
       <ResultatsNotesPanel
-        hidden={hideTextNotes || mainView === 'judgeNotes'}
+        hidden={hideResultNotes}
         selectedClip={selectedClip}
-        generalJudge={currentJudge}
-        categoryGroups={categoryGroups}
-        hideTotalsSummary={!canSortByScore}
+        noteText={selectedResultNoteText}
         selectedClipFps={selectedClipFps}
-        onSetCurrentJudgeText={(clipId, text) => {
-          setTextNotes(clipId, text)
-          markDirty()
+        shortcutBindings={shortcutBindings}
+        onChangeText={(clipId, text) => {
+          setResultNote(clipId, text)
         }}
-        onClosePanel={toggleTextNotes}
         onJumpToTimecode={(clipId, seconds) => {
           jumpToTimecodeInNotation(clipId, seconds).catch(() => {})
         }}
@@ -492,9 +582,9 @@ export default function ResultatsInterface() {
         onImportJudgeJson={() => {
           handleImportJudgeJson().catch(() => {})
         }}
-        onRemoveClip={removeClip}
-        hideGeneralNotes={hideTextNotes}
-        onToggleGeneralNotes={toggleTextNotes}
+        onRemoveClip={requestClipDeletion}
+        hideGeneralNotes={hideResultNotes}
+        onToggleGeneralNotes={() => setHideResultNotes((current) => !current)}
       />
 
       {renameJudgeDialog && (
@@ -503,8 +593,11 @@ export default function ResultatsInterface() {
           value={renameJudgeValue}
           errorMessage={renameJudgeError}
           onChangeValue={(nextValue) => {
-            setRenameJudgeValue(nextValue)
-            if (renameJudgeError) setRenameJudgeError(null)
+            setRenameJudgeState((current) => ({
+              ...current,
+              value: nextValue,
+              error: null,
+            }))
           }}
           onCancel={closeRenameJudgeDialog}
           onConfirm={submitRenameJudgeDialog}
@@ -514,4 +607,11 @@ export default function ResultatsInterface() {
       <DetachedFramePreview framePreview={framePreview} />
     </div>
   )
+
+  return { renderContent }
+}
+
+export default function ResultatsInterface() {
+  const { renderContent } = useResultatsInterfaceController()
+  return renderContent()
 }

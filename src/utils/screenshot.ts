@@ -1,13 +1,13 @@
 import { writeBinaryFile } from '@tauri-apps/api/fs'
 import * as tauri from '@/services/tauri'
 
-export function screenshotTimestamp() {
+function screenshotTimestamp() {
   const now = new Date()
   const pad = (v: number) => String(v).padStart(2, '0')
   return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}_${pad(now.getHours())}-${pad(now.getMinutes())}-${pad(now.getSeconds())}`
 }
 
-export function safeFilePart(value: string) {
+function safeFilePart(value: string) {
   return value
     .normalize('NFKD')
     .replace(/[^\w.-]+/g, '-')

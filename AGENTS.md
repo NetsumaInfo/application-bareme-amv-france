@@ -7,247 +7,389 @@ This file provides guidance to Codex and other coding agents when working with c
 - Keep code clean, refactored, and modular. Avoid large monolithic files when logic can be split into focused modules.
 - Follow best practices for the stack (React/TypeScript/Rust): clear naming, strong typing, single-responsibility components/hooks, and reusable utilities.
 - Any functional change should preserve or improve maintainability (readability, testability, and consistency with existing architecture).
+- The expected quality bar is **100%**. Do not treat "mostly working" or "good enough" as finished if there are still known avoidable issues, regressions, broken states, or incomplete cleanup.
+- When validating a change, aim to leave no avoidable errors or warnings in the touched area. If a check cannot reach a clean result, document the reason clearly instead of silently leaving it behind.
+
+## Workflow Discipline
+
+- Use `Apex` as the default workflow for any implementation, refactor, or bug-fix task.
+- Before modifying code or docs, always select and follow the most relevant skill for the task at hand.
+- Keep that skill usage consistent on every change, not only on major edits.
+- Treat `Reactor` and the selected skill workflow as mandatory quality gates: do not skip them when you touch the repository.
 
 ## Build & Development Commands
 
 ```bash
-# Development (launches Vite + Tauri together)
-npm run tauri dev
+# Development
+npm run dev                # Frontend only (Vite)
+npm run tauri dev          # Vite + Tauri desktop app
 
-# Frontend only (no Rust backend)
-npm run dev
+# Frontend build / preview
+npm run build              # TypeScript build + Vite build
+npm run preview            # Preview the Vite bundle
 
-# Build production
-npm run build          # TypeScript check + Vite build (frontend only)
-npm run tauri build    # Full desktop app build (frontend + Rust)
-
-# Lint
-npm run lint           # ESLint
+# Lint / i18n
+npm run lint
+npm run i18n:sync
 
 # Rust checks
-cd src-tauri && cargo check    # Type check Rust backend
-cd src-tauri && cargo build    # Build Rust backend
+cd src-tauri && cargo check
+cd src-tauri && cargo build
+
+# Full desktop build
+npm run tauri build
 ```
 
-**Prerequisite**: `libmpv-2.dll` must be in the project root for video playback. Without it, the app runs but video features are disabled.
+**Prerequisite**: `libmpv-2.dll` must be available for playback in development. In practice, keep it in the project root when running locally. Production bundles include the Windows resources from `src-tauri/resources/windows/*`.
+
+## Stack Summary
+
+- **Desktop shell**: Tauri v1
+- **Frontend**: React 19, TypeScript 5, Vite 7, Zustand
+- **Backend**: Rust 2021
+- **Video**: mpv loaded dynamically at runtime, plus FFmpeg/ffprobe-based probing helpers
+- **Primary platform**: Windows-first desktop behavior, with many Win32-specific player/window integrations
 
 ## Architecture
 
-**Tauri v1** desktop app: React frontend communicates with Rust backend via `invoke()` commands.
+### Frontend (`src/`)
 
-### Frontend (src/)
+- **Multi-entry frontend**:
+  - `src/main.tsx` -> main app window
+  - `src/overlay-entry.tsx` -> fullscreen overlay window
+  - `src/notes-entry.tsx` -> detached notes window
+  - `src/resultats-notes-entry.tsx` -> detached judge-notes window
+- **Path alias**: `@/` maps to `./src/` in TypeScript and Vite.
+- **Tauri access rule**: always go through `src/services/tauri.ts`, which re-exports the typed API modules from `src/services/tauri_api/*`. Do not call `invoke()` directly from components.
 
-- **4 Zustand stores** share state across all interfaces:
-  - `useProjectStore` - Project data, clips array, currentClipIndex, dirty flag, navigation, `removeClip()`
-  - `usePlayerStore` - Playback state synced from mpv via 250ms polling (isPlaying, currentTime, duration, volume, tracks, isDetached)
-  - `useNotationStore` - Scores (`notes: Record<clipId, Note>`), bareme, validation. `updateCriterion()` validates + recalculates
-  - `useUIStore` - Interface mode (`spreadsheet | modern | notation | resultats | export`), sidebar state, modal flags, zoom level, floating video state, language, app theme, primary accent color
+### State Stores
 
-- **5 interfaces** read/write the same stores - switching is seamless:
-  - Spreadsheet (table with keyboard nav, PiP floating video, right-click context menu for clip deletion, 3-way sorting)
-  - Modern (cards, sliders, ScoreRing SVG)
-  - Notation (compact panel alongside fullscreen video)
-  - Resultats (aggregate scores from multiple judges, import JE.json files, right-click judge management, dedicated judge-notes view)
-  - Export (table and poster modes, customizable PDF/PNG/JSON exports, summary/detailed table views, notes PDF export)
+- **Core shared Zustand stores**:
+  - `useProjectStore` -> project entity, clips, current clip index, imported judges, dirty flag, removed clip history
+  - `usePlayerStore` -> playback state, loaded file, tracks, fullscreen/detached state
+  - `useNotationStore` -> notes, note history, current bareme, available baremes
+  - `useUIStore` -> active tab, notation layout, theme, accent, language, zoom, shortcut bindings, modal flags, PiP visibility, notes detachment, UI preferences
+- **Flow-specific store**:
+  - `useClipDeletionStore` -> pending deletion confirmation flow
 
-- **services/tauri.ts** - Typed wrappers around all `invoke()` calls. Always go through this module, never call `invoke()` directly from components.
+### UI Structure
 
-- **Path alias**: `@/` maps to `./src/` (configured in tsconfig + vite)
+- **Top-level tabs**:
+  - `notation`
+  - `resultats`
+  - `export`
+- **Notation layouts inside the notation tab**:
+  - `spreadsheet`
+  - `notation` (comments-focused scoring panel)
+  - `dual` (spreadsheet + detached notes workflow)
+- Historical `modern` interface values are still normalized back to `notation` for old settings, but the removed modern UI files should not be revived without a full app-wide plan.
 
-### Backend (src-tauri/src/)
+### Important Frontend Modules
 
-- **player/** - mpv integration via dynamic loading (`libloading` crate)
-  - `mpv_ffi.rs` - Raw FFI: loads DLL at runtime, stores function pointers. Searches CWD, exe ancestors, and system PATH.
-  - `mpv_wrapper.rs` - High-level API: `new(wid: Option<i64>)`, load_file, play, pause, seek, get/set properties.
-  - `mpv_window.rs` - Win32 popup window for mpv rendering. Supports attached (owned popup over Tauri window), detached (standalone top-level window with title bar), and fullscreen modes. Handles WM_MOUSEACTIVATE and WM_CLOSE.
-  - `commands.rs` - Tauri command handlers. Includes `sync_overlay_with_child()` helper for precise overlay positioning.
+- `components/layout/AppLayout.tsx` orchestrates app bootstrap, bridges, shortcuts, zoom, auto-save, and player window lifecycle.
+- `components/layout/AppMainContent.tsx` swaps between Welcome, Notation, Resultats, and Export.
+- `components/layout/NotationTabContent.tsx` decides whether the notation tab renders spreadsheet mode or notation/comments mode.
+- `components/interfaces/spreadsheet/hooks/useSpreadsheetInterfaceController.ts` is the central composition hook for spreadsheet mode.
+- `components/notes/DetachedNotesWindow.tsx` is the detached notes UI.
+- `components/interfaces/resultats/DetachedResultatsJudgeNotesWindow.tsx` is the detached judge-notes UI.
+- `hooks/usePlayer.ts` + `hooks/usePlayerStatusPolling.ts` are the playback control/sync entry points on the frontend.
+- `hooks/useWindowUiSettingsSync.ts` keeps auxiliary windows aligned with theme/language/shortcut settings.
 
-- **project/manager.rs** - Save/load `.json` project files via `serde_json::Value`. Projects auto-saved to `Documents/AMV Notation/Projets/` folder. Also handles JE.json export format for judge notation sharing.
+### Backend (`src-tauri/src/`)
 
-- **video/import.rs** - Scan folders for video files using `walkdir` (depth 1)
-
-- **state.rs** - `AppState` with `Mutex<Option<MpvPlayer>>` and `Mutex<Option<MpvChildWindow>>`. Both are Option because mpv may not be available. Initialized as None, populated in the `.setup()` hook.
-
-- **main.rs** - Uses `.setup()` hook to: create fullscreen overlay window (hidden, transparent), get Tauri window HWND, create MpvChildWindow, create MpvPlayer with `wid` for embedded rendering.
+- `main.rs` wires Tauri commands, precreates auxiliary windows, and bootstraps the embedded player.
+- `app_windows.rs` owns fullscreen overlay, detached notes window, detached results notes window, and related lifecycle events.
+- `state.rs` stores `Mutex<Option<MpvPlayer>>` and `Mutex<Option<MpvChildWindow>>`.
+- `player/` is split into focused modules:
+  - `bootstrap.rs` -> player/window init during app startup
+  - `commands/` -> Tauri command handlers grouped by concern (`control`, `window`, `media`, `probe_*`, `overlay`, `cache`, etc.)
+  - `mpv_ffi.rs` -> raw dynamic DLL loading and symbols
+  - `mpv_wrapper.rs` + helper modules -> high-level mpv control/properties/media helpers
+  - `mpv_window.rs` + helper modules -> embedded/detached/fullscreen Win32 child window behavior
+  - `mpv_probe/` -> ffprobe parsing helpers
+- `project/manager.rs` is now a façade over submodules:
+  - `project_files.rs`
+  - `project_listing.rs`
+  - `baremes.rs`
+  - `user_settings.rs`
+  - `json_io.rs`
+  - `paths.rs`
+  - `types.rs`
+- `video/import.rs` scans folders for supported video files.
 
 ## Key Patterns
 
-### mpv Embedded Rendering (critical)
-mpv renders into a Win32 popup window overlaid on the webview. The frontend tracks the video container's position via `ResizeObserver` + `getBoundingClientRect()` and sends geometry updates (DPI-scaled) to the backend via `player_set_geometry`. The popup window is shown/hidden as the VideoPlayer component mounts/unmounts. When detached, geometry updates are ignored since the window is independently positioned.
+### mpv Embedded Rendering
 
-### mpv Dynamic Loading (critical)
-`libloading` loads mpv DLL at runtime - no compile-time dependency. In `mpv_ffi.rs`, `Symbol` borrows from `Library`, so you must dereference to raw fn pointers *before* moving Library into the struct:
-```rust
-let create_ptr = *lib.get::<unsafe fn() -> MpvHandle>(b"mpv_create\0")?;
-// ... then move lib into struct, store raw fn pointers separately
-```
+mpv renders into a Win32 child/popup window layered over the webview rather than inside the DOM. The frontend computes geometry from the video container and sends it to `player_set_geometry`. This is the core invariant behind `VideoPlayer`, `FloatingVideoPlayer`, detached mode, and fullscreen overlay sync.
 
-### Player State Sync
-`usePlayer` hook polls `player_get_status` every 250ms to sync mpv state (isPlaying, currentTime, duration) into the Zustand store. Playback commands (play, pause, seek, volume) go through `services/tauri.ts` invoke wrappers.
+### Geometry Updates Are Deduplicated
 
-### Video Loading on Interface Switch
-When switching interfaces (Ctrl+1/2/3), the VideoPlayer remounts. It checks `usePlayerStore.getState().currentFilePath` to avoid reloading the same file (which would restart playback). If the file is already loaded, it just shows the child window and updates geometry.
+`src/services/tauri_api/player.ts` caches the last geometry payload and skips duplicate `player_set_geometry` calls. Do not bypass this helper with raw `invoke()` calls from UI code.
 
-### TypeScript Strictness
-`tsconfig.app.json` has `noUnusedLocals` and `noUnusedParameters` enabled. Prefix unused params with `_`. React 19 requires `useRef()` to have an initial value argument.
+### mpv Dynamic Loading
 
-### Scoring Flow
-User input -> `useNotationStore.updateCriterion()` -> `validateCriterionValue()` -> `calculateScore()` -> updates `notes[clipId]` -> marks project dirty -> auto-save triggers.
+`libloading` is used so mpv remains an optional runtime dependency. In `mpv_ffi.rs`, dereference `Symbol<T>` to raw function pointers before moving the `Library` into the struct. Keep this pattern intact whenever touching the FFI layer.
+
+### Player State Sync Is Adaptive
+
+The frontend no longer polls at a flat 250 ms. `usePlayerStatusPolling()` uses:
+
+- `120ms` while playing or fullscreen
+- `320ms` while idle
+- `500ms` after polling errors
+
+It also refreshes fullscreen state only when needed. Preserve that adaptive behavior when changing player sync.
+
+### First Playback Starts Muted
+
+`usePlayer()` sets player volume to `0` on init. This is intentional to avoid surprise audio.
+
+### Tabs vs Notation Layouts
+
+`Ctrl+1/2/3` now switch the **top-level tabs** (`notation`, `resultats`, `export`). They do not switch between spreadsheet/comments layouts. The notation layouts are toggled from `NotationModeSwitcher` and settings.
+
+### Detached Notes Window Is Bridge-Driven
+
+Detached notes are not a second independent store. The detached window receives clip/bareme/note payloads from the main window through Tauri events such as:
+
+- `main:clip-data`
+- `main:note-updated`
+- `notes:criterion-updated`
+- `notes:text-notes-updated`
+- `notes:timecode-jump`
+
+If you change notes behavior, update both the main-window emitters and the detached-window listeners.
+
+### Dual Mode Auto-Detaches Notes
+
+When the notation tab is in `dual` mode, `useAutoDetachNotesWindow()` opens the detached notes window automatically. When that window closes, the app falls back out of dual mode to avoid a broken split state.
+
+### Results Detached Notes Use a Separate Bridge
+
+The Resultats tab has its own detached judge-notes bridge using events like:
+
+- `main:resultats-judge-notes-data`
+- `resultats-notes:request-data`
+- `resultats-notes:select-clip`
+- `resultats-notes:timecode-jump`
+
+Do not mix the notation-window bridge and the resultats-window bridge.
+
+### Auxiliary Windows Are Precreated/Warmed
+
+The fullscreen overlay window is precreated in `app_windows::precreate_aux_windows()`. The notes/resultats-notes windows can also be warmed with `warm_aux_windows()` shortly after app load to avoid sluggish first-open behavior.
+
+### UI Settings Persist And Broadcast Across Windows
+
+Theme, accent color, language, shortcut bindings, audio meter visibility, and clip-deletion confirmation are persisted through `load_user_settings` / `save_user_settings`. Changes are broadcast with the `ui:settings-updated` event so detached windows stay visually in sync.
+
+### Welcome Screen Loads Folder Projects Plus Recents
+
+The welcome screen combines:
+
+- the real project list from the default projects folder
+- recent file paths stored in user settings
+
+Recent entries that no longer exist are cleaned up. Keep this merge behavior intact if you touch project discovery.
+
+### No-Video Workflow Is Supported
+
+Spreadsheet mode supports creating a scoring table without imported video files. Users can:
+
+- paste one participant per line
+- create manual rows
+- attach video files later
+
+Do not regress this workflow by assuming every clip has `filePath`.
 
 ### Clip Naming Convention
-Video filenames are parsed with `parseClipName()` in `utils/formatters.ts`:
-- `pseudo-nom_du_clip.mp4` -> author: "pseudo", displayName: "nom du clip"
-- `nom_du_clip.mp4` -> displayName: "nom du clip" (no author)
-First dash separates author from title, underscores become spaces.
 
-### Tauri Resources
-`tauri.conf.json` bundles `libmpv-2.dll` via `"resources": ["resources/windows/libmpv-2.dll"]`. The installer includes the DLL so end users don't need to download it separately. In development, place `libmpv-2.dll` in the project root. Managed by Git LFS.
+`parseClipName()` / clip import helpers treat the first dash as the separator between author and clip title:
 
-### Rust Modules
-Use `#![allow(dead_code)]` at top of FFI/future-use modules to suppress warnings.
+- `pseudo-nom_du_clip.mp4` -> author: `pseudo`, displayName: `nom du clip`
+- `nom_du_clip.mp4` -> displayName only
 
-### Projects Folder Management
-Projects are auto-saved to `Documents/AMV Notation/Projets/{name}.json` on creation. The WelcomeScreen scans this folder via `list_projects_in_folder` Rust command. The `useSaveProject` hook extracts save/saveAs logic for reuse across keyboard shortcuts and menu actions.
+Underscores become spaces. Match this logic when generating or reconciling clips.
 
-### Keyboard Shortcuts
-Shortcut definitions are centralized in `utils/shortcuts.ts` with `ShortcutAction` type and `SHORTCUT_DEFINITIONS` array (French labels).
+### Clip Deletion Is Confirmation-Aware
 
-The `useKeyboardShortcuts(shortcuts, globalShortcuts?)` hook differentiates between:
-- **Regular shortcuts**: Blocked when typing in INPUT/TEXTAREA/SELECT elements
-- **Global shortcuts**: Always fire, even in input fields (used for Ctrl+S, Ctrl+N, Ctrl+O, F11, zoom)
+Deletion should go through `useClipDeletionStore` when the UI needs the confirmation flow. `useProjectStore.removeClip()` is the raw state mutation and also manages selection/history bookkeeping.
 
-Common shortcuts:
-- `Ctrl+S`: Save project
-- `Ctrl+N`: New project
-- `Ctrl+O`: Open project
-- `Ctrl+1/2/3`: Switch interfaces (Spreadsheet/Modern/Notation)
-- `F11`: Toggle fullscreen video
-- `Space`: Play/pause
-- `←`/`→`: Seek -5s/+5s
-- `Shift+←`/`Shift+→`: Seek -30s/+30s
-- `N`/`P`: Next/previous clip
+### Undo Covers Two Domains
 
-### Fullscreen Video
-Fullscreen mode uses Win32 `MonitorFromWindow` + `GetMonitorInfoW` to get monitor bounds, then `SetWindowPos` to resize mpv. An `AtomicBool` tracks fullscreen state. A separate overlay Tauri window displays controls that auto-hide after inactivity. The `sync_overlay_with_child()` helper in `commands.rs` positions the overlay precisely on the correct monitor, using `get_client_rect_screen()` for detached mode and `get_window_rect()` for fullscreen mode.
+`Ctrl+Z` first restores the last removed clip if applicable; otherwise it falls back to notation history undo. Keep that ordering.
 
-The `FullscreenOverlay` is viewport-aware with compact/tiny control modes for smaller windows. It includes subtitle and audio track selectors (fetched directly from the backend via `playerGetTracks()`).
+### Frame Preview / Media Info Use Probing And Caches
 
-### Detachable Video Window
-The mpv window can be detached from the Tauri parent into a standalone top-level window with a native title bar (`WS_CAPTION | WS_THICKFRAME`). This allows dragging the video to any monitor.
+The backend can derive:
 
-Key Win32 operations:
-- **Detach**: `SetWindowLongPtrW` to change style (add caption/frame), remove owner (`GWLP_HWNDPARENT = 0`), add `WS_EX_APPWINDOW` for taskbar visibility
-- **Attach**: Restore original `WS_POPUP` style, re-set owner, restore `WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE`
-- **Geometry isolation**: `set_geometry()` is no-op when detached; `saved_detached_geometry` tracks detached position separately
+- frame previews (`player_get_frame_preview`)
+- detailed media info (`player_get_media_info`)
 
-### FloatingVideoPlayer
-In Spreadsheet mode, video can detach into a floating PiP window (fixed position, draggable via mousedown/move/up). Uses the same mpv geometry tracking as VideoPlayer. Includes detach/attach button (`ExternalLink`/`Undo2` icons). On close or unmount, re-attaches automatically if detached.
+These go through ffmpeg/mpv/ffprobe helpers and LRU caches in `src-tauri/src/player/commands/cache.rs`. Prefer extending that pipeline rather than inventing separate probing codepaths.
 
-### Track Selectors (Subtitle/Audio)
-`SubtitleSelector` and `AudioTrackSelector` render as icon-only buttons (always visible, dimmed when no tracks). On click, a portal-mounted popup menu appears with track options. Uses `createPortal` to `document.body` with viewport-aware positioning.
+### Fullscreen Overlay Positioning
 
-### CSS Zoom
-The app supports zoom in/out via `style={{ zoom: zoomLevel + '%' }}` on the root container. Zoom level is stored in `useUIStore` and adjustable via keyboard shortcuts.
+The overlay is a separate transparent Tauri window. The backend keeps it aligned with the player child window via `player_sync_overlay` and window-geometry helpers. Fullscreen/detached modes use different coordinate sources, so preserve those branches when editing overlay sync logic.
 
-### Clip Deletion
-Right-click on a clip row in SpreadsheetInterface opens a context menu with "Supprimer". The `removeClip(clipId)` action in `useProjectStore` handles index adjustment for `currentClipIndex`.
+### Detached Player Window
 
-### Video Import
-Both folder import (`scanVideoFolder`) and individual file import (`openVideoFilesDialog` with multi-select) are supported. Available from ProjectManager menu and SpreadsheetInterface empty state.
-
-### JE.json Export Format
-Separate from full project export, "Exporter notation (JE.json)" exports only the current judge's scores for sharing/integration. This format can be imported in the Resultats interface to aggregate scores from multiple judges.
-
-### Resultats Notes Panel
-- The bottom panel in `ResultatsInterface` is for the **general note** only (current judge editable text).
-- Detailed per-judge notes must remain in `ResultatsJudgeNotesView`.
-- Visibility is controlled by `hideTextNotes` and can be toggled from the panel close button or the right-click context menu ("Afficher/Masquer note générale").
-
-### Export Table Views
-- Export table supports two views:
-  - `summary`: one column per category
-  - `detailed`: category headers + criterion/sub-category columns
-- `useExportData` prepares both category-level and criterion-level aggregates used by these views.
-
-### Export PNG/PDF Notes
-- PNG export supports `single`, `paged`, and `both` modes.
-- Paged PNG uses `exportPageRefs` targets marked with `data-export-page="true"` and sorted by `data-export-page-index`.
-- Notes PDF export supports `general`, `judges`, and `both`.
-- Notes PDF pagination avoids orphan clip headers at the bottom of a page by reserving space for header + first note lines before rendering a clip block.
-
-### App Appearance
-- Application appearance is driven by `src/utils/appTheme.ts`.
-- `applyAppearanceToDocument(theme, primaryColor)` sets `data-app-theme` and `data-primary-color` on `document.documentElement`.
-- Detached windows that render UI (`notes-entry`) must also bootstrap and apply the saved theme and language, not just the main app shell.
+The mpv child window can be detached into a native top-level window. In detached mode, geometry from embedded React containers should not drive the child window position.
 
 ### Custom Context Menus
-- Use `AppContextMenuPanel` / `AppContextMenuItem` for custom right-click menus instead of browser-native menus.
-- `AppContextMenuPanel` renders through a portal to `document.body`; prefer it for any menu that could be clipped by `overflow` containers.
-- Page-level context menus are handled by `useLayoutContextMenu` + `ContextMenu.tsx`.
-- Local feature menus (Spreadsheet clip menu, Resultats menus, Export poster/table menus) must stop propagation when they intentionally override the page-level context menu.
+
+- Use `AppContextMenuPanel` / `AppContextMenuItem` for custom menus.
+- These menus render through a portal and are preferred over browser-native menus.
+- Page-level and local menus must stop propagation correctly when intentionally overriding each other.
+
+### App Appearance
+
+- Appearance is driven by `src/utils/appTheme.ts`.
+- `applyAppearanceToDocument(theme, primaryColor)` sets document-level attributes.
+- Detached windows must bootstrap and re-apply theme/language; do not assume only the main window needs this.
+
+## Keyboard Shortcuts
+
+Shortcut definitions are centralized in `src/utils/shortcuts.ts`. Bindings are user-configurable and persisted.
+
+Common defaults:
+
+- `Ctrl+1` -> notation tab
+- `Ctrl+2` -> resultats tab
+- `Ctrl+3` -> export tab
+- `Ctrl+S` -> save
+- `Ctrl+Shift+S` -> save as
+- `Ctrl+N` -> new project
+- `Ctrl+O` -> open project
+- `F11` -> fullscreen video
+- `Escape` -> exit fullscreen
+- `Space` -> play/pause
+- `Left` / `Right` -> seek `-5s` / `+5s`
+- `Shift+Left` / `Shift+Right` -> seek `-30s` / `+30s`
+- `N` / `P` -> next / previous clip
+- `,` / `.` -> frame back / forward
+- `Ctrl+Shift+G` -> screenshot
+- `Ctrl+T` -> insert timecode in notes
+- `Ctrl+M` -> toggle miniatures
+- `Ctrl+Shift+M` -> set current miniature frame
+
+`useKeyboardShortcuts(shortcuts, globalShortcuts?)` still differentiates between:
+
+- **Regular shortcuts**: blocked while typing in inputs/textareas/selects
+- **Global shortcuts**: always active
+
+## Welcome Screen Import Policy
+
+- The welcome screen must not handle **CSV**, **TSV**, or **XLSX** judging-sheet imports for now.
+- Keep regular project creation/opening flows simple and isolate any future tabular-import work from the default welcome screen path.
 
 ## File Layout
 
-```
+```text
 src/
-  types/          # TypeScript interfaces (project, bareme, notation, player)
-  schemas/        # Zod validation schemas
-  store/          # 4 Zustand stores
-  services/       # tauri.ts - all Tauri invoke wrappers
-  hooks/          # usePlayer, useAutoSave, useKeyboardShortcuts, useSaveProject
-  utils/          # scoring.ts, formatters.ts, colors.ts, results.ts, shortcuts.ts, videoElement.ts
   components/
-    layout/       # AppLayout (WelcomeScreen + layouts), Header, Sidebar, ContextMenu
-    player/       # VideoPlayer, FloatingVideoPlayer (PiP), PlayerControls, FullscreenOverlay, SubtitleSelector, AudioTrackSelector
-    interfaces/   # SpreadsheetInterface, ModernInterface, NotationInterface, ResultatsInterface, ExportInterface, InterfaceSwitcher
-    project/      # ProjectManager, CreateProjectModal, VideoList, ProgressIndicator
-    settings/     # SettingsPanel (3 tabs: General, Notation, Lecteur)
-    scoring/      # BaremeEditor (create/edit custom baremes)
+    interfaces/
+      spreadsheet/    # Spreadsheet view + controller hooks
+      notation/       # Comments/scoring mode
+      resultats/      # Aggregation, judge notes, detached notes support
+      export/         # Export options, preview, actions
+    layout/           # App shell, header, context menu, bridges, welcome
+    notes/            # Detached notes window UI + helpers
+    player/           # Embedded player, overlay, floating player, media info
+    project/          # Project menu, create/open/save flows
+    scoring/          # Bareme editor
+    settings/         # Settings tabs and config
+    ui/               # Shared UI primitives
+  hooks/
+    usePlayer.ts
+    usePlayerStatusPolling.ts
+    useAutoSave.ts
+    useKeyboardShortcuts.ts
+    useSaveProject.ts
+    useWindowUiSettingsSync.ts
+  i18n/
+    locales/
+    seed.ts
+  schemas/
+  services/
+    tauri.ts
+    tauri_api/
+    projectSession.ts
+    recentProjects.ts
+  store/
+    useProjectStore.ts
+    usePlayerStore.ts
+    useNotationStore.ts
+    useUIStore.ts
+    useClipDeletionStore.ts
+  utils/
+    appTheme.ts
+    clipImport.ts
+    clipOrder.ts
+    results.ts
+    resultsVisibility.ts
+    scoring.ts
+    shortcuts.ts
+    uiSettingsEvents.ts
+  main.tsx
+  overlay-entry.tsx
+  notes-entry.tsx
+  resultats-notes-entry.tsx
 
 src-tauri/src/
-  main.rs         # Entry point, .setup() hook for mpv init
-  state.rs        # AppState (player + child_window, both Mutex<Option<...>>)
-  player/         # mpv_ffi.rs, mpv_wrapper.rs, mpv_window.rs, commands.rs
-  project/        # manager.rs (save/load .json project files, JE.json export)
-  video/          # import.rs (folder scanning)
+  app_windows.rs
+  main.rs
+  state.rs
+  player/
+    bootstrap.rs
+    commands/
+    mpv_ffi.rs
+    mpv_probe/
+    mpv_window.rs
+    mpv_wrapper.rs
+  project/
+    manager.rs
+    manager/
+  video/
+    import.rs
 ```
 
 ## Language
 
 - The **source language** of the UI is French.
-- The runtime UI is multilingual: French, English, Japanese, Russian, Chinese, Spanish.
+- Runtime UI languages: French, English, Japanese, Russian, Chinese, Spanish.
 - Any new visible UI string must go through `useI18n().t(...)`.
-- Avoid introducing raw user-facing strings in JSX unless they are domain data coming from the project/barème itself.
+- Avoid raw user-facing strings in JSX unless they are domain/project data.
 
 ## Internationalization
 
-- The app now supports 6 UI languages: French, English, Japanese, Russian, Chinese, and Spanish.
-- French is the **source language** for all user-facing copy.
-- Any new UI string must be wrapped with `t('Texte français')` from `useI18n()`. Do not add raw user-facing strings directly in components.
-- Config-driven labels/descriptions that are not direct JSX literals must be added to `src/i18n/seed.ts` so they are picked up by the sync script.
-- The language picker must stay compact and minimal: prefer a flag-first UI with the native language label, avoid duplicated patterns such as `FR Français`, use consistent custom flag badges/icons instead of relying on OS emoji fallback, and render dropdowns in a portal when clipping/overflow is possible.
-- Auto-filled translations are only a baseline. Any visible UI change must include a manual review of the affected locale strings, with extra attention to Japanese/Chinese layout fit and to placeholder preservation (`{path}`, `{error}`, etc.).
-- After adding or changing French UI text, run:
+- Add new French-visible strings with `t('Texte français')`.
+- Config-driven labels/descriptions that are not direct JSX literals must be added to `src/i18n/seed.ts`.
+- After changing French UI text, run:
 
 ```bash
 npm run i18n:sync
 ```
 
-- `scripts/sync-i18n.mjs` scans `t('...')` source strings, updates `src/i18n/locales/fr.json`, and auto-fills missing translations for the other supported locales.
-- The sync script only fills missing locale keys. Existing manual translations must be preserved and manually improved when auto-filled wording is weak or domain-inaccurate (for example around `barème`, judging, or export terminology).
-- Runtime fallback rule: if a translation is missing, the French source string is displayed.
+- The sync script updates `src/i18n/locales/fr.json` and fills missing keys in the other locale files.
+- Auto-filled translations are only a baseline. Manually review user-visible wording, especially:
+  - judging / barème vocabulary
+  - placeholder preservation (`{path}`, `{error}`, etc.)
+  - Japanese / Chinese layout fit
+- Runtime fallback remains French.
 
 ## Supported Video Formats
 
-Via mpv/FFmpeg, the app supports common formats:
+Via mpv/FFmpeg, the app supports common formats including:
+
 - **Containers**: MP4, MKV, AVI, MOV, WebM, FLV, M4V, AMV
 - **Codecs**: H.264, H.265/HEVC, VP8, VP9, AV1
 
 ## Important Notes
 
-- **libmpv-2.dll location**: In development, place in project root. In production, bundled via `resources/windows/libmpv-2.dll` (managed by Git LFS).
-- **Video player muted by default**: First playback starts muted to avoid startling users.
-- **Fullscreen overlay window**: Created at app startup (hidden, transparent) to avoid WebView creation deadlocks in sync Tauri commands on Windows. Positioned via `sync_overlay_with_child()` helper using Win32 API.
-- **Auto-save**: Configurable interval in settings. Projects marked dirty when scores change, auto-saved to their existing file path.
-- **WM_CLOSE handling**: The mpv window intercepts WM_CLOSE to hide instead of destroy, preventing accidental destruction when the user closes the detached window.
-- **Window validity**: All Win32 operations in `mpv_window.rs` check `IsWindow()` before proceeding, guarding against stale HWND references.
+- `src-tauri/tauri.conf.json` bundles Windows resources with `"resources": ["resources/windows/*"]`.
+- The overlay, notes, and resultats-notes windows are separate HTML entry points. Do not assume a single-window frontend.
+- `WM_CLOSE` handling in the mpv window code intentionally hides instead of destroying some windows to keep the player reusable.
+- All Win32 operations in the player window layer should keep `IsWindow()`-style validity checks to avoid stale HWND crashes.
+- Many playback and probing features degrade gracefully when mpv/ffmpeg/ffprobe are unavailable. Preserve graceful failure paths instead of turning them into hard crashes.

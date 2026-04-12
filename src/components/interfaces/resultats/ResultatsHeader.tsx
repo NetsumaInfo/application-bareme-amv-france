@@ -1,23 +1,20 @@
-import { useRef } from 'react'
-import { Upload, Users } from 'lucide-react'
+import { Users } from 'lucide-react'
 import type { ResultatsHeaderProps } from '@/components/interfaces/resultats/types'
 import { ColorSwatchPicker } from '@/components/ui/ColorSwatchPicker'
+import { HoverTextTooltip } from '@/components/ui/HoverTextTooltip'
 import { COLOR_MEMORY_KEYS } from '@/utils/colorPickerStorage'
 import { withAlpha } from '@/utils/colors'
 import { useI18n } from '@/i18n'
 
 export function ResultatsHeader({
-  importing,
   judges,
   selectedJudgeKey,
   judgeColors,
-  onImportJudgeJson,
   onSelectJudge,
   onJudgeColorChange,
   onOpenMemberContextMenu,
 }: ResultatsHeaderProps) {
   const { t } = useI18n()
-  const colorPickerButtonRefs = useRef<Record<string, HTMLButtonElement | null>>({})
 
   const seenNames = new Map<string, number>()
   const getDisplayName = (name: string, isCurrentJudge: boolean) => {
@@ -30,57 +27,51 @@ export function ResultatsHeader({
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
-      <button
-        onClick={onImportJudgeJson}
-        disabled={importing}
-        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-surface border border-gray-700 text-gray-300 hover:text-white hover:border-gray-600 transition-colors disabled:opacity-60"
-      >
-        <Upload size={13} />
-        {importing ? t('Import...') : t('Importer un JE.json')}
-      </button>
+    <div className="ml-auto flex min-w-0 items-start justify-end gap-2">
+      <div className="flex min-w-0 flex-wrap items-center justify-end gap-1">
+        <div className="flex items-center gap-1.5 px-1 text-[10px] text-gray-500">
+          <Users size={13} />
+          {t('{count} juge(s)', { count: judges.length })}
+        </div>
 
-      <div className="flex items-center gap-1.5 text-xs text-gray-400">
-        <Users size={13} />
-        {t('{count} juge(s)', { count: judges.length })}
+        {judges.map((judge) => {
+          const color = judgeColors[judge.key] ?? '#60a5fa'
+          const active = selectedJudgeKey === judge.key
+          const displayName = getDisplayName(judge.judgeName, judge.isCurrentJudge)
+
+          return (
+            <div key={judge.key} className="inline-flex items-center gap-1.5">
+              <HoverTextTooltip text={t('Clic droit pour options')}>
+                <button
+                  type="button"
+                  onClick={() => onSelectJudge(judge.key)}
+                  onContextMenu={(event) => {
+                    event.preventDefault()
+                    event.stopPropagation()
+                    onOpenMemberContextMenu(judge.key, event.clientX, event.clientY)
+                  }}
+                  className="inline-flex h-6 items-center rounded-md px-1.5 text-[11px] transition-colors hover:bg-white/5 hover:text-white"
+                  style={{
+                    color: active ? color : 'rgb(var(--app-text) / 0.78)',
+                    backgroundColor: active ? withAlpha(color, 0.08) : 'transparent',
+                    boxShadow: active ? `inset 0 -1px 0 0 ${withAlpha(color, 0.9)}` : 'none',
+                  }}
+                >
+                  {displayName}
+                </button>
+              </HoverTextTooltip>
+              <ColorSwatchPicker
+                value={color}
+                onChange={(next) => onJudgeColorChange(judge.key, next)}
+                title={t('Couleur de {name}', { name: displayName })}
+                triggerSize="sm"
+                triggerVariant="dot"
+                memoryKey={COLOR_MEMORY_KEYS.recentJudgeColors}
+              />
+            </div>
+          )
+        })}
       </div>
-
-      {judges.map((judge) => {
-        const color = judgeColors[judge.key] ?? '#60a5fa'
-        const active = selectedJudgeKey === judge.key
-        const displayName = getDisplayName(judge.judgeName, judge.isCurrentJudge)
-
-        return (
-          <div key={judge.key} className="inline-flex items-center gap-1.5">
-            <button
-              type="button"
-              onClick={() => onSelectJudge(judge.key)}
-              onContextMenu={(event) => {
-                event.preventDefault()
-                event.stopPropagation()
-                onOpenMemberContextMenu(judge.key, event.clientX, event.clientY)
-              }}
-              className="inline-flex items-center text-[11px] px-2 py-1 rounded border transition-colors bg-surface-dark hover:text-white"
-              style={{
-                color,
-                borderColor: withAlpha(color, active ? 0.7 : 0.45),
-                backgroundColor: withAlpha(color, active ? 0.15 : 0.07),
-              }}
-              title={t('Clic droit pour options')}
-            >
-              {displayName}
-            </button>
-            <ColorSwatchPicker
-              value={color}
-              onChange={(next) => onJudgeColorChange(judge.key, next)}
-              title={t('Couleur de {name}', { name: displayName })}
-              triggerSize="sm"
-              memoryKey={COLOR_MEMORY_KEYS.recentJudgeColors}
-              triggerRef={(node) => { colorPickerButtonRefs.current[judge.key] = node }}
-            />
-          </div>
-        )
-      })}
     </div>
   )
 }

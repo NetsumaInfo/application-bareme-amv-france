@@ -1,4 +1,4 @@
-import type { Clip } from '@/types/project'
+import type { Clip, ClipNamePattern } from '@/types/project'
 import { generateId, parseClipName } from '@/utils/formatters'
 import { findMatchingLinkedClipIndex, findMatchingPlaceholderIndex } from '@/utils/clipImportTokens'
 import { normalizeFilePath } from '@/utils/path'
@@ -8,9 +8,8 @@ import {
   type ManualClipEntry,
 } from '@/utils/manualClipParser'
 export { parseManualClipLine } from '@/utils/manualClipParser'
-export type { ManualClipEntry } from '@/utils/manualClipParser'
 
-export interface ImportMergeResult {
+interface ImportMergeResult {
   clips: Clip[]
   linkedCount: number
   addedCount: number
@@ -20,12 +19,16 @@ interface MergeOptions {
   appendUnmatched?: boolean
 }
 
-export function createManualClip(entry: ManualClipEntry, order: number): Clip {
+export function createManualClip(
+  entry: ManualClipEntry,
+  order: number,
+  clipNamePattern: ClipNamePattern = 'pseudo_clip',
+): Clip {
   const author = sanitizeManualPart(entry.author)
   const displayName = sanitizeManualPart(entry.displayName)
   return {
     id: generateId(),
-    fileName: buildManualFileName(entry),
+    fileName: buildManualFileName(entry, clipNamePattern),
     filePath: '',
     displayName,
     author: author || undefined,
@@ -37,9 +40,13 @@ export function createManualClip(entry: ManualClipEntry, order: number): Clip {
   }
 }
 
-export function createClipFromFilePath(filePath: string, order: number): Clip {
+export function createClipFromFilePath(
+  filePath: string,
+  order: number,
+  clipNamePattern: ClipNamePattern = 'pseudo_clip',
+): Clip {
   const fileName = filePath.split(/[\\/]/).pop() || filePath
-  const parsed = parseClipName(fileName)
+  const parsed = parseClipName(fileName, clipNamePattern)
   return {
     id: generateId(),
     fileName,
@@ -57,8 +64,9 @@ export function createClipFromFilePath(filePath: string, order: number): Clip {
 export function createClipFromVideoMeta(
   metadata: { file_name: string; file_path: string },
   order: number,
+  clipNamePattern: ClipNamePattern = 'pseudo_clip',
 ): Clip {
-  const parsed = parseClipName(metadata.file_name)
+  const parsed = parseClipName(metadata.file_name, clipNamePattern)
   return {
     id: generateId(),
     fileName: metadata.file_name,

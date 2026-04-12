@@ -1,8 +1,11 @@
 import { AlertTriangle, Download, FilePlus, FolderPlus, Table2 } from 'lucide-react'
+import { AppCheckbox } from '@/components/ui/AppCheckbox'
 import { useI18n } from '@/i18n'
+import type { ClipNamePattern } from '@/types/project'
 
 interface NoVideoStateProps {
   isDragOver: boolean
+  clipNamePattern: ClipNamePattern
   showNoVideoTableModal: boolean
   noVideoTableAccepted: boolean
   noVideoTableInput: string
@@ -18,6 +21,7 @@ interface NoVideoStateProps {
 
 export function NoVideoState({
   isDragOver,
+  clipNamePattern,
   showNoVideoTableModal,
   noVideoTableAccepted,
   noVideoTableInput,
@@ -31,6 +35,16 @@ export function NoVideoState({
   onCreateNoVideoTable,
 }: NoVideoStateProps) {
   const { t } = useI18n()
+  const tableInputLabel = clipNamePattern === 'clip_pseudo'
+    ? t('Une ligne par participant: Clip - Pseudo ou juste Clip')
+    : t('Une ligne par participant: Pseudo - Clip ou juste Clip')
+  const tableInputPlaceholder = clipNamePattern === 'clip_pseudo'
+    ? t('Havoc - Netsuma\nsoul bloom - UdSnow\nCOLORs - YiFan')
+    : t('Netsuma - Havoc\nUdSnow - soul bloom\nYiFan - COLORs')
+  const linkingFormatExample = clipNamePattern === 'clip_pseudo'
+    ? t('Nom du clip - Pseudo')
+    : t('Pseudo - Nom du clip')
+
   return (
     <div
       className={`flex flex-col items-center justify-center h-full gap-4 transition-colors ${isDragOver ? 'bg-primary-600/10' : ''
@@ -83,28 +97,27 @@ export function NoVideoState({
               <div className="flex items-start gap-2">
                 <AlertTriangle size={14} className="mt-0.5 shrink-0" />
                 <p>
-                  {t('Mode sans vidéo: vous pouvez noter, calculer et exporter les résultats. La lecture vidéo, MediaInfo et les fonctions frame/timecode liées au lecteur seront indisponibles tant que les fichiers ne sont pas importés. Pour lier automatiquement plus tard, utilisez le même format de nom (ex: Pseudo - Nom du clip). Vous pouvez laisser cette zone vide et créer/éditer les lignes ensuite directement dans le tableur.')}
+                  {t('Mode sans vidéo: vous pouvez noter, calculer et exporter les résultats. La lecture vidéo, MediaInfo et les fonctions frame/timecode liées au lecteur seront indisponibles tant que les fichiers ne sont pas importés. Pour lier automatiquement plus tard, utilisez le même format de nom (ex: {format}). Vous pouvez laisser cette zone vide et créer/éditer les lignes ensuite directement dans le tableur.', {
+                    format: linkingFormatExample,
+                  })}
                 </p>
               </div>
             </div>
 
-            <label className="flex items-center gap-2 text-xs text-gray-300 mb-3">
-              <input
-                type="checkbox"
-                checked={noVideoTableAccepted}
-                onChange={(event) => onNoVideoTableAcceptedChange(event.target.checked)}
-                className="rounded border-gray-600 bg-surface-dark text-primary-500 focus:ring-primary-500"
-              />
-              {t('J’ai compris les limites du mode sans vidéos.')}
-            </label>
+            <AppCheckbox
+              checked={noVideoTableAccepted}
+              onChange={onNoVideoTableAcceptedChange}
+              label={t('J’ai compris les limites du mode sans vidéos.')}
+              className="mb-3 text-xs"
+            />
 
             <label className="block text-xs text-gray-400 mb-1">
-              {t('Une ligne par participant: Pseudo - Clip ou juste Clip')}
+              {tableInputLabel}
             </label>
             <textarea
               value={noVideoTableInput}
               onChange={(event) => onNoVideoTableInputChange(event.target.value)}
-              placeholder={'Netsuma - Havoc\nUdSnow - soul bloom\nYiFan - COLORs'}
+              placeholder={tableInputPlaceholder}
               className="w-full min-h-[220px] resize-y rounded-lg border border-gray-700 bg-surface-dark px-3 py-2 text-sm text-gray-100 placeholder:text-gray-500 focus:outline-none focus:border-primary-500"
             />
             {noVideoTableError && <p className="mt-2 text-xs text-red-400">{noVideoTableError}</p>}

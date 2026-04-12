@@ -44,19 +44,19 @@ export function ResultatsJudgeTable({
 }: ResultatsJudgeTableProps) {
   const { t } = useI18n()
   return (
-    <div className="flex-1 overflow-auto rounded-lg border border-gray-700">
-      <table className="w-full border-collapse text-xs">
+    <div className="min-h-0 flex-1 overflow-auto">
+      <table className="w-full border-collapse text-[11px]">
         <thead className="sticky top-0 z-10">
           <tr>
             <th
               rowSpan={2}
-              className="px-2 py-1.5 text-center text-[10px] font-medium text-gray-500 border-r border-b border-gray-700 w-8 bg-surface-dark sticky left-0 z-20"
+              className="w-8 border-b border-r border-gray-700/60 bg-surface px-2 py-1 text-center text-[10px] font-medium text-gray-500 sticky left-0 z-20"
             >
               #
             </th>
             <th
               rowSpan={2}
-              className="px-2 py-1.5 text-left text-[10px] font-medium text-gray-500 border-r border-b border-gray-700 min-w-[120px] max-w-[180px] bg-surface-dark sticky left-8 z-20"
+              className="min-w-[112px] max-w-[160px] border-b border-r border-gray-700/60 bg-surface px-2 py-1 text-left text-[10px] font-medium text-gray-500 sticky left-8 z-20"
             >
               {t('Clip')}
             </th>
@@ -64,20 +64,20 @@ export function ResultatsJudgeTable({
               <th
                 key={group.category}
                 colSpan={group.criteria.length}
-                className="px-2 py-1.5 text-center text-[10px] font-bold uppercase tracking-wider border-r border-b"
+                className="border-b border-r px-2 py-1 text-center text-[10px] font-semibold"
                 style={{
                   color: group.color,
-                  backgroundColor: withAlpha(group.color, 0.16),
-                  borderColor: withAlpha(group.color, 0.3),
+                  backgroundColor: withAlpha(group.color, 0.12),
+                  borderColor: withAlpha(group.color, 0.24),
                 }}
               >
                 {group.category}
-                <span className="text-gray-500 font-normal ml-1">/{group.totalMax}</span>
+                <span className="ml-1 text-gray-500 font-normal">/{group.totalMax}</span>
               </th>
             ))}
             <th
               rowSpan={2}
-              className="px-2 py-1.5 text-center text-[10px] font-bold uppercase tracking-wider border-r border-b border-gray-700 min-w-[100px] bg-surface-dark"
+              className="min-w-[88px] border-b border-r border-gray-700/60 bg-surface px-2 py-1 text-center text-[10px] font-semibold"
             >
               {t('Total')}
               <div className="text-gray-500 font-normal">/{currentBaremeTotalPoints}</div>
@@ -88,14 +88,14 @@ export function ResultatsJudgeTable({
               group.criteria.map((criterion) => (
                 <th
                   key={`${group.category}-${criterion.id}`}
-                  className="px-2 py-1 text-center text-[9px] font-semibold border-r border-b border-gray-700"
+                  className="border-b border-r border-gray-700/60 px-1.5 py-1 text-center text-[9px] font-medium"
                   style={{
-                    color: group.color,
-                    backgroundColor: withAlpha(group.color, 0.08),
+                    color: withAlpha(group.color, 0.92),
+                    backgroundColor: withAlpha(group.color, 0.05),
                   }}
                 >
                   {criterion.name}
-                  <span className="text-gray-500 font-normal ml-1">/{criterion.max}</span>
+                  <span className="ml-1 text-gray-500 font-normal">/{criterion.max}</span>
                 </th>
               )),
             )}
@@ -110,17 +110,17 @@ export function ResultatsJudgeTable({
                 onClick={() => onSelectClip(row.clip.id)}
                 className={`cursor-pointer transition-colors ${
                   isSelected
-                    ? 'bg-primary-600/12'
+                    ? 'bg-white/[0.04]'
                     : index % 2 === 0
-                      ? 'bg-surface-dark/20'
+                      ? 'bg-surface-dark/10'
                       : 'bg-transparent'
-                } hover:bg-primary-600/8`}
+                } hover:bg-white/[0.03]`}
               >
-                <td className="px-2 py-1 text-center text-[10px] text-gray-500 border-r border-gray-800 sticky left-0 z-10 bg-surface-dark">
+                <td className="sticky left-0 z-10 border-r border-gray-800/60 bg-surface px-2 py-1 text-center text-[10px] text-gray-500">
                   {index + 1}
                 </td>
                 <td
-                  className="px-2 py-1 border-r border-gray-800 sticky left-8 z-10 bg-surface-dark max-w-[180px]"
+                  className="sticky left-8 z-10 max-w-[160px] border-r border-gray-800/60 bg-surface px-2 py-1"
                   onDoubleClick={(event) => {
                     event.stopPropagation()
                     onOpenClipInNotation(row.clip.id)
@@ -128,15 +128,11 @@ export function ResultatsJudgeTable({
                   onContextMenu={(event) => {
                     event.preventDefault()
                     event.stopPropagation()
-                    const width = 220
-                    const height = 210
-                    const x = Math.max(8, Math.min(event.clientX, window.innerWidth - width - 8))
-                    const y = Math.max(8, Math.min(event.clientY, window.innerHeight - height - 8))
-                    onOpenClipContextMenu(row.clip.id, x, y)
+                    onOpenClipContextMenu(row.clip.id, event.clientX, event.clientY)
                   }}
                 >
                   <div className="flex flex-col min-w-0 leading-tight">
-                    <span className="truncate text-primary-300 text-[11px] font-semibold">{getClipPrimaryLabel(row.clip)}</span>
+                    <span className="truncate text-[11px] font-semibold text-primary-300">{getClipPrimaryLabel(row.clip)}</span>
                     {getClipSecondaryLabel(row.clip) && (
                       <span className="truncate text-[9px] text-gray-500">{getClipSecondaryLabel(row.clip)}</span>
                     )}
@@ -162,7 +158,7 @@ export function ResultatsJudgeTable({
                     return (
                       <td
                         key={`${row.clip.id}-${criterion.id}-${judge.key}`}
-                        className="px-1 py-1 text-center border-r border-gray-800 font-mono text-primary-200"
+                        className="border-r border-gray-800/60 px-1 py-1 text-center font-mono text-gray-100"
                       >
                         <input
                           type="number"
@@ -173,11 +169,7 @@ export function ResultatsJudgeTable({
                           onContextMenu={(event) => {
                             event.preventDefault()
                             event.stopPropagation()
-                            const width = 225
-                            const height = 170
-                            const x = Math.max(8, Math.min(event.clientX, window.innerWidth - width - 8))
-                            const y = Math.max(8, Math.min(event.clientY, window.innerHeight - height - 8))
-                            onOpenClipContextMenu(row.clip.id, x, y)
+                            onOpenClipContextMenu(row.clip.id, event.clientX, event.clientY)
                           }}
                           onChange={(event) => {
                             onSetCriterionDraftCell(key, event.target.value)
@@ -191,7 +183,7 @@ export function ResultatsJudgeTable({
                               onClearCriterionDraftCell(key)
                             }
                           }}
-                          className="amv-soft-number w-full px-1 py-0.5 rounded bg-transparent border border-transparent hover:bg-surface-light/40 focus:bg-surface-dark focus:border-primary-500 focus-visible:outline-none outline-none text-center"
+                          className="amv-soft-number w-full rounded-sm border border-transparent bg-transparent px-1 py-0.5 text-center hover:bg-white/[0.03] focus:bg-surface-dark focus:border-gray-600 focus-visible:outline-none outline-none"
                           title={`${judge.judgeName} - ${group.category} - ${criterion.name}`}
                         />
                       </td>
@@ -199,7 +191,7 @@ export function ResultatsJudgeTable({
                   }),
                 )}
 
-                <td className="px-2 py-1 text-center border-r border-gray-700 font-mono font-semibold text-white">
+                <td className="border-r border-gray-700/60 px-2 py-1 text-center font-mono font-semibold text-white">
                   {(row.judgeTotals[judgeIndex] ?? 0).toFixed(1)}
                 </td>
               </tr>

@@ -1,4 +1,5 @@
 import { extractTimecodesFromText, type ParsedTimecode } from '@/utils/timecodes'
+import { HoverTextTooltip } from '@/components/ui/HoverTextTooltip'
 import { useI18n } from '@/i18n'
 
 interface TimecodeInlineTextProps {
@@ -34,46 +35,52 @@ export function TimecodeInlineText({
     return <div className={className}>{value}</div>
   }
 
-  const segments: Array<{ type: 'text'; value: string } | { type: 'time'; item: ParsedTimecode }> = []
+  const segments: Array<
+    | { type: 'text'; value: string; start: number }
+    | { type: 'time'; item: ParsedTimecode }
+  > = []
   let cursor = 0
   for (const item of items) {
     const start = item.index
     const end = item.index + item.raw.length
-    if (start > cursor) segments.push({ type: 'text', value: value.slice(cursor, start) })
+    if (start > cursor) segments.push({ type: 'text', value: value.slice(cursor, start), start: cursor })
     segments.push({ type: 'time', item })
     cursor = end
   }
-  if (cursor < value.length) segments.push({ type: 'text', value: value.slice(cursor) })
+  if (cursor < value.length) segments.push({ type: 'text', value: value.slice(cursor), start: cursor })
 
   return (
     <div className={className}>
-      {segments.map((segment, index) => {
+      {segments.map((segment) => {
         if (segment.type === 'text') {
-          return <span key={`txt-${index}`}>{segment.value}</span>
+          return <span key={`txt-${segment.start}`}>{segment.value}</span>
         }
         return (
-          <button
-            key={`time-${segment.item.index}-${segment.item.raw}-${index}`}
-            type="button"
-            className="inline m-0 p-0 bg-transparent border-0 underline underline-offset-2 decoration-dotted decoration-1 hover:brightness-110 transition-colors"
-            style={{ color, font: 'inherit', lineHeight: 'inherit' }}
-            onClick={(event) => {
-              event.preventDefault()
-              event.stopPropagation()
-              onTimecodeSelect(segment.item)
-            }}
-            onMouseEnter={(event) => {
-              if (!onTimecodeHover) return
-              onTimecodeHover({
-                item: segment.item,
-                anchorRect: (event.currentTarget as HTMLButtonElement).getBoundingClientRect(),
-              })
-            }}
-            onMouseLeave={() => onTimecodeLeave?.()}
-            title={t('Aller à {timecode}', { timecode: segment.item.raw })}
+          <HoverTextTooltip
+            key={`time-${segment.item.index}-${segment.item.raw}`}
+            text={t('Aller à {timecode}', { timecode: segment.item.raw })}
           >
-            {segment.item.raw}
-          </button>
+            <button
+              type="button"
+              className="inline m-0 p-0 bg-transparent border-0 underline underline-offset-2 decoration-dotted decoration-1 hover:brightness-110 transition-colors"
+              style={{ color, font: 'inherit', lineHeight: 'inherit' }}
+              onClick={(event) => {
+                event.preventDefault()
+                event.stopPropagation()
+                onTimecodeSelect(segment.item)
+              }}
+              onMouseEnter={(event) => {
+                if (!onTimecodeHover) return
+                onTimecodeHover({
+                  item: segment.item,
+                  anchorRect: (event.currentTarget as HTMLButtonElement).getBoundingClientRect(),
+                })
+              }}
+              onMouseLeave={() => onTimecodeLeave?.()}
+            >
+              {segment.item.raw}
+            </button>
+          </HoverTextTooltip>
         )
       })}
     </div>

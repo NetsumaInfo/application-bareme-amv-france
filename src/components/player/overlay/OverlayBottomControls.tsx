@@ -4,6 +4,7 @@ import type { ClipInfo, MarkerTooltip, OverlayTimecodeMarker } from '@/component
 import { OverlayTimeline } from '@/components/player/overlay/OverlayTimeline'
 import { OverlayTransportControls } from '@/components/player/overlay/OverlayTransportControls'
 import { OverlayUtilityControls } from '@/components/player/overlay/OverlayUtilityControls'
+import type { ShortcutAction } from '@/utils/shortcuts'
 
 interface OverlayBottomControlsProps {
   isPlayerFullscreen: boolean
@@ -19,6 +20,7 @@ interface OverlayBottomControlsProps {
   volume: number
   isMuted: boolean
   showAudioDb: boolean
+  shortcutBindings: Partial<Record<ShortcutAction, string>>
   subtitleTracks: TrackItem[]
   audioTracks: TrackItem[]
   currentSubtitleId: number | null
@@ -59,6 +61,7 @@ export function OverlayBottomControls({
   volume,
   isMuted,
   showAudioDb,
+  shortcutBindings,
   subtitleTracks,
   audioTracks,
   currentSubtitleId,
@@ -172,6 +175,7 @@ export function OverlayBottomControls({
             compactControls={compactControls}
             clipInfo={clipInfo}
             isPlaying={hasVideo ? isPlaying : false}
+            shortcutBindings={shortcutBindings}
             onPrevClip={onPrevClip}
             onNextClip={onNextClip}
             onSeekRelative={hasVideo ? onSeekRelative : () => {}}
@@ -188,6 +192,7 @@ export function OverlayBottomControls({
             isMuted={hasVideo ? isMuted : true}
             volume={hasVideo ? volume : 0}
             showAudioDb={showAudioDb}
+            shortcutBindings={shortcutBindings}
             clipInfo={clipInfo}
             subtitleTracks={subtitleTracks}
             audioTracks={audioTracks}

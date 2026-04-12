@@ -29,12 +29,7 @@ export const APP_LANGUAGE_INTL_LOCALES = APP_LANGUAGE_OPTIONS.reduce<Record<AppL
   return acc
 }, {} as Record<AppLanguage, string>)
 
-export const APP_LANGUAGE_FLAGS = APP_LANGUAGE_OPTIONS.reduce<Record<AppLanguage, string>>((acc, option) => {
-  acc[option.value] = option.flag
-  return acc
-}, {} as Record<AppLanguage, string>)
-
-export function isAppLanguage(value: unknown): value is AppLanguage {
+function isAppLanguage(value: unknown): value is AppLanguage {
   return APP_LANGUAGE_OPTIONS.some((option) => option.value === value)
 }
 

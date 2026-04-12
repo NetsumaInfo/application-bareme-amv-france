@@ -1,6 +1,72 @@
 use tauri::Manager;
 
 #[tauri::command]
+pub async fn warm_aux_windows(app_handle: tauri::AppHandle) -> Result<(), String> {
+    let handle = app_handle.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        if handle.get_window("notes-window").is_none() {
+            match tauri::WindowBuilder::new(
+                &handle,
+                "notes-window",
+                tauri::WindowUrl::App("notes.html".into()),
+            )
+            .title("AMV Notation - Notes")
+            .inner_size(380.0, 700.0)
+            .min_inner_size(320.0, 400.0)
+            .resizable(true)
+            .decorations(true)
+            .visible(false)
+            .focused(false)
+            .initialization_script(
+                "window.__AMV_NOTES_WINDOW__ = true; window.__AMV_FULLSCREEN_OVERLAY__ = false;",
+            )
+            .build()
+            {
+                Ok(notes) => {
+                    let _ = notes.hide();
+                }
+                Err(e) => {
+                    eprintln!("[AMV] Failed to warm notes window: {}", e);
+                }
+            }
+        }
+
+        if handle.get_window("resultats-notes-window").is_none() {
+            match tauri::WindowBuilder::new(
+                &handle,
+                "resultats-notes-window",
+                tauri::WindowUrl::App("resultats-notes.html".into()),
+            )
+            .title("AMV Notation - Notes juges")
+            .inner_size(1100.0, 760.0)
+            .min_inner_size(760.0, 480.0)
+            .resizable(true)
+            .decorations(true)
+            .visible(false)
+            .focused(false)
+            .initialization_script(
+                "window.__AMV_RESULTATS_NOTES_WINDOW__ = true; window.__AMV_FULLSCREEN_OVERLAY__ = false; window.__AMV_NOTES_WINDOW__ = false;",
+            )
+            .build()
+            {
+                Ok(resultats_notes) => {
+                    let _ = resultats_notes.hide();
+                }
+                Err(e) => {
+                    eprintln!("[AMV] Failed to warm resultats notes window: {}", e);
+                }
+            }
+        }
+
+        Ok::<(), String>(())
+    })
+    .await
+    .map_err(|e| format!("warm aux windows task error: {}", e))??;
+
+    Ok(())
+}
+
+#[tauri::command]
 pub async fn open_notes_window(app_handle: tauri::AppHandle) -> Result<(), String> {
     if let Some(existing) = app_handle.get_window("notes-window") {
         let _ = existing.show();
@@ -69,7 +135,7 @@ pub async fn open_resultats_judge_notes_window(app_handle: tauri::AppHandle) -> 
         tauri::WindowBuilder::new(
             &handle,
             "resultats-notes-window",
-            tauri::WindowUrl::App("index.html?resultats-notes=true".into()),
+            tauri::WindowUrl::App("resultats-notes.html".into()),
         )
         .title("AMV Notation - Notes juges")
         .inner_size(1100.0, 760.0)
@@ -105,7 +171,7 @@ pub fn precreate_aux_windows(app: &tauri::App) {
         match tauri::WindowBuilder::new(
             app,
             "fullscreen-overlay",
-            tauri::WindowUrl::App("index.html?overlay=true".into()),
+            tauri::WindowUrl::App("overlay.html".into()),
         )
         .transparent(true)
         .decorations(false)
@@ -130,59 +196,6 @@ pub fn precreate_aux_windows(app: &tauri::App) {
         }
     }
 
-    if app.get_window("notes-window").is_none() {
-        match tauri::WindowBuilder::new(
-            app,
-            "notes-window",
-            tauri::WindowUrl::App("notes.html".into()),
-        )
-        .title("AMV Notation - Notes")
-        .inner_size(380.0, 700.0)
-        .min_inner_size(320.0, 400.0)
-        .resizable(true)
-        .decorations(true)
-        .visible(false)
-        .focused(false)
-        .initialization_script(
-            "window.__AMV_NOTES_WINDOW__ = true; window.__AMV_FULLSCREEN_OVERLAY__ = false;",
-        )
-        .build()
-        {
-            Ok(notes) => {
-                let _ = notes.hide();
-            }
-            Err(e) => {
-                eprintln!("[AMV] Failed to precreate notes window: {}", e);
-            }
-        }
-    }
-
-    if app.get_window("resultats-notes-window").is_none() {
-        match tauri::WindowBuilder::new(
-            app,
-            "resultats-notes-window",
-            tauri::WindowUrl::App("index.html?resultats-notes=true".into()),
-        )
-        .title("AMV Notation - Notes juges")
-        .inner_size(1100.0, 760.0)
-        .min_inner_size(760.0, 480.0)
-        .resizable(true)
-        .decorations(true)
-        .visible(false)
-        .focused(false)
-        .initialization_script(
-            "window.__AMV_RESULTATS_NOTES_WINDOW__ = true; window.__AMV_FULLSCREEN_OVERLAY__ = false; window.__AMV_NOTES_WINDOW__ = false;",
-        )
-        .build()
-        {
-            Ok(resultats_notes) => {
-                let _ = resultats_notes.hide();
-            }
-            Err(e) => {
-                eprintln!("[AMV] Failed to precreate resultats notes window: {}", e);
-            }
-        }
-    }
 }
 
 pub fn handle_window_event(event: &tauri::GlobalWindowEvent) {

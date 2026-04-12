@@ -58,18 +58,18 @@ function TopList({
   thumbnailDefaultSeconds: number
 }) {
   return (
-    <div className="rounded-lg border border-gray-700 bg-surface overflow-hidden flex-1 basis-0 min-w-[260px]">
+    <div className="min-w-[220px] flex-1 basis-0 overflow-hidden border border-gray-700/50 bg-transparent">
       <div
-        className="px-3 py-2 text-xs font-semibold uppercase tracking-wide border-b"
+        className="flex items-center gap-2 border-b border-gray-700/60 px-2.5 py-1.5 text-[11px] font-medium"
         style={{
           color: accentColor,
-          borderColor: withAlpha(accentColor, 0.3),
-          backgroundColor: withAlpha(accentColor, 0.12),
+          backgroundColor: withAlpha(accentColor, 0.06),
         }}
       >
+        <span className="inline-block h-1.5 w-1.5 rounded-full" style={{ backgroundColor: accentColor }} />
         {title}
       </div>
-      <div className="divide-y divide-gray-800">
+      <div className="divide-y divide-gray-800/60">
         {entries.map((row, index) => {
           const isSelected = selectedClipId === row.clip.id
           return (
@@ -78,18 +78,18 @@ function TopList({
               type="button"
               onClick={() => onSelectClip(row.clip.id)}
               onDoubleClick={() => onOpenClipInNotation(row.clip.id)}
-              className={`w-full text-left px-3 py-2 text-xs transition-colors ${
+              className={`w-full px-2.5 py-1.5 text-left text-[11px] transition-colors ${
                 isSelected
-                  ? 'bg-primary-600/14'
-                  : 'hover:bg-primary-600/8'
+                  ? 'bg-white/[0.04]'
+                  : 'hover:bg-white/[0.03]'
               }`}
             >
               <div className="flex items-start gap-1.5">
                 <span className="text-gray-500 w-4 shrink-0">{index + 1}</span>
                 <div className="min-w-0">
-                  <div className="truncate text-primary-200 font-medium">{getClipPrimaryLabel(row.clip)}</div>
+                  <div className="truncate text-[11px] font-semibold text-primary-300">{getClipPrimaryLabel(row.clip)}</div>
                   {getClipSecondaryLabel(row.clip) && (
-                    <div className="truncate text-[11px] text-gray-500">{getClipSecondaryLabel(row.clip)}</div>
+                    <div className="truncate text-[10px] text-gray-500">{getClipSecondaryLabel(row.clip)}</div>
                   )}
                   {showMiniatures && row.clip.filePath ? (
                     <ClipMiniaturePreview
@@ -136,7 +136,7 @@ export function ResultatsTopLists({
 
   return (
     <div className="flex-1 min-h-0 overflow-x-auto overflow-y-hidden">
-      <div className="flex flex-nowrap items-start gap-3 min-w-full w-full">
+      <div className="flex min-w-full w-full flex-nowrap items-start gap-2">
         {topByJudge.map(({ judge, entries }) => (
           <TopList
             key={`top-${judge.key}`}
@@ -154,7 +154,7 @@ export function ResultatsTopLists({
         <TopList
           title={t('Top final')}
           entries={finalTop}
-          accentColor="#60a5fa"
+          accentColor="#d4d4d8"
           selectedClipId={selectedClipId}
           onSelectClip={onSelectClip}
           onOpenClipInNotation={onOpenClipInNotation}

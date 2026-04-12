@@ -102,6 +102,10 @@ export function SpreadsheetTable({
   const hideBubbleTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const bubbleRef = useRef<HTMLDivElement | null>(null)
   const [bubbleHovered, setBubbleHovered] = useState(false)
+  const closeSubcategoryBubble = useCallback(() => {
+    setSubcategoryBubble(null)
+    setBubbleHovered(false)
+  }, [])
 
   useEffect(() => {
     if (hideBubbleTimeoutRef.current) {
@@ -112,8 +116,7 @@ export function SpreadsheetTable({
     if (!subcategoryBubble || bubbleHovered) return
 
     hideBubbleTimeoutRef.current = setTimeout(() => {
-      setSubcategoryBubble(null)
-      setBubbleHovered(false)
+      closeSubcategoryBubble()
       hideBubbleTimeoutRef.current = null
     }, 6500)
 
@@ -123,7 +126,7 @@ export function SpreadsheetTable({
         hideBubbleTimeoutRef.current = null
       }
     }
-  }, [subcategoryBubble, bubbleHovered])
+  }, [bubbleHovered, closeSubcategoryBubble, subcategoryBubble])
 
   useEffect(() => {
     if (!subcategoryBubble) return
@@ -131,14 +134,12 @@ export function SpreadsheetTable({
     const handlePointerDown = (event: MouseEvent) => {
       const target = event.target as Node | null
       if (target && bubbleRef.current?.contains(target)) return
-      setSubcategoryBubble(null)
-      setBubbleHovered(false)
+      closeSubcategoryBubble()
     }
 
     const handleEscape = (event: KeyboardEvent) => {
       if (event.key !== 'Escape') return
-      setSubcategoryBubble(null)
-      setBubbleHovered(false)
+      closeSubcategoryBubble()
     }
 
     window.addEventListener('mousedown', handlePointerDown, true)
@@ -148,7 +149,7 @@ export function SpreadsheetTable({
       window.removeEventListener('mousedown', handlePointerDown, true)
       window.removeEventListener('keydown', handleEscape)
     }
-  }, [subcategoryBubble])
+  }, [closeSubcategoryBubble, subcategoryBubble])
 
   const handleShowSubcategoryBubble = useCallback((params: {
     clip: Clip

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type Ref } from 'react'
 import { createPortal } from 'react-dom'
 import { ChevronDown } from 'lucide-react'
+import { HoverTextTooltip } from '@/components/ui/HoverTextTooltip'
 import { CATEGORY_COLOR_PRESETS, sanitizeColor, withAlpha } from '@/utils/colors'
 import {
   COLOR_MEMORY_KEYS,
@@ -10,6 +11,7 @@ import {
   writeStoredColorList,
 } from '@/utils/colorPickerStorage'
 import { useI18n } from '@/i18n'
+import { useZoomScale } from '@/hooks/useZoomScale'
 
 interface ColorSwatchPickerProps {
   value: string
@@ -17,6 +19,7 @@ interface ColorSwatchPickerProps {
   disabled?: boolean
   title?: string
   triggerSize?: 'md' | 'sm'
+  triggerVariant?: 'default' | 'dot'
   presets?: string[]
   memoryKey?: string
   maxRemembered?: number
@@ -130,18 +133,20 @@ function assignRef<T>(ref: Ref<T> | undefined, value: T | null) {
   objectRef.current = value
 }
 
-export function ColorSwatchPicker({
+function useColorSwatchPickerController({
   value,
   onChange,
   disabled = false,
   title,
   triggerSize = 'md',
+  triggerVariant = 'default',
   presets = CATEGORY_COLOR_PRESETS,
   memoryKey = FALLBACK_MEMORY_KEY,
   maxRemembered = 10,
   triggerRef,
 }: ColorSwatchPickerProps) {
   const { t } = useI18n()
+  const zoomScale = useZoomScale()
   const [open, setOpen] = useState(false)
   const normalizedValue = sanitizeColor(value)
   const [draftHex, setDraftHex] = useState(normalizedValue)
@@ -287,16 +292,19 @@ export function ColorSwatchPicker({
     const width = 280
     const viewportPadding = 8
     const measuredHeight = pickerRef.current?.offsetHeight ?? 360
-    const spaceBelow = window.innerHeight - rect.bottom - viewportPadding
+    // With CSS zoom, rect/clientX values are in zoomed space, window.inner* are not.
+    const viewportW = window.innerWidth * zoomScale
+    const viewportH = window.innerHeight * zoomScale
+    const spaceBelow = viewportH - rect.bottom - viewportPadding
     const spaceAbove = rect.top - viewportPadding
     const openUpwards = spaceBelow < measuredHeight && spaceAbove > spaceBelow
 
     const rawTop = openUpwards ? (rect.top - measuredHeight - 8) : (rect.bottom + 8)
-    const top = clamp(rawTop, viewportPadding, window.innerHeight - measuredHeight - viewportPadding)
-    const left = clamp(rect.left, viewportPadding, window.innerWidth - width - viewportPadding)
+    const top = clamp(rawTop, viewportPadding, viewportH - measuredHeight - viewportPadding)
+    const left = clamp(rect.left, viewportPadding, viewportW - width - viewportPadding)
 
     setPickerStyle({ top, left, width })
-  }, [])
+  }, [zoomScale])
 
   useEffect(() => {
     if (!open) return
@@ -348,15 +356,18 @@ export function ColorSwatchPicker({
 
   useEffect(() => {
     if (!contextMenu) return
+    const closeContextMenu = () => {
+      setContextMenu(null)
+    }
     const onPointerDownOutside = (event: MouseEvent) => {
       const target = event.target as Node
       if (contextMenuRef.current?.contains(target)) return
-      setContextMenu(null)
+      closeContextMenu()
     }
     const onEscape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setContextMenu(null)
+      if (event.key === 'Escape') closeContextMenu()
     }
-    const onViewportChange = () => setContextMenu(null)
+    const onViewportChange = () => closeContextMenu()
 
     document.addEventListener('mousedown', onPointerDownOutside)
     window.addEventListener('keydown', onEscape)
@@ -397,23 +408,37 @@ export function ColorSwatchPicker({
     ? favoriteColors.some((entry) => entry.toLowerCase() === contextColor.toLowerCase())
     : false
 
-  return (
+  const renderContent = () => (
     <div className="relative" ref={containerRef}>
-      <button
-        ref={setTriggerButtonNode}
-        type="button"
-        disabled={disabled}
-        onClick={togglePicker}
-        onContextMenu={(event) => openColorContextMenu(event, normalizedValue)}
-        className={`${triggerSize === 'sm' ? 'h-[28px] px-2 gap-1.5' : 'h-8 px-2 gap-1.5'} rounded border border-gray-700 bg-surface-dark/80 hover:border-gray-500 disabled:opacity-40 disabled:cursor-not-allowed inline-flex items-center`}
-        title={title}
-      >
-        <span
-          className={`${triggerSize === 'sm' ? 'w-4 h-4' : 'w-4 h-4'} inline-block rounded border border-white/20`}
-          style={{ backgroundColor: normalizedValue }}
-        />
-        <ChevronDown size={triggerSize === 'sm' ? 11 : 12} className="text-gray-400" />
-      </button>
+      <HoverTextTooltip text={title ?? ''}>
+        <button
+          ref={setTriggerButtonNode}
+          type="button"
+          disabled={disabled}
+          onClick={togglePicker}
+          onContextMenu={(event) => openColorContextMenu(event, normalizedValue)}
+          aria-label={title}
+          className={
+            triggerVariant === 'dot'
+              ? `inline-flex items-center justify-center rounded-full transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
+                triggerSize === 'sm'
+                  ? 'h-4 w-4 hover:bg-white/5'
+                  : 'h-5 w-5 hover:bg-white/5'
+              }`
+              : `${triggerSize === 'sm' ? 'h-[28px] px-2 gap-1.5' : 'h-8 px-2 gap-1.5'} rounded border border-gray-700 bg-surface-dark/80 hover:border-gray-500 disabled:opacity-40 disabled:cursor-not-allowed inline-flex items-center`
+          }
+        >
+          <span
+            className={
+              triggerVariant === 'dot'
+                ? `${triggerSize === 'sm' ? 'h-2.5 w-2.5' : 'h-3 w-3'} inline-block rounded-full`
+                : `${triggerSize === 'sm' ? 'w-4 h-4' : 'w-4 h-4'} inline-block rounded border border-white/20`
+            }
+            style={{ backgroundColor: normalizedValue }}
+          />
+          {triggerVariant !== 'dot' ? <ChevronDown size={triggerSize === 'sm' ? 11 : 12} className="text-gray-400" /> : null}
+        </button>
+      </HoverTextTooltip>
 
       {open && !disabled && createPortal(
         <div
@@ -430,6 +455,7 @@ export function ColorSwatchPicker({
             }}
             className="relative rounded-lg border border-gray-700 overflow-hidden cursor-crosshair"
             style={{ height: 140, backgroundColor: `hsl(${hsv.h.toFixed(0)}, 100%, 50%)` }}
+            role="presentation"
           >
             <div className="absolute inset-0" style={{ background: 'linear-gradient(to right, #ffffff, rgba(255,255,255,0))' }} />
             <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, #000000, rgba(0,0,0,0))' }} />
@@ -445,12 +471,13 @@ export function ColorSwatchPicker({
           </div>
 
           <div className="mt-2 flex items-center gap-2">
-            <div
-              className="h-4 w-14 rounded-full border border-white/20 shrink-0"
-              style={{ backgroundColor: displayColor }}
-              title={displayColor}
-              onContextMenu={(event) => openColorContextMenu(event, displayColor)}
-            />
+            <HoverTextTooltip text={displayColor}>
+              <div
+                className="h-4 w-14 rounded-full border border-white/20 shrink-0"
+                style={{ backgroundColor: displayColor }}
+                onContextMenu={(event) => openColorContextMenu(event, displayColor)}
+              />
+            </HoverTextTooltip>
             <div className="flex-1">
               <div
                 ref={hueAreaRef}
@@ -464,6 +491,7 @@ export function ColorSwatchPicker({
                   background:
                     'linear-gradient(to right, #ff0000 0%, #ffff00 17%, #00ff00 33%, #00ffff 50%, #0000ff 67%, #ff00ff 83%, #ff0000 100%)',
                 }}
+                role="presentation"
               >
                 <div
                   className="absolute top-1/2 w-3 h-3 rounded-full border-2 border-white pointer-events-none"
@@ -480,14 +508,16 @@ export function ColorSwatchPicker({
           {defaultColor && (
             <div className="mt-2 pt-2 border-t border-gray-700">
               <div className="text-[10px] uppercase tracking-wide text-gray-500 mb-1">{t('Par défaut')}</div>
-              <button
-                type="button"
-                onClick={() => commitHex(defaultColor, true)}
-                onContextMenu={(event) => openColorContextMenu(event, defaultColor)}
-                className="h-6 w-full rounded border border-gray-700 hover:border-gray-500"
-                style={{ backgroundColor: defaultColor }}
-                title={t('{color} (couleur par défaut)', { color: defaultColor })}
-              />
+              <HoverTextTooltip text={t('{color} (couleur par défaut)', { color: defaultColor })}>
+                <button
+                  type="button"
+                  onClick={() => commitHex(defaultColor, true)}
+                  onContextMenu={(event) => openColorContextMenu(event, defaultColor)}
+                  aria-label={t('{color} (couleur par défaut)', { color: defaultColor })}
+                  className="h-6 w-full rounded border border-gray-700 hover:border-gray-500"
+                  style={{ backgroundColor: defaultColor }}
+                />
+              </HoverTextTooltip>
             </div>
           )}
 
@@ -500,21 +530,25 @@ export function ColorSwatchPicker({
                   const active = color === normalizedValue
                   const isDefault = defaultColor?.toLowerCase() === color.toLowerCase()
                   return (
-                    <button
+                    <HoverTextTooltip
                       key={`favorite-${color}`}
-                      type="button"
-                      onClick={() => commitHex(color, true)}
-                      onContextMenu={(event) => openColorContextMenu(event, color)}
-                      className={`h-5 rounded border transition-colors relative ${
-                        active ? 'border-white' : 'border-gray-700 hover:border-gray-500'
-                      }`}
-                      style={{ backgroundColor: color }}
-                      title={isDefault ? t('{color} (défaut)', { color }) : color}
+                      text={isDefault ? t('{color} (défaut)', { color }) : color}
                     >
-                      {isDefault && (
-                        <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-primary-400 border border-surface-dark" />
-                      )}
-                    </button>
+                      <button
+                        type="button"
+                        onClick={() => commitHex(color, true)}
+                        onContextMenu={(event) => openColorContextMenu(event, color)}
+                        aria-label={isDefault ? t('{color} (défaut)', { color }) : color}
+                        className={`h-5 rounded border transition-colors relative ${
+                          active ? 'border-white' : 'border-gray-700 hover:border-gray-500'
+                        }`}
+                        style={{ backgroundColor: color }}
+                      >
+                        {isDefault && (
+                          <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-primary-400 border border-surface-dark" />
+                        )}
+                      </button>
+                    </HoverTextTooltip>
                   )
                 })}
               </div>
@@ -529,17 +563,18 @@ export function ColorSwatchPicker({
                   const color = sanitizeColor(preset)
                   const active = color === normalizedValue
                   return (
-                    <button
-                      key={`recent-${color}`}
-                      type="button"
-                      onClick={() => commitHex(color, true)}
-                      onContextMenu={(event) => openColorContextMenu(event, color)}
-                      className={`h-5 rounded border transition-colors ${
-                        active ? 'border-white' : 'border-gray-700 hover:border-gray-500'
-                      }`}
-                      style={{ backgroundColor: color }}
-                      title={color}
-                    />
+                    <HoverTextTooltip key={`recent-${color}`} text={color}>
+                      <button
+                        type="button"
+                        onClick={() => commitHex(color, true)}
+                        onContextMenu={(event) => openColorContextMenu(event, color)}
+                        aria-label={color}
+                        className={`h-5 rounded border transition-colors ${
+                          active ? 'border-white' : 'border-gray-700 hover:border-gray-500'
+                        }`}
+                        style={{ backgroundColor: color }}
+                      />
+                    </HoverTextTooltip>
                   )
                 })}
               </div>
@@ -552,17 +587,18 @@ export function ColorSwatchPicker({
                 const color = sanitizeColor(preset)
                 const active = color === normalizedValue
                 return (
-                <button
-                  key={color}
-                  type="button"
-                  onClick={() => commitHex(color, true)}
-                  onContextMenu={(event) => openColorContextMenu(event, color)}
-                  className={`h-5 rounded border transition-colors ${
-                    active ? 'border-white' : 'border-gray-700 hover:border-gray-500'
-                  }`}
+                <HoverTextTooltip key={color} text={color}>
+                  <button
+                    type="button"
+                    onClick={() => commitHex(color, true)}
+                    onContextMenu={(event) => openColorContextMenu(event, color)}
+                    aria-label={color}
+                    className={`h-5 rounded border transition-colors ${
+                      active ? 'border-white' : 'border-gray-700 hover:border-gray-500'
+                    }`}
                     style={{ backgroundColor: color }}
-                    title={color}
                   />
+                </HoverTextTooltip>
                 )
               })}
             </div>
@@ -603,8 +639,8 @@ export function ColorSwatchPicker({
           ref={contextMenuRef}
           className="fixed z-[70] w-52 rounded-lg border border-gray-700 bg-surface-dark shadow-2xl p-1"
           style={{
-            left: clamp(contextMenu.x, 8, window.innerWidth - 220),
-            top: clamp(contextMenu.y, 8, window.innerHeight - 180),
+            left: clamp(contextMenu.x, 8, window.innerWidth * zoomScale - 220),
+            top: clamp(contextMenu.y, 8, window.innerHeight * zoomScale - 180),
           }}
         >
           <button
@@ -674,4 +710,11 @@ export function ColorSwatchPicker({
       )}
     </div>
   )
+
+  return { renderContent }
+}
+
+export function ColorSwatchPicker(props: ColorSwatchPickerProps) {
+  const { renderContent } = useColorSwatchPickerController(props)
+  return renderContent()
 }

@@ -63,7 +63,7 @@ interface ExportNotesPdfClipEntry {
   judges: ExportNotesPdfJudgeEntry[]
 }
 
-export interface ExportNotesPdfPayload {
+interface ExportNotesPdfPayload {
   mode: ExportNotesPdfMode
   title: string
   entries: ExportNotesPdfClipEntry[]

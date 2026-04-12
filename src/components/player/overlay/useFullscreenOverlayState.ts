@@ -193,6 +193,7 @@ export function useFullscreenOverlayState() {
     markerTooltip,
     setMarkerTooltip,
     showAudioDb,
+    shortcutBindings,
     subtitleTracks,
     audioTracks,
     subMenuOpen,

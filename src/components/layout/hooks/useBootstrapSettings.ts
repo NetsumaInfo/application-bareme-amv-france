@@ -8,7 +8,7 @@ import {
   normalizePrimaryColorPreset,
 } from '@/utils/appTheme'
 import { applyLanguageToDocument, normalizeAppLanguage } from '@/i18n/config'
-import type { Bareme } from '@/types/bareme'
+import { OFFICIAL_BAREME, type Bareme } from '@/types/bareme'
 import type { ShortcutAction } from '@/utils/shortcuts'
 
 type UseBootstrapSettingsParams = {
@@ -17,13 +17,19 @@ type UseBootstrapSettingsParams = {
 
 export function useBootstrapSettings({ loadCustomBaremes }: UseBootstrapSettingsParams) {
   useEffect(() => {
+    tauri.saveBareme(OFFICIAL_BAREME, OFFICIAL_BAREME.id).catch((errorValue) => {
+      console.error('Failed to synchronize official bareme:', errorValue)
+    })
+
     tauri.loadBaremes()
       .then((items) => {
         if (Array.isArray(items)) {
           loadCustomBaremes(items as Bareme[])
         }
       })
-      .catch(() => {})
+      .catch((errorValue) => {
+        console.error('Failed to load baremes:', errorValue)
+      })
   }, [loadCustomBaremes])
 
   useEffect(() => {
@@ -34,6 +40,15 @@ export function useBootstrapSettings({ loadCustomBaremes }: UseBootstrapSettings
 
         if (typeof settings.showAudioDb === 'boolean') {
           nextState.showAudioDb = settings.showAudioDb
+        }
+        if (typeof settings.confirmClipDeletion === 'boolean') {
+          nextState.confirmClipDeletion = settings.confirmClipDeletion
+        }
+        if (typeof settings.projectsFolderPath === 'string' && settings.projectsFolderPath.trim()) {
+          nextState.projectsFolderPath = settings.projectsFolderPath.trim()
+        }
+        if (typeof settings.baremesFolderPath === 'string' && settings.baremesFolderPath.trim()) {
+          nextState.baremesFolderPath = settings.baremesFolderPath.trim()
         }
         const normalizedAppThemePreset = normalizeAppThemePreset(settings.appTheme)
         if (normalizedAppThemePreset) {

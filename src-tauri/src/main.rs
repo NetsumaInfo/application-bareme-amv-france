@@ -68,6 +68,7 @@ fn main() {
             project::manager::save_user_settings,
             project::manager::load_user_settings,
             // Window commands
+            app_windows::warm_aux_windows,
             app_windows::open_notes_window,
             app_windows::close_notes_window,
             app_windows::open_resultats_judge_notes_window,

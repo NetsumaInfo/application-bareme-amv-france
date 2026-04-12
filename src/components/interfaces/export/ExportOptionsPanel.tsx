@@ -15,6 +15,8 @@ import { ExportAccentPresets } from '@/components/interfaces/export/ExportAccent
 import { ExportActions } from '@/components/interfaces/export/ExportActions'
 import { ExportBinaryButtons } from '@/components/interfaces/export/ExportBinaryButtons'
 import { ExportCheckbox } from '@/components/interfaces/export/ExportCheckbox'
+import { AppRangeSlider } from '@/components/ui/AppRangeSlider'
+import { AppSelect } from '@/components/ui/AppSelect'
 import { useI18n } from '@/i18n'
 
 interface ExportOptionsPanelProps {
@@ -78,7 +80,12 @@ interface ExportOptionsPanelProps {
   onSetNotesPdfMode: (mode: ExportNotesPdfMode) => void
 }
 
-export function ExportOptionsPanel({
+export function ExportOptionsPanel(props: ExportOptionsPanelProps) {
+  const { t } = useI18n()
+  return renderExportOptionsPanel({ ...props, t })
+}
+
+function renderExportOptionsPanel({
   title,
   exportMode,
   tableView,
@@ -137,8 +144,8 @@ export function ExportOptionsPanel({
   onExportNotesPdf,
   onExportJson,
   onSetNotesPdfMode,
-}: ExportOptionsPanelProps) {
-  const { t } = useI18n()
+  t,
+}: ExportOptionsPanelProps & { t: ReturnType<typeof useI18n>['t'] }) {
   return (
     <div className="w-full rounded-lg border border-gray-700 bg-surface p-3 overflow-y-auto">
       <h3 className="text-sm font-semibold text-white mb-1 flex items-center gap-1.5">
@@ -173,31 +180,32 @@ export function ExportOptionsPanel({
         {exportMode === 'individual' && (
           <div>
             <label className="block text-xs text-gray-400 mb-1">{t('Juge')}</label>
-            <select
+            <AppSelect
               value={selectedJudgeKey}
-              onChange={(event) => onSetSelectedJudgeKey(event.target.value)}
-              className="w-full px-2 py-1.5 rounded border border-gray-700 bg-surface-dark text-xs text-white focus:border-primary-500 focus:outline-none"
-            >
-              {judges.map((judge) => (
-                <option key={judge.key} value={judge.key}>
-                  {judge.judgeName}
-                </option>
-              ))}
-            </select>
+              onChange={onSetSelectedJudgeKey}
+              ariaLabel={t('Juge')}
+              className="w-full"
+              options={judges.map((judge) => ({
+                value: judge.key,
+                label: judge.judgeName,
+              }))}
+            />
           </div>
         )}
 
         <div>
           <label className="block text-xs text-gray-400 mb-1">{t('Arrondi des notes')}</label>
-          <select
+          <AppSelect
             value={decimals}
-            onChange={(event) => onSetDecimals(Number(event.target.value))}
-            className="w-full px-2 py-1.5 rounded border border-gray-700 bg-surface-dark text-xs text-white focus:border-primary-500 focus:outline-none"
-          >
-            <option value={0}>{t('0 décimale')}</option>
-            <option value={1}>{t('1 décimale')}</option>
-            <option value={2}>{t('2 décimales')}</option>
-          </select>
+            onChange={onSetDecimals}
+            ariaLabel={t('Arrondi des notes')}
+            className="w-full"
+            options={[
+              { value: 0, label: t('0 décimale') },
+              { value: 1, label: t('1 décimale') },
+              { value: 2, label: t('2 décimales') },
+            ]}
+          />
         </div>
 
         <div>
@@ -232,14 +240,13 @@ export function ExportOptionsPanel({
 
         <div>
           <label className="block text-xs text-gray-400 mb-1">{t('Qualité PNG (échelle)')}: x{pngScale}</label>
-          <input
-            type="range"
+          <AppRangeSlider
             min={2}
             max={5}
             step={1}
             value={pngScale}
-            onChange={(event) => onSetPngScale(Number(event.target.value))}
-            className="w-full"
+            onChange={onSetPngScale}
+            ariaLabel={t('Qualité PNG (échelle)')}
           />
         </div>
 
@@ -285,65 +292,63 @@ export function ExportOptionsPanel({
           </div>
           <div>
             <label className="block text-xs text-gray-400 mb-1">{t('Hauteur ligne')}: {tableRowHeight}px</label>
-            <input
-              type="range"
+            <AppRangeSlider
               min={44}
               max={88}
               step={1}
               value={tableRowHeight}
-              onChange={(event) => onSetTableRowHeight(Number(event.target.value))}
-              className="w-full"
+              onChange={onSetTableRowHeight}
+              ariaLabel={t('Hauteur ligne')}
             />
           </div>
           <div>
             <label className="block text-xs text-gray-400 mb-1">{t('Taille chiffres')}: {tableNumberFontSize}px</label>
-            <input
-              type="range"
+            <AppRangeSlider
               min={11}
               max={20}
               step={1}
               value={tableNumberFontSize}
-              onChange={(event) => onSetTableNumberFontSize(Number(event.target.value))}
-              className="w-full"
+              onChange={onSetTableNumberFontSize}
+              ariaLabel={t('Taille chiffres')}
             />
           </div>
           <div className="grid grid-cols-2 gap-2">
             <div>
               <label className="block text-xs text-gray-400 mb-1">{t('Taille pseudo')}: {tablePrimaryFontSize}px</label>
-              <input
-                type="range"
+              <AppRangeSlider
                 min={12}
                 max={24}
                 step={1}
                 value={tablePrimaryFontSize}
-                onChange={(event) => onSetTablePrimaryFontSize(Number(event.target.value))}
-                className="w-full"
+                onChange={onSetTablePrimaryFontSize}
+                ariaLabel={t('Taille pseudo')}
               />
             </div>
             <div>
               <label className="block text-xs text-gray-400 mb-1">{t('Taille clip')}: {tableSecondaryFontSize}px</label>
-              <input
-                type="range"
+              <AppRangeSlider
                 min={10}
                 max={18}
                 step={1}
                 value={tableSecondaryFontSize}
-                onChange={(event) => onSetTableSecondaryFontSize(Number(event.target.value))}
-                className="w-full"
+                onChange={onSetTableSecondaryFontSize}
+                ariaLabel={t('Taille clip')}
               />
             </div>
           </div>
           <div>
             <label className="block text-xs text-gray-400 mb-1">{t('Style rang')}</label>
-            <select
+            <AppSelect
               value={rankBadgeStyle}
-              onChange={(event) => onSetRankBadgeStyle(event.target.value as ExportRankBadgeStyle)}
-              className="w-full px-2 py-1.5 rounded border border-gray-700 bg-surface-dark text-xs text-white focus:border-primary-500 focus:outline-none"
-            >
-              <option value="filled">{t('Puce pleine')}</option>
-              <option value="outline">{t('Puce contour')}</option>
-              <option value="plain">{t('Texte simple')}</option>
-            </select>
+              onChange={onSetRankBadgeStyle}
+              ariaLabel={t('Style rang')}
+              className="w-full"
+              options={[
+                { value: 'filled', label: t('Puce pleine') },
+                { value: 'outline', label: t('Puce contour') },
+                { value: 'plain', label: t('Texte simple') },
+              ]}
+            />
           </div>
         </div>
 
@@ -360,7 +365,7 @@ export function ExportOptionsPanel({
         <ExportCheckbox
           checked={useCollabMepLabels}
           onToggle={onToggleUseCollabMepLabels}
-          label={t('Remplacer pseudos multiples par colab / mep')}
+          label={t('Remplacer les pseudos multiples par « Collab / MEP »')}
         />
         <p className="text-[11px] text-gray-500 -mt-1">
           {t('Désactivé: export avec tous les pseudos. Séparateurs reconnus:')} <code>,</code> {t('et')} <code>&amp;</code>.

@@ -26,8 +26,8 @@ export function duplicateBareme(bareme: Bareme): Bareme {
   }
 }
 
-export function addCriterionItem(criteria: Criterion[]) {
-  return [...criteria, emptyCriterion()]
+export function addCriterionItem(criteria: Criterion[], criterion: Criterion = emptyCriterion()) {
+  return [...criteria, criterion]
 }
 
 export function removeCriterionItem(criteria: Criterion[], index: number) {
@@ -52,21 +52,68 @@ export function moveCategoryGroup(criteria: Criterion[], category: string, direc
     grouped.get(key)?.push(criterion)
   }
 
-  const order = Array.from(grouped.keys())
-  const index = order.indexOf(category)
+  const visibleOrder = Array.from(
+    new Set(
+      criteria
+        .filter((criterion) => criterion.name.trim())
+        .map((criterion) => getCriterionCategoryLabel(criterion)),
+    ),
+  )
+  const hiddenOrder = Array.from(grouped.keys()).filter((key) => !visibleOrder.includes(key))
+
+  const index = visibleOrder.indexOf(category)
   if (index < 0) return criteria
   const target = direction === 'up' ? index - 1 : index + 1
-  if (target < 0 || target >= order.length) return criteria
+  if (target < 0 || target >= visibleOrder.length) return criteria
 
-  const nextOrder = [...order]
+  const nextOrder = [...visibleOrder]
   ;[nextOrder[index], nextOrder[target]] = [nextOrder[target], nextOrder[index]]
-  return nextOrder.flatMap((key) => grouped.get(key) ?? [])
+  return [...nextOrder, ...hiddenOrder].flatMap((key) => grouped.get(key) ?? [])
 }
 
 export function updateCriterionItem(criteria: Criterion[], index: number, updates: Partial<Criterion>) {
   return criteria.map((criterion, criterionIndex) =>
     criterionIndex === index ? normalizeCriterion({ ...criterion, ...updates }) : criterion,
   )
+}
+
+export function updateCriterionCategoryItem(criteria: Criterion[], index: number, rawCategory: string) {
+  const criterion = criteria[index]
+  if (!criterion) return criteria
+
+  const nextCriterion = normalizeCriterion({
+    ...criterion,
+    category: rawCategory,
+  })
+  const nextCategory = nextCriterion.category?.trim() || ''
+  const currentCategory = criterion.category?.trim() || ''
+
+  if (!nextCategory || nextCategory === currentCategory) {
+    return criteria.map((item, itemIndex) => (itemIndex === index ? nextCriterion : item))
+  }
+
+  const matchesTargetCategory = criteria.some(
+    (item, itemIndex) =>
+      itemIndex !== index &&
+      (item.category?.trim() || '') === nextCategory,
+  )
+
+  if (!matchesTargetCategory) {
+    return criteria.map((item, itemIndex) => (itemIndex === index ? nextCriterion : item))
+  }
+
+  const next = [...criteria]
+  next.splice(index, 1)
+
+  let insertIndex = next.length
+  for (let itemIndex = 0; itemIndex < next.length; itemIndex += 1) {
+    if ((next[itemIndex].category?.trim() || '') === nextCategory) {
+      insertIndex = itemIndex + 1
+    }
+  }
+
+  next.splice(insertIndex, 0, nextCriterion)
+  return next
 }
 
 export function commitCategoryColorValue(

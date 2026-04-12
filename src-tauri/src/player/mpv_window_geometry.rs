@@ -76,6 +76,9 @@ impl MpvChildWindow {
                 let mut pt = Point { x, y };
                 ClientToScreen(self.owner, &mut pt);
                 if let Ok(mut saved) = self.saved_geometry.lock() {
+                    if *saved == (pt.x, pt.y, w, h) {
+                        return;
+                    }
                     *saved = (pt.x, pt.y, w, h);
                 }
                 MoveWindow(self.hwnd, pt.x, pt.y, w, h, 1);

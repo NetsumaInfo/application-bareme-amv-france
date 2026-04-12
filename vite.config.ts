@@ -23,6 +23,8 @@ export default defineConfig({
       input: {
         main: path.resolve(__dirname, 'index.html'),
         notes: path.resolve(__dirname, 'notes.html'),
+        overlay: path.resolve(__dirname, 'overlay.html'),
+        resultatsNotes: path.resolve(__dirname, 'resultats-notes.html'),
       },
     },
   },

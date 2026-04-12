@@ -1,3 +1,5 @@
+import { getZoomedViewport } from '@/hooks/useZoomScale'
+
 interface PreviewPlacementParams {
   anchorRect: DOMRect
   previewWidth: number
@@ -19,25 +21,28 @@ export function computeFramePreviewPlacement({
   anchorRect,
   previewWidth,
   previewHeight,
-  viewportWidth = window.innerWidth,
-  viewportHeight = window.innerHeight,
+  viewportWidth,
+  viewportHeight,
 }: PreviewPlacementParams): PreviewPlacement {
+  const viewport = getZoomedViewport()
   const margin = 12
   const gap = 10
   const safeWidth = Math.max(120, previewWidth)
   const safeHeight = Math.max(80, previewHeight)
+  const safeViewportWidth = viewportWidth ?? viewport.width
+  const safeViewportHeight = viewportHeight ?? viewport.height
 
   const spaceAbove = anchorRect.top - margin
-  const spaceBelow = viewportHeight - anchorRect.bottom - margin
+  const spaceBelow = safeViewportHeight - anchorRect.bottom - margin
 
   const preferBelow = spaceBelow >= safeHeight + gap || spaceBelow >= spaceAbove
   let top = preferBelow
     ? anchorRect.bottom + gap
     : anchorRect.top - safeHeight - gap
-  top = clamp(top, margin, Math.max(margin, viewportHeight - safeHeight - margin))
+  top = clamp(top, margin, Math.max(margin, safeViewportHeight - safeHeight - margin))
 
   let left = anchorRect.left + (anchorRect.width - safeWidth) / 2
-  left = clamp(left, margin, Math.max(margin, viewportWidth - safeWidth - margin))
+  left = clamp(left, margin, Math.max(margin, safeViewportWidth - safeWidth - margin))
 
   const overlapsAnchor =
     left < anchorRect.right &&
@@ -46,28 +51,27 @@ export function computeFramePreviewPlacement({
     top + safeHeight > anchorRect.top
 
   if (overlapsAnchor) {
-    const roomRight = viewportWidth - anchorRect.right - margin
+    const roomRight = safeViewportWidth - anchorRect.right - margin
     const roomLeft = anchorRect.left - margin
     if (roomRight >= safeWidth + gap || roomRight >= roomLeft) {
       left = clamp(
         anchorRect.right + gap,
         margin,
-        Math.max(margin, viewportWidth - safeWidth - margin),
+        Math.max(margin, safeViewportWidth - safeWidth - margin),
       )
     } else {
       left = clamp(
         anchorRect.left - safeWidth - gap,
         margin,
-        Math.max(margin, viewportWidth - safeWidth - margin),
+        Math.max(margin, safeViewportWidth - safeWidth - margin),
       )
     }
     top = clamp(
       anchorRect.top + (anchorRect.height - safeHeight) / 2,
       margin,
-      Math.max(margin, viewportHeight - safeHeight - margin),
+      Math.max(margin, safeViewportHeight - safeHeight - margin),
     )
   }
 
   return { left, top }
 }
-

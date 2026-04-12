@@ -1,5 +1,6 @@
 import ContextMenu from '@/components/layout/ContextMenu'
 import { FloatingVideoPlayer } from '@/components/player/FloatingVideoPlayer'
+import { ClipDeletionConfirmDialog } from '@/components/project/ClipDeletionConfirmDialog'
 import CreateProjectModal from '@/components/project/CreateProjectModal'
 import BaremeEditor from '@/components/scoring/BaremeEditor'
 import SettingsPanel from '@/components/settings/SettingsPanel'
@@ -67,6 +68,7 @@ export function AppFloatingLayers({
       <CreateProjectModal />
       <BaremeEditor />
       {showSettings ? <SettingsPanel onClose={onCloseSettings} /> : null}
+      <ClipDeletionConfirmDialog />
 
       {currentProject
         && (

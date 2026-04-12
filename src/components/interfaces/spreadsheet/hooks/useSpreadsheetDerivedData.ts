@@ -73,7 +73,7 @@ export function useSpreadsheetDerivedData({
     getNoteForClip,
   )
   const showMiniatures = Boolean(currentProject?.settings.showMiniatures)
-  const showAddRowButton = Boolean(currentProject?.settings.showAddRowButton)
+  const showQuickActions = currentProject?.settings.showQuickActions ?? true
 
   const getCategoryScore = useCallback(
     (clipId: string, group: CategoryGroup): number => {
@@ -134,7 +134,7 @@ export function useSpreadsheetDerivedData({
     hideTotalsSetting,
     hideTotalsUntilAllScored,
     showMiniatures,
-    showAddRowButton,
+    showQuickActions,
     getCategoryScore,
     hasAnyScoreInGroup,
     hasAnyScoreInBareme,

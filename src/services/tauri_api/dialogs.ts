@@ -1,4 +1,5 @@
 import { open, save } from '@tauri-apps/api/dialog'
+import { join } from '@tauri-apps/api/path'
 
 export async function openProjectDialog(): Promise<string | null> {
   const result = await open({
@@ -8,18 +9,25 @@ export async function openProjectDialog(): Promise<string | null> {
   return typeof result === 'string' ? result : null
 }
 
-export async function saveProjectDialog(defaultName?: string): Promise<string | null> {
+async function buildDefaultPath(defaultName?: string, defaultFolder?: string): Promise<string | undefined> {
+  const fileName = defaultName ? `${defaultName}.json` : undefined
+  if (!fileName) return defaultFolder
+  return defaultFolder ? await join(defaultFolder, fileName) : fileName
+}
+
+export async function saveProjectDialog(defaultName?: string, defaultFolder?: string): Promise<string | null> {
   const result = await save({
     filters: [{ name: 'Projet AMV Notation', extensions: ['json'] }],
-    defaultPath: defaultName ? `${defaultName}.json` : undefined,
+    defaultPath: await buildDefaultPath(defaultName, defaultFolder),
   })
   return result
 }
 
-export async function openFolderDialog(): Promise<string | null> {
+export async function openFolderDialog(defaultPath?: string): Promise<string | null> {
   const result = await open({
     directory: true,
     multiple: false,
+    defaultPath,
   })
   return typeof result === 'string' ? result : null
 }
@@ -30,6 +38,15 @@ export async function openJsonDialog(): Promise<string | null> {
     multiple: false,
   })
   return typeof result === 'string' ? result : null
+}
+
+export async function openJsonFilesDialog(): Promise<string[] | null> {
+  const result = await open({
+    filters: [{ name: 'JSON', extensions: ['json'] }],
+    multiple: true,
+  })
+  if (Array.isArray(result)) return result
+  return typeof result === 'string' ? [result] : null
 }
 
 export async function saveJsonDialog(defaultName?: string): Promise<string | null> {

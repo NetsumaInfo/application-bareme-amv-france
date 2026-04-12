@@ -50,17 +50,18 @@ export function DetachedCriterionItem({
   return (
     <div className="space-y-1">
       <div
-        className="flex items-center gap-2 px-3 py-2 rounded-md transition-colors"
+        className="flex items-center gap-2 rounded-md px-2.5 py-1.5 transition-colors"
         style={{
-          backgroundColor: withAlpha(color, 0.07),
+          backgroundColor: 'rgb(var(--color-surface) / 0.88)',
+          boxShadow: `inset 0 1px 0 ${withAlpha(color, 0.05)}`,
         }}
       >
         <div className="flex-1 min-w-0">
-          <span className="text-xs text-gray-200 truncate block" title={criterion.name}>
+          <span className="block truncate text-[11px] text-gray-200" title={criterion.name}>
             {criterion.name}
           </span>
           {criterion.description ? (
-            <span className="text-[9px] text-gray-500 truncate block">{criterion.description}</span>
+            <span className="block truncate text-[9px] text-gray-500">{criterion.description}</span>
           ) : null}
         </div>
         <input
@@ -78,17 +79,17 @@ export function DetachedCriterionItem({
               event.target.value,
             )}
           onKeyDown={(event) => onInputKeyDown(event, flatIndex)}
-          className="amv-soft-number w-16 rounded-md border px-2 py-1 text-center text-sm font-mono text-white focus:border-primary-500 focus:outline-none focus-visible:outline-none"
+          className="amv-soft-number w-14 rounded-md border border-transparent px-2 py-1 text-center text-[12px] font-mono text-white focus:border-primary-500/25 focus:outline-none focus-visible:outline-none"
           style={{
-            borderColor: withAlpha(color, 0.42),
-            backgroundColor: withAlpha(color, 0.1),
+            backgroundColor: 'rgb(var(--color-surface-light) / 0.9)',
+            boxShadow: `inset 0 0 0 1px ${withAlpha(color, 0.12)}`,
           }}
         />
-        <span className="text-[10px] text-gray-500 w-7 text-right font-mono">/{criterion.max ?? 10}</span>
+        <span className="w-7 text-right font-mono text-[9px] text-gray-500">/{criterion.max ?? 10}</span>
         <button
           type="button"
           onClick={onToggleNote}
-          className="ml-1 px-1 text-[10px] leading-none text-gray-400 hover:text-white transition-colors bg-transparent"
+          className="ml-0.5 px-1 text-[10px] leading-none text-gray-500 transition-colors hover:text-white bg-transparent"
           style={{ background: 'transparent' }}
           title={isCriterionNoteExpanded ? t('Refermer la note') : t('Ouvrir la note')}
         >
@@ -102,8 +103,8 @@ export function DetachedCriterionItem({
           onChange={(nextValue) => onCriterionNoteChange(criterion.id, nextValue)}
           textareaClassName="min-h-[30px]"
           style={{
-            backgroundColor: withAlpha(color, 0.045),
-            borderColor: withAlpha(color, 0.15),
+            backgroundColor: 'rgb(var(--color-surface-dark) / 0.72)',
+            borderColor: 'rgb(var(--color-primary-500) / 0.22)',
           }}
           color={color}
           fpsHint={clipFps ?? undefined}
@@ -122,8 +123,8 @@ export function DetachedCriterionItem({
         <button
           type="button"
           onClick={onExpandNote}
-          className="w-full text-left px-2.5 py-1 rounded-md text-[10px] text-gray-400 border border-gray-700 hover:text-gray-200 hover:border-gray-500 transition-colors truncate"
-          style={{ backgroundColor: withAlpha(color, 0.04) }}
+          className="w-full truncate rounded-md px-2.5 py-1 text-left text-[10px] text-gray-400 transition-colors hover:text-gray-200"
+          style={{ backgroundColor: 'rgb(var(--color-surface-dark) / 0.58)' }}
           title={criterionNoteValue}
         >
           {criterionNoteValue.replace(/\s+/g, ' ').slice(0, 96)}

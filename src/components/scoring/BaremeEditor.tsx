@@ -9,6 +9,7 @@ export default function BaremeEditor() {
   const {
     showBaremeEditor,
     availableBaremes,
+    baremesFolderPath,
     mode,
     setMode,
     editingBareme,
@@ -21,6 +22,7 @@ export default function BaremeEditor() {
     categoryColors,
     globalStep,
     hideTotalsUntilAllScored,
+    spotlightCriterionId,
     error,
     getCategoryColor,
     onClose,
@@ -67,10 +69,11 @@ export default function BaremeEditor() {
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-5">
+        <div className="flex-1 overflow-y-auto p-5" data-bareme-scroll-container="true">
           {mode === 'list' ? (
             <BaremeListView
               availableBaremes={availableBaremes}
+              baremesFolderPath={baremesFolderPath}
               onCreate={startNew}
               onImportJson={handleImportBaremeJson}
               onEdit={startEdit}
@@ -89,6 +92,7 @@ export default function BaremeEditor() {
               categoryColors={categoryColors}
               globalStep={globalStep}
               hideTotalsUntilAllScored={hideTotalsUntilAllScored}
+              spotlightCriterionId={spotlightCriterionId}
               error={error}
               getCategoryColor={getCategoryColor}
               onNameChange={setName}
