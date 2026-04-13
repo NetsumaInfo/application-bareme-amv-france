@@ -47,17 +47,17 @@ export function NoVideoState({
 
   return (
     <div
-      className={`flex flex-col items-center justify-center h-full gap-4 transition-colors ${isDragOver ? 'bg-primary-600/10' : ''
+      className={`flex flex-col items-center justify-center h-full gap-4 transition-colors ${isDragOver ? 'bg-primary-600/8' : ''
         }`}
     >
       <div
-        className={`flex flex-col items-center justify-center gap-3 p-8 rounded-xl border-2 border-dashed transition-colors ${isDragOver ? 'border-primary-400 bg-primary-600/5' : 'border-gray-700'
+        className={`flex flex-col items-center justify-center gap-3 p-8 rounded-xl border-2 border-dashed transition-colors ${isDragOver ? 'border-primary-300 bg-primary-600/4' : 'border-gray-700'
           }`}
       >
         {isDragOver ? (
           <>
-            <Download size={32} className="text-primary-400" />
-            <p className="text-primary-400 text-sm font-medium">{t('Déposez vos fichiers ici')}</p>
+            <Download size={32} className="text-primary-300" />
+            <p className="text-primary-300 text-sm font-medium">{t('Déposez vos fichiers ici')}</p>
           </>
         ) : (
           <>
@@ -72,7 +72,7 @@ export function NoVideoState({
               </button>
               <button
                 onClick={onImportFiles}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg border border-primary-600 text-primary-500 hover:bg-primary-600/10 text-sm font-medium transition-colors"
+                className="flex items-center gap-2 px-4 py-2 rounded-lg border border-primary-300 text-primary-300 hover:bg-primary-300/8 text-sm font-medium transition-colors"
               >
                 <FilePlus size={16} />
                 {t('Importer des fichiers')}

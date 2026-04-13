@@ -80,7 +80,7 @@ export function SpreadsheetCriterionCells({
                 }
                 event.stopPropagation()
               }}
-              className="amv-soft-number w-full rounded border border-transparent bg-transparent px-1 py-0.5 text-center text-xs font-mono text-white transition-colors hover:bg-surface-light/50 focus:border-primary-500 focus:bg-surface-dark focus:outline-none focus-visible:outline-none"
+              className="amv-soft-number w-full rounded border border-transparent bg-transparent px-1 py-0.5 text-center text-xs text-white transition-colors hover:bg-surface-light/50 focus:border-primary-500 focus:bg-surface-dark focus:outline-none focus-visible:outline-none"
             />
           </td>
         )

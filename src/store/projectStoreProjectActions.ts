@@ -6,6 +6,7 @@ import type {
   ProjectData,
   ProjectSettings,
 } from '@/types/project'
+import type { Bareme } from '@/types/bareme'
 import { DEFAULT_PROJECT_SETTINGS } from '@/types/project'
 import { generateId } from '@/utils/formatters'
 
@@ -45,11 +46,17 @@ export function buildProjectDataPayload(
   clips: Clip[],
   notes: Record<string, NoteData>,
   importedJudges: ImportedJudgeData[],
+  currentBareme?: Bareme | null,
 ): ProjectData {
+  const project = currentBareme?.id && currentProject.baremeId !== currentBareme.id
+    ? { ...currentProject, baremeId: currentBareme.id }
+    : currentProject
+
   return {
     version: '1.0',
-    project: currentProject,
-    baremeId: currentProject.baremeId,
+    project,
+    baremeId: project.baremeId,
+    bareme: currentBareme ?? null,
     clips,
     notes,
     importedJudges,

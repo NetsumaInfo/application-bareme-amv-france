@@ -53,7 +53,7 @@ export function ResultatsHeader({
                   className="inline-flex h-6 items-center rounded-md px-1.5 text-[11px] transition-colors hover:bg-white/5 hover:text-white"
                   style={{
                     color: active ? color : 'rgb(var(--app-text) / 0.78)',
-                    backgroundColor: active ? withAlpha(color, 0.08) : 'transparent',
+                    backgroundColor: active ? withAlpha(color, 0.12) : 'transparent',
                     boxShadow: active ? `inset 0 -1px 0 0 ${withAlpha(color, 0.9)}` : 'none',
                   }}
                 >

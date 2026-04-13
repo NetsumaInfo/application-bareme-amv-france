@@ -222,7 +222,7 @@
 
 @layer components {
   .app-header-trigger {
-    @apply inline-flex h-6 items-center rounded-md px-2 text-xs font-medium transition-colors duration-150;
+    @apply inline-flex h-[22px] items-center justify-center whitespace-nowrap rounded-md px-1.5 text-[11px] font-medium leading-none transition-colors duration-150;
     background-color: rgb(var(--color-surface-dark) / 0.92);
     color: rgb(var(--app-text) / 0.78);
   }
@@ -239,7 +239,7 @@
   }
 
   .app-header-trigger-icon {
-    @apply w-6 justify-center px-0;
+    @apply w-[22px] justify-center px-0;
   }
 
   .app-header-trigger-chevron {
@@ -251,7 +251,7 @@
   }
 
   .app-range-slider {
-    height: 0.375rem;
+    height: 0.25rem;
     cursor: pointer;
     appearance: none;
     border-radius: 9999px;
@@ -276,15 +276,15 @@
   }
 
   .app-range-slider::-webkit-slider-runnable-track {
-    height: 0.375rem;
+    height: 0.25rem;
     border-radius: 9999px;
     background: transparent;
   }
 
   .app-range-slider::-webkit-slider-thumb {
-    width: 0.875rem;
-    height: 0.875rem;
-    margin-top: -0.25rem;
+    width: 0.625rem;
+    height: 0.625rem;
+    margin-top: -0.1875rem;
     appearance: none;
     border: 2px solid var(--app-range-accent, rgb(var(--color-primary-500)));
     border-radius: 9999px;
@@ -293,20 +293,20 @@
   }
 
   .app-range-slider::-moz-range-track {
-    height: 0.375rem;
+    height: 0.25rem;
     border-radius: 9999px;
     background: rgb(var(--color-surface-light) / 0.78);
   }
 
   .app-range-slider::-moz-range-progress {
-    height: 0.375rem;
+    height: 0.25rem;
     border-radius: 9999px;
     background: var(--app-range-accent, rgb(var(--color-primary-500) / 0.92));
   }
 
   .app-range-slider::-moz-range-thumb {
-    width: 0.875rem;
-    height: 0.875rem;
+    width: 0.625rem;
+    height: 0.625rem;
     border: 2px solid var(--app-range-accent, rgb(var(--color-primary-500)));
     border-radius: 9999px;
     background: rgb(var(--app-text));
@@ -709,12 +709,14 @@ body {
 
 * {
   box-sizing: border-box;
+  scrollbar-width: thin;
+  scrollbar-color: rgb(var(--scrollbar-thumb)) rgb(var(--scrollbar-track));
 }
 
 /* Scrollbar styling */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 5px;
+  height: 5px;
 }
 
 ::-webkit-scrollbar-track {
@@ -723,7 +725,7 @@ body {
 
 ::-webkit-scrollbar-thumb {
   background: rgb(var(--scrollbar-thumb));
-  border-radius: 4px;
+  border-radius: 999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
@@ -737,8 +739,15 @@ body {
 }
 
 /* Softer number inputs used in notation/results tables */
+.amv-number-ui {
+  font-family: inherit;
+  font-variant-numeric: tabular-nums;
+}
+
 .amv-soft-number {
   color-scheme: dark;
+  font: inherit;
+  font-variant-numeric: tabular-nums;
   appearance: textfield;
   -moz-appearance: textfield;
 }
@@ -761,4 +770,80 @@ input[type='number']::-webkit-inner-spin-button {
   -webkit-appearance: none;
   appearance: none;
   margin: 0;
+}
+
+.amv-export-static-target,
+.amv-export-static-target .amv-export-surface {
+  width: max-content !important;
+  max-width: none !important;
+  height: auto !important;
+  min-height: 0 !important;
+  overflow: visible !important;
+}
+
+.amv-export-static-target .h-full,
+.amv-export-static-target .min-h-0,
+.amv-export-static-target .flex-1 {
+  height: auto !important;
+  min-height: 0 !important;
+}
+
+.amv-export-static-target .overflow-hidden,
+.amv-export-static-target .overflow-auto,
+.amv-export-static-target .overflow-x-auto,
+.amv-export-static-target .overflow-y-hidden {
+  overflow: visible !important;
+}
+
+.amv-export-static-target .sticky {
+  position: static !important;
+}
+
+.amv-export-static-target table {
+  width: max-content !important;
+  min-width: max-content !important;
+  table-layout: auto !important;
+}
+
+.amv-export-static-target table thead,
+.amv-export-static-target table tbody,
+.amv-export-static-target table tr {
+  height: auto !important;
+  min-height: 0 !important;
+  overflow: visible !important;
+}
+
+.amv-export-static-target table th,
+.amv-export-static-target table td {
+  height: auto !important;
+  min-height: 0 !important;
+  line-height: 1.35 !important;
+  overflow: visible !important;
+  vertical-align: middle !important;
+}
+
+.amv-export-static-target table th[rowspan] {
+  vertical-align: middle !important;
+}
+
+.amv-export-static-target table tbody td {
+  padding-top: 0.65rem !important;
+  padding-bottom: 0.65rem !important;
+}
+
+.amv-export-static-target table .truncate {
+  max-width: none !important;
+  overflow: visible !important;
+  text-overflow: clip !important;
+  white-space: nowrap !important;
+}
+
+.amv-export-static-target table td > .flex.flex-col {
+  gap: 0.15rem !important;
+  line-height: 1.3 !important;
+  overflow: visible !important;
+}
+
+.amv-export-static-target img {
+  max-width: 100%;
 }

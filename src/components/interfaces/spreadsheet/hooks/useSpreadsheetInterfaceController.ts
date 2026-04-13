@@ -1,5 +1,5 @@
 import type { ComponentProps } from 'react'
-import { useRef, useState } from 'react'
+import { useCallback, useMemo, useRef, useState } from 'react'
 import { useSpreadsheetImport } from '@/components/interfaces/spreadsheet/hooks/useSpreadsheetImport'
 import { useSpreadsheetManualClips } from '@/components/interfaces/spreadsheet/hooks/useSpreadsheetManualClips'
 import { useSpreadsheetFrameTools } from '@/components/interfaces/spreadsheet/hooks/useSpreadsheetFrameTools'
@@ -17,6 +17,7 @@ import { useNotationStore } from '@/store/useNotationStore'
 import { useProjectStore } from '@/store/useProjectStore'
 import { useUIStore } from '@/store/useUIStore'
 import { usePlayer } from '@/hooks/usePlayer'
+import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts'
 
 interface SpreadsheetInterfaceController {
   currentBareme: Bareme | null
@@ -111,6 +112,29 @@ export function useSpreadsheetInterfaceController(): SpreadsheetInterfaceControl
 
   const currentClip = clips[currentClipIndex]
   const currentNote = currentClip ? getNoteForClip(currentClip.id) : undefined
+
+  const handleRenameCurrentClip = useCallback(() => {
+    if (!currentClip) return
+    handleStartClipIdentityEdit(currentClip.id)
+  }, [currentClip, handleStartClipIdentityEdit])
+
+  const handleSwapCurrentClipIdentity = useCallback(() => {
+    if (!currentClip) return
+    handleSwapClipAuthorAndDisplayName(currentClip.id)
+  }, [currentClip, handleSwapClipAuthorAndDisplayName])
+
+  const spreadsheetShortcuts = useMemo(() => ({
+    [shortcutBindings.renameClip]: handleRenameCurrentClip,
+    [shortcutBindings.swapPseudoAndClipName]: handleSwapCurrentClipIdentity,
+  }), [
+    handleRenameCurrentClip,
+    handleSwapCurrentClipIdentity,
+    shortcutBindings.renameClip,
+    shortcutBindings.swapPseudoAndClipName,
+  ])
+
+  useKeyboardShortcuts(spreadsheetShortcuts)
+
   const {
     categoryGroups,
     sortedClips,

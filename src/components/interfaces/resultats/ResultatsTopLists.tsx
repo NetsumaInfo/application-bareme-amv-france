@@ -16,6 +16,8 @@ interface ResultatsTopListsProps {
   onOpenClipInNotation: (clipId: string) => void
   showMiniatures: boolean
   thumbnailDefaultSeconds: number
+  forceMiniatureLoad?: boolean
+  staticExport?: boolean
 }
 
 function sortRowsByScore(rows: ResultatsRow[], scoreAccessor: (row: ResultatsRow) => number) {
@@ -47,6 +49,8 @@ function TopList({
   onOpenClipInNotation,
   showMiniatures,
   thumbnailDefaultSeconds,
+  forceMiniatureLoad,
+  staticExport,
 }: {
   title: string
   entries: ResultatsRow[]
@@ -56,14 +60,16 @@ function TopList({
   onOpenClipInNotation: (clipId: string) => void
   showMiniatures: boolean
   thumbnailDefaultSeconds: number
+  forceMiniatureLoad: boolean
+  staticExport: boolean
 }) {
   return (
-    <div className="min-w-[220px] flex-1 basis-0 overflow-hidden border border-gray-700/50 bg-transparent">
+    <div className={`min-w-[220px] flex-1 basis-0 border border-gray-700/50 bg-transparent ${staticExport ? 'overflow-visible' : 'overflow-hidden'}`}>
       <div
         className="flex items-center gap-2 border-b border-gray-700/60 px-2.5 py-1.5 text-[11px] font-medium"
         style={{
           color: accentColor,
-          backgroundColor: withAlpha(accentColor, 0.06),
+          backgroundColor: withAlpha(accentColor, 0.1),
         }}
       >
         <span className="inline-block h-1.5 w-1.5 rounded-full" style={{ backgroundColor: accentColor }} />
@@ -80,22 +86,23 @@ function TopList({
               onDoubleClick={() => onOpenClipInNotation(row.clip.id)}
               className={`w-full px-2.5 py-1.5 text-left text-[11px] transition-colors ${
                 isSelected
-                  ? 'bg-white/[0.04]'
-                  : 'hover:bg-white/[0.03]'
+                  ? 'bg-white/[0.06]'
+                  : 'hover:bg-white/[0.05]'
               }`}
             >
               <div className="flex items-start gap-1.5">
                 <span className="text-gray-500 w-4 shrink-0">{index + 1}</span>
                 <div className="min-w-0">
-                  <div className="truncate text-[11px] font-semibold text-primary-300">{getClipPrimaryLabel(row.clip)}</div>
+                  <div className={`${staticExport ? 'whitespace-normal break-words' : 'truncate'} text-[11px] font-semibold text-primary-300`}>{getClipPrimaryLabel(row.clip)}</div>
                   {getClipSecondaryLabel(row.clip) && (
-                    <div className="truncate text-[10px] text-gray-500">{getClipSecondaryLabel(row.clip)}</div>
+                    <div className={`${staticExport ? 'whitespace-normal break-words' : 'truncate'} text-[10px] text-gray-500`}>{getClipSecondaryLabel(row.clip)}</div>
                   )}
                   {showMiniatures && row.clip.filePath ? (
                     <ClipMiniaturePreview
                       clip={row.clip}
                       enabled={showMiniatures}
                       defaultSeconds={thumbnailDefaultSeconds}
+                      forceLoad={forceMiniatureLoad}
                     />
                   ) : null}
                 </div>
@@ -118,6 +125,8 @@ export function ResultatsTopLists({
   onOpenClipInNotation,
   showMiniatures,
   thumbnailDefaultSeconds,
+  forceMiniatureLoad = false,
+  staticExport = false,
 }: ResultatsTopListsProps) {
   const { t } = useI18n()
   const finalTop = useMemo(
@@ -135,7 +144,7 @@ export function ResultatsTopLists({
   )
 
   return (
-    <div className="flex-1 min-h-0 overflow-x-auto overflow-y-hidden">
+    <div className={`flex-1 min-h-0 ${staticExport ? 'overflow-visible' : 'overflow-x-auto overflow-y-hidden'}`}>
       <div className="flex min-w-full w-full flex-nowrap items-start gap-2">
         {topByJudge.map(({ judge, entries }) => (
           <TopList
@@ -148,6 +157,8 @@ export function ResultatsTopLists({
             onOpenClipInNotation={onOpenClipInNotation}
             showMiniatures={showMiniatures}
             thumbnailDefaultSeconds={thumbnailDefaultSeconds}
+            forceMiniatureLoad={forceMiniatureLoad}
+            staticExport={staticExport}
           />
         ))}
 
@@ -160,6 +171,8 @@ export function ResultatsTopLists({
           onOpenClipInNotation={onOpenClipInNotation}
           showMiniatures={showMiniatures}
           thumbnailDefaultSeconds={thumbnailDefaultSeconds}
+          forceMiniatureLoad={forceMiniatureLoad}
+          staticExport={staticExport}
         />
       </div>
     </div>

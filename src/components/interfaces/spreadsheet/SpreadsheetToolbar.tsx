@@ -31,17 +31,17 @@ function ToolbarIconButton({
 }: ToolbarIconButtonProps) {
   const colorClassName = disabled
     ? 'bg-transparent text-gray-600'
-    : danger
+      : danger
       ? 'bg-transparent text-rose-300 hover:bg-rose-500/10 hover:text-rose-200'
       : active
-        ? 'bg-primary-500/10 text-primary-200 hover:bg-primary-500/14 hover:text-white'
+        ? 'bg-primary-500/8 text-primary-100 hover:bg-primary-500/12 hover:text-white'
         : 'bg-transparent text-gray-400 hover:bg-white/5 hover:text-white'
   const bubbleClassName = disabled
     ? 'bg-slate-950 text-gray-600'
     : danger
       ? 'bg-slate-950 text-rose-300'
       : active
-        ? 'bg-slate-950 text-primary-200'
+        ? 'bg-slate-950 text-primary-100'
         : 'bg-slate-950 text-slate-200'
 
   return (
@@ -52,23 +52,19 @@ function ToolbarIconButton({
         onContextMenu={onContextMenu}
         disabled={disabled}
         aria-label={ariaLabel}
-        className={`inline-flex h-[18px] w-[18px] items-center justify-center rounded-[5px] transition-colors ${colorClassName} ${disabled ? 'cursor-not-allowed opacity-55' : ''}`}
+        className={`inline-flex h-6 w-6 items-center justify-center rounded-md transition-colors ${colorClassName} ${disabled ? 'cursor-not-allowed opacity-55' : ''}`}
       >
-        <span className="relative flex h-3 w-3 items-center justify-center">
-          <Icon size={12} strokeWidth={1.9} />
+        <span className="relative flex h-3.5 w-3.5 items-center justify-center">
+          <Icon size={14} strokeWidth={1.9} />
           {IconSecondary ? (
-            <span className={`absolute -bottom-px -right-px flex h-[7px] w-[7px] items-center justify-center rounded-full ${bubbleClassName}`}>
-              <IconSecondary size={3.6} strokeWidth={2.1} />
+            <span className={`absolute -bottom-px -right-px flex h-2.5 w-2.5 items-center justify-center rounded-full ${bubbleClassName}`}>
+              <IconSecondary size={5} strokeWidth={2.1} />
             </span>
           ) : null}
         </span>
       </button>
     </HoverTextTooltip>
   )
-}
-
-function ToolbarDivider() {
-  return <div className="h-3 w-px bg-white/7 shrink-0" aria-hidden="true" />
 }
 
 interface SpreadsheetToolbarProps {
@@ -137,7 +133,7 @@ export function SpreadsheetToolbar({
     : t('Vidéo PiP indisponible (pas de média)')
 
   return (
-    <div className="flex shrink-0 items-center gap-0.5 overflow-x-auto border-b border-gray-700/80 bg-surface-dark/72 px-1.5 py-0.5">
+    <div className="flex shrink-0 items-center gap-0.5 overflow-x-auto border-b border-gray-700/50 py-px">
       <ToolbarIconButton
         ariaLabel={hasCurrentClipVideo ? pipLabel : attachVideoLabel}
         title={hasCurrentClipVideo ? pipLabel : attachVideoLabel}
@@ -204,8 +200,6 @@ export function SpreadsheetToolbar({
         disabled={!currentClip}
         onClick={currentClip ? () => onToggleScored(currentClip) : undefined}
       />
-
-      <ToolbarDivider />
 
       <ToolbarIconButton
         ariaLabel={removeClipLabel}

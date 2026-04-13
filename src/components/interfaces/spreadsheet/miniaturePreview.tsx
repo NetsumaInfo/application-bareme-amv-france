@@ -64,9 +64,10 @@ interface ClipMiniaturePreviewProps {
   clip: Clip
   enabled: boolean
   defaultSeconds: number
+  forceLoad?: boolean
 }
 
-export function ClipMiniaturePreview({ clip, enabled, defaultSeconds }: ClipMiniaturePreviewProps) {
+export function ClipMiniaturePreview({ clip, enabled, defaultSeconds, forceLoad = false }: ClipMiniaturePreviewProps) {
   const [imageState, setImageState] = useState<{ key: string; value: string | null }>({
     key: '',
     value: null,
@@ -86,6 +87,14 @@ export function ClipMiniaturePreview({ clip, enabled, defaultSeconds }: ClipMini
   const loading = statusState.key === cacheKey ? statusState.loading : false
   const failed = statusState.key === cacheKey ? statusState.failed : false
   const resolvedImage = cachedImage ?? image
+  const shouldLoadPreview = forceLoad || isVisible
+  const miniatureState = resolvedImage
+    ? 'loaded'
+    : loading || (forceLoad && Boolean(clip.filePath) && !failed)
+      ? 'loading'
+      : failed
+        ? 'failed'
+        : 'idle'
   const markPreviewLoading = (nextKey: string) => {
     setImageState({ key: nextKey, value: null })
     setStatusState({ key: nextKey, loading: true, failed: false })
@@ -102,6 +111,7 @@ export function ClipMiniaturePreview({ clip, enabled, defaultSeconds }: ClipMini
   useEffect(() => {
     const node = containerRef.current
     if (!enabled || !node) return
+    if (forceLoad) return
 
     const observer = new IntersectionObserver(
       (entries) => {
@@ -112,10 +122,10 @@ export function ClipMiniaturePreview({ clip, enabled, defaultSeconds }: ClipMini
     )
     observer.observe(node)
     return () => observer.disconnect()
-  }, [enabled, cacheKey])
+  }, [enabled, cacheKey, forceLoad])
 
   useEffect(() => {
-    if (!enabled || !clip.filePath || !isVisible) return
+    if (!enabled || !clip.filePath || !shouldLoadPreview) return
     if (miniaturePreviewCache.has(cacheKey)) return
 
     let active = true
@@ -142,7 +152,7 @@ export function ClipMiniaturePreview({ clip, enabled, defaultSeconds }: ClipMini
     return () => {
       active = false
     }
-  }, [cacheKey, clip.filePath, enabled, isVisible, seconds])
+  }, [cacheKey, clip.filePath, enabled, seconds, shouldLoadPreview])
 
   if (!enabled) return null
 
@@ -150,6 +160,7 @@ export function ClipMiniaturePreview({ clip, enabled, defaultSeconds }: ClipMini
     <div
       ref={containerRef}
       className="mt-1 w-[82px] h-[46px] rounded-md overflow-hidden border border-gray-700 bg-black/60 pointer-events-none select-none"
+      data-miniature-state={miniatureState}
     >
       {resolvedImage ? (
         <img

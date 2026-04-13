@@ -55,9 +55,9 @@ export function SpreadsheetTableFooter({
                 key={`avg-${criterion.id}`}
                 colSpan={group.criteria.length}
                 className="px-1 py-2 text-center border-r border-gray-600"
-                style={{ backgroundColor: withAlpha(group.color, 0.22) }}
+                style={{ backgroundColor: withAlpha(group.color, 0.16) }}
               >
-                <span className="text-[11px] font-mono font-bold" style={{ color: group.color }}>
+                <span className="amv-number-ui text-[11px] font-bold" style={{ color: group.color }}>
                   {avg.toFixed(1)}
                 </span>
                 <span className="text-[9px] text-gray-400">/{group.totalMax}</span>
@@ -66,7 +66,7 @@ export function SpreadsheetTableFooter({
           }),
         )}
         {!hideTotalsSetting && (
-          <td className="px-2 py-2 text-center font-mono font-bold text-[12px] text-white bg-surface-dark">
+          <td className="amv-number-ui px-2 py-2 text-center font-bold text-[12px] text-white bg-surface-dark">
             {(() => {
               const values = clips
                 .filter((clip) => hasAnyScoreInBareme(clip.id))

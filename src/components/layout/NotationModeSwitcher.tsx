@@ -51,26 +51,26 @@ export function NotationModeSwitcher() {
     <div className="flex items-center overflow-hidden rounded-md bg-surface-dark p-0">
       <button
         onClick={toggleSpreadsheet}
-        className={`h-5 rounded-l-[5px] px-2 text-[11px] leading-none transition-all ${
+        className={`h-[22px] rounded-l-[5px] px-1.5 text-[11px] leading-none transition-all ${
           spreadsheetActive
             ? 'bg-primary-600/80 text-white shadow-sm'
             : 'text-gray-400 hover:bg-white/5 hover:text-white'
         }`}
       >
-        <span className="inline-flex items-center gap-1">
+        <span className="inline-flex items-center gap-0.5">
           <SpreadsheetIcon size={11} />
           <span>{t('Tableur')}</span>
         </span>
       </button>
       <button
         onClick={toggleNotation}
-        className={`h-5 rounded-r-[5px] px-2 text-[11px] leading-none transition-all ${
+        className={`h-[22px] rounded-r-[5px] px-1.5 text-[11px] leading-none transition-all ${
           notationActive
             ? 'bg-primary-600/80 text-white shadow-sm'
             : 'text-gray-400 hover:bg-white/5 hover:text-white'
         }`}
       >
-        <span className="inline-flex items-center gap-1">
+        <span className="inline-flex items-center gap-0.5">
           <NotesIcon size={11} />
           <span>{t('Commentaires')}</span>
         </span>

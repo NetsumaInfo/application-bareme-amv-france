@@ -7,6 +7,7 @@ import type {
   NoteData,
   ImportedJudgeData,
 } from '@/types/project'
+import type { Bareme } from '@/types/bareme'
 import { getSortedClipIndices } from '@/utils/clipOrder'
 import { normalizeProjectDataInput } from '@/store/projectStoreNormalization'
 import {
@@ -52,7 +53,7 @@ interface ProjectStore {
   markDirty: () => void
   markClean: () => void
   setFilePath: (path: string) => void
-  getProjectData: (notes: Record<string, NoteData>) => ProjectData | null
+  getProjectData: (notes: Record<string, NoteData>, currentBareme?: Bareme | null) => ProjectData | null
   reset: () => void
 }
 
@@ -241,10 +242,10 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
     })
   },
 
-  getProjectData: (notes: Record<string, NoteData>): ProjectData | null => {
+  getProjectData: (notes: Record<string, NoteData>, currentBareme?: Bareme | null): ProjectData | null => {
     const { currentProject, clips, importedJudges } = get()
     if (!currentProject) return null
-    return buildProjectDataPayload(currentProject, clips, notes, importedJudges)
+    return buildProjectDataPayload(currentProject, clips, notes, importedJudges, currentBareme)
   },
 
   reset: () => {

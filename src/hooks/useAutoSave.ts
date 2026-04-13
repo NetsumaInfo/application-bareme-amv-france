@@ -5,7 +5,7 @@ import * as tauri from '@/services/tauri'
 
 export function useAutoSave() {
   const { currentProject, isDirty, markClean, getProjectData } = useProjectStore()
-  const { getNotesData } = useNotationStore()
+  const { getNotesData, currentBareme } = useNotationStore()
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const doSaveRef = useRef<() => Promise<void>>(async () => {})
 
@@ -15,7 +15,7 @@ export function useAutoSave() {
 
       try {
         const notesData = getNotesData()
-        const projectData = getProjectData(notesData)
+        const projectData = getProjectData(notesData, currentBareme)
         if (!projectData) return
 
         await tauri.saveProjectFile(projectData, currentProject.filePath)
@@ -24,7 +24,7 @@ export function useAutoSave() {
         console.error('Auto-save failed:', e)
       }
     }
-  }, [currentProject?.filePath, isDirty, getNotesData, getProjectData, markClean])
+  }, [currentBareme, currentProject?.filePath, isDirty, getNotesData, getProjectData, markClean])
 
   useEffect(() => {
     if (!currentProject?.settings.autoSave || !isDirty) return

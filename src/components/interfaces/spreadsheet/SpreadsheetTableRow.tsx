@@ -67,15 +67,11 @@ export function SpreadsheetTableRow({
   onShowSubcategoryBubble,
 }: SpreadsheetTableRowProps) {
   const rowClassName = isActive
-    ? 'bg-primary-600/15'
+    ? 'bg-white/[0.07]'
     : clipIdx % 2 === 0
-      ? 'bg-surface-dark/40'
-      : 'bg-surface'
-  const stickyCellClassName = isActive
-    ? 'bg-[#132748]'
-    : clipIdx % 2 === 0
-      ? 'bg-surface-dark'
-      : 'bg-surface'
+      ? 'bg-white/[0.04]'
+      : 'bg-transparent'
+  const stickyCellClassName = 'bg-surface'
 
   return (
     <tr
@@ -83,7 +79,7 @@ export function SpreadsheetTableRow({
       ref={(element) => {
         if (element) rowRefs.current.set(clipIdx, element)
       }}
-      className={`transition-colors cursor-pointer ${rowClassName} hover:bg-primary-600/10`}
+      className={`transition-colors cursor-pointer ${rowClassName} hover:bg-primary-600/8`}
       onClick={() => {
         const originalIndex = clips.findIndex((item) => item.id === clip.id)
         if (originalIndex !== -1) onSetCurrentClip(originalIndex)
@@ -95,7 +91,7 @@ export function SpreadsheetTableRow({
       }}
     >
       <td
-        className={`px-2 py-1 text-center font-mono text-[10px] text-gray-500 border-r border-gray-800 sticky left-0 z-20 ${stickyCellClassName}`}
+        className={`amv-number-ui w-8 px-2 py-1 text-center text-[10px] text-gray-500 border-r border-gray-800/60 sticky left-0 z-20 ${stickyCellClassName}`}
       >
         {clipIdx + 1}
       </td>
@@ -131,7 +127,7 @@ export function SpreadsheetTableRow({
       />
 
       {!hideTotalsSetting && (
-        <td className="px-2 py-1 text-center font-mono font-bold text-[11px]">
+        <td className="amv-number-ui px-2 py-1 text-center font-bold text-[11px]">
           <span className={hideTotalsUntilAllScored ? 'text-gray-600' : totalScore > 0 ? 'text-white' : 'text-gray-600'}>
             {hideTotalsUntilAllScored ? '-' : totalScore}
           </span>

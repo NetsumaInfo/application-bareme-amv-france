@@ -121,8 +121,8 @@ function ClipMenu({
               }}
               className={`flex w-full items-center gap-2 rounded-sm px-2.5 py-1.5 text-left text-[11px] transition-colors ${
                 isSelected
-                  ? 'bg-white/[0.04] text-white'
-                  : 'text-gray-300 hover:bg-white/[0.03] hover:text-white'
+                  ? 'bg-white/[0.06] text-white'
+                  : 'text-gray-300 hover:bg-white/[0.05] hover:text-white'
               }`}
               role="option"
               aria-selected={isSelected}
@@ -184,7 +184,7 @@ function JudgeNotesToolbar({
           ref={clipMenuButtonRef}
           type="button"
           onClick={onToggleClipMenu}
-          className="flex h-6 w-full items-center gap-2 rounded-md bg-transparent px-2 text-left text-[11px] text-gray-200 transition-colors hover:bg-white/[0.03] focus:outline-none"
+          className="flex h-6 w-full items-center gap-2 rounded-md bg-transparent px-2 text-left text-[11px] text-gray-200 transition-colors hover:bg-white/[0.05] focus:outline-none"
           aria-label={clipOptions[effectiveClipIndex]?.label ?? selectedClip.id}
           aria-haspopup="listbox"
           aria-expanded={clipMenuOpen}
@@ -271,8 +271,8 @@ function ResultatsJudgeCategorySection({
   const { t } = useI18n()
 
   return (
-    <section className="overflow-hidden rounded-md border border-gray-700/60 bg-surface-dark/20">
-      <div className="border-b border-gray-700/60 px-2.5 py-1.5" style={{ backgroundColor: withAlpha(group.color, 0.1) }}>
+    <section className="overflow-hidden rounded-md border border-gray-700/60 bg-surface-dark/26">
+      <div className="border-b border-gray-700/60 px-2.5 py-1.5" style={{ backgroundColor: withAlpha(group.color, 0.14) }}>
         <div className="text-[11px] font-semibold" style={{ color: group.color }}>{group.category}</div>
       </div>
 
@@ -300,7 +300,7 @@ function ResultatsJudgeCategorySection({
           <tbody>
             {group.criteria.map((criterion) => (
               <tr key={`criterion-row-${selectedClip.id}-${group.category}-${criterion.id}`} className="align-top">
-                <td className="border-b border-r border-gray-800/60 bg-surface-dark/25 px-2 py-1.5">
+                <td className="border-b border-r border-gray-800/60 bg-surface-dark/32 px-2 py-1.5">
                   <HoverTextTooltip text={criterion.name}>
                     <div className="text-gray-200 font-medium truncate">{criterion.name}</div>
                   </HoverTextTooltip>
@@ -315,11 +315,11 @@ function ResultatsJudgeCategorySection({
                   const note = judge.notes[selectedClip.id] as JudgeNoteLike | undefined
                   const criterionNote = normalizeText(note?.criterionNotes?.[criterion.id])
                   return (
-                    <td
-                      key={`criterion-cell-${selectedClip.id}-${group.category}-${criterion.id}-${judge.key}`}
-                      className="border-b border-r border-gray-800/60 px-2 py-1.5"
-                      style={{ backgroundColor: withAlpha(color, 0.025) }}
-                    >
+                      <td
+                        key={`criterion-cell-${selectedClip.id}-${group.category}-${criterion.id}-${judge.key}`}
+                        className="border-b border-r border-gray-800/60 px-2 py-1.5"
+                        style={{ backgroundColor: withAlpha(color, 0.04) }}
+                      >
                       <InlineNote clipId={selectedClip.id} text={criterionNote} color={color} handlers={handlers} />
                     </td>
                   )
@@ -327,7 +327,7 @@ function ResultatsJudgeCategorySection({
               </tr>
             ))}
             <tr className="align-top">
-              <td className="border-b border-r border-gray-800/60 bg-surface-dark/25 px-2 py-1.5">
+              <td className="border-b border-r border-gray-800/60 bg-surface-dark/32 px-2 py-1.5">
                 <div className="text-gray-200 font-medium">{t('Note catégorie')}</div>
               </td>
               {judges.map((judge) => {
@@ -338,7 +338,7 @@ function ResultatsJudgeCategorySection({
                   <td
                     key={`category-note-${selectedClip.id}-${group.category}-${judge.key}`}
                     className="border-b border-r border-gray-800/60 px-2 py-1.5"
-                    style={{ backgroundColor: withAlpha(color, 0.025) }}
+                    style={{ backgroundColor: withAlpha(color, 0.04) }}
                   >
                     <InlineNote clipId={selectedClip.id} text={categoryNote} color={color} handlers={handlers} />
                   </td>
@@ -366,7 +366,7 @@ function GlobalNotesSection({
   const { t } = useI18n()
 
   return (
-    <section className="overflow-hidden rounded-md border border-gray-700/60 bg-surface-dark/20">
+    <section className="overflow-hidden rounded-md border border-gray-700/60 bg-surface-dark/26">
       <div className="border-b border-gray-700/60 bg-surface px-2.5 py-1.5 text-[11px] font-semibold text-gray-300">
         {t('Notes générales')}
       </div>

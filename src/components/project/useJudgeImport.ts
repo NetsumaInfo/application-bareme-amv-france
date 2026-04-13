@@ -1,7 +1,10 @@
 import { useCallback, useRef, useState } from 'react'
 import * as tauri from '@/services/tauri'
+import { extractEmbeddedBaremes } from '@/store/embeddedBaremes'
+import { useNotationStore } from '@/store/useNotationStore'
 import { useProjectStore } from '@/store/useProjectStore'
 import { normalizeImportedJudge } from '@/components/interfaces/resultats/importJudge'
+import type { Bareme } from '@/types/bareme'
 import type { ImportedJudgeData } from '@/types/project'
 import { useI18n } from '@/i18n'
 
@@ -47,6 +50,9 @@ export function useJudgeImport() {
   const clips = useProjectStore((state) => state.clips)
   const importedJudges = useProjectStore((state) => state.importedJudges)
   const setImportedJudges = useProjectStore((state) => state.setImportedJudges)
+  const updateProject = useProjectStore((state) => state.updateProject)
+  const addBareme = useNotationStore((state) => state.addBareme)
+  const setBareme = useNotationStore((state) => state.setBareme)
   const [importing, setImporting] = useState(false)
   const importingRef = useRef(false)
 
@@ -72,6 +78,8 @@ export function useJudgeImport() {
       const normalizedJudges: ImportedJudgeData[] = []
       const ignoredFiles: string[] = []
       const partialImports: Array<{ judgeName: string; matchedCount: number }> = []
+      let importedBaremeCount = 0
+      let selectedImportedBareme: Bareme | null = null
       const totalClips = clips.length
 
       for (const path of jsonPaths) {
@@ -85,6 +93,19 @@ export function useJudgeImport() {
           }
 
           normalizedJudges.push(normalized)
+
+          for (const bareme of extractEmbeddedBaremes(payload)) {
+            const latestBaremes = useNotationStore.getState().availableBaremes
+            const existingBareme = latestBaremes.find((item) => item.id === bareme.id)
+            if (existingBareme) {
+              selectedImportedBareme = selectedImportedBareme ?? existingBareme
+              continue
+            }
+
+            const persistedBareme = addBareme({ ...bareme, isOfficial: false })
+            selectedImportedBareme = selectedImportedBareme ?? persistedBareme
+            importedBaremeCount += 1
+          }
 
           const matchedCount = Object.keys(normalized.notes).length
           if (matchedCount < totalClips) {
@@ -102,6 +123,10 @@ export function useJudgeImport() {
       }
 
       setImportedJudges(mergeImportedJudges(importedJudges, normalizedJudges))
+      if (selectedImportedBareme) {
+        setBareme(selectedImportedBareme)
+        updateProject({ baremeId: selectedImportedBareme.id })
+      }
 
       if (
         jsonPaths.length === 1 &&
@@ -110,18 +135,27 @@ export function useJudgeImport() {
         partialImports.length === 1
       ) {
         const partialImport = partialImports[0]
-        alert(t('Import réussi : {judgeName}\n{matchedCount}/{totalClips} clips appariés.', {
-          judgeName: partialImport.judgeName,
-          matchedCount: partialImport.matchedCount,
-          totalClips,
-        }))
+        const messages = [
+          t('Import réussi : {judgeName}\n{matchedCount}/{totalClips} clips appariés.', {
+            judgeName: partialImport.judgeName,
+            matchedCount: partialImport.matchedCount,
+            totalClips,
+          }),
+        ]
+        if (importedBaremeCount > 0) {
+          messages.push(t('{count} barème(s) importé(s).', { count: importedBaremeCount }))
+        }
+        alert(messages.join('\n'))
         return
       }
 
-      if (jsonPaths.length > 1 || ignoredFiles.length > 0 || partialImports.length > 0) {
+      if (jsonPaths.length > 1 || ignoredFiles.length > 0 || partialImports.length > 0 || importedBaremeCount > 0) {
         const messages = [
           t('Import terminé : {count} juge(s) importé(s).', { count: normalizedJudges.length }),
         ]
+        if (importedBaremeCount > 0) {
+          messages.push(t('{count} barème(s) importé(s).', { count: importedBaremeCount }))
+        }
         if (partialImports.length > 0) {
           messages.push(
             partialImports
@@ -141,7 +175,7 @@ export function useJudgeImport() {
       importingRef.current = false
       setImporting(false)
     }
-  }, [clips, importedJudges, setImportedJudges, t])
+  }, [addBareme, clips, importedJudges, setBareme, setImportedJudges, t, updateProject])
 
   const handleImportJudgeJson = useCallback(async () => {
     if (importingRef.current || clips.length === 0) return

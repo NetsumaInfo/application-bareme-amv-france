@@ -54,7 +54,7 @@ export function ResultatsJudgeNotesModal({
 
   return (
     <div
-      className="fixed inset-0 z-[110] bg-black/60 backdrop-blur-[1px] flex items-center justify-center p-4"
+      className="fixed inset-0 z-[110] bg-black/65 backdrop-blur-[1px] flex items-center justify-center p-4"
       onClick={onClose}
       onContextMenu={(event) => event.preventDefault()}
       onKeyDown={(event) => {
@@ -105,8 +105,8 @@ export function ResultatsJudgeNotesModal({
                 className="px-2 py-1 rounded-md border text-[11px] font-medium"
                 style={{
                   color,
-                  borderColor: withAlpha(color, 0.5),
-                  backgroundColor: withAlpha(color, 0.12),
+                  borderColor: withAlpha(color, 0.6),
+                  backgroundColor: withAlpha(color, 0.18),
                 }}
               >
                 {judge.judgeName}
@@ -123,7 +123,7 @@ export function ResultatsJudgeNotesModal({
             >
               <div
                 className="px-3 py-2 border-b border-gray-700"
-                style={{ backgroundColor: withAlpha(group.color, 0.16) }}
+                style={{ backgroundColor: withAlpha(group.color, 0.22) }}
               >
                 <div className="text-xs font-semibold uppercase tracking-wide" style={{ color: group.color }}>
                   {group.category}
@@ -154,7 +154,7 @@ export function ResultatsJudgeNotesModal({
                   <tbody>
                     {group.criteria.map((criterion) => (
                       <tr key={`criterion-row-${group.category}-${criterion.id}`} className="align-top">
-                        <td className="px-3 py-2 border-r border-b border-gray-800 bg-surface-dark/30">
+                        <td className="px-3 py-2 border-r border-b border-gray-800 bg-surface-dark/36">
                           <div className="text-gray-200 font-medium">{criterion.name}</div>
                           {criterion.description ? (
                             <div className="text-[10px] text-gray-500 mt-0.5">{criterion.description}</div>
@@ -168,7 +168,7 @@ export function ResultatsJudgeNotesModal({
                             <td
                               key={`criterion-cell-${group.category}-${criterion.id}-${judge.key}`}
                               className="px-2 py-2 border-r border-b border-gray-800"
-                              style={{ backgroundColor: withAlpha(color, 0.05) }}
+                              style={{ backgroundColor: withAlpha(color, 0.08) }}
                             >
                               {criterionNote ? (
                                 <TimecodeInlineText
@@ -189,7 +189,7 @@ export function ResultatsJudgeNotesModal({
                       </tr>
                     ))}
                     <tr className="align-top">
-                      <td className="px-3 py-2 border-r border-b border-gray-800 bg-surface-dark/30">
+                      <td className="px-3 py-2 border-r border-b border-gray-800 bg-surface-dark/36">
                         <div className="text-gray-200 font-medium">{t('Note catégorie')}</div>
                       </td>
                       {judges.map((judge) => {
@@ -197,11 +197,11 @@ export function ResultatsJudgeNotesModal({
                         const note = judge.notes[clip.id] as JudgeNoteLike | undefined
                         const categoryNote = normalizeText(note?.categoryNotes?.[group.category])
                         return (
-                          <td
-                            key={`category-note-${group.category}-${judge.key}`}
-                            className="px-2 py-2 border-r border-b border-gray-800"
-                            style={{ backgroundColor: withAlpha(color, 0.05) }}
-                          >
+                            <td
+                              key={`category-note-${group.category}-${judge.key}`}
+                              className="px-2 py-2 border-r border-b border-gray-800"
+                              style={{ backgroundColor: withAlpha(color, 0.08) }}
+                            >
                             {categoryNote ? (
                               <TimecodeInlineText
                                 text={categoryNote}
@@ -239,8 +239,8 @@ export function ResultatsJudgeNotesModal({
                     key={`global-note-${judge.key}`}
                     className="rounded border p-2"
                     style={{
-                      borderColor: withAlpha(color, 0.45),
-                      backgroundColor: withAlpha(color, 0.06),
+                      borderColor: withAlpha(color, 0.55),
+                      backgroundColor: withAlpha(color, 0.1),
                     }}
                   >
                     <div className="text-[11px] font-medium mb-1" style={{ color }}>

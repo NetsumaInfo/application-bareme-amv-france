@@ -76,44 +76,38 @@ export function ResultatsNotesPanel({
   const secondaryLabel = getClipSecondaryLabel(selectedClip)
 
   return (
-    <div className="shrink-0 border-t border-gray-700/60 bg-surface">
-      <div className="flex items-center justify-between gap-2 border-b border-gray-700/50 px-3 py-1.5">
-        <div className="flex min-w-0 items-center gap-2 text-[11px] leading-none">
-          <span className="shrink-0 uppercase tracking-[0.16em] text-gray-500">{t('Note générale')}</span>
-          <span className="shrink-0 text-gray-600">—</span>
-          <div className="flex min-w-0 items-center gap-1.5 text-[11px]">
-            <span className="truncate font-semibold text-primary-300">{getClipPrimaryLabel(selectedClip)}</span>
-            {secondaryLabel ? (
-              <>
-                <span className="text-gray-600">-</span>
-                <span className="truncate text-gray-500">{secondaryLabel}</span>
-              </>
-            ) : null}
-          </div>
-        </div>
+    <div className="shrink-0 border-t border-gray-700 bg-surface px-3 py-2">
+      <div className="mb-1 flex items-center gap-2">
+        <span className="text-[10px] uppercase tracking-wider text-gray-500">{t('Note générale')}</span>
+        <span className="text-[10px] text-gray-600">—</span>
+        <span className="min-w-0 text-[10px] text-gray-400">
+          <span className="text-primary-400">{getClipPrimaryLabel(selectedClip)}</span>
+          {secondaryLabel ? (
+            <span className="ml-1 text-gray-500">- {secondaryLabel}</span>
+          ) : null}
+        </span>
       </div>
-      <div className="px-3 py-2">
-        <TimecodeTextarea
-          textareaRef={(el) => {
-            textareaRef.current = el
-          }}
-          value={noteText}
-          onChange={(nextValue) => {
-            onChangeText(selectedClip.id, nextValue)
-          }}
-          onTimecodeSelect={(item) => {
-            onJumpToTimecode(selectedClip.id, item.seconds)
-          }}
-          onTimecodeHover={({ item, anchorRect }) => {
-            onTimecodeHover({ seconds: item.seconds, anchorRect })
-          }}
-          onTimecodeLeave={onTimecodeLeave}
-          color="rgb(var(--color-primary-400))"
-          fpsHint={selectedClipFps ?? undefined}
-          textareaClassName="min-h-[36px]"
-          placeholder={t('Notes générales...')}
-        />
-      </div>
+      <TimecodeTextarea
+        textareaRef={(el) => {
+          textareaRef.current = el
+        }}
+        value={noteText}
+        onChange={(nextValue) => {
+          onChangeText(selectedClip.id, nextValue)
+        }}
+        onTimecodeSelect={(item) => {
+          onJumpToTimecode(selectedClip.id, item.seconds)
+        }}
+        onTimecodeHover={({ item, anchorRect }) => {
+          onTimecodeHover({ seconds: item.seconds, anchorRect })
+        }}
+        onTimecodeLeave={onTimecodeLeave}
+        color="#60a5fa"
+        fpsHint={selectedClipFps ?? undefined}
+        rows={2}
+        textareaClassName="text-xs min-h-[40px]"
+        placeholder={t('Notes générales...')}
+      />
     </div>
   )
 }

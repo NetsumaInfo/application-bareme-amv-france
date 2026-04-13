@@ -22,7 +22,7 @@ export function useSaveProject() {
     }
 
     const notesData = notationState.getNotesData()
-    const projectData = projectState.getProjectData(notesData)
+    const projectData = projectState.getProjectData(notesData, notationState.currentBareme)
     if (!projectData) return
 
     const activeBaremeId = notationState.currentBareme?.id
@@ -49,7 +49,7 @@ export function useSaveProject() {
 
     projectState.setFilePath(filePath)
     const notesData = notationState.getNotesData()
-    const projectData = projectState.getProjectData(notesData)
+    const projectData = projectState.getProjectData(notesData, notationState.currentBareme)
     if (!projectData) return
 
     const activeBaremeId = notationState.currentBareme?.id

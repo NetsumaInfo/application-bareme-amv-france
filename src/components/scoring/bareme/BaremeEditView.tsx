@@ -106,7 +106,7 @@ export function BaremeEditView({
               <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: section.color }} aria-hidden="true" />
               <div className="min-w-0">
                 <div className="truncate text-sm font-medium text-white">{section.label}</div>
-                <div className="text-[11px] text-gray-400 tabular-nums">
+                <div className="amv-number-ui text-[11px] text-gray-400">
                   {t('{count} critères • {points} points', {
                     count: section.items.length,
                     points: section.total,

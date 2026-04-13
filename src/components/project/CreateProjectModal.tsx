@@ -291,7 +291,7 @@ export default function CreateProjectModal() {
 
       const notationState = useNotationStore.getState()
       const notesData = notationState.getNotesData()
-      const projectData = projectState.getProjectData(notesData)
+      const projectData = projectState.getProjectData(notesData, notationState.currentBareme)
       if (projectData) {
         await tauri.saveProjectFile(projectData, filePath)
         await rememberRecentProjectPath(filePath)

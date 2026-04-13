@@ -2,6 +2,7 @@ import type { RefObject } from 'react'
 import { useMemo } from 'react'
 import InlineTimecodeText from '@/components/notes/InlineTimecodeText'
 import { getZoomedViewport } from '@/hooks/useZoomScale'
+import { withAlpha } from '@/utils/colors'
 
 interface SpreadsheetSubcategoryBubbleCriterion {
   id: string
@@ -62,7 +63,7 @@ export function SpreadsheetSubcategoryBubble({
   return (
     <div
       ref={bubbleRef}
-      className="fixed z-[125] pointer-events-auto rounded-xl border border-primary-500/30 bg-surface/95 backdrop-blur-sm shadow-2xl overflow-hidden"
+      className="fixed z-[125] pointer-events-auto rounded-xl border border-primary-500/18 bg-surface/95 backdrop-blur-sm shadow-2xl overflow-hidden"
       style={style}
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
@@ -70,9 +71,9 @@ export function SpreadsheetSubcategoryBubble({
       onMouseDown={(event) => event.stopPropagation()}
       role="presentation"
     >
-      <div className="px-3 py-2 border-b border-gray-700/70 bg-surface-light/40 flex items-start justify-between gap-2">
+      <div className="px-3 py-2 border-b border-gray-700/70 bg-surface-light/28 flex items-start justify-between gap-2">
         <div className="min-w-0">
-          <p className="truncate text-[12px] font-semibold text-primary-200">{bubble.clipLabel}</p>
+          <p className="truncate text-[12px] font-semibold text-primary-100">{bubble.clipLabel}</p>
           {bubble.clipSubLabel ? (
             <p className="truncate text-[10px] text-gray-400">{bubble.clipSubLabel}</p>
           ) : null}
@@ -81,7 +82,7 @@ export function SpreadsheetSubcategoryBubble({
 
       <div className="max-h-[55vh] overflow-auto px-3 py-2 space-y-2">
         {bubble.categories.map((group) => (
-          <div key={group.category} className="rounded-lg border border-gray-700/70 bg-surface-dark/30 overflow-hidden">
+          <div key={group.category} className="rounded-lg border border-gray-700/70 bg-surface-dark/24 overflow-hidden">
             <div className="flex items-center justify-between gap-2 px-2 py-1 border-b border-gray-700/60">
               <div className="flex items-center gap-1.5 min-w-0">
                 <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: group.color }} />
@@ -94,8 +95,8 @@ export function SpreadsheetSubcategoryBubble({
                   className="inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-semibold border shrink-0"
                   style={{
                     color: group.color,
-                    borderColor: `${group.color}66`,
-                    backgroundColor: `${group.color}22`,
+                    borderColor: withAlpha(group.color, 0.18),
+                    backgroundColor: withAlpha(group.color, 0.08),
                   }}
                 >
                   {group.criteria[0].label}
@@ -132,8 +133,8 @@ export function SpreadsheetSubcategoryBubble({
                       className="inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-semibold border"
                       style={{
                         color: group.color,
-                        borderColor: `${group.color}66`,
-                        backgroundColor: `${group.color}22`,
+                        borderColor: withAlpha(group.color, 0.18),
+                        backgroundColor: withAlpha(group.color, 0.08),
                       }}
                     >
                       {criterion.label}

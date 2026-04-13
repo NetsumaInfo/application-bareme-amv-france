@@ -79,10 +79,10 @@ export function DetachedCriterionItem({
               event.target.value,
             )}
           onKeyDown={(event) => onInputKeyDown(event, flatIndex)}
-          className="amv-soft-number w-14 rounded-md border border-transparent px-2 py-1 text-center text-[12px] font-mono text-white focus:border-primary-500/25 focus:outline-none focus-visible:outline-none"
+          className="amv-soft-number w-14 rounded-md border border-transparent px-2 py-1 text-center text-[12px] font-mono text-white focus:border-primary-500/18 focus:outline-none focus-visible:outline-none"
           style={{
-            backgroundColor: 'rgb(var(--color-surface-light) / 0.9)',
-            boxShadow: `inset 0 0 0 1px ${withAlpha(color, 0.12)}`,
+            backgroundColor: 'rgb(var(--color-surface-light) / 0.86)',
+            boxShadow: `inset 0 0 0 1px ${withAlpha(color, 0.08)}`,
           }}
         />
         <span className="w-7 text-right font-mono text-[9px] text-gray-500">/{criterion.max ?? 10}</span>
@@ -103,8 +103,8 @@ export function DetachedCriterionItem({
           onChange={(nextValue) => onCriterionNoteChange(criterion.id, nextValue)}
           textareaClassName="min-h-[30px]"
           style={{
-            backgroundColor: 'rgb(var(--color-surface-dark) / 0.72)',
-            borderColor: 'rgb(var(--color-primary-500) / 0.22)',
+            backgroundColor: 'rgb(var(--color-surface-dark) / 0.68)',
+            borderColor: 'rgb(var(--color-primary-500) / 0.18)',
           }}
           color={color}
           fpsHint={clipFps ?? undefined}
@@ -124,7 +124,7 @@ export function DetachedCriterionItem({
           type="button"
           onClick={onExpandNote}
           className="w-full truncate rounded-md px-2.5 py-1 text-left text-[10px] text-gray-400 transition-colors hover:text-gray-200"
-          style={{ backgroundColor: 'rgb(var(--color-surface-dark) / 0.58)' }}
+          style={{ backgroundColor: 'rgb(var(--color-surface-dark) / 0.5)' }}
           title={criterionNoteValue}
         >
           {criterionNoteValue.replace(/\s+/g, ' ').slice(0, 96)}

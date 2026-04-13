@@ -56,7 +56,7 @@ export function BaremeEditCategoriesSummary({
               <span className={`${compact ? 'text-[10px]' : 'text-[11px]'} font-semibold tracking-[0.01em]`} style={{ color }}>
                 {category}
               </span>
-              <span className={`${compact ? 'text-[10px]' : 'text-[11px]'} text-gray-300 tabular-nums`}>
+              <span className={`${compact ? 'text-[10px]' : 'text-[11px]'} amv-number-ui text-gray-300`}>
                 {t('{count} crit. • /{total}', {
                   count: stat.count,
                   total: stat.total,

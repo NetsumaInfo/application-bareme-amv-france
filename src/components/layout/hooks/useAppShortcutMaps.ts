@@ -97,8 +97,10 @@ export function useAppShortcutMaps({
           return
         }
         if (currentTab === 'export') {
-          captureElementToPngFile(appRootRef.current, buildScreenshotName('export-page'))
-            .catch(() => {})
+          // Dispatch a custom event so ExportInterface (which owns exportContainer
+          // and exportCaptureOptions) can trigger the full PNG export pipeline —
+          // identical to clicking the "Export PNG" button.
+          window.dispatchEvent(new CustomEvent('amv:export-screenshot'))
           return
         }
         if (currentTab === 'notation' && currentInterface === 'notation') {

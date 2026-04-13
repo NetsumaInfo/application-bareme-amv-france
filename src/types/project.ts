@@ -1,3 +1,5 @@
+import type { Bareme } from '@/types/bareme'
+
 export interface Project {
   id: string
   name: string
@@ -47,6 +49,8 @@ export interface ProjectData {
   version: string
   project: Project
   baremeId: string
+  bareme?: Bareme | null
+  baremes?: Bareme[]
   clips: Clip[]
   notes: Record<string, NoteData>
   importedJudges?: ImportedJudgeData[]

@@ -43,7 +43,7 @@ export function SpreadsheetNotesPanel({
         <span className="text-[10px] text-gray-500 uppercase tracking-wider">{t('Notes')}</span>
         <span className="text-[10px] text-gray-600">—</span>
         <span className="text-[10px] text-gray-400">
-          <span className="text-primary-400">{getClipPrimaryLabel(currentClip)}</span>
+          <span className="text-primary-300">{getClipPrimaryLabel(currentClip)}</span>
           {getClipSecondaryLabel(currentClip) && (
             <span className="text-gray-500 ml-1">- {getClipSecondaryLabel(currentClip)}</span>
           )}
@@ -65,7 +65,7 @@ export function SpreadsheetNotesPanel({
         onChange={onChangeText}
         rows={2}
         textareaClassName="text-xs min-h-[40px]"
-        color="#60a5fa"
+        color="rgb(var(--color-primary-300))"
         fpsHint={clipFps ?? undefined}
         onTimecodeSelect={async (item) => {
           if (!currentClip.filePath) return

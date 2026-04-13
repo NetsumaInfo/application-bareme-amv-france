@@ -65,7 +65,7 @@ export function BaremeCriterionCard({
 
       <div className="mb-3 flex items-start justify-between gap-3">
         <div className="flex min-w-0 items-center gap-2">
-          <span className="inline-flex h-6 min-w-6 items-center justify-center rounded-full border border-gray-700 bg-surface px-1.5 text-[11px] font-medium text-gray-300 tabular-nums">
+          <span className="amv-number-ui inline-flex h-6 min-w-6 items-center justify-center rounded-full border border-gray-700 bg-surface px-1.5 text-[11px] font-medium text-gray-300">
             {index + 1}
           </span>
           <span
@@ -194,7 +194,7 @@ export function BaremeCriterionCard({
             onChange={(event) => onUpdateCriterion(index, { max: Number(event.target.value) })}
             min={1}
             step={1}
-            className="w-full rounded-lg border border-gray-700 bg-surface px-3 py-2 text-center text-sm text-white tabular-nums focus:border-primary-500 focus:outline-none"
+            className="amv-soft-number w-full rounded-lg border border-gray-700 bg-surface px-3 py-2 text-center text-sm text-white focus:border-primary-500 focus:outline-none"
             disabled={readOnly}
           />
         </div>
@@ -206,7 +206,7 @@ export function BaremeCriterionCard({
             value={criterion.step ?? 0.5}
             onChange={(event) => onUpdateCriterion(index, { step: Number(event.target.value) })}
             step={0.1}
-            className="w-full rounded-lg border border-gray-700 bg-surface px-3 py-2 text-center text-sm text-white tabular-nums focus:border-primary-500 focus:outline-none"
+            className="amv-soft-number w-full rounded-lg border border-gray-700 bg-surface px-3 py-2 text-center text-sm text-white focus:border-primary-500 focus:outline-none"
             disabled={readOnly}
           />
         </div>

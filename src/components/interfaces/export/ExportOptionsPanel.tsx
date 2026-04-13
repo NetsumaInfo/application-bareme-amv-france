@@ -1,395 +1,272 @@
-import { SlidersHorizontal } from 'lucide-react'
+import { Code2, FileImage, FileJson, FileSpreadsheet, FileText, Loader2 } from 'lucide-react'
+import type { ElementType } from 'react'
 import type {
-  ExportDensity,
   ExportJsonJudgeOption,
   ExportJsonMode,
   ExportJudge,
   ExportMode,
   ExportNotesPdfMode,
   ExportPngMode,
-  ExportRankBadgeStyle,
   ExportTableView,
-  ExportTheme,
 } from '@/components/interfaces/export/types'
-import { ExportAccentPresets } from '@/components/interfaces/export/ExportAccentPresets'
-import { ExportActions } from '@/components/interfaces/export/ExportActions'
-import { ExportBinaryButtons } from '@/components/interfaces/export/ExportBinaryButtons'
-import { ExportCheckbox } from '@/components/interfaces/export/ExportCheckbox'
-import { AppRangeSlider } from '@/components/ui/AppRangeSlider'
 import { AppSelect } from '@/components/ui/AppSelect'
+import { HoverTextTooltip } from '@/components/ui/HoverTextTooltip'
 import { useI18n } from '@/i18n'
 
+// ─── Download button ──────────────────────────────────────────────────────────
+
+function DlBtn({
+  icon: Icon,
+  label,
+  tooltip,
+  loading,
+  onClick,
+}: {
+  icon: ElementType
+  label: string
+  tooltip: string
+  loading: boolean
+  onClick: () => void
+}) {
+  return (
+    <HoverTextTooltip text={tooltip} className="inline-flex">
+      <button
+        type="button"
+        onClick={onClick}
+        disabled={loading}
+        aria-label={tooltip}
+        className="group flex min-w-[42px] flex-col items-center gap-0.5 rounded-md px-2 py-1.5 text-gray-400 transition-colors hover:bg-white/[0.06] hover:text-white disabled:opacity-40 active:scale-[0.97]"
+      >
+        <span className="flex h-6 w-6 items-center justify-center rounded-md bg-white/[0.06] text-gray-400 transition-colors group-hover:bg-primary-600/20 group-hover:text-primary-300">
+          {loading ? <Loader2 size={13} className="animate-spin" /> : <Icon size={13} />}
+        </span>
+        <span className="text-[10px] font-medium leading-tight">{label}</span>
+      </button>
+    </HoverTextTooltip>
+  )
+}
+
+// ─── Inline option chip ───────────────────────────────────────────────────────
+
+function InlineChip<T extends string>({
+  value,
+  options,
+  onChange,
+}: {
+  value: T
+  options: { label: string; value: T }[]
+  onChange: (v: T) => void
+}) {
+  return (
+    <div className="flex gap-px rounded-md border border-gray-700/40 overflow-hidden">
+      {options.map((opt) => (
+        <button
+          key={opt.value}
+          type="button"
+          onClick={() => onChange(opt.value)}
+          className={`px-2 py-0.5 text-[10px] font-medium transition-colors ${
+            value === opt.value
+              ? 'bg-primary-600/20 text-primary-300'
+              : 'text-gray-500 hover:text-gray-300'
+          }`}
+        >
+          {opt.label}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+// ─── Panel ────────────────────────────────────────────────────────────────────
+
 interface ExportOptionsPanelProps {
-  title: string
   exportMode: ExportMode
   tableView: ExportTableView
   selectedJudgeKey: string
-  decimals: number
-  theme: ExportTheme
-  density: ExportDensity
   pngExportMode: ExportPngMode
   pngScale: number
   rowsPerImage: number
-  accent: string
-  showTopBanner: boolean
-  showJudgeColumns: boolean
-  showRank: boolean
-  tableClipColumnWidth: number
-  tableScoreColumnWidth: number
-  tableRowHeight: number
-  tableNumberFontSize: number
-  tablePrimaryFontSize: number
-  tableSecondaryFontSize: number
-  rankBadgeStyle: ExportRankBadgeStyle
-  useCollabMepLabels: boolean
   judges: ExportJudge[]
-  accentPresets: string[]
   exporting: boolean
   notesPdfMode: ExportNotesPdfMode
   jsonExportMode: ExportJsonMode
   jsonJudgeKey: string
   jsonJudgeOptions: ExportJsonJudgeOption[]
-  onSetTitle: (value: string) => void
   onSetExportMode: (mode: ExportMode) => void
   onSetTableView: (view: ExportTableView) => void
   onSetSelectedJudgeKey: (judgeKey: string) => void
-  onSetDecimals: (value: number) => void
-  onSetTheme: (theme: ExportTheme) => void
-  onSetDensity: (density: ExportDensity) => void
   onSetPngExportMode: (mode: ExportPngMode) => void
   onSetPngScale: (value: number) => void
   onSetRowsPerImage: (value: number) => void
   onSetJsonExportMode: (mode: ExportJsonMode) => void
   onSetJsonJudgeKey: (judgeKey: string) => void
-  onSetAccent: (accent: string) => void
-  onSetTableClipColumnWidth: (value: number) => void
-  onSetTableScoreColumnWidth: (value: number) => void
-  onSetTableRowHeight: (value: number) => void
-  onSetTableNumberFontSize: (value: number) => void
-  onSetTablePrimaryFontSize: (value: number) => void
-  onSetTableSecondaryFontSize: (value: number) => void
-  onSetRankBadgeStyle: (style: ExportRankBadgeStyle) => void
-  onToggleShowTopBanner: () => void
-  onToggleShowJudgeColumns: () => void
-  onToggleShowRank: () => void
-  onToggleUseCollabMepLabels: () => void
   onExportPng: () => void
   onExportPdf: () => void
   onExportNotesPdf: () => void
   onExportJson: () => void
+  onExportSpreadsheet: () => void
+  onExportHtml: () => void
   onSetNotesPdfMode: (mode: ExportNotesPdfMode) => void
 }
 
-export function ExportOptionsPanel(props: ExportOptionsPanelProps) {
-  const { t } = useI18n()
-  return renderExportOptionsPanel({ ...props, t })
-}
-
-function renderExportOptionsPanel({
-  title,
-  exportMode,
-  tableView,
-  selectedJudgeKey,
-  decimals,
-  theme,
-  density,
+export function ExportOptionsPanel({
   pngExportMode,
   pngScale,
   rowsPerImage,
-  accent,
-  showTopBanner,
-  showJudgeColumns,
-  showRank,
-  tableClipColumnWidth,
-  tableScoreColumnWidth,
-  tableRowHeight,
-  tableNumberFontSize,
-  tablePrimaryFontSize,
-  tableSecondaryFontSize,
-  rankBadgeStyle,
-  useCollabMepLabels,
-  judges,
-  accentPresets,
   exporting,
   notesPdfMode,
   jsonExportMode,
   jsonJudgeKey,
   jsonJudgeOptions,
-  onSetTitle,
-  onSetExportMode,
-  onSetTableView,
-  onSetSelectedJudgeKey,
-  onSetDecimals,
-  onSetTheme,
-  onSetDensity,
   onSetPngExportMode,
   onSetPngScale,
   onSetRowsPerImage,
   onSetJsonExportMode,
   onSetJsonJudgeKey,
-  onSetAccent,
-  onSetTableClipColumnWidth,
-  onSetTableScoreColumnWidth,
-  onSetTableRowHeight,
-  onSetTableNumberFontSize,
-  onSetTablePrimaryFontSize,
-  onSetTableSecondaryFontSize,
-  onSetRankBadgeStyle,
-  onToggleShowTopBanner,
-  onToggleShowJudgeColumns,
-  onToggleShowRank,
-  onToggleUseCollabMepLabels,
   onExportPng,
   onExportPdf,
   onExportNotesPdf,
   onExportJson,
+  onExportSpreadsheet,
+  onExportHtml,
   onSetNotesPdfMode,
-  t,
-}: ExportOptionsPanelProps & { t: ReturnType<typeof useI18n>['t'] }) {
+}: ExportOptionsPanelProps) {
+  const { t } = useI18n()
+
   return (
-    <div className="w-full rounded-lg border border-gray-700 bg-surface p-3 overflow-y-auto">
-      <h3 className="text-sm font-semibold text-white mb-1 flex items-center gap-1.5">
-        <SlidersHorizontal size={14} />
-        {t("Options d'export")}
-      </h3>
-      <p className="text-[11px] text-gray-500 mb-3">
-        {t('Mets en forme le rendu avant export.')}
-      </p>
+    <div className="flex flex-col gap-0">
 
-      <div className="space-y-3">
-        <div>
-          <label className="block text-xs text-gray-400 mb-1">{t('Titre')}</label>
-          <input
-            value={title}
-            onChange={(event) => onSetTitle(event.target.value)}
-            className="w-full px-2 py-1.5 rounded border border-gray-700 bg-surface-dark text-xs text-white focus:border-primary-500 focus:outline-none"
-            placeholder={t("Titre de la planche d'export")}
-          />
+      {/* ── Format buttons — horizontal row ──────────────────── */}
+      <div className="flex items-end gap-0.5 overflow-x-auto border-b border-gray-700/30 pb-1.5">
+        <DlBtn
+          icon={FileImage}
+          label="PNG"
+          tooltip={t('Exporter une image PNG')}
+          loading={exporting}
+          onClick={onExportPng}
+        />
+        <DlBtn
+          icon={FileText}
+          label="PDF"
+          tooltip={t('Exporter un PDF')}
+          loading={exporting}
+          onClick={onExportPdf}
+        />
+        <DlBtn
+          icon={FileSpreadsheet}
+          label="Excel"
+          tooltip={t('Exporter un fichier Excel')}
+          loading={exporting}
+          onClick={onExportSpreadsheet}
+        />
+        <DlBtn
+          icon={Code2}
+          label="HTML"
+          tooltip={t('Exporter une page HTML/CSS')}
+          loading={exporting}
+          onClick={onExportHtml}
+        />
+        <DlBtn
+          icon={FileText}
+          label={t('Notes')}
+          tooltip={t('Exporter les notes en PDF')}
+          loading={exporting}
+          onClick={onExportNotesPdf}
+        />
+        <DlBtn
+          icon={FileJson}
+          label="JSON"
+          tooltip={t('Exporter les données JSON')}
+          loading={exporting}
+          onClick={onExportJson}
+        />
+      </div>
+
+      {/* ── Compact settings ─────────────────────────────────── */}
+      <div className="flex flex-col gap-1.5 pt-1.5">
+
+        {/* PNG */}
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-[10px] text-gray-500 shrink-0">PNG</span>
+          <div className="flex items-center gap-2">
+            <InlineChip
+              value={String(pngScale) as '2' | '3' | '4' | '5'}
+              options={[
+                { label: '1×', value: '2' },
+                { label: '2×', value: '3' },
+                { label: '3×', value: '4' },
+                { label: '4×', value: '5' },
+              ]}
+              onChange={(v) => onSetPngScale(Number(v))}
+            />
+            <InlineChip
+              value={pngExportMode}
+              options={[
+                { label: t('Unique'), value: 'single' },
+                { label: t('Paginé'), value: 'paged' },
+              ]}
+              onChange={onSetPngExportMode}
+            />
+          </div>
         </div>
 
-        <div>
-          <label className="block text-xs text-gray-400 mb-1">{t('Type de résultats')}</label>
-          <ExportBinaryButtons
-            value={exportMode}
-            left={{ label: t('Groupés'), value: 'grouped' }}
-            right={{ label: t('Individuel'), value: 'individual' }}
-            onChange={onSetExportMode}
-          />
-        </div>
-
-        {exportMode === 'individual' && (
-          <div>
-            <label className="block text-xs text-gray-400 mb-1">{t('Juge')}</label>
-            <AppSelect
-              value={selectedJudgeKey}
-              onChange={onSetSelectedJudgeKey}
-              ariaLabel={t('Juge')}
-              className="w-full"
-              options={judges.map((judge) => ({
-                value: judge.key,
-                label: judge.judgeName,
-              }))}
+        {(pngExportMode === 'paged' || pngExportMode === 'both') && (
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-[10px] text-gray-500 shrink-0">{t('Par page')}</span>
+            <input
+              type="number"
+              min={5}
+              max={80}
+              value={rowsPerImage}
+              onChange={(e) => onSetRowsPerImage(Number(e.target.value))}
+              className="w-14 rounded border border-gray-700/50 bg-transparent px-1.5 py-0.5 text-center text-[10px] text-white focus:border-primary-500 focus:outline-none"
             />
           </div>
         )}
 
-        <div>
-          <label className="block text-xs text-gray-400 mb-1">{t('Arrondi des notes')}</label>
-          <AppSelect
-            value={decimals}
-            onChange={onSetDecimals}
-            ariaLabel={t('Arrondi des notes')}
-            className="w-full"
+        {/* Notes PDF */}
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-[10px] text-gray-500 shrink-0">{t('Notes')}</span>
+          <InlineChip
+            value={notesPdfMode}
             options={[
-              { value: 0, label: t('0 décimale') },
-              { value: 1, label: t('1 décimale') },
-              { value: 2, label: t('2 décimales') },
+              { label: t('Générales'), value: 'general' },
+              { label: t('Juges'), value: 'judges' },
+              { label: t('Toutes'), value: 'both' },
+            ]}
+            onChange={onSetNotesPdfMode}
+          />
+        </div>
+
+        {/* JSON */}
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-[10px] text-gray-500 shrink-0">JSON</span>
+          <AppSelect
+            value={jsonExportMode}
+            onChange={onSetJsonExportMode}
+            ariaLabel={t('Contenu JSON')}
+            className="w-32"
+            options={[
+              { value: 'full_project', label: t('Projet complet') },
+              { value: 'single_judge', label: t('Par juge') },
+              { value: 'notes_only', label: t('Notes') },
             ]}
           />
         </div>
 
-        <div>
-          <label className="block text-xs text-gray-400 mb-1">{t('Thème')}</label>
-          <ExportBinaryButtons
-            value={theme}
-            left={{ label: t('Sombre'), value: 'dark' }}
-            right={{ label: t('Clair'), value: 'light' }}
-            onChange={onSetTheme}
-          />
-        </div>
-
-        <div>
-          <label className="block text-xs text-gray-400 mb-1">{t('Densité')}</label>
-          <ExportBinaryButtons
-            value={density}
-            left={{ label: t('Confort'), value: 'comfortable' }}
-            right={{ label: t('Compact'), value: 'compact' }}
-            onChange={onSetDensity}
-          />
-        </div>
-
-        <div>
-          <label className="block text-xs text-gray-400 mb-1">{t('Affichage tableau')}</label>
-          <ExportBinaryButtons
-            value={tableView}
-            left={{ label: t('Synthèse'), value: 'summary' }}
-            right={{ label: t('Détaillé'), value: 'detailed' }}
-            onChange={onSetTableView}
-          />
-        </div>
-
-        <div>
-          <label className="block text-xs text-gray-400 mb-1">{t('Qualité PNG (échelle)')}: x{pngScale}</label>
-          <AppRangeSlider
-            min={2}
-            max={5}
-            step={1}
-            value={pngScale}
-            onChange={onSetPngScale}
-            ariaLabel={t('Qualité PNG (échelle)')}
-          />
-        </div>
-
-        <div>
-          <label className="block text-xs text-gray-400 mb-1">{t('Accent')}</label>
-          <ExportAccentPresets accent={accent} presets={accentPresets} onChange={onSetAccent} />
-        </div>
-
-        <div className="rounded border border-gray-700/80 bg-surface-dark/40 p-2.5 space-y-1.5">
-          <div className="text-[11px] font-semibold text-gray-200">{t('Habillage tableau')}</div>
-          <ExportCheckbox
-            checked={showTopBanner}
-            onToggle={onToggleShowTopBanner}
-            label={t('Afficher bandeau supérieur')}
-          />
-        </div>
-
-        <div className="rounded border border-gray-700/80 bg-surface-dark/40 p-2.5 space-y-2">
-          <div className="text-[11px] font-semibold text-gray-200">{t('Personnalisation avancée')}</div>
-          <div className="grid grid-cols-2 gap-2">
-            <div>
-              <label className="block text-xs text-gray-400 mb-1">{t('Colonne clip (px)')}</label>
-              <input
-                type="number"
-                min={260}
-                max={560}
-                value={tableClipColumnWidth}
-                onChange={(event) => onSetTableClipColumnWidth(Number(event.target.value))}
-                className="w-full px-2 py-1.5 rounded border border-gray-700 bg-surface-dark text-xs text-white focus:border-primary-500 focus:outline-none"
-              />
-            </div>
-            <div>
-              <label className="block text-xs text-gray-400 mb-1">{t('Colonne notes (px)')}</label>
-              <input
-                type="number"
-                min={88}
-                max={180}
-                value={tableScoreColumnWidth}
-                onChange={(event) => onSetTableScoreColumnWidth(Number(event.target.value))}
-                className="w-full px-2 py-1.5 rounded border border-gray-700 bg-surface-dark text-xs text-white focus:border-primary-500 focus:outline-none"
-              />
-            </div>
-          </div>
-          <div>
-            <label className="block text-xs text-gray-400 mb-1">{t('Hauteur ligne')}: {tableRowHeight}px</label>
-            <AppRangeSlider
-              min={44}
-              max={88}
-              step={1}
-              value={tableRowHeight}
-              onChange={onSetTableRowHeight}
-              ariaLabel={t('Hauteur ligne')}
-            />
-          </div>
-          <div>
-            <label className="block text-xs text-gray-400 mb-1">{t('Taille chiffres')}: {tableNumberFontSize}px</label>
-            <AppRangeSlider
-              min={11}
-              max={20}
-              step={1}
-              value={tableNumberFontSize}
-              onChange={onSetTableNumberFontSize}
-              ariaLabel={t('Taille chiffres')}
-            />
-          </div>
-          <div className="grid grid-cols-2 gap-2">
-            <div>
-              <label className="block text-xs text-gray-400 mb-1">{t('Taille pseudo')}: {tablePrimaryFontSize}px</label>
-              <AppRangeSlider
-                min={12}
-                max={24}
-                step={1}
-                value={tablePrimaryFontSize}
-                onChange={onSetTablePrimaryFontSize}
-                ariaLabel={t('Taille pseudo')}
-              />
-            </div>
-            <div>
-              <label className="block text-xs text-gray-400 mb-1">{t('Taille clip')}: {tableSecondaryFontSize}px</label>
-              <AppRangeSlider
-                min={10}
-                max={18}
-                step={1}
-                value={tableSecondaryFontSize}
-                onChange={onSetTableSecondaryFontSize}
-                ariaLabel={t('Taille clip')}
-              />
-            </div>
-          </div>
-          <div>
-            <label className="block text-xs text-gray-400 mb-1">{t('Style rang')}</label>
+        {jsonExportMode === 'single_judge' && jsonJudgeOptions.length > 0 && (
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-[10px] text-gray-500 shrink-0">{t('Juge')}</span>
             <AppSelect
-              value={rankBadgeStyle}
-              onChange={onSetRankBadgeStyle}
-              ariaLabel={t('Style rang')}
-              className="w-full"
-              options={[
-                { value: 'filled', label: t('Puce pleine') },
-                { value: 'outline', label: t('Puce contour') },
-                { value: 'plain', label: t('Texte simple') },
-              ]}
+              value={jsonJudgeKey}
+              onChange={onSetJsonJudgeKey}
+              ariaLabel={t('Juge')}
+              className="w-32"
+              options={jsonJudgeOptions.map((j) => ({ value: j.key, label: j.judgeName }))}
             />
           </div>
-        </div>
-
-        {exportMode === 'grouped' && (
-          <ExportCheckbox
-            checked={showJudgeColumns}
-            onToggle={onToggleShowJudgeColumns}
-            label={t('Afficher les totaux par juge')}
-          />
         )}
-
-        <ExportCheckbox checked={showRank} onToggle={onToggleShowRank} label={t('Afficher le rang')} />
-
-        <ExportCheckbox
-          checked={useCollabMepLabels}
-          onToggle={onToggleUseCollabMepLabels}
-          label={t('Remplacer les pseudos multiples par « Collab / MEP »')}
-        />
-        <p className="text-[11px] text-gray-500 -mt-1">
-          {t('Désactivé: export avec tous les pseudos. Séparateurs reconnus:')} <code>,</code> {t('et')} <code>&amp;</code>.
-        </p>
       </div>
-
-      <ExportActions
-        exporting={exporting}
-        pngExportMode={pngExportMode}
-        rowsPerImage={rowsPerImage}
-        notesPdfMode={notesPdfMode}
-        jsonExportMode={jsonExportMode}
-        jsonJudgeKey={jsonJudgeKey}
-        jsonJudgeOptions={jsonJudgeOptions}
-        onSetPngExportMode={onSetPngExportMode}
-        onSetRowsPerImage={onSetRowsPerImage}
-        onSetNotesPdfMode={onSetNotesPdfMode}
-        onSetJsonExportMode={onSetJsonExportMode}
-        onSetJsonJudgeKey={onSetJsonJudgeKey}
-        onExportPng={onExportPng}
-        onExportPdf={onExportPdf}
-        onExportNotesPdf={onExportNotesPdf}
-        onExportJson={onExportJson}
-      />
     </div>
   )
 }

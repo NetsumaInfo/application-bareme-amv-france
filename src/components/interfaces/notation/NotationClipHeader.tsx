@@ -74,7 +74,7 @@ export function NotationClipHeader({
             {getClipSecondaryLabel(clip) && (
               <>
                 <span className="text-gray-600">-</span>
-                <span className="text-primary-400 truncate max-w-[32%]">{getClipSecondaryLabel(clip)}</span>
+                <span className="text-primary-300 truncate max-w-[32%]">{getClipSecondaryLabel(clip)}</span>
               </>
             )}
             <span className="text-gray-500 shrink-0">

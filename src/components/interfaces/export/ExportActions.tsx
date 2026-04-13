@@ -1,4 +1,4 @@
-import { FileImage, FileJson, FileText } from 'lucide-react'
+import { Code2, FileImage, FileJson, FileSpreadsheet, FileText } from 'lucide-react'
 import type {
   ExportJsonJudgeOption,
   ExportJsonMode,
@@ -25,6 +25,8 @@ interface ExportActionsProps {
   onExportPdf: () => void
   onExportNotesPdf?: () => void
   onExportJson: () => void
+  onExportSpreadsheet?: () => void
+  onExportHtml?: () => void
 }
 
 export function ExportActions({
@@ -44,15 +46,17 @@ export function ExportActions({
   onExportPdf,
   onExportNotesPdf,
   onExportJson,
+  onExportSpreadsheet,
+  onExportHtml,
 }: ExportActionsProps) {
   const { t } = useI18n()
   return (
-    <div className="mt-4 flex flex-col gap-2">
+    <div className="mt-1.5 pt-1.5 border-t border-gray-700/50 flex flex-col gap-1">
       {pngExportMode && onSetPngExportMode && typeof rowsPerImage === 'number' && onSetRowsPerImage && (
-        <div className="rounded border border-gray-700/80 bg-surface-dark/40 p-2.5 space-y-2">
-          <div className="text-[11px] font-semibold text-gray-200">{t('Sortie PNG')}</div>
+        <div className="rounded border border-gray-700/70 bg-surface-dark/35 p-1 space-y-1">
+          <div className="text-[10px] font-semibold text-gray-200">{t('Sortie PNG')}</div>
           <div>
-            <label className="block text-xs text-gray-400 mb-1">{t('Mode')}</label>
+            <label className="block text-[10px] text-gray-400 mb-0.5">{t('Mode')}</label>
             <AppSelect
               value={pngExportMode}
               onChange={onSetPngExportMode}
@@ -74,7 +78,7 @@ export function ExportActions({
                 max={80}
                 value={rowsPerImage}
                 onChange={(event) => onSetRowsPerImage(Number(event.target.value))}
-                className="w-full px-2 py-1.5 rounded border border-gray-700 bg-surface-dark text-xs text-white focus:border-primary-500 focus:outline-none"
+                className="w-full px-1 py-0.5 rounded border border-gray-700 bg-surface-dark text-[10px] text-white focus:border-primary-500 focus:outline-none"
               />
             </div>
           )}
@@ -84,7 +88,7 @@ export function ExportActions({
       <button
         onClick={onExportPng}
         disabled={exporting}
-        className="flex items-center justify-center gap-1.5 px-3 py-2 rounded bg-primary-600 hover:bg-primary-500 text-white text-xs font-medium disabled:opacity-60"
+        className="w-full flex items-center justify-center gap-1 px-2 py-1 rounded bg-primary-600 hover:bg-primary-500 text-white text-[11px] font-medium disabled:opacity-60"
       >
         <FileImage size={14} />
         {t('Export PNG')}
@@ -92,14 +96,34 @@ export function ExportActions({
       <button
         onClick={onExportPdf}
         disabled={exporting}
-        className="flex items-center justify-center gap-1.5 px-3 py-2 rounded bg-surface-light border border-gray-700 text-gray-300 hover:text-white text-xs"
+        className="w-full flex items-center justify-center gap-1 px-2 py-1 rounded bg-surface-light border border-gray-700 text-gray-300 hover:text-white text-[11px]"
       >
         <FileText size={14} />
         {t('Export PDF')}
       </button>
+      {onExportSpreadsheet && (
+        <button
+          onClick={onExportSpreadsheet}
+          disabled={exporting}
+          className="flex items-center justify-center gap-1 px-2 py-1 rounded bg-surface-light border border-gray-700 text-gray-300 hover:text-white text-[11px] disabled:opacity-60"
+        >
+          <FileSpreadsheet size={14} />
+          {t('Export Excel')}
+        </button>
+      )}
+      {onExportHtml && (
+        <button
+          onClick={onExportHtml}
+          disabled={exporting}
+          className="flex items-center justify-center gap-1 px-2 py-1 rounded bg-surface-light border border-gray-700 text-gray-300 hover:text-white text-[11px] disabled:opacity-60"
+        >
+          <Code2 size={14} />
+          {t('Export HTML/CSS')}
+        </button>
+      )}
       {notesPdfMode && onSetNotesPdfMode && onExportNotesPdf && (
-        <div className="rounded border border-gray-700/80 bg-surface-dark/40 p-2.5 space-y-2">
-          <div className="text-[11px] font-semibold text-gray-200">{t('Export notes (PDF)')}</div>
+        <div className="rounded border border-gray-700/70 bg-surface-dark/35 p-1 space-y-1">
+          <div className="text-[10px] font-semibold text-gray-200">{t('Export notes (PDF)')}</div>
           <AppSelect
             value={notesPdfMode}
             onChange={onSetNotesPdfMode}
@@ -114,7 +138,7 @@ export function ExportActions({
           <button
             onClick={onExportNotesPdf}
             disabled={exporting}
-            className="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded bg-surface-light border border-gray-700 text-gray-300 hover:text-white text-xs disabled:opacity-60"
+            className="w-full flex items-center justify-center gap-1 px-2 py-1 rounded bg-surface-light border border-gray-700 text-gray-300 hover:text-white text-[11px] disabled:opacity-60"
           >
             <FileText size={14} />
             {t('Export PDF notes')}
@@ -122,8 +146,8 @@ export function ExportActions({
         </div>
       )}
       {jsonExportMode && onSetJsonExportMode && (
-        <div className="rounded border border-gray-700/80 bg-surface-dark/40 p-2.5 space-y-2">
-          <div className="text-[11px] font-semibold text-gray-200">{t('Export JSON')}</div>
+        <div className="rounded border border-gray-700/70 bg-surface-dark/35 p-1 space-y-1">
+          <div className="text-[10px] font-semibold text-gray-200">{t('Export JSON')}</div>
           <AppSelect
             value={jsonExportMode}
             onChange={onSetJsonExportMode}
@@ -151,7 +175,7 @@ export function ExportActions({
       )}
       <button
         onClick={onExportJson}
-        className="flex items-center justify-center gap-1.5 px-3 py-2 rounded bg-surface-light border border-gray-700 text-gray-300 hover:text-white text-xs"
+        className="w-full flex items-center justify-center gap-1 px-2 py-1 rounded bg-surface-light border border-gray-700 text-gray-300 hover:text-white text-[11px]"
       >
         <FileJson size={14} />
         {t('Export JSON')}

@@ -69,7 +69,7 @@ export function NotationNotesFooter({
                 ? insertTimecodeLabel
                 : t('Timecode indisponible (pas de vidéo)')
             }
-            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] border border-primary-500/40 bg-primary-500/10 text-primary-300 hover:bg-primary-500/20 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-primary-500/10 transition-colors"
+            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] border border-primary-500/30 bg-primary-500/8 text-primary-200 hover:bg-primary-500/12 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-primary-500/8 transition-colors"
           >
             <Clock3 size={12} />
             {t('Timecode')}
@@ -87,7 +87,7 @@ export function NotationNotesFooter({
           onChange={onChangeText}
           onFocus={onFocus}
           textareaClassName="min-h-[36px]"
-          color="rgb(var(--color-primary-400))"
+          color="rgb(var(--color-primary-300))"
           fpsHint={clipFps ?? undefined}
           onTimecodeSelect={(item) => {
             onJumpToTimecode(item.seconds)

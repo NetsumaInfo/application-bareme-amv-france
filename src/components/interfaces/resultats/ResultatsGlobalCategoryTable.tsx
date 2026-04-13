@@ -2,6 +2,7 @@ import { getClipPrimaryLabel, getClipSecondaryLabel } from '@/utils/formatters'
 import { withAlpha } from '@/utils/colors'
 import { hasAnyCriterionScore, type CategoryGroup, type JudgeSource, type NoteLike } from '@/utils/results'
 import type { ResultatsRow } from '@/components/interfaces/resultats/types'
+import { RESULTATS_PARTICIPANT_COLUMN_WIDTH_CLASS } from '@/components/interfaces/resultats/layout'
 import { ClipMiniaturePreview } from '@/components/interfaces/spreadsheet/miniaturePreview'
 import { useI18n } from '@/i18n'
 
@@ -17,6 +18,8 @@ interface ResultatsGlobalCategoryTableProps {
   onOpenClipContextMenu: (clipId: string, x: number, y: number) => void
   showMiniatures: boolean
   thumbnailDefaultSeconds: number
+  forceMiniatureLoad?: boolean
+  staticExport?: boolean
 }
 
 function formatAverage(values: number[]): string {
@@ -37,26 +40,28 @@ export function ResultatsGlobalCategoryTable({
   onOpenClipContextMenu,
   showMiniatures,
   thumbnailDefaultSeconds,
+  forceMiniatureLoad = false,
+  staticExport = false,
 }: ResultatsGlobalCategoryTableProps) {
   const { t } = useI18n()
   const judgeBandMinWidth = Math.max(184, (judges.length + 1) * 68)
 
   return (
-    <div className="min-h-0 flex-1 overflow-auto">
+    <div className={`min-h-0 flex-1 ${staticExport ? 'overflow-visible' : 'overflow-auto'}`}>
       <table className="w-full min-w-max border-collapse text-[11px]">
-        <thead className="sticky top-0 z-10">
+        <thead className={staticExport ? undefined : 'sticky top-0 z-10'}>
           <tr>
             <th
               rowSpan={2}
-              className="sticky left-0 z-20 w-8 border-b border-r border-gray-700/60 bg-surface px-2 py-1 text-center text-[10px] font-medium text-gray-500"
+              className={`${staticExport ? '' : 'sticky left-0 z-20'} w-8 border-b border-r border-gray-700/60 bg-surface px-2 py-1 text-center text-[10px] font-medium text-gray-500`}
             >
               #
             </th>
             <th
               rowSpan={2}
-              className="sticky left-8 z-20 min-w-[104px] max-w-[152px] border-b border-r border-gray-700/60 bg-surface px-1.5 py-1 text-left text-[10px] font-medium text-gray-500"
+              className={`${staticExport ? '' : 'sticky left-8 z-20'} border-b border-r border-gray-700/60 bg-surface px-2 py-1 text-left text-[10px] font-medium text-gray-500 ${RESULTATS_PARTICIPANT_COLUMN_WIDTH_CLASS}`}
             >
-              {t('Clip')}
+              {t('Participant')}
             </th>
             {categoryGroups.map((group) => (
               <th
@@ -65,8 +70,8 @@ export function ResultatsGlobalCategoryTable({
                 className="min-w-[220px] border-b border-r px-2 py-1 text-center text-[10px] font-semibold"
                 style={{
                   color: group.color,
-                  backgroundColor: withAlpha(group.color, 0.12),
-                  borderColor: withAlpha(group.color, 0.24),
+                  backgroundColor: withAlpha(group.color, 0.18),
+                  borderColor: withAlpha(group.color, 0.3),
                   minWidth: `${judgeBandMinWidth}px`,
                 }}
               >
@@ -97,7 +102,7 @@ export function ResultatsGlobalCategoryTable({
                       className="truncate border-r border-gray-700/50 px-1.5 py-1 text-center text-[9px]"
                       style={{
                         color: judgeColors[judge.key] ?? '#60a5fa',
-                        backgroundColor: withAlpha(judgeColors[judge.key] ?? '#60a5fa', 0.03),
+                        backgroundColor: withAlpha(judgeColors[judge.key] ?? '#60a5fa', 0.05),
                       }}
                       title={judge.judgeName}
                     >
@@ -123,17 +128,17 @@ export function ResultatsGlobalCategoryTable({
                 onClick={() => onSelectClip(row.clip.id)}
                 className={`cursor-pointer transition-colors ${
                   isSelected
-                    ? 'bg-white/[0.04]'
+                    ? 'bg-white/[0.06]'
                     : index % 2 === 0
-                      ? 'bg-surface-dark/10'
+                      ? 'bg-surface-dark/16'
                       : 'bg-transparent'
-                } hover:bg-white/[0.03]`}
+                } hover:bg-white/[0.05]`}
               >
-                <td className="sticky left-0 z-10 border-r border-gray-800/60 bg-surface px-2 py-1 text-center text-[10px] text-gray-500">
+                <td className={`${staticExport ? '' : 'sticky left-0 z-10'} border-r border-gray-800/60 bg-surface px-2 py-1 text-center text-[10px] text-gray-500`}>
                   {index + 1}
                 </td>
                 <td
-                  className="sticky left-8 z-10 min-w-[104px] max-w-[152px] border-r border-gray-800/60 bg-surface px-1.5 py-1"
+                  className={`${staticExport ? '' : 'sticky left-8 z-10'} border-r border-gray-800/60 bg-surface px-2 py-1 ${RESULTATS_PARTICIPANT_COLUMN_WIDTH_CLASS}`}
                   onDoubleClick={(event) => {
                     event.stopPropagation()
                     onOpenClipInNotation(row.clip.id)
@@ -144,16 +149,17 @@ export function ResultatsGlobalCategoryTable({
                     onOpenClipContextMenu(row.clip.id, event.clientX, event.clientY)
                   }}
                 >
-                  <div className="flex flex-col min-w-0 leading-tight">
-                    <span className="truncate text-[11px] font-semibold text-primary-300">{getClipPrimaryLabel(row.clip)}</span>
+                  <div className={`flex flex-col min-w-0 ${staticExport ? 'leading-snug' : 'leading-tight'}`}>
+                    <span className={`${staticExport ? 'whitespace-normal break-words' : 'truncate'} text-[11px] font-semibold text-primary-300`}>{getClipPrimaryLabel(row.clip)}</span>
                     {getClipSecondaryLabel(row.clip) && (
-                      <span className="truncate text-[8px] text-gray-500">{getClipSecondaryLabel(row.clip)}</span>
+                      <span className={`${staticExport ? 'whitespace-normal break-words' : 'truncate'} text-[8px] text-gray-500`}>{getClipSecondaryLabel(row.clip)}</span>
                     )}
                     {showMiniatures && row.clip.filePath ? (
                       <ClipMiniaturePreview
                         clip={row.clip}
                         enabled={showMiniatures}
                         defaultSeconds={thumbnailDefaultSeconds}
+                        forceLoad={forceMiniatureLoad}
                       />
                     ) : null}
                   </div>
@@ -163,7 +169,7 @@ export function ResultatsGlobalCategoryTable({
                   return (
                     <td
                       key={`${row.clip.id}-${group.category}-judge-values`}
-                      className="border-r border-gray-800/60 px-0 py-0 font-mono text-white/90"
+                      className="amv-number-ui border-r border-gray-800/60 px-0 py-0 text-white/90"
                       style={{ minWidth: `${judgeBandMinWidth}px` }}
                     >
                       <div
@@ -200,7 +206,7 @@ export function ResultatsGlobalCategoryTable({
                   )
                 })}
 
-                <td className="border-r border-gray-700/60 px-2 py-1 text-center font-mono font-bold text-white">
+                <td className="amv-number-ui border-r border-gray-700/60 px-2 py-1 text-center font-bold text-white">
                   {row.averageTotal.toFixed(1)}
                 </td>
               </tr>

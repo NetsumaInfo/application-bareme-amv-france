@@ -15,7 +15,6 @@ export function useProjectFileActions() {
     markClean,
     getProjectData,
   } = useProjectStore()
-  const { getNotesData } = useNotationStore()
   const { setShowProjectModal } = useUIStore()
   const projectsFolderPath = useUIStore((state) => state.projectsFolderPath)
 
@@ -37,11 +36,13 @@ export function useProjectFileActions() {
   }
 
   const saveProjectTo = async (filePath: string) => {
-    const notesData = getNotesData()
-    const projectData = getProjectData(notesData)
+    const notationState = useNotationStore.getState()
+    const notesData = notationState.getNotesData()
+    const activeBareme = notationState.currentBareme
+    const projectData = getProjectData(notesData, activeBareme)
     if (!projectData) return
 
-    const activeBaremeId = useNotationStore.getState().currentBareme?.id
+    const activeBaremeId = activeBareme?.id
     if (activeBaremeId) {
       projectData.baremeId = activeBaremeId
       projectData.project.baremeId = activeBaremeId
@@ -92,8 +93,10 @@ export function useProjectFileActions() {
       const filePath = await tauri.saveJsonDialog(`${currentProject.name}.json`)
       if (!filePath) return
 
-      const notesData = getNotesData()
-      const projectData = getProjectData(notesData)
+      const notationState = useNotationStore.getState()
+      const notesData = notationState.getNotesData()
+      const projectData = getProjectData(notesData, notationState.currentBareme)
+      if (!projectData) return
       await tauri.exportJsonFile(projectData, filePath)
     } catch (errorValue) {
       console.error('Failed to export:', errorValue)
@@ -110,7 +113,10 @@ export function useProjectFileActions() {
       const filePath = await tauri.saveJsonDialog(defaultName)
       if (!filePath) return
 
-      const notesData = getNotesData()
+      const notationState = useNotationStore.getState()
+      const notesData = notationState.getNotesData()
+      const activeBareme = notationState.currentBareme
+      const activeBaremeId = activeBareme?.id ?? currentProject.baremeId
       await tauri.exportJsonFile(
         {
           version: '1.0',
@@ -118,7 +124,8 @@ export function useProjectFileActions() {
           exportedAt: new Date().toISOString(),
           projectName: currentProject.name,
           judgeName: currentProject.judgeName,
-          baremeId: currentProject.baremeId,
+          baremeId: activeBaremeId,
+          bareme: activeBareme ?? null,
           clips: clips.map((clip) => ({
             id: clip.id,
             fileName: clip.fileName,

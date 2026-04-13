@@ -90,7 +90,7 @@ export function LanguageSwitcher({
   const currentNativeLabel = APP_LANGUAGE_NATIVE_LABELS[language]
   const currentOption = APP_LANGUAGE_OPTIONS.find((option) => option.value === language) ?? APP_LANGUAGE_OPTIONS[0]
   return (
-    <div ref={rootRef} className="relative inline-flex">
+    <div ref={rootRef} className="relative inline-flex items-center">
       <HoverTextTooltip text={`${t('Changer la langue')} · ${currentNativeLabel}`}>
         <button
           type="button"
@@ -98,7 +98,7 @@ export function LanguageSwitcher({
           data-open={open ? 'true' : 'false'}
           className={
             compact
-              ? 'app-header-trigger gap-1 px-2'
+              ? 'app-header-trigger gap-0.5 px-1.5'
               : 'inline-flex h-9 items-center gap-2.5 rounded-lg bg-black/18 px-3 text-xs text-gray-200 transition-colors ring-1 ring-inset ring-primary-400/10 hover:bg-white/[0.04] hover:text-white'
           }
           aria-label={`${t('Changer la langue')} · ${currentNativeLabel}`}
@@ -106,7 +106,7 @@ export function LanguageSwitcher({
           aria-expanded={open}
         >
           {compact ? (
-            <span className="inline-flex min-w-[1.55rem] items-center justify-center text-[11px] font-semibold uppercase tracking-[0.06em] text-current">
+            <span className="inline-flex min-w-[1.45rem] items-center justify-center text-[11px] font-semibold uppercase leading-none tracking-[0.06em] text-current">
               {APP_LANGUAGE_SHORT_LABELS[currentOption.value]}
             </span>
           ) : (
@@ -114,7 +114,7 @@ export function LanguageSwitcher({
           )}
           {!compact ? <span className="max-w-[8rem] truncate text-xs font-medium">{currentNativeLabel}</span> : null}
           <ChevronDown
-            size={compact ? 13 : 12}
+            size={compact ? 10 : 12}
             className={`shrink-0 transition-transform ${compact ? 'app-header-trigger-chevron' : 'text-gray-500'} ${open ? 'rotate-180' : ''}`}
           />
         </button>

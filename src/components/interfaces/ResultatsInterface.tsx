@@ -377,7 +377,7 @@ function useResultatsInterfaceController() {
 
   const renderContent = () => (
     <div
-      className="relative flex h-full flex-col gap-0.5 px-1.5 pb-1.5"
+      className="relative flex h-full w-full min-w-0 flex-1 flex-col overflow-hidden"
       onContextMenu={(event) => {
         const target = event.target as HTMLElement
         if (
@@ -402,7 +402,7 @@ function useResultatsInterfaceController() {
         </div>
       )}
 
-      <div className="flex items-start justify-between gap-3 border-b border-gray-700/50 pb-1">
+      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-px border-b border-gray-700/50 py-px">
         <ResultatsViewModeControls
           mainView={mainView}
           onMainViewChange={setMainView}

@@ -33,19 +33,21 @@ export function BaremeSelector() {
   }
 
   return (
-    <div className="relative" ref={dropdownRef}>
+    <div className="relative inline-flex items-center" ref={dropdownRef}>
       <HoverTextTooltip text={t('Barème')}>
         <button
           onClick={() => setOpen((value) => !value)}
           aria-label={t('Barème')}
           data-open={open ? 'true' : 'false'}
-          className="app-header-trigger gap-1"
+          className="app-header-trigger gap-0.5"
         >
-          <span className="max-w-[150px] truncate font-medium">{currentBareme?.name || t('Barème')}</span>
-          <ChevronDown
-            size={10}
-            className={`app-header-trigger-chevron transition-transform ${open ? 'rotate-180' : ''}`}
-          />
+          <span className="inline-flex items-center gap-0.5 leading-none">
+            <span className="max-w-[150px] truncate font-medium leading-none">{currentBareme?.name || t('Barème')}</span>
+            <ChevronDown
+              size={10}
+              className={`app-header-trigger-chevron shrink-0 transition-transform ${open ? 'rotate-180' : ''}`}
+            />
+          </span>
         </button>
       </HoverTextTooltip>
 

@@ -28,7 +28,7 @@ export function DetachedCategoryHeader({
         backgroundColor: isExpanded
           ? 'rgb(var(--color-surface-light) / 0.92)'
           : 'rgb(var(--color-surface) / 0.82)',
-        boxShadow: isExpanded ? `inset 0 1px 0 ${withAlpha(color, 0.12)}` : 'none',
+        boxShadow: isExpanded ? `inset 0 1px 0 ${withAlpha(color, 0.08)}` : 'none',
       }}
     >
       <div className="flex items-center gap-2">

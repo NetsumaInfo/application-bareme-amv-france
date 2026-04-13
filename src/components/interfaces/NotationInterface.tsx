@@ -110,7 +110,7 @@ export default function NotationInterface() {
       className="flex flex-col w-full h-full text-gray-200"
       style={{
         background:
-          'linear-gradient(180deg, rgb(var(--app-bg-secondary) / 0.96) 0%, rgb(var(--app-bg) / 1) 100%)',
+          'linear-gradient(180deg, rgb(var(--color-surface-dark) / 0.98) 0%, rgb(var(--app-bg) / 1) 100%)',
       }}
     >
       <NotationClipHeader

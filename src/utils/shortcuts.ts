@@ -6,6 +6,8 @@ export type ShortcutAction =
   | 'seekForwardLong'
   | 'nextClip'
   | 'prevClip'
+  | 'renameClip'
+  | 'swapPseudoAndClipName'
   | 'tabNotation'
   | 'tabResultats'
   | 'tabExport'
@@ -52,6 +54,8 @@ export const SHORTCUT_DEFINITIONS: ShortcutDefinition[] = [
   { action: 'seekForwardLong', label: 'Avancer 30s', defaultShortcut: 'shift+arrowright' },
   { action: 'nextClip', label: 'Clip suivant', defaultShortcut: 'n' },
   { action: 'prevClip', label: 'Clip précédent', defaultShortcut: 'p' },
+  { action: 'renameClip', label: 'Renommer', defaultShortcut: 'f2' },
+  { action: 'swapPseudoAndClipName', label: 'Échanger pseudo et nom du clip', defaultShortcut: 'ctrl+shift+e' },
   { action: 'tabNotation', label: 'Onglet Notation', defaultShortcut: 'ctrl+1' },
   { action: 'tabResultats', label: 'Onglet Résultat', defaultShortcut: 'ctrl+2' },
   { action: 'tabExport', label: 'Onglet Export', defaultShortcut: 'ctrl+3' },

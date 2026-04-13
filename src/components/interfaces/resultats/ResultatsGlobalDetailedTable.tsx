@@ -7,6 +7,7 @@ import {
   type NoteLike,
 } from '@/utils/results'
 import type { ResultatsRow } from '@/components/interfaces/resultats/types'
+import { RESULTATS_PARTICIPANT_COLUMN_WIDTH_CLASS } from '@/components/interfaces/resultats/layout'
 import { ClipMiniaturePreview } from '@/components/interfaces/spreadsheet/miniaturePreview'
 import { useI18n } from '@/i18n'
 
@@ -28,6 +29,9 @@ interface ResultatsGlobalDetailedTableProps {
   onClearCriterionDraftCell: (key: string) => void
   showMiniatures: boolean
   thumbnailDefaultSeconds: number
+  readOnly?: boolean
+  forceMiniatureLoad?: boolean
+  staticExport?: boolean
 }
 
 function formatCriterionValue(value: number): string {
@@ -54,24 +58,27 @@ export function ResultatsGlobalDetailedTable({
   onClearCriterionDraftCell,
   showMiniatures,
   thumbnailDefaultSeconds,
+  readOnly = false,
+  forceMiniatureLoad = false,
+  staticExport = false,
 }: ResultatsGlobalDetailedTableProps) {
   const { t } = useI18n()
   return (
-    <div className="min-h-0 flex-1 overflow-auto">
+    <div className={`min-h-0 flex-1 ${staticExport ? 'overflow-visible' : 'overflow-auto'}`}>
       <table className="w-full border-collapse text-[11px]">
-        <thead className="sticky top-0 z-10">
+        <thead className={staticExport ? undefined : 'sticky top-0 z-10'}>
           <tr>
             <th
               rowSpan={3}
-              className="sticky left-0 z-20 w-8 border-b border-r border-gray-700/60 bg-surface px-2 py-1 text-center text-[10px] font-medium text-gray-500"
+              className={`${staticExport ? '' : 'sticky left-0 z-20'} w-8 border-b border-r border-gray-700/60 bg-surface px-2 py-1 text-center text-[10px] font-medium text-gray-500`}
             >
               #
             </th>
             <th
               rowSpan={3}
-              className="sticky left-8 z-20 min-w-[112px] max-w-[160px] border-b border-r border-gray-700/60 bg-surface px-2 py-1 text-left text-[10px] font-medium text-gray-500"
+              className={`${staticExport ? '' : 'sticky left-8 z-20'} border-b border-r border-gray-700/60 bg-surface px-2 py-1 text-left text-[10px] font-medium text-gray-500 ${RESULTATS_PARTICIPANT_COLUMN_WIDTH_CLASS}`}
             >
-              {t('Clip')}
+              {t('Participant')}
             </th>
             {categoryGroups.map((group) => (
               <th
@@ -80,8 +87,8 @@ export function ResultatsGlobalDetailedTable({
                 className="border-b border-r px-2 py-1 text-center text-[10px] font-semibold"
                 style={{
                   color: group.color,
-                  backgroundColor: withAlpha(group.color, 0.12),
-                  borderColor: withAlpha(group.color, 0.24),
+                  backgroundColor: withAlpha(group.color, 0.18),
+                  borderColor: withAlpha(group.color, 0.3),
                 }}
               >
                 {group.category}
@@ -108,7 +115,7 @@ export function ResultatsGlobalDetailedTable({
                   className="border-b border-r border-gray-700/60 px-1.5 py-1 text-center text-[9px] font-medium"
                   style={{
                     color: withAlpha(group.color, 0.92),
-                    backgroundColor: withAlpha(group.color, 0.05),
+                    backgroundColor: withAlpha(group.color, 0.08),
                   }}
                 >
                   {criterion.name}
@@ -125,7 +132,7 @@ export function ResultatsGlobalDetailedTable({
                   className="border-b border-r border-gray-700/60 px-1 py-1 text-center text-[9px]"
                   style={{
                     color: judgeColors[judge.key] ?? '#60a5fa',
-                    backgroundColor: withAlpha(judgeColors[judge.key] ?? '#60a5fa', 0.04),
+                    backgroundColor: withAlpha(judgeColors[judge.key] ?? '#60a5fa', 0.07),
                   }}
                 >
                   {judge.judgeName}
@@ -152,7 +159,7 @@ export function ResultatsGlobalDetailedTable({
                       className="border-b border-r border-gray-700/60 px-1 py-1 text-center text-[9px]"
                       style={{
                         color,
-                        backgroundColor: withAlpha(color, 0.03),
+                        backgroundColor: withAlpha(color, 0.05),
                       }}
                       title={judge.judgeName}
                     >
@@ -176,17 +183,17 @@ export function ResultatsGlobalDetailedTable({
                 onClick={() => onSelectClip(row.clip.id)}
                 className={`cursor-pointer transition-colors ${
                   isSelected
-                    ? 'bg-white/[0.04]'
+                    ? 'bg-white/[0.07]'
                     : index % 2 === 0
-                      ? 'bg-surface-dark/10'
+                      ? 'bg-white/[0.04]'
                       : 'bg-transparent'
-                } hover:bg-white/[0.03]`}
+                } hover:bg-white/[0.06]`}
               >
-                <td className="sticky left-0 z-10 border-r border-gray-800/60 bg-surface px-2 py-1 text-center text-[10px] text-gray-500">
+                <td className={`${staticExport ? '' : 'sticky left-0 z-10'} border-r border-gray-800/60 bg-surface px-2 py-1 text-center text-[10px] text-gray-500`}>
                   {index + 1}
                 </td>
                 <td
-                  className="sticky left-8 z-10 max-w-[160px] border-r border-gray-800/60 bg-surface px-2 py-1"
+                  className={`${staticExport ? '' : 'sticky left-8 z-10'} border-r border-gray-800/60 bg-surface px-2 py-1 ${RESULTATS_PARTICIPANT_COLUMN_WIDTH_CLASS}`}
                   onDoubleClick={(event) => {
                     event.stopPropagation()
                     onOpenClipInNotation(row.clip.id)
@@ -197,16 +204,17 @@ export function ResultatsGlobalDetailedTable({
                     onOpenClipContextMenu(row.clip.id, event.clientX, event.clientY)
                   }}
                 >
-                  <div className="flex flex-col min-w-0 leading-tight">
-                    <span className="truncate text-[11px] font-semibold text-primary-300">{getClipPrimaryLabel(row.clip)}</span>
+                  <div className={`flex flex-col min-w-0 ${staticExport ? 'leading-snug' : 'leading-tight'}`}>
+                    <span className={`${staticExport ? 'whitespace-normal break-words' : 'truncate'} text-[11px] font-semibold text-primary-300`}>{getClipPrimaryLabel(row.clip)}</span>
                     {getClipSecondaryLabel(row.clip) && (
-                      <span className="truncate text-[9px] text-gray-500">{getClipSecondaryLabel(row.clip)}</span>
+                      <span className={`${staticExport ? 'whitespace-normal break-words' : 'truncate'} text-[9px] text-gray-500`}>{getClipSecondaryLabel(row.clip)}</span>
                     )}
                     {showMiniatures && row.clip.filePath ? (
                       <ClipMiniaturePreview
                         clip={row.clip}
                         enabled={showMiniatures}
                         defaultSeconds={thumbnailDefaultSeconds}
+                        forceLoad={forceMiniatureLoad}
                       />
                     ) : null}
                   </div>
@@ -224,35 +232,44 @@ export function ResultatsGlobalDetailedTable({
                       return (
                         <td
                           key={`${row.clip.id}-${criterion.id}-${judge.key}`}
-                          className="border-r border-gray-800/60 px-1 py-1 text-center font-mono"
-                          style={{ color: judgeColor, backgroundColor: withAlpha(judgeColor, 0.03) }}
+                          className="amv-number-ui border-r border-gray-800/60 px-1 py-1 text-center"
+                          style={{ color: judgeColor, backgroundColor: withAlpha(judgeColor, 0.05) }}
                         >
-                          <input
-                            type="number"
-                            min={Number.isFinite(criterion.min) ? Number(criterion.min) : 0}
-                            max={Number.isFinite(criterion.max) ? Number(criterion.max) : undefined}
-                            step={Number.isFinite(criterion.step) ? Number(criterion.step) : 0.5}
-                            value={displayed}
-                            onContextMenu={(event) => {
-                              event.preventDefault()
-                              event.stopPropagation()
-                              onOpenClipContextMenu(row.clip.id, event.clientX, event.clientY)
-                            }}
-                            onChange={(event) => {
-                              onSetCriterionDraftCell(key, event.target.value)
-                            }}
-                            onBlur={() => onCommitCriterionDraftCell(row.clip.id, criterion.id, judge.key)}
-                            onKeyDown={(event) => {
-                              if (event.key === 'Enter') {
+                          {readOnly ? (
+                            <span
+                              className="block w-full rounded-sm border border-transparent bg-transparent px-1 py-0.5 text-center"
+                              title={`${judge.judgeName} - ${group.category} - ${criterion.name}`}
+                            >
+                              {displayed}
+                            </span>
+                          ) : (
+                            <input
+                              type="number"
+                              min={Number.isFinite(criterion.min) ? Number(criterion.min) : 0}
+                              max={Number.isFinite(criterion.max) ? Number(criterion.max) : undefined}
+                              step={Number.isFinite(criterion.step) ? Number(criterion.step) : 0.5}
+                              value={displayed}
+                              onContextMenu={(event) => {
                                 event.preventDefault()
-                                onCommitCriterionDraftCell(row.clip.id, criterion.id, judge.key)
-                              } else if (event.key === 'Escape') {
-                                onClearCriterionDraftCell(key)
-                              }
-                            }}
-                            className="amv-soft-number w-full rounded-sm border border-transparent bg-transparent px-1 py-0.5 text-center hover:bg-white/[0.03] focus:bg-surface-dark focus:border-gray-600 focus-visible:outline-none outline-none"
-                            title={`${judge.judgeName} - ${group.category} - ${criterion.name}`}
-                          />
+                                event.stopPropagation()
+                                onOpenClipContextMenu(row.clip.id, event.clientX, event.clientY)
+                              }}
+                              onChange={(event) => {
+                                onSetCriterionDraftCell(key, event.target.value)
+                              }}
+                              onBlur={() => onCommitCriterionDraftCell(row.clip.id, criterion.id, judge.key)}
+                              onKeyDown={(event) => {
+                                if (event.key === 'Enter') {
+                                  event.preventDefault()
+                                  onCommitCriterionDraftCell(row.clip.id, criterion.id, judge.key)
+                                } else if (event.key === 'Escape') {
+                                  onClearCriterionDraftCell(key)
+                                }
+                              }}
+                              className="amv-soft-number w-full rounded-sm border border-transparent bg-transparent px-1 py-0.5 text-center hover:bg-white/[0.05] focus:bg-surface-dark focus:border-gray-600 focus-visible:outline-none outline-none"
+                              title={`${judge.judgeName} - ${group.category} - ${criterion.name}`}
+                            />
+                          )}
                         </td>
                       )
                     }),
@@ -266,8 +283,8 @@ export function ResultatsGlobalDetailedTable({
                     return (
                       <td
                         key={`${row.clip.id}-total-${judge.key}`}
-                        className="border-r border-gray-800/60 px-2 py-1 text-center font-mono"
-                        style={{ color, backgroundColor: withAlpha(color, 0.04) }}
+                        className="amv-number-ui border-r border-gray-800/60 px-2 py-1 text-center"
+                        style={{ color, backgroundColor: withAlpha(color, 0.06) }}
                       >
                         {score.toFixed(1)}
                       </td>
@@ -275,7 +292,7 @@ export function ResultatsGlobalDetailedTable({
                   })}
 
                 {canSortByScore && (
-                  <td className="border-r border-gray-700/60 px-2 py-1 text-center font-mono font-bold text-white">
+                  <td className="amv-number-ui border-r border-gray-700/60 px-2 py-1 text-center font-bold text-white">
                     {row.averageTotal.toFixed(1)}
                   </td>
                 )}

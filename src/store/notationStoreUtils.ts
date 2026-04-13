@@ -83,7 +83,7 @@ export function parseBareme(raw: unknown): Bareme | null {
     id,
     name,
     description: typeof row.description === 'string' && row.description.trim() ? row.description : undefined,
-    isOfficial: false,
+    isOfficial: typeof row.isOfficial === 'boolean' ? row.isOfficial : false,
     hideTotalsUntilAllScored: Boolean(row.hideTotalsUntilAllScored),
     criteria,
     categoryColors: Object.keys(colorMap).length > 0 ? colorMap : undefined,
