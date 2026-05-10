@@ -5,6 +5,8 @@ import { useProjectStore } from '@/store/useProjectStore'
 import { useUIStore } from '@/store/useUIStore'
 import type { Clip, Project } from '@/types/project'
 
+const DETACHED_OVERLAY_FALLBACK_SYNC_MS = 500
+
 type UsePlayerWindowLifecycleParams = {
   currentProject: Project | null
   isAnyModalOpen: boolean
@@ -62,15 +64,15 @@ export function usePlayerWindowLifecycle({
   useEffect(() => {
     if (!currentProject) return
 
-    if (!(isDetached || isFullscreen)) {
-      tauri.playerSyncOverlay().catch(() => {})
-      return
-    }
-
     tauri.playerSyncOverlay().catch(() => {})
+
+    if (!(isDetached || isFullscreen)) return
+
+    // Overlay window drives high-frequency sync itself.
+    // Keep a slow fallback tick from main window for resilience.
     const timer = setInterval(() => {
       tauri.playerSyncOverlay().catch(() => {})
-    }, 120)
+    }, DETACHED_OVERLAY_FALLBACK_SYNC_MS)
     return () => clearInterval(timer)
   }, [currentProject, isDetached, isFullscreen, currentClipIndex, clips.length])
 

@@ -3,7 +3,7 @@ use tauri::Manager;
 
 #[cfg(target_os = "windows")]
 pub fn initialize_embedded_player(app: &tauri::App, state: &tauri::State<'_, AppState>) {
-    let Some(window) = app.get_window("main") else {
+    let Some(window) = app.get_webview_window("main") else {
         eprintln!("[AMV] Main window not found at setup; continuing without player");
         return;
     };

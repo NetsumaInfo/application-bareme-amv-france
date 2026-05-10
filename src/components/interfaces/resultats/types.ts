@@ -9,6 +9,10 @@ export interface ResultatsRow {
   categoryJudgeScores: Record<string, number[]>
   judgeTotals: number[]
   averageTotal: number
+  judgeFavorites: Array<{
+    isFavorite: boolean
+    comment: string
+  }>
 }
 
 export interface ResultatsHeaderProps {
@@ -18,4 +22,10 @@ export interface ResultatsHeaderProps {
   onSelectJudge: (judgeKey: string) => void
   onJudgeColorChange: (judgeKey: string, color: string) => void
   onOpenMemberContextMenu: (judgeKey: string, x: number, y: number) => void
+}
+
+export interface ResultatsContestCategoryOption {
+  key: string
+  label: string
+  count: number
 }

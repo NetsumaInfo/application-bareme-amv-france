@@ -6,21 +6,37 @@ type PlayerStatusSnapshot = Awaited<ReturnType<typeof tauri.playerGetStatus>>
 const ACTIVE_POLL_MS = 120
 const IDLE_POLL_MS = 320
 const ERROR_POLL_MS = 500
+const ACTIVE_POLL_MS_ULTRA = 16
+const IDLE_POLL_MS_ULTRA = 120
+const ERROR_POLL_MS_ULTRA = 180
 const FULLSCREEN_POLL_EVERY = 3
 
 export function usePlayerStatusPolling(
   onUpdate: (status: PlayerStatusSnapshot, fullscreen: boolean) => void,
+  options: { enabled?: boolean; ultraSnap?: boolean } = {},
 ) {
   const onUpdateRef = useRef(onUpdate)
   const lastFullscreenRef = useRef(false)
   const lastPlayingRef = useRef<boolean | null>(null)
   const fullscreenPollCounterRef = useRef(0)
+  const enabled = options.enabled ?? true
+  const ultraSnap = options.ultraSnap ?? false
+  const activePollMs = ultraSnap ? ACTIVE_POLL_MS_ULTRA : ACTIVE_POLL_MS
+  const idlePollMs = ultraSnap ? IDLE_POLL_MS_ULTRA : IDLE_POLL_MS
+  const errorPollMs = ultraSnap ? ERROR_POLL_MS_ULTRA : ERROR_POLL_MS
 
   useEffect(() => {
     onUpdateRef.current = onUpdate
   }, [onUpdate])
 
   useEffect(() => {
+    if (!enabled) {
+      lastFullscreenRef.current = false
+      lastPlayingRef.current = null
+      fullscreenPollCounterRef.current = 0
+      return
+    }
+
     let active = true
     let timer: ReturnType<typeof setTimeout> | null = null
 
@@ -53,9 +69,9 @@ export function usePlayerStatusPolling(
         lastPlayingRef.current = status.is_playing
         if (!active) return
         onUpdateRef.current(status, fullscreen)
-        scheduleNextPoll(status.is_playing || fullscreen ? ACTIVE_POLL_MS : IDLE_POLL_MS)
+        scheduleNextPoll(status.is_playing || fullscreen ? activePollMs : idlePollMs)
       } catch {
-        scheduleNextPoll(ERROR_POLL_MS)
+        scheduleNextPoll(errorPollMs)
       }
     }
 
@@ -67,5 +83,5 @@ export function usePlayerStatusPolling(
         clearTimeout(timer)
       }
     }
-  }, [])
+  }, [activePollMs, enabled, errorPollMs, idlePollMs])
 }

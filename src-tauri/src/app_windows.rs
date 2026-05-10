@@ -1,14 +1,14 @@
-use tauri::Manager;
+use tauri::{Emitter, Manager, WebviewUrl, WebviewWindowBuilder};
 
 #[tauri::command]
 pub async fn warm_aux_windows(app_handle: tauri::AppHandle) -> Result<(), String> {
     let handle = app_handle.clone();
     tauri::async_runtime::spawn_blocking(move || {
-        if handle.get_window("notes-window").is_none() {
-            match tauri::WindowBuilder::new(
+        if handle.get_webview_window("notes-window").is_none() {
+            match WebviewWindowBuilder::new(
                 &handle,
                 "notes-window",
-                tauri::WindowUrl::App("notes.html".into()),
+                WebviewUrl::App("notes.html".into()),
             )
             .title("AMV Notation - Notes")
             .inner_size(380.0, 700.0)
@@ -31,11 +31,11 @@ pub async fn warm_aux_windows(app_handle: tauri::AppHandle) -> Result<(), String
             }
         }
 
-        if handle.get_window("resultats-notes-window").is_none() {
-            match tauri::WindowBuilder::new(
+        if handle.get_webview_window("resultats-notes-window").is_none() {
+            match WebviewWindowBuilder::new(
                 &handle,
                 "resultats-notes-window",
-                tauri::WindowUrl::App("resultats-notes.html".into()),
+                WebviewUrl::App("resultats-notes.html".into()),
             )
             .title("AMV Notation - Notes juges")
             .inner_size(1100.0, 760.0)
@@ -68,7 +68,7 @@ pub async fn warm_aux_windows(app_handle: tauri::AppHandle) -> Result<(), String
 
 #[tauri::command]
 pub async fn open_notes_window(app_handle: tauri::AppHandle) -> Result<(), String> {
-    if let Some(existing) = app_handle.get_window("notes-window") {
+    if let Some(existing) = app_handle.get_webview_window("notes-window") {
         let _ = existing.show();
         let _ = existing.set_focus();
         return Ok(());
@@ -76,16 +76,16 @@ pub async fn open_notes_window(app_handle: tauri::AppHandle) -> Result<(), Strin
 
     let handle = app_handle.clone();
     tauri::async_runtime::spawn_blocking(move || {
-        if let Some(existing) = handle.get_window("notes-window") {
+        if let Some(existing) = handle.get_webview_window("notes-window") {
             let _ = existing.show();
             let _ = existing.set_focus();
             return Ok(());
         }
 
-        tauri::WindowBuilder::new(
+        WebviewWindowBuilder::new(
             &handle,
             "notes-window",
-            tauri::WindowUrl::App("notes.html".into()),
+            WebviewUrl::App("notes.html".into()),
         )
         .title("AMV Notation - Notes")
         .inner_size(380.0, 700.0)
@@ -110,7 +110,7 @@ pub async fn open_notes_window(app_handle: tauri::AppHandle) -> Result<(), Strin
 
 #[tauri::command]
 pub fn close_notes_window(app_handle: tauri::AppHandle) -> Result<(), String> {
-    if let Some(window) = app_handle.get_window("notes-window") {
+    if let Some(window) = app_handle.get_webview_window("notes-window") {
         window.close().map_err(|e| e.to_string())?;
     }
     Ok(())
@@ -118,7 +118,7 @@ pub fn close_notes_window(app_handle: tauri::AppHandle) -> Result<(), String> {
 
 #[tauri::command]
 pub async fn open_resultats_judge_notes_window(app_handle: tauri::AppHandle) -> Result<(), String> {
-    if let Some(existing) = app_handle.get_window("resultats-notes-window") {
+    if let Some(existing) = app_handle.get_webview_window("resultats-notes-window") {
         let _ = existing.show();
         let _ = existing.set_focus();
         return Ok(());
@@ -126,16 +126,16 @@ pub async fn open_resultats_judge_notes_window(app_handle: tauri::AppHandle) -> 
 
     let handle = app_handle.clone();
     tauri::async_runtime::spawn_blocking(move || {
-        if let Some(existing) = handle.get_window("resultats-notes-window") {
+        if let Some(existing) = handle.get_webview_window("resultats-notes-window") {
             let _ = existing.show();
             let _ = existing.set_focus();
             return Ok(());
         }
 
-        tauri::WindowBuilder::new(
+        WebviewWindowBuilder::new(
             &handle,
             "resultats-notes-window",
-            tauri::WindowUrl::App("resultats-notes.html".into()),
+            WebviewUrl::App("resultats-notes.html".into()),
         )
         .title("AMV Notation - Notes juges")
         .inner_size(1100.0, 760.0)
@@ -160,21 +160,22 @@ pub async fn open_resultats_judge_notes_window(app_handle: tauri::AppHandle) -> 
 
 #[tauri::command]
 pub fn close_resultats_judge_notes_window(app_handle: tauri::AppHandle) -> Result<(), String> {
-    if let Some(window) = app_handle.get_window("resultats-notes-window") {
+    if let Some(window) = app_handle.get_webview_window("resultats-notes-window") {
         window.close().map_err(|e| e.to_string())?;
     }
     Ok(())
 }
 
 pub fn precreate_aux_windows(app: &tauri::App) {
-    if app.get_window("fullscreen-overlay").is_none() {
-        match tauri::WindowBuilder::new(
+    if app.get_webview_window("fullscreen-overlay").is_none() {
+        match WebviewWindowBuilder::new(
             app,
             "fullscreen-overlay",
-            tauri::WindowUrl::App("overlay.html".into()),
+            WebviewUrl::App("overlay.html".into()),
         )
         .transparent(true)
         .decorations(false)
+        .shadow(false)
         .always_on_top(false)
         .fullscreen(false)
         .visible(false)
@@ -195,34 +196,36 @@ pub fn precreate_aux_windows(app: &tauri::App) {
             }
         }
     }
-
 }
 
-pub fn handle_window_event(event: &tauri::GlobalWindowEvent) {
-    let label = event.window().label().to_string();
-    match event.event() {
+pub fn handle_window_event(window: &tauri::Window, event: &tauri::WindowEvent) {
+    let label = window.label().to_string();
+    let app_handle = window.app_handle();
+    match event {
         tauri::WindowEvent::CloseRequested { .. } => {
             if label == "main" {
-                if let Some(overlay) = event.window().app_handle().get_window("fullscreen-overlay") {
+                if let Some(overlay) = app_handle.get_webview_window("fullscreen-overlay") {
                     let _ = overlay.close();
                 }
-                if let Some(notes) = event.window().app_handle().get_window("notes-window") {
+                if let Some(notes) = app_handle.get_webview_window("notes-window") {
                     let _ = notes.close();
                 }
-                if let Some(resultats_notes) = event.window().app_handle().get_window("resultats-notes-window") {
+                if let Some(resultats_notes) =
+                    app_handle.get_webview_window("resultats-notes-window")
+                {
                     let _ = resultats_notes.close();
                 }
             } else if label == "notes-window" {
-                let _ = event.window().app_handle().emit_all("notes:close", ());
+                let _ = app_handle.emit("notes:close", ());
             } else if label == "resultats-notes-window" {
-                let _ = event.window().app_handle().emit_all("resultats-notes:close", ());
+                let _ = app_handle.emit("resultats-notes:close", ());
             }
         }
         tauri::WindowEvent::Destroyed => {
             if label == "notes-window" {
-                let _ = event.window().app_handle().emit_all("notes:close", ());
+                let _ = app_handle.emit("notes:close", ());
             } else if label == "resultats-notes-window" {
-                let _ = event.window().app_handle().emit_all("resultats-notes:close", ());
+                let _ = app_handle.emit("resultats-notes:close", ());
             }
         }
         _ => {}

@@ -74,6 +74,9 @@ export function useSpreadsheetDerivedData({
   )
   const showMiniatures = Boolean(currentProject?.settings.showMiniatures)
   const showQuickActions = currentProject?.settings.showQuickActions ?? true
+  const contestCategoriesEnabled = currentProject?.settings.contestCategoriesEnabled ?? false
+  const contestCategoryPresets = currentProject?.settings.contestCategoryPresets ?? []
+  const contestCategoryColors = currentProject?.settings.contestCategoryColors ?? {}
 
   const getCategoryScore = useCallback(
     (clipId: string, group: CategoryGroup): number => {
@@ -135,6 +138,9 @@ export function useSpreadsheetDerivedData({
     hideTotalsUntilAllScored,
     showMiniatures,
     showQuickActions,
+    contestCategoriesEnabled,
+    contestCategoryPresets,
+    contestCategoryColors,
     getCategoryScore,
     hasAnyScoreInGroup,
     hasAnyScoreInBareme,

@@ -8,10 +8,18 @@ import type { CategoryGroup } from '@/utils/results'
 import type { Clip, Project } from '@/types/project'
 import type { Note } from '@/types/notation'
 import type { ShortcutAction } from '@/utils/shortcuts'
+import { useI18n } from '@/i18n'
+import {
+  ALL_CONTEST_CATEGORY_KEY,
+  getClipContestCategory,
+  getContestCategoryColor,
+  normalizeContestCategoryPresets,
+} from '@/utils/contestCategory'
 
 interface UseSpreadsheetLoadedViewPropsParams {
   isDragOver: boolean
   clips: Clip[]
+  allSortedClips: Clip[]
   sortedClips: Clip[]
   currentClipIndex: number
   currentBareme: Bareme | null
@@ -21,6 +29,11 @@ interface UseSpreadsheetLoadedViewPropsParams {
   hideAverages: boolean
   showMiniatures: boolean
   showQuickActions: boolean
+  contestCategoriesEnabled: boolean
+  contestCategoryPresets: string[]
+  contestCategoryColors: Record<string, string>
+  activeContestCategoryView: string
+  onSelectContestCategoryView: (categoryKey: string) => void
   hasAnyLinkedVideo: boolean
   shortcutBindings: Record<ShortcutAction, string>
   currentProject: Project | null
@@ -39,7 +52,11 @@ interface UseSpreadsheetLoadedViewPropsParams {
   openPlayerAtFront: () => void
   setEditingManualClipId: (clipId: string | null) => void
   handleManualClipBlur: (clipId: string, event: FocusEvent<HTMLDivElement>) => void
-  handleManualClipFieldChange: (clipId: string, field: 'author' | 'displayName', value: string) => void
+  handleManualClipFieldChange: (
+    clipId: string,
+    field: 'author' | 'displayName' | 'contestCategory',
+    value: string,
+  ) => void
   handleChange: (clipId: string, criterionId: string, value: string) => void
   handleKeyDown: (event: ReactKeyboardEvent<Element>, clipIdx: number, critIdx: number) => void
   seek: (time: number) => Promise<void>
@@ -65,10 +82,14 @@ interface UseSpreadsheetLoadedViewPropsParams {
   contextMenu: { clipId: string; x: number; y: number } | null
   contextClip: Clip | null
   contextMenuRef: MutableRefObject<HTMLDivElement | null>
+  favoriteDialogProps: ComponentProps<typeof SpreadsheetLoadedView>['favoriteDialogProps']
+  contestCategoryDialogProps: ComponentProps<typeof SpreadsheetLoadedView>['contestCategoryDialogProps']
   handleToggleScored: (clip: Clip) => void
+  handleOpenFavorite: (clip: Clip) => void
   handleOpenNotes: (clip: Clip) => void
   handleAttachVideo: (clip: Clip) => void
   handleRenameClip: (clip: Clip) => void
+  handleEditContestCategory: (clip: Clip) => void
   handleSwapPseudoAndClipName: (clip: Clip) => void
   handleSetMiniatureFromCurrentFrame: (clip: Clip) => void
   handleResetMiniature: (clip: Clip) => void
@@ -83,6 +104,7 @@ interface UseSpreadsheetLoadedViewPropsParams {
 export function useSpreadsheetLoadedViewProps({
   isDragOver,
   clips,
+  allSortedClips,
   sortedClips,
   currentClipIndex,
   currentBareme,
@@ -92,6 +114,11 @@ export function useSpreadsheetLoadedViewProps({
   hideAverages,
   showMiniatures,
   showQuickActions,
+  contestCategoriesEnabled,
+  contestCategoryPresets,
+  contestCategoryColors,
+  activeContestCategoryView,
+  onSelectContestCategoryView,
   hasAnyLinkedVideo,
   shortcutBindings,
   currentProject,
@@ -130,10 +157,14 @@ export function useSpreadsheetLoadedViewProps({
   contextMenu,
   contextClip,
   contextMenuRef,
+  favoriteDialogProps,
+  contestCategoryDialogProps,
   handleToggleScored,
+  handleOpenFavorite,
   handleOpenNotes,
   handleAttachVideo,
   handleRenameClip,
+  handleEditContestCategory,
   handleSwapPseudoAndClipName,
   handleSetMiniatureFromCurrentFrame,
   handleResetMiniature,
@@ -144,7 +175,23 @@ export function useSpreadsheetLoadedViewProps({
   mediaInfoClip,
   setMediaInfoClip,
 }: UseSpreadsheetLoadedViewPropsParams): ComponentProps<typeof SpreadsheetLoadedView> | null {
+  const { t } = useI18n()
   if (!currentBareme) return null
+  const normalizedContestPresets = normalizeContestCategoryPresets(contestCategoryPresets)
+  const contestCategoryViewTabs = [
+    {
+      key: ALL_CONTEST_CATEGORY_KEY,
+      label: t('Toutes catégories'),
+      color: 'rgb(var(--color-primary-500) / 0.75)',
+      count: allSortedClips.length,
+    },
+    ...normalizedContestPresets.map((category, index) => ({
+      key: category,
+      label: category,
+      color: getContestCategoryColor(category, contestCategoryColors, index),
+      count: allSortedClips.filter((clip) => getClipContestCategory(clip) === category).length,
+    })),
+  ]
 
   const tableProps = buildSpreadsheetTableProps({
     clips,
@@ -207,9 +254,11 @@ export function useSpreadsheetLoadedViewProps({
     shortcutBindings,
     contextMenuRef,
     handleToggleScored,
+    handleOpenFavorite,
     handleOpenNotes,
     handleAttachVideo,
     handleRenameClip,
+    handleEditContestCategory,
     handleSwapPseudoAndClipName,
     handleSetMiniatureFromCurrentFrame,
     handleResetMiniature,
@@ -225,8 +274,13 @@ export function useSpreadsheetLoadedViewProps({
     showQuickActions,
     toolbarProps: {
       currentClip,
+      contestCategoriesEnabled,
+      contestCategoryViewTabs,
+      activeContestCategoryView,
       onAddManualRow: handleAddManualRow,
+      onSelectContestCategoryView,
       onToggleScored: handleToggleScored,
+      onOpenFavorite: handleOpenFavorite,
       onOpenNotes: handleOpenNotes,
       onAttachVideo: handleAttachVideo,
       onRenameClip: handleRenameClip,
@@ -245,6 +299,8 @@ export function useSpreadsheetLoadedViewProps({
       framePreview,
     },
     contextMenuProps,
+    favoriteDialogProps,
+    contestCategoryDialogProps,
     mediaInfoClip,
     onCloseMediaInfo: () => setMediaInfoClip(null),
   } satisfies ComponentProps<typeof SpreadsheetLoadedView>

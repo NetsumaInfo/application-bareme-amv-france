@@ -1,7 +1,15 @@
+import { useMemo } from 'react'
 import { AppSelect } from '@/components/ui/AppSelect'
 import { SettingsToggle } from '@/components/settings/SettingsToggle'
+import { ContestCategoriesEditor } from '@/components/project/ContestCategoriesEditor'
 import type { ClipNamePattern, MultiPseudoDisplayMode, Project, ProjectSettings } from '@/types/project'
 import { useI18n } from '@/i18n'
+import {
+  buildContestCategoryEditorItems,
+  getContestCategoryColor,
+  type ContestCategoryEditorItem,
+} from '@/utils/contestCategory'
+import { sanitizeColor } from '@/utils/colors'
 
 interface SettingsProjectTabProps {
   currentProject: Project | null
@@ -25,6 +33,14 @@ export function SettingsProjectTab({
   const showQuickActions = settings?.showQuickActions ?? true
   const multiPseudoDisplayMode = settings?.multiPseudoDisplayMode ?? 'all'
   const clipNamePattern = settings?.clipNamePattern ?? 'pseudo_clip'
+  const contestCategoriesEnabled = settings?.contestCategoriesEnabled ?? false
+  const contestCategoryItems = useMemo<ContestCategoryEditorItem[]>(
+    () => buildContestCategoryEditorItems(
+      settings?.contestCategoryPresets ?? [],
+      settings?.contestCategoryColors ?? {},
+    ),
+    [settings?.contestCategoryColors, settings?.contestCategoryPresets],
+  )
 
   const multiPseudoDisplayOptions: Array<{ value: MultiPseudoDisplayMode; label: string }> = [
     { value: 'collab_mep', label: t('Collab / MEP') },
@@ -161,7 +177,53 @@ export function SettingsProjectTab({
                 onChange={() => onUpdateSettings({ showQuickActions: !showQuickActions })}
               />
             </div>
+            <div className={ROW}>
+              <div>
+                <span className="text-sm text-gray-300 block">{t('Activer les catégories concours rapides')}</span>
+                <span className="text-[10px] text-gray-500">{t('Affiche des boutons de catégories au centre de la barre')}</span>
+              </div>
+              <SettingsToggle
+                checked={contestCategoriesEnabled}
+                onChange={() => onUpdateSettings({ contestCategoriesEnabled: !contestCategoriesEnabled })}
+              />
+            </div>
           </div>
+
+          {contestCategoriesEnabled ? (
+            <div>
+              <label className="text-xs font-medium text-gray-400 mb-2 block">{t('Catégories concours')}</label>
+              <ContestCategoriesEditor
+                items={contestCategoryItems}
+                onChange={(nextItems) => {
+                  const presets: string[] = []
+                  const colors: Record<string, string> = {}
+                  const seen = new Set<string>()
+
+                  for (const [index, item] of nextItems.entries()) {
+                    const rawName = item.name.slice(0, 80)
+                    if (!rawName.trim()) continue
+                    const dedupKey = rawName.toLocaleLowerCase()
+                    if (seen.has(dedupKey)) continue
+                    seen.add(dedupKey)
+                    presets.push(rawName)
+                    colors[rawName] = sanitizeColor(
+                      item.color,
+                      getContestCategoryColor(rawName, {}, index),
+                    )
+                    if (presets.length >= 24) break
+                  }
+
+                  onUpdateSettings({
+                    contestCategoryPresets: presets,
+                    contestCategoryColors: colors,
+                  })
+                }}
+              />
+              <p className="mt-1.5 text-[10px] text-gray-500">
+                {t('Catégories visibles au centre de la barre. Le mode Toutes catégories affiche tout; un mode catégorie filtre la table.')}
+              </p>
+            </div>
+          ) : null}
 
           {/* Miniature frame */}
           <div>

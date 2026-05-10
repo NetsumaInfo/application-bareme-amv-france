@@ -24,7 +24,7 @@ export function OverlayTopBar({
       className={`absolute top-0 left-0 right-0 ${compactControls ? 'px-3 py-2' : 'px-6 py-4'} ${
         isPlayerFullscreen
           ? 'bg-gradient-to-b from-black/55 via-slate-950/25 to-transparent'
-          : 'bg-slate-950/52 border-b border-white/10 backdrop-blur-[3px]'
+          : 'bg-gradient-to-b from-black/34 via-slate-950/14 to-transparent'
       } transition-opacity duration-300 ${
         controlsVisible ? 'opacity-100' : 'opacity-0 pointer-events-none'
       }`}

@@ -10,6 +10,11 @@ import type {
 import { DEFAULT_PROJECT_SETTINGS } from '@/types/project'
 import { generateId, parseClipName } from '@/utils/formatters'
 import { sanitizeColor } from '@/utils/colors'
+import {
+  normalizeContestCategory,
+  normalizeContestCategoryColorMap,
+  normalizeContestCategoryPresets,
+} from '@/utils/contestCategory'
 
 interface NormalizedProjectData {
   project: Project
@@ -77,6 +82,23 @@ function normalizeImportedJudges(rawImportedJudges: unknown[]): ImportedJudgeDat
         }
 
         const parsedFinalScore = Number(noteRow.finalScore)
+        const favoriteValue = noteRow.favorite ?? noteRow.isFavorite ?? noteRow.is_favorite
+        const favoriteComment = typeof noteRow.favoriteComment === 'string'
+          ? noteRow.favoriteComment
+          : typeof noteRow.favorite_comment === 'string'
+            ? noteRow.favorite_comment
+            : undefined
+        const isFavorite = typeof favoriteValue === 'boolean'
+          ? favoriteValue
+          : favoriteValue === 1
+            ? true
+            : favoriteValue === 0
+              ? false
+              : favoriteValue === 'true'
+                ? true
+                : favoriteValue === 'false'
+                  ? false
+                  : undefined
         const textNotes = typeof noteRow.textNotes === 'string'
           ? noteRow.textNotes
           : typeof noteRow.text_notes === 'string'
@@ -109,12 +131,16 @@ function normalizeImportedJudges(rawImportedJudges: unknown[]): ImportedJudgeDat
               textNotes,
               criterionNotes,
               categoryNotes,
+              favorite: isFavorite,
+              favoriteComment,
             }
           : {
               scores,
               textNotes,
               criterionNotes,
               categoryNotes,
+              favorite: isFavorite,
+              favoriteComment,
             }
       }
 
@@ -158,6 +184,12 @@ export function normalizeProjectDataInput(data: ProjectData): NormalizedProjectD
     return DEFAULT_PROJECT_SETTINGS.multiPseudoDisplayMode
   })()
   const normalizedClipNamePattern = normalizeClipNamePattern(rawSettings)
+  const normalizedContestCategoryPresets = normalizeContestCategoryPresets(
+    rawSettings.contestCategoryPresets
+    ?? rawSettings.contest_category_presets
+    ?? rawSettings.categoryPresets
+    ?? rawSettings.category_presets,
+  )
 
   const project: Project = {
     id: (rawProject.id as string) || generateId(),
@@ -230,6 +262,20 @@ export function normalizeProjectDataInput(data: ProjectData): NormalizedProjectD
       multiPseudoDisplayMode: normalizedMultiPseudoDisplayMode,
       clipNamePattern: normalizedClipNamePattern,
       thumbnailDefaultTimeSec: clampedThumbnailDefaultTime,
+      contestCategoriesEnabled:
+        typeof rawSettings.contestCategoriesEnabled === 'boolean'
+          ? rawSettings.contestCategoriesEnabled
+          : typeof rawSettings.contest_categories_enabled === 'boolean'
+            ? rawSettings.contest_categories_enabled
+            : DEFAULT_PROJECT_SETTINGS.contestCategoriesEnabled,
+      contestCategoryPresets: normalizedContestCategoryPresets,
+      contestCategoryColors: normalizeContestCategoryColorMap(
+        rawSettings.contestCategoryColors
+        ?? rawSettings.contest_category_colors
+        ?? rawSettings.categoryColors
+        ?? rawSettings.category_colors,
+        normalizedContestCategoryPresets,
+      ),
     },
     resultNotes: normalizeTextMap(rawProject.resultNotes ?? rawProject.result_notes),
     filePath:
@@ -266,6 +312,20 @@ export function normalizeProjectDataInput(data: ProjectData): NormalizedProjectD
       audioTrackCount:
         Math.max(1, Number(rawClip.audioTrackCount ?? rawClip.audio_track_count ?? 1) || 1),
       scored: Boolean(rawClip.scored),
+      favorite: Boolean(rawClip.favorite ?? rawClip.isFavorite ?? rawClip.is_favorite ?? false),
+      favoriteComment:
+        typeof rawClip.favoriteComment === 'string'
+          ? rawClip.favoriteComment
+          : typeof rawClip.favorite_comment === 'string'
+            ? rawClip.favorite_comment
+            : '',
+      contestCategory: normalizeContestCategory(
+        rawClip.contestCategory
+        ?? rawClip.contest_category
+        ?? rawClip.category
+        ?? rawClip.clipCategory
+        ?? rawClip.clip_category,
+      ) || undefined,
       order: numberOr(rawClip.order, index),
       thumbnailTime,
     }

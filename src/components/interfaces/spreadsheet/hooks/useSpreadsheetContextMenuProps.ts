@@ -13,9 +13,11 @@ interface UseSpreadsheetContextMenuPropsParams {
   shortcutBindings: Record<ShortcutAction, string>
   contextMenuRef: MutableRefObject<HTMLDivElement | null>
   handleToggleScored: (clip: Clip) => void
+  handleOpenFavorite: (clip: Clip) => void
   handleOpenNotes: (clip: Clip) => void
   handleAttachVideo: (clip: Clip) => void
   handleRenameClip: (clip: Clip) => void
+  handleEditContestCategory: (clip: Clip) => void
   handleSwapPseudoAndClipName: (clip: Clip) => void
   handleSetMiniatureFromCurrentFrame: (clip: Clip) => void
   handleResetMiniature: (clip: Clip) => void
@@ -35,9 +37,11 @@ export function buildSpreadsheetContextMenuProps({
   shortcutBindings,
   contextMenuRef,
   handleToggleScored,
+  handleOpenFavorite,
   handleOpenNotes,
   handleAttachVideo,
   handleRenameClip,
+  handleEditContestCategory,
   handleSwapPseudoAndClipName,
   handleSetMiniatureFromCurrentFrame,
   handleResetMiniature,
@@ -56,9 +60,11 @@ export function buildSpreadsheetContextMenuProps({
     shortcutBindings,
     contextMenuRef,
     onToggleScored: handleToggleScored,
+    onOpenFavorite: handleOpenFavorite,
     onOpenNotes: handleOpenNotes,
     onAttachVideo: handleAttachVideo,
     onRenameClip: handleRenameClip,
+    onEditContestCategory: handleEditContestCategory,
     onSwapPseudoAndClipName: handleSwapPseudoAndClipName,
     onSetMiniatureFromCurrentFrame: handleSetMiniatureFromCurrentFrame,
     onResetMiniature: handleResetMiniature,

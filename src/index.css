@@ -759,6 +759,21 @@ body {
   margin: 0;
 }
 
+.amv-results-scroll {
+  overflow-y: auto;
+  overflow-x: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  scroll-behavior: auto;
+  -webkit-overflow-scrolling: touch;
+  overflow-anchor: none;
+}
+
+:where(.overflow-auto, .overflow-y-auto, .overflow-x-auto) {
+  scroll-behavior: auto;
+  overscroll-behavior: contain;
+}
+
 /* Ensure no white native spinner appears anywhere on Windows/WebView */
 input[type='number'] {
   appearance: textfield;

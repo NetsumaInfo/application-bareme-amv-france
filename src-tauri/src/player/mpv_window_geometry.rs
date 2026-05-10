@@ -1,5 +1,5 @@
-use crate::player::mpv_win32::*;
 use super::MpvChildWindow;
+use crate::player::mpv_win32::*;
 
 impl MpvChildWindow {
     /// Returns the current outer window rect as (left, top, width, height).

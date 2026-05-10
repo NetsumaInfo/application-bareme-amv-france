@@ -76,14 +76,8 @@ impl MpvPlayer {
 
     pub fn get_media_info(&self) -> MediaInfo {
         let tracks = self.get_track_list();
-        let audio_track_count = tracks
-            .iter()
-            .filter(|t| t.track_type == "audio")
-            .count() as i64;
-        let video_track_count = tracks
-            .iter()
-            .filter(|t| t.track_type == "video")
-            .count() as i64;
+        let audio_track_count = tracks.iter().filter(|t| t.track_type == "audio").count() as i64;
+        let video_track_count = tracks.iter().filter(|t| t.track_type == "video").count() as i64;
         let subtitle_track_count = tracks
             .iter()
             .filter(|t| t.track_type == "sub" || t.track_type == "subtitle")
@@ -94,9 +88,18 @@ impl MpvPlayer {
             height: self.get_property_string_safe("height").parse().unwrap_or(0),
             video_codec: self.get_property_string_safe("video-codec"),
             audio_codec: self.get_property_string_safe("audio-codec-name"),
-            file_size: self.get_property_string_safe("file-size").parse().unwrap_or(0),
-            video_bitrate: self.get_property_string_safe("video-bitrate").parse().unwrap_or(0),
-            audio_bitrate: self.get_property_string_safe("audio-bitrate").parse().unwrap_or(0),
+            file_size: self
+                .get_property_string_safe("file-size")
+                .parse()
+                .unwrap_or(0),
+            video_bitrate: self
+                .get_property_string_safe("video-bitrate")
+                .parse()
+                .unwrap_or(0),
+            audio_bitrate: self
+                .get_property_string_safe("audio-bitrate")
+                .parse()
+                .unwrap_or(0),
             fps: self.get_property_double("container-fps").unwrap_or(0.0),
             sample_rate: self
                 .get_property_string_safe("audio-params/samplerate")
@@ -109,8 +112,14 @@ impl MpvPlayer {
             format_name: self.get_property_string_safe("file-format"),
             duration: self.get_duration(),
             format_long_name: String::new(),
-            overall_bitrate: self.get_property_string_safe("video-bitrate").parse().unwrap_or(0)
-                + self.get_property_string_safe("audio-bitrate").parse().unwrap_or(0),
+            overall_bitrate: self
+                .get_property_string_safe("video-bitrate")
+                .parse()
+                .unwrap_or(0)
+                + self
+                    .get_property_string_safe("audio-bitrate")
+                    .parse()
+                    .unwrap_or(0),
             video_profile: self.get_property_string_safe("video-params/profile"),
             pixel_format: self.get_property_string_safe("video-params/pixelformat"),
             color_space: self.get_property_string_safe("video-params/colormatrix"),
@@ -154,10 +163,7 @@ impl MpvPlayer {
                 .replace(',', ".")
                 .trim()
                 .to_string();
-            let first_token = normalized
-                .split_whitespace()
-                .next()
-                .unwrap_or("");
+            let first_token = normalized.split_whitespace().next().unwrap_or("");
             first_token.parse::<f64>().ok()
         }
 

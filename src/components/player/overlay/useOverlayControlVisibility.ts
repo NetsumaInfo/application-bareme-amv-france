@@ -1,30 +1,30 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { appWindow } from '@tauri-apps/api/window'
+import { getCurrentWindow } from '@tauri-apps/api/window'
 
 interface UseOverlayControlVisibilityOptions {
-  isPlayerFullscreen: boolean
+  autoHideControls: boolean
 }
 
-export function useOverlayControlVisibility({ isPlayerFullscreen }: UseOverlayControlVisibilityOptions) {
+export function useOverlayControlVisibility({ autoHideControls }: UseOverlayControlVisibilityOptions) {
   const [showControls, setShowControls] = useState(true)
   const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const resetHideTimer = useCallback(() => {
     setShowControls(true)
-    if (isPlayerFullscreen) {
-      appWindow.setFocus().catch(() => {})
+    if (autoHideControls) {
+      getCurrentWindow().setFocus().catch(() => {})
       if (hideTimerRef.current) clearTimeout(hideTimerRef.current)
       hideTimerRef.current = setTimeout(() => setShowControls(false), 3000)
     }
-  }, [isPlayerFullscreen])
+  }, [autoHideControls])
 
   useEffect(() => {
-    if (!isPlayerFullscreen) return
+    if (!autoHideControls) return
     hideTimerRef.current = setTimeout(() => setShowControls(false), 3000)
     return () => {
       if (hideTimerRef.current) clearTimeout(hideTimerRef.current)
     }
-  }, [isPlayerFullscreen])
+  }, [autoHideControls])
 
   useEffect(() => {
     const onActivity = () => resetHideTimer()
@@ -40,7 +40,7 @@ export function useOverlayControlVisibility({ isPlayerFullscreen }: UseOverlayCo
 
   return {
     showControls,
-    controlsVisible: !isPlayerFullscreen || showControls,
+    controlsVisible: !autoHideControls || showControls,
     resetHideTimer,
   }
 }

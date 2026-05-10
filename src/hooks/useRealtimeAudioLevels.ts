@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
 import * as tauri from '@/services/tauri'
 
-const AUDIO_LEVEL_POLL_MS = 100
-const DB_DELTA_THRESHOLD = 0.15
+const AUDIO_LEVEL_POLL_MS = 16
+const DB_DELTA_THRESHOLD = 0.03
 
 const DEFAULT_AUDIO_LEVELS: tauri.AudioLevels = {
   left_db: -90,

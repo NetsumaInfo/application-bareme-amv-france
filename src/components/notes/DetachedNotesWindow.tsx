@@ -33,6 +33,7 @@ function useDetachedNotesWindowState() {
   const inputRefs = useRef<Map<string, HTMLInputElement>>(new Map())
   const [expandedCriterionNotes, setExpandedCriterionNotes] = useState<Record<string, boolean>>({})
   const categoryTextareaRefs = useRef<Map<string, HTMLTextAreaElement>>(new Map())
+  const favoriteTextareaRef = useRef<HTMLTextAreaElement | null>(null)
   const globalTextareaRef = useRef<HTMLTextAreaElement | null>(null)
   const activeNoteFieldRef = useRef<ActiveNoteField | null>(null)
   const clipRef = useRef<Clip | null>(null)
@@ -52,6 +53,7 @@ function useDetachedNotesWindowState() {
     expandedCriterionNotes,
     setExpandedCriterionNotes,
     categoryTextareaRefs,
+    favoriteTextareaRef,
     globalTextareaRef,
     activeNoteFieldRef,
     clipRef,
@@ -77,6 +79,7 @@ export default function DetachedNotesWindow() {
     expandedCriterionNotes,
     setExpandedCriterionNotes,
     categoryTextareaRefs,
+    favoriteTextareaRef,
     globalTextareaRef,
     activeNoteFieldRef,
     clipRef,
@@ -150,6 +153,7 @@ export default function DetachedNotesWindow() {
     handleTextChange,
     handleCategoryNoteChange,
     handleCriterionNoteChange,
+    handleFavoriteCommentChange,
     flushPendingNoteUpdates,
     insertCurrentTimecode,
   } = useDetachedNotesEditing({
@@ -157,6 +161,7 @@ export default function DetachedNotesWindow() {
     clipFps,
     setLocalNote,
     categoryTextareaRefs,
+    favoriteTextareaRef,
     globalTextareaRef,
     activeNoteFieldRef,
   })
@@ -236,6 +241,8 @@ export default function DetachedNotesWindow() {
 
       <DetachedNotesCategories
         categories={categories}
+        isFavorite={Boolean(clip.favorite)}
+        favoriteComment={clip.favoriteComment ?? ''}
         expandedCategory={expandedCategory}
         setExpandedCategory={setExpandedCategory}
         shouldHideTotals={shouldHideTotals}
@@ -246,12 +253,26 @@ export default function DetachedNotesWindow() {
         setExpandedCriterionNotes={setExpandedCriterionNotes}
         inputRefs={inputRefs}
         categoryTextareaRefs={categoryTextareaRefs}
+        favoriteTextareaRef={favoriteTextareaRef}
         activeNoteFieldRef={activeNoteFieldRef}
         clipFps={clipFps}
         onValueChange={handleValueChange}
         onInputKeyDown={handleInputKeyDown}
         onCriterionNoteChange={handleCriterionNoteChange}
         onCategoryNoteChange={handleCategoryNoteChange}
+        onFavoriteCommentChange={(nextValue) => {
+          setClipData((prev) => {
+            if (!prev?.clip || prev.clip.id !== clip.id) return prev
+            return {
+              ...prev,
+              clip: {
+                ...prev.clip,
+                favoriteComment: nextValue,
+              },
+            }
+          })
+          handleFavoriteCommentChange(nextValue)
+        }}
         onTimecodeJump={handleTimecodeJump}
         onTimecodeHover={showFramePreview}
         onTimecodeLeave={hideFramePreview}

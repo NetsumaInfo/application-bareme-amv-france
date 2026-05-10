@@ -4,6 +4,7 @@ import {
   FileJson,
   FileSpreadsheet,
   FileText,
+  MessageSquareText,
   Rows3,
   Table,
   Table2,
@@ -85,6 +86,15 @@ export function ExportContextMenu({
       minWidthClassName="min-w-[220px]"
     >
       <AppContextMenuItem
+        label={t('Discord')}
+        icon={MessageSquareText}
+        active={layoutMode === 'discord'}
+        onClick={() => {
+          onSetLayoutMode('discord')
+          onClose()
+        }}
+      />
+      <AppContextMenuItem
         label={t('Tableau complet')}
         icon={Table}
         active={layoutMode === 'table'}
@@ -164,41 +174,54 @@ export function ExportContextMenu({
         </>
       ) : null}
 
-      <AppContextMenuSeparator />
-      <AppContextMenuItem
-        label={t('Exporter PNG')}
-        icon={FileImage}
-        onClick={() => exportAndClose(() => { exportContainer('png', exportCaptureOptions).catch(() => {}) })}
-      />
-      <AppContextMenuItem
-        label={t('Exporter PDF')}
-        icon={FileText}
-        onClick={() => exportAndClose(() => { exportContainer('pdf', exportCaptureOptions).catch(() => {}) })}
-      />
-      {layoutMode === 'table' ? (
+      {layoutMode === 'discord' ? (
         <>
+          <AppContextMenuSeparator />
           <AppContextMenuItem
-            label={t('Exporter Excel')}
-            icon={FileSpreadsheet}
-            onClick={() => exportAndClose(() => { exportSpreadsheet().catch(() => {}) })}
-          />
-          <AppContextMenuItem
-            label={t('Exporter HTML/CSS')}
-            icon={Code2}
-            onClick={() => exportAndClose(() => { exportHtml().catch(() => {}) })}
+            label={t('Utilisez les boutons de copie Discord')}
+            icon={MessageSquareText}
+            disabled
           />
         </>
-      ) : null}
-      <AppContextMenuItem
-        label={t('Exporter PDF notes')}
-        icon={FileText}
-        onClick={() => exportAndClose(() => { exportNotesPdf().catch(() => {}) })}
-      />
-      <AppContextMenuItem
-        label={t('Exporter JSON')}
-        icon={FileJson}
-        onClick={() => exportAndClose(() => { exportJson().catch(() => {}) })}
-      />
+      ) : (
+        <>
+          <AppContextMenuSeparator />
+          <AppContextMenuItem
+            label={t('Exporter PNG')}
+            icon={FileImage}
+            onClick={() => exportAndClose(() => { exportContainer('png', exportCaptureOptions).catch(() => {}) })}
+          />
+          <AppContextMenuItem
+            label={t('Exporter PDF')}
+            icon={FileText}
+            onClick={() => exportAndClose(() => { exportContainer('pdf', exportCaptureOptions).catch(() => {}) })}
+          />
+          {layoutMode === 'table' ? (
+            <>
+              <AppContextMenuItem
+                label={t('Exporter Excel')}
+                icon={FileSpreadsheet}
+                onClick={() => exportAndClose(() => { exportSpreadsheet().catch(() => {}) })}
+              />
+              <AppContextMenuItem
+                label={t('Exporter HTML/CSS')}
+                icon={Code2}
+                onClick={() => exportAndClose(() => { exportHtml().catch(() => {}) })}
+              />
+            </>
+          ) : null}
+          <AppContextMenuItem
+            label={t('Exporter PDF notes')}
+            icon={FileText}
+            onClick={() => exportAndClose(() => { exportNotesPdf().catch(() => {}) })}
+          />
+          <AppContextMenuItem
+            label={t('Exporter JSON')}
+            icon={FileJson}
+            onClick={() => exportAndClose(() => { exportJson().catch(() => {}) })}
+          />
+        </>
+      )}
     </AppContextMenuPanel>
   )
 }

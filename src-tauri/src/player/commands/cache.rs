@@ -64,7 +64,7 @@ fn normalized_cache_path(path: &str) -> String {
     let normalized = super::parsing::normalize_path(path);
     #[cfg(target_os = "windows")]
     {
-        return normalized.to_ascii_lowercase();
+        normalized.to_ascii_lowercase()
     }
     #[cfg(not(target_os = "windows"))]
     {
@@ -99,12 +99,16 @@ pub(super) fn put_media_info_cache(path: &str, info: crate::player::mpv_wrapper:
 
 pub(super) fn get_frame_preview_cached(path: &str, seconds: f64, width: u32) -> Option<String> {
     let key = frame_preview_cache_key(path, seconds, width);
-    let mut cache = FRAME_PREVIEW_CACHE.lock().unwrap_or_else(|e| e.into_inner());
+    let mut cache = FRAME_PREVIEW_CACHE
+        .lock()
+        .unwrap_or_else(|e| e.into_inner());
     cache.get(&key)
 }
 
 pub(super) fn put_frame_preview_cache(path: &str, seconds: f64, width: u32, image: String) {
     let key = frame_preview_cache_key(path, seconds, width);
-    let mut cache = FRAME_PREVIEW_CACHE.lock().unwrap_or_else(|e| e.into_inner());
+    let mut cache = FRAME_PREVIEW_CACHE
+        .lock()
+        .unwrap_or_else(|e| e.into_inner());
     cache.put(key, image);
 }

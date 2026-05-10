@@ -10,7 +10,7 @@ import { shouldHideResultsUntilAllScored } from '@/utils/resultsVisibility'
 
 interface UseNotesBridgeOptions {
   isNotesDetached: boolean
-  clips: Array<{ id: string; filePath?: string }>
+  clips: Array<{ id: string; filePath?: string; favorite?: boolean; favoriteComment?: string }>
   currentClipIndex: number
   notes: unknown
   currentProject: {
@@ -36,6 +36,8 @@ export function useNotesBridge({
   onSetCurrentClipMiniatureFrame,
   onToggleMiniatures,
 }: UseNotesBridgeOptions) {
+  const selectedClip = clips[currentClipIndex]
+
   const emitNotesClipData = useCallback(() => {
     const projectStore = useProjectStore.getState()
     const { clips: allClips, currentClipIndex: idx, currentProject: project } = projectStore
@@ -98,6 +100,19 @@ export function useNotesBridge({
       const { clipId, criterionId, text } = event.payload
       useNotationStore.getState().setCriterionNote(clipId, criterionId, text)
       useProjectStore.getState().markDirty()
+    }).then(pushUnlisten)
+
+    listen<{ clipId?: string; text?: string }>('notes:favorite-comment-updated', (event) => {
+      const clipId = event.payload?.clipId
+      if (!clipId) return
+
+      const store = useProjectStore.getState()
+      const targetClip = store.clips.find((clip) => clip.id === clipId)
+      if (!targetClip?.favorite) return
+
+      const text = typeof event.payload?.text === 'string' ? event.payload.text : ''
+      store.setClipFavorite(clipId, true, text)
+      emitNotesClipData()
     }).then(pushUnlisten)
 
     listen<{ direction?: 'next' | 'prev'; fromClipId?: string }>('notes:navigate-clip', (event) => {
@@ -198,6 +213,8 @@ export function useNotesBridge({
     isNotesDetached,
     currentClipIndex,
     clips.length,
+    selectedClip?.favorite,
+    selectedClip?.favoriteComment,
     notes,
     emitNotesClipData,
     currentProject?.settings.hideTotals,

@@ -100,6 +100,22 @@ export function normalizeImportedJudge(
     }
 
     const maybeFinal = Number(noteRaw.finalScore)
+    const favoriteRaw = noteRaw.favorite ?? noteRaw.isFavorite ?? noteRaw.is_favorite
+    const favoriteCommentRaw = noteRaw.favoriteComment ?? noteRaw.favorite_comment
+    const favorite = typeof favoriteRaw === 'boolean'
+      ? favoriteRaw
+      : favoriteRaw === 1
+        ? true
+        : favoriteRaw === 0
+          ? false
+          : favoriteRaw === 'true'
+            ? true
+            : favoriteRaw === 'false'
+              ? false
+              : undefined
+    const favoriteComment = typeof favoriteCommentRaw === 'string'
+      ? favoriteCommentRaw
+      : undefined
     const textNotes =
       typeof noteRaw.textNotes === 'string'
         ? noteRaw.textNotes
@@ -134,12 +150,16 @@ export function normalizeImportedJudge(
           textNotes,
           criterionNotes,
           categoryNotes,
+          favorite,
+          favoriteComment,
         }
       : {
           scores,
           textNotes,
           criterionNotes,
           categoryNotes,
+          favorite,
+          favoriteComment,
         }
   }
 

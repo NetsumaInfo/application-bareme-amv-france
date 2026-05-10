@@ -1,5 +1,5 @@
-use crate::player::mpv_win32::*;
 use super::MpvChildWindow;
+use crate::player::mpv_win32::*;
 
 impl MpvChildWindow {
     pub fn set_fullscreen(&self, fullscreen: bool) {
@@ -76,7 +76,11 @@ impl MpvChildWindow {
                     screen_h,
                     SWP_SHOWWINDOW
                         | SWP_NOACTIVATE
-                        | if self.is_detached() { SWP_FRAMECHANGED } else { 0 },
+                        | if self.is_detached() {
+                            SWP_FRAMECHANGED
+                        } else {
+                            0
+                        },
                 );
             } else {
                 let (x, y, w, h) = if self.is_detached() {
@@ -109,7 +113,12 @@ impl MpvChildWindow {
                     y,
                     w.max(1),
                     h.max(1),
-                    SWP_SHOWWINDOW | if self.is_detached() { SWP_FRAMECHANGED } else { 0 },
+                    SWP_SHOWWINDOW
+                        | if self.is_detached() {
+                            SWP_FRAMECHANGED
+                        } else {
+                            0
+                        },
                 );
             }
         }

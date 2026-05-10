@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { FolderPlus, Check, Circle, CheckSquare2, Trash2 } from 'lucide-react'
+import { FolderPlus, Check, Circle, CheckSquare2, Star, Trash2 } from 'lucide-react'
 import { useProjectStore } from '@/store/useProjectStore'
 import { useClipDeletionStore } from '@/store/useClipDeletionStore'
 import { useNotationStore } from '@/store/useNotationStore'
@@ -16,18 +16,23 @@ import {
   AppContextMenuSeparator,
 } from '@/components/ui/AppContextMenu'
 import { UI_ICONS } from '@/components/ui/actionIcons'
+import { ClipFavoriteDialog } from '@/components/project/ClipFavoriteDialog'
 
 export default function VideoList() {
   const { t } = useI18n()
   const detailedNotesIcon = UI_ICONS.detailedNotes
   const detailedNotesSecondaryIcon = UI_ICONS.detailedNotesSecondary
-  const { clips, currentClipIndex, setCurrentClip, setClips, currentProject, updateProject, setClipScored } =
+  const { clips, currentClipIndex, setCurrentClip, setClips, currentProject, updateProject, setClipScored, setClipFavorite } =
     useProjectStore()
   const { isClipComplete } = useNotationStore()
   const setNotesDetached = useUIStore((state) => state.setNotesDetached)
   const requestClipDeletion = useClipDeletionStore((state) => state.requestClipDeletion)
   const [contextMenu, setContextMenu] = useState<{ clipId: string; x: number; y: number } | null>(null)
+  const [favoriteDialogClipId, setFavoriteDialogClipId] = useState<string | null>(null)
   const contextMenuRef = useRef<HTMLDivElement | null>(null)
+  const favoriteDialogClip = favoriteDialogClipId
+    ? (clips.find((clip) => clip.id === favoriteDialogClipId) ?? null)
+    : null
 
   useEffect(() => {
     if (!contextMenu) return
@@ -95,6 +100,7 @@ export default function VideoList() {
         {clips.map((clip, index) => {
           const isActive = index === currentClipIndex
           const isComplete = isClipComplete(clip.id)
+          const isScored = clip.scored || isComplete
 
           return (
             <button
@@ -112,7 +118,7 @@ export default function VideoList() {
               }`}
             >
               <span className="flex-shrink-0">
-                {isComplete ? (
+                {isScored ? (
                   <Check size={12} className="text-green-400" />
                 ) : (
                   <Circle size={12} className="text-gray-600" />
@@ -124,6 +130,14 @@ export default function VideoList() {
                   <span className="text-gray-500 ml-1">({getClipSecondaryLabel(clip)})</span>
                 )}
               </span>
+              {clip.favorite ? (
+                <span
+                  className="flex-shrink-0 text-amber-200"
+                  title={clip.favoriteComment?.trim() || t('Favori')}
+                >
+                  <Star size={12} fill="currentColor" />
+                </span>
+              ) : null}
               <span className="text-gray-500 flex-shrink-0">{index + 1}</span>
             </button>
           )
@@ -151,6 +165,14 @@ export default function VideoList() {
                   label={clip.scored ? t('Retirer "noté"') : t('Marquer comme noté')}
                   icon={CheckSquare2}
                 />
+                <AppContextMenuItem
+                  onClick={() => {
+                    setFavoriteDialogClipId(clip.id)
+                    setContextMenu(null)
+                  }}
+                  label={clip.favorite ? t('Modifier le favori') : t('Mettre en favori')}
+                  icon={Star}
+                />
                 <AppContextMenuSeparator />
                 <AppContextMenuItem
                   onClick={() => {
@@ -177,6 +199,21 @@ export default function VideoList() {
           />
         </AppContextMenuPanel>
       )}
+
+      {favoriteDialogClip ? (
+        <ClipFavoriteDialog
+          clip={favoriteDialogClip}
+          onClose={() => setFavoriteDialogClipId(null)}
+          onSave={(clip, comment) => {
+            setClipFavorite(clip.id, true, comment)
+            setFavoriteDialogClipId(null)
+          }}
+          onRemove={(clip) => {
+            setClipFavorite(clip.id, false)
+            setFavoriteDialogClipId(null)
+          }}
+        />
+      ) : null}
     </div>
   )
 }

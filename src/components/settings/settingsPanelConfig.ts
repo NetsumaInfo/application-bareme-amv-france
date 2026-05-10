@@ -3,7 +3,7 @@ import type { InterfaceMode } from '@/types/notation'
 import type { TranslateFn } from '@/i18n'
 import { UI_ICONS } from '@/components/ui/actionIcons'
 
-export type SettingsTab = 'project' | 'notation' | 'application' | 'raccourcis'
+export type SettingsTab = 'project' | 'notation' | 'application' | 'raccourcis' | 'apropos'
 
 export function getSettingsTabs(t: TranslateFn): { id: SettingsTab; label: string }[] {
   return [
@@ -11,6 +11,7 @@ export function getSettingsTabs(t: TranslateFn): { id: SettingsTab; label: strin
     { id: 'notation', label: t('Notation') },
     { id: 'application', label: t('Application') },
     { id: 'raccourcis', label: t('Raccourcis') },
+    { id: 'apropos', label: t('À propos') },
   ]
 }
 

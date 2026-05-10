@@ -2,8 +2,9 @@ import type { RefObject } from 'react'
 import {
   CheckSquare2,
   ImagePlus,
-  Info,
   Link2,
+  Star,
+  Tags,
   TextCursorInput,
   Trash2,
 } from 'lucide-react'
@@ -33,9 +34,11 @@ interface ClipContextMenuProps {
   shortcutBindings: Record<ShortcutAction, string>
   contextMenuRef: RefObject<HTMLDivElement | null>
   onToggleScored: (clip: Clip) => void
+  onOpenFavorite: (clip: Clip) => void
   onOpenNotes: (clip: Clip) => void
   onAttachVideo: (clip: Clip) => void
   onRenameClip: (clip: Clip) => void
+  onEditContestCategory: (clip: Clip) => void
   onSwapPseudoAndClipName: (clip: Clip) => void
   onSetMiniatureFromCurrentFrame: (clip: Clip) => void
   onResetMiniature: (clip: Clip) => void
@@ -55,9 +58,11 @@ export function ClipContextMenu({
   shortcutBindings,
   contextMenuRef,
   onToggleScored,
+  onOpenFavorite,
   onOpenNotes,
   onAttachVideo,
   onRenameClip,
+  onEditContestCategory,
   onSwapPseudoAndClipName,
   onSetMiniatureFromCurrentFrame,
   onResetMiniature,
@@ -71,8 +76,10 @@ export function ClipContextMenu({
   const miniaturesIcon = UI_ICONS.miniatures
   const showIcon = UI_ICONS.show
   const hideIcon = UI_ICONS.hide
+  const mediaInfoIcon = UI_ICONS.mediaInfo
   const renameIcon = TextCursorInput
   const swapIcon = UI_ICONS.swap
+  const contestCategoryIcon = Tags
 
   if (!contextMenu) return null
 
@@ -89,6 +96,11 @@ export function ClipContextMenu({
             onClick={() => onToggleScored(contextClip)}
             label={contextClip.scored ? t('Retirer "noté"') : t('Marquer comme noté')}
             icon={CheckSquare2}
+          />
+          <AppContextMenuItem
+            onClick={() => onOpenFavorite(contextClip)}
+            label={contextClip.favorite ? t('Modifier le favori') : t('Mettre en favori')}
+            icon={Star}
           />
           <AppContextMenuSeparator />
           <AppContextMenuItem
@@ -107,6 +119,11 @@ export function ClipContextMenu({
             onClick={() => onRenameClip(contextClip)}
             label={t('Renommer')}
             icon={renameIcon}
+          />
+          <AppContextMenuItem
+            onClick={() => onEditContestCategory(contextClip)}
+            label={contextClip.contestCategory?.trim() ? t('Modifier catégorie concours') : t('Définir catégorie concours')}
+            icon={contestCategoryIcon}
           />
           <AppContextMenuItem
             onClick={() => onSwapPseudoAndClipName(contextClip)}
@@ -158,7 +175,7 @@ export function ClipContextMenu({
         onClick={() => contextClip && onShowMediaInfo(contextClip)}
         disabled={!contextClip?.filePath}
         label={contextClip?.filePath ? t('Afficher MediaInfo') : t('MediaInfo indisponible (pas de vidéo)')}
-        icon={Info}
+        icon={mediaInfoIcon}
       />
       <AppContextMenuSeparator />
       <AppContextMenuItem

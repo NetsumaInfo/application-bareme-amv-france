@@ -1,9 +1,11 @@
 import { useMemo } from 'react'
+import { Star } from 'lucide-react'
 import { getClipPrimaryLabel, getClipSecondaryLabel } from '@/utils/formatters'
 import { withAlpha } from '@/utils/colors'
 import type { JudgeSource } from '@/utils/results'
 import type { ResultatsRow } from '@/components/interfaces/resultats/types'
 import { ClipMiniaturePreview } from '@/components/interfaces/spreadsheet/miniaturePreview'
+import { HoverTextTooltip } from '@/components/ui/HoverTextTooltip'
 import { useI18n } from '@/i18n'
 
 interface ResultatsTopListsProps {
@@ -51,6 +53,8 @@ function TopList({
   thumbnailDefaultSeconds,
   forceMiniatureLoad,
   staticExport,
+  scoreAccessor,
+  favoriteMetaAccessor,
 }: {
   title: string
   entries: ResultatsRow[]
@@ -62,6 +66,8 @@ function TopList({
   thumbnailDefaultSeconds: number
   forceMiniatureLoad: boolean
   staticExport: boolean
+  scoreAccessor: (row: ResultatsRow) => number
+  favoriteMetaAccessor?: (row: ResultatsRow) => { color: string; tooltip: string } | null
 }) {
   return (
     <div className={`min-w-[220px] flex-1 basis-0 border border-gray-700/50 bg-transparent ${staticExport ? 'overflow-visible' : 'overflow-hidden'}`}>
@@ -78,6 +84,9 @@ function TopList({
       <div className="divide-y divide-gray-800/60">
         {entries.map((row, index) => {
           const isSelected = selectedClipId === row.clip.id
+          const score = scoreAccessor(row)
+          const scoreLabel = Number.isFinite(score) ? score.toFixed(1) : null
+          const favoriteMeta = favoriteMetaAccessor?.(row) ?? null
           return (
             <button
               key={`${title}-${row.clip.id}`}
@@ -90,8 +99,24 @@ function TopList({
                   : 'hover:bg-white/[0.05]'
               }`}
             >
-              <div className="flex items-start gap-1.5">
-                <span className="text-gray-500 w-4 shrink-0">{index + 1}</span>
+              <div className="relative flex items-start gap-1.5 pr-11">
+                <div className="relative w-5 shrink-0">
+                  <span className="rounded-md bg-black/15 px-1.5 py-0.5 text-center text-[10px] font-semibold leading-4 text-gray-400">{index + 1}</span>
+                  {favoriteMeta ? (
+                    <div className="absolute left-1/2 top-[18px] -translate-x-1/2">
+                      <HoverTextTooltip text={favoriteMeta.tooltip}>
+                        <span
+                          className="inline-flex h-4 w-4 items-center justify-center"
+                          style={{
+                            color: favoriteMeta.color,
+                          }}
+                        >
+                          <Star size={10} fill="currentColor" aria-hidden="true" />
+                        </span>
+                      </HoverTextTooltip>
+                    </div>
+                  ) : null}
+                </div>
                 <div className="min-w-0">
                   <div className={`${staticExport ? 'whitespace-normal break-words' : 'truncate'} text-[11px] font-semibold text-primary-300`}>{getClipPrimaryLabel(row.clip)}</div>
                   {getClipSecondaryLabel(row.clip) && (
@@ -105,6 +130,15 @@ function TopList({
                       forceLoad={forceMiniatureLoad}
                     />
                   ) : null}
+                </div>
+                <div className="absolute right-0 top-0 flex w-10 flex-col items-center">
+                  {scoreLabel ? (
+                    <span className="shrink-0 rounded-md border border-white/10 bg-white/[0.045] px-1.5 py-0.5 text-[10px] font-semibold text-gray-200">
+                      {scoreLabel}
+                    </span>
+                  ) : (
+                    <span className="inline-block h-5" aria-hidden="true" />
+                  )}
                 </div>
               </div>
             </button>
@@ -146,7 +180,7 @@ export function ResultatsTopLists({
   return (
     <div className={`flex-1 min-h-0 ${staticExport ? 'overflow-visible' : 'overflow-x-auto overflow-y-hidden'}`}>
       <div className="flex min-w-full w-full flex-nowrap items-start gap-2">
-        {topByJudge.map(({ judge, entries }) => (
+        {topByJudge.map(({ judge, entries }, index) => (
           <TopList
             key={`top-${judge.key}`}
             title={t('Top {name}', { name: judge.judgeName })}
@@ -159,6 +193,16 @@ export function ResultatsTopLists({
             thumbnailDefaultSeconds={thumbnailDefaultSeconds}
             forceMiniatureLoad={forceMiniatureLoad}
             staticExport={staticExport}
+            scoreAccessor={(row) => row.judgeTotals[index] ?? 0}
+            favoriteMetaAccessor={(row) => {
+              const favorite = row.judgeFavorites[index]
+              if (!favorite?.isFavorite) return null
+              const comment = favorite.comment.trim()
+              return {
+                color: judgeColors[judge.key] ?? '#fbbf24',
+                tooltip: comment || t('Favori'),
+              }
+            }}
           />
         ))}
 
@@ -173,6 +217,7 @@ export function ResultatsTopLists({
           thumbnailDefaultSeconds={thumbnailDefaultSeconds}
           forceMiniatureLoad={forceMiniatureLoad}
           staticExport={staticExport}
+          scoreAccessor={(row) => row.averageTotal}
         />
       </div>
     </div>

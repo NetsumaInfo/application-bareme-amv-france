@@ -6,9 +6,12 @@ import type { Note } from '@/types/notation'
 import type { ActiveNoteField, CategoryGroup } from '@/components/notes/detached/types'
 import { DetachedCategoryHeader } from '@/components/notes/detached/DetachedCategoryHeader'
 import { DetachedCriterionItem } from '@/components/notes/detached/DetachedCriterionItem'
+import { DetachedFavoriteComment } from '@/components/notes/detached/DetachedFavoriteComment'
 
 interface DetachedNotesCategoriesProps {
   categories: CategoryGroup[]
+  isFavorite: boolean
+  favoriteComment: string
   expandedCategory: string | null
   setExpandedCategory: (value: string | null) => void
   shouldHideTotals: boolean
@@ -19,12 +22,14 @@ interface DetachedNotesCategoriesProps {
   setExpandedCriterionNotes: Dispatch<SetStateAction<Record<string, boolean>>>
   inputRefs: MutableRefObject<Map<string, HTMLInputElement>>
   categoryTextareaRefs: MutableRefObject<Map<string, HTMLTextAreaElement>>
+  favoriteTextareaRef: MutableRefObject<HTMLTextAreaElement | null>
   activeNoteFieldRef: MutableRefObject<ActiveNoteField | null>
   clipFps: number | null
   onValueChange: (criterionId: string, value: number | string) => void
   onInputKeyDown: (event: React.KeyboardEvent, index: number) => void
   onCriterionNoteChange: (criterionId: string, text: string) => void
   onCategoryNoteChange: (category: string, text: string) => void
+  onFavoriteCommentChange: (value: string) => void
   onTimecodeJump: (seconds: number, payload?: { category?: string; criterionId?: string }) => void
   onTimecodeHover: (payload: { seconds: number; anchorRect: DOMRect }) => void | Promise<void>
   onTimecodeLeave: () => void
@@ -32,6 +37,8 @@ interface DetachedNotesCategoriesProps {
 
 export function DetachedNotesCategories({
   categories,
+  isFavorite,
+  favoriteComment,
   expandedCategory,
   setExpandedCategory,
   shouldHideTotals,
@@ -42,18 +49,33 @@ export function DetachedNotesCategories({
   setExpandedCriterionNotes,
   inputRefs,
   categoryTextareaRefs,
+  favoriteTextareaRef,
   activeNoteFieldRef,
   clipFps,
   onValueChange,
   onInputKeyDown,
   onCriterionNoteChange,
   onCategoryNoteChange,
+  onFavoriteCommentChange,
   onTimecodeJump,
   onTimecodeHover,
   onTimecodeLeave,
 }: DetachedNotesCategoriesProps) {
   return (
     <div className="flex-1 overflow-y-auto py-1">
+      {isFavorite ? (
+        <DetachedFavoriteComment
+          favoriteComment={favoriteComment}
+          favoriteTextareaRef={favoriteTextareaRef}
+          activeNoteFieldRef={activeNoteFieldRef}
+          clipFps={clipFps}
+          onFavoriteCommentChange={onFavoriteCommentChange}
+          onTimecodeJump={onTimecodeJump}
+          onTimecodeHover={onTimecodeHover}
+          onTimecodeLeave={onTimecodeLeave}
+        />
+      ) : null}
+
       {categories.map(({ category, criteria, color, totalMax }) => {
         const isExpanded = expandedCategory === category
         const catScore = getCategoryScore({ criteria })

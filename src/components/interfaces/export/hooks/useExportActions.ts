@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react'
 import type { RefObject } from 'react'
-import { save } from '@tauri-apps/api/dialog'
-import { writeBinaryFile, writeTextFile } from '@tauri-apps/api/fs'
+import { save } from '@tauri-apps/plugin-dialog'
+import { writeFile, writeTextFile } from '@tauri-apps/plugin-fs'
 import { join } from '@tauri-apps/api/path'
 import * as tauri from '@/services/tauri'
 import { useI18n } from '@/i18n'
@@ -510,7 +510,7 @@ export function useExportActions({
           })
           if (pngPath) {
             const singleCanvas = await captureElement(previewRef.current)
-            await writeBinaryFile(pngPath, await canvasToPngBytes(singleCanvas))
+            await writeFile(pngPath, await canvasToPngBytes(singleCanvas))
             hasWrittenOutput = true
           }
         }
@@ -529,7 +529,7 @@ export function useExportActions({
                 const pageCanvas = await captureElement(pageTargets[index])
                 const pageName = `${exportStem}_page_${String(index + 1).padStart(digits, '0')}.png`
                 const targetPath = await join(folderPath, pageName)
-                await writeBinaryFile(targetPath, await canvasToPngBytes(pageCanvas))
+                await writeFile(targetPath, await canvasToPngBytes(pageCanvas))
               }
               hasWrittenOutput = true
             }
@@ -607,7 +607,7 @@ export function useExportActions({
 
       pdfCanvases.forEach((pdfCanvas, index) => addCanvasToPdf(pdfCanvas, index))
 
-      await writeBinaryFile(pdfPath, new Uint8Array(pdf.output('arraybuffer')))
+      await writeFile(pdfPath, new Uint8Array(pdf.output('arraybuffer')))
     } catch (error) {
       console.error(`Export ${type.toUpperCase()} failed:`, error)
       alert(`${t('Erreur export')} ${type.toUpperCase()}: ${error}`)
@@ -638,7 +638,7 @@ export function useExportActions({
       })
       if (!spreadsheetPath) return
 
-      await writeBinaryFile(spreadsheetPath, createXlsxWorkbook(spreadsheetSheets))
+      await writeFile(spreadsheetPath, createXlsxWorkbook(spreadsheetSheets))
     } catch (error) {
       console.error('Export Excel failed:', error)
       alert(`${t('Erreur export Excel')}: ${error}`)
@@ -838,7 +838,7 @@ export function useExportActions({
         writeGap(10)
       })
 
-      await writeBinaryFile(pdfPath, new Uint8Array(pdf.output('arraybuffer')))
+      await writeFile(pdfPath, new Uint8Array(pdf.output('arraybuffer')))
     } catch (error) {
       console.error('Export PDF notes failed:', error)
       alert(`${t('Erreur export PDF notes')}: ${error}`)

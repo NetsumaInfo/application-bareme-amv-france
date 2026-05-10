@@ -30,7 +30,11 @@ interface UseSpreadsheetTablePropsParams {
   openPlayerAtFront: () => void
   setEditingManualClipId: (clipId: string | null) => void
   handleManualClipBlur: (clipId: string, event: FocusEvent<HTMLDivElement>) => void
-  handleManualClipFieldChange: (clipId: string, field: 'author' | 'displayName', value: string) => void
+  handleManualClipFieldChange: (
+    clipId: string,
+    field: 'author' | 'displayName' | 'contestCategory',
+    value: string,
+  ) => void
   handleChange: (clipId: string, criterionId: string, value: string) => void
   handleKeyDown: (event: ReactKeyboardEvent<Element>, clipIdx: number, critIdx: number) => void
   seek: (time: number) => Promise<void>

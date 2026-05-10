@@ -10,11 +10,16 @@ import { useI18n } from '@/i18n'
 import { normalizeFilePath } from '@/utils/path'
 import { useSpreadsheetDropListeners } from '@/components/interfaces/spreadsheet/hooks/useSpreadsheetDropListeners'
 import type { Clip, Project } from '@/types/project'
+import {
+  ALL_CONTEST_CATEGORY_KEY,
+  UNCATEGORIZED_CONTEST_CATEGORY_KEY,
+} from '@/utils/contestCategory'
 
 const VIDEO_EXTENSIONS = ['mp4', 'mkv', 'avi', 'mov', 'webm', 'flv', 'm4v', 'wmv', 'mpg', 'mpeg', 'ts', 'vob', 'ogv', 'amv']
 
 interface UseSpreadsheetImportParams {
   currentProject: Project | null
+  activeContestCategoryView: string
   markDirty: () => void
   setClips: (clips: Clip[]) => void
   updateProject: (updates: Partial<Project>) => void
@@ -22,6 +27,7 @@ interface UseSpreadsheetImportParams {
 
 export function useSpreadsheetImport({
   currentProject,
+  activeContestCategoryView,
   markDirty,
   setClips,
   updateProject,
@@ -34,6 +40,16 @@ export function useSpreadsheetImport({
     const ext = path.split('.').pop()?.toLowerCase() ?? ''
     return VIDEO_EXTENSIONS.includes(ext)
   }, [])
+
+  const getImportContestCategory = useCallback(() => {
+    if (
+      activeContestCategoryView === ALL_CONTEST_CATEGORY_KEY
+      || activeContestCategoryView === UNCATEGORIZED_CONTEST_CATEGORY_KEY
+    ) {
+      return ''
+    }
+    return activeContestCategoryView
+  }, [activeContestCategoryView])
 
   const applyImportedClips = useCallback((importedClips: Clip[]) => {
     if (importedClips.length === 0) return
@@ -82,15 +98,26 @@ export function useSpreadsheetImport({
     }
 
     const clipNamePattern = getClipNamePattern()
+    const importContestCategory = getImportContestCategory()
     const importedClips: Clip[] = [
-      ...videoPaths.map((filePath, i) => createClipFromFilePath(filePath, latestClips.length + i, clipNamePattern)),
+      ...videoPaths.map((filePath, i) => createClipFromFilePath(
+        filePath,
+        latestClips.length + i,
+        clipNamePattern,
+        importContestCategory,
+      )),
       ...folderVideos.map((video, i) =>
-        createClipFromVideoMeta(video, latestClips.length + videoPaths.length + i, clipNamePattern),
+        createClipFromVideoMeta(
+          video,
+          latestClips.length + videoPaths.length + i,
+          clipNamePattern,
+          importContestCategory,
+        ),
       ),
     ]
 
     applyImportedClips(importedClips)
-  }, [applyImportedClips, getClipNamePattern, isVideoFile])
+  }, [applyImportedClips, getClipNamePattern, getImportContestCategory, isVideoFile])
 
   const { isDragOver } = useSpreadsheetDropListeners({
     handleFileDrop,
@@ -117,8 +144,9 @@ export function useSpreadsheetImport({
 
       const videos = await tauri.scanVideoFolder(folderPath)
       const clipNamePattern = getClipNamePattern()
+      const importContestCategory = getImportContestCategory()
       const importedClips = videos.map((video, index) =>
-        createClipFromVideoMeta(video, latestClips.length + index, clipNamePattern),
+        createClipFromVideoMeta(video, latestClips.length + index, clipNamePattern, importContestCategory),
       )
       applyImportedClips(importedClips)
       if (currentProject) {
@@ -130,7 +158,7 @@ export function useSpreadsheetImport({
     } finally {
       endImportingSoon()
     }
-  }, [applyImportedClips, currentProject, endImportingSoon, getClipNamePattern, t, updateProject])
+  }, [applyImportedClips, currentProject, endImportingSoon, getClipNamePattern, getImportContestCategory, t, updateProject])
 
   const handleImportFiles = useCallback(async () => {
     try {
@@ -141,8 +169,9 @@ export function useSpreadsheetImport({
       if (!filePaths || filePaths.length === 0) return
 
       const clipNamePattern = getClipNamePattern()
+      const importContestCategory = getImportContestCategory()
       const importedClips = filePaths.map((filePath, index) =>
-        createClipFromFilePath(filePath, latestClips.length + index, clipNamePattern),
+        createClipFromFilePath(filePath, latestClips.length + index, clipNamePattern, importContestCategory),
       )
       applyImportedClips(importedClips)
     } catch (error) {
@@ -151,7 +180,7 @@ export function useSpreadsheetImport({
     } finally {
       endImportingSoon()
     }
-  }, [applyImportedClips, endImportingSoon, getClipNamePattern, t])
+  }, [applyImportedClips, endImportingSoon, getClipNamePattern, getImportContestCategory, t])
 
   return {
     isDragOver,

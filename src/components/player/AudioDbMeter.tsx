@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { useRealtimeAudioLevels } from '@/hooks/useRealtimeAudioLevels'
 import { useI18n } from '@/i18n'
+import { HoverTextTooltip } from '@/components/ui/HoverTextTooltip'
 
 interface AudioDbMeterProps {
   enabled: boolean
@@ -48,38 +49,40 @@ export default function AudioDbMeter({ enabled, compact, tiny, muted, className 
   const rightBarClass = useMemo(() => levelColorClass(levels.right_db), [levels.right_db])
   const leftValueClass = useMemo(() => valueColorClass(levels.left_db), [levels.left_db])
   const rightValueClass = useMemo(() => valueColorClass(levels.right_db), [levels.right_db])
+  const meterTooltipText = muted ? t('Muet') : `${formatDb(levels.overall_db)} dB`
 
   if (!enabled) return null
 
   return (
-    <div
-      className={`flex items-center gap-1.5 ${tiny ? 'min-w-[66px]' : compact ? 'min-w-[108px]' : 'min-w-[122px]'} ${className || ''}`}
-      title={muted ? t('Muet') : `${formatDb(levels.overall_db)} dB`}
-    >
-      <span className={`${compact ? 'text-[10px]' : 'text-[10px]'} text-gray-500 font-mono`}>L</span>
-      <div className={`relative ${tiny ? 'w-8 h-1.5' : compact ? 'w-12 h-2' : 'w-14 h-2'} rounded-full bg-white/15 overflow-hidden`}>
-        <div
-          className={`absolute left-0 top-0 h-full rounded-full bg-gradient-to-r transition-[width] duration-150 ${leftBarClass}`}
-          style={{ width: `${leftPercent}%` }}
-        />
+    <HoverTextTooltip text={meterTooltipText} className="inline-flex">
+      <div
+        className={`flex items-center gap-1.5 ${tiny ? 'min-w-[66px]' : compact ? 'min-w-[108px]' : 'min-w-[122px]'} ${className || ''}`}
+      >
+        <span className={`${compact ? 'text-[10px]' : 'text-[10px]'} text-gray-500 font-mono`}>L</span>
+        <div className={`relative ${tiny ? 'w-8 h-1.5' : compact ? 'w-12 h-2' : 'w-14 h-2'} rounded-full bg-white/15 overflow-hidden`}>
+          <div
+            className={`absolute left-0 top-0 h-full rounded-full bg-gradient-to-r transition-[width] duration-150 ${leftBarClass}`}
+            style={{ width: `${leftPercent}%` }}
+          />
+        </div>
+        {!tiny && (
+          <span className={`${compact ? 'text-[10px] w-9' : 'text-[10px] w-10'} font-mono text-right ${muted ? 'text-gray-500' : leftValueClass}`}>
+            {muted ? t('Muet') : formatDb(levels.left_db)}
+          </span>
+        )}
+        <span className={`${compact ? 'text-[10px]' : 'text-[10px]'} text-gray-500 font-mono`}>R</span>
+        <div className={`relative ${tiny ? 'w-8 h-1.5' : compact ? 'w-12 h-2' : 'w-14 h-2'} rounded-full bg-white/15 overflow-hidden`}>
+          <div
+            className={`absolute left-0 top-0 h-full rounded-full bg-gradient-to-r transition-[width] duration-150 ${rightBarClass}`}
+            style={{ width: `${rightPercent}%` }}
+          />
+        </div>
+        {!tiny && (
+          <span className={`${compact ? 'text-[10px] w-9' : 'text-[10px] w-10'} font-mono text-right ${muted ? 'text-gray-500' : rightValueClass}`}>
+            {muted ? t('Muet') : formatDb(levels.right_db)}
+          </span>
+        )}
       </div>
-      {!tiny && (
-        <span className={`${compact ? 'text-[10px] w-9' : 'text-[10px] w-10'} font-mono text-right ${muted ? 'text-gray-500' : leftValueClass}`}>
-          {muted ? t('Muet') : formatDb(levels.left_db)}
-        </span>
-      )}
-      <span className={`${compact ? 'text-[10px]' : 'text-[10px]'} text-gray-500 font-mono`}>R</span>
-      <div className={`relative ${tiny ? 'w-8 h-1.5' : compact ? 'w-12 h-2' : 'w-14 h-2'} rounded-full bg-white/15 overflow-hidden`}>
-        <div
-          className={`absolute left-0 top-0 h-full rounded-full bg-gradient-to-r transition-[width] duration-150 ${rightBarClass}`}
-          style={{ width: `${rightPercent}%` }}
-        />
-      </div>
-      {!tiny && (
-        <span className={`${compact ? 'text-[10px] w-9' : 'text-[10px] w-10'} font-mono text-right ${muted ? 'text-gray-500' : rightValueClass}`}>
-          {muted ? t('Muet') : formatDb(levels.right_db)}
-        </span>
-      )}
-    </div>
+    </HoverTextTooltip>
   )
 }

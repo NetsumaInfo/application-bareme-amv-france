@@ -33,6 +33,17 @@ export function useResultatsComputedData({
   sortMode,
   canSortByScore,
 }: UseResultatsComputedDataParams) {
+  const normalizeFavoriteFlag = (value: unknown): boolean => (
+    value === true
+    || value === 1
+    || value === '1'
+    || value === 'true'
+  )
+
+  const normalizeFavoriteComment = (value: unknown): string => (
+    typeof value === 'string' ? value.trim() : ''
+  )
+
   const effectiveSortMode: SortMode =
     sortMode === 'score' && !canSortByScore ? 'folder' : sortMode
 
@@ -121,12 +132,34 @@ export function useResultatsComputedData({
               100,
           ) / 100
         : 0
+      const judgeFavorites = judges.map((judge) => {
+        if (judge.isCurrentJudge) {
+          return {
+            isFavorite: Boolean(clip.favorite),
+            comment: (clip.favoriteComment ?? '').trim(),
+          }
+        }
+
+        const note = judge.notes[clip.id] as unknown as {
+          favorite?: unknown
+          isFavorite?: unknown
+          is_favorite?: unknown
+          favoriteComment?: unknown
+          favorite_comment?: unknown
+        } | undefined
+
+        return {
+          isFavorite: normalizeFavoriteFlag(note?.favorite ?? note?.isFavorite ?? note?.is_favorite),
+          comment: normalizeFavoriteComment(note?.favoriteComment ?? note?.favorite_comment),
+        }
+      })
 
       return {
         clip,
         categoryJudgeScores,
         judgeTotals,
         averageTotal,
+        judgeFavorites,
       }
     })
   }, [categoryGroups, currentBareme, judges, sortedClips])

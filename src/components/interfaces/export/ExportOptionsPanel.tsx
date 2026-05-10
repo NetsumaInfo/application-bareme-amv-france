@@ -1,6 +1,7 @@
 import { Code2, FileImage, FileJson, FileSpreadsheet, FileText, Loader2 } from 'lucide-react'
 import type { ElementType } from 'react'
 import type {
+  ExportContestCategoryOption,
   ExportJsonJudgeOption,
   ExportJsonMode,
   ExportJudge,
@@ -92,6 +93,8 @@ interface ExportOptionsPanelProps {
   jsonExportMode: ExportJsonMode
   jsonJudgeKey: string
   jsonJudgeOptions: ExportJsonJudgeOption[]
+  contestCategoryKey: string
+  contestCategoryOptions: ExportContestCategoryOption[]
   onSetExportMode: (mode: ExportMode) => void
   onSetTableView: (view: ExportTableView) => void
   onSetSelectedJudgeKey: (judgeKey: string) => void
@@ -100,6 +103,7 @@ interface ExportOptionsPanelProps {
   onSetRowsPerImage: (value: number) => void
   onSetJsonExportMode: (mode: ExportJsonMode) => void
   onSetJsonJudgeKey: (judgeKey: string) => void
+  onSetContestCategoryKey: (categoryKey: string) => void
   onExportPng: () => void
   onExportPdf: () => void
   onExportNotesPdf: () => void
@@ -118,11 +122,14 @@ export function ExportOptionsPanel({
   jsonExportMode,
   jsonJudgeKey,
   jsonJudgeOptions,
+  contestCategoryKey,
+  contestCategoryOptions,
   onSetPngExportMode,
   onSetPngScale,
   onSetRowsPerImage,
   onSetJsonExportMode,
   onSetJsonJudgeKey,
+  onSetContestCategoryKey,
   onExportPng,
   onExportPdf,
   onExportNotesPdf,
@@ -266,6 +273,17 @@ export function ExportOptionsPanel({
             />
           </div>
         )}
+
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-[10px] text-gray-500 shrink-0">{t('Catégories concours')}</span>
+          <AppSelect
+            value={contestCategoryKey}
+            onChange={onSetContestCategoryKey}
+            ariaLabel={t('Catégories concours')}
+            className="w-32"
+            options={contestCategoryOptions.map((option) => ({ value: option.key, label: option.label }))}
+          />
+        </div>
       </div>
     </div>
   )

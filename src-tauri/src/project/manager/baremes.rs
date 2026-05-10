@@ -11,7 +11,10 @@ fn legacy_bareme_file_path(bareme_id: &str) -> Result<std::path::PathBuf, String
     Ok(folder.join(format!("{}.json", name)))
 }
 
-fn bareme_file_path(data: &serde_json::Value, bareme_id: &str) -> Result<std::path::PathBuf, String> {
+fn bareme_file_path(
+    data: &serde_json::Value,
+    bareme_id: &str,
+) -> Result<std::path::PathBuf, String> {
     let folder = paths::baremes_folder()?;
     let id = paths::sanitize_bareme_file_name(bareme_id);
     let name = data
@@ -62,12 +65,8 @@ pub fn load_baremes_files() -> Result<Vec<serde_json::Value>, String> {
         .collect();
 
     entries.sort_by(|a, b| {
-        let a_modified = fs::metadata(a)
-            .and_then(|meta| meta.modified())
-            .ok();
-        let b_modified = fs::metadata(b)
-            .and_then(|meta| meta.modified())
-            .ok();
+        let a_modified = fs::metadata(a).and_then(|meta| meta.modified()).ok();
+        let b_modified = fs::metadata(b).and_then(|meta| meta.modified()).ok();
         b_modified.cmp(&a_modified)
     });
 
@@ -109,7 +108,8 @@ fn cleanup_duplicate_bareme_files(
         return Ok(());
     };
 
-    let entries = fs::read_dir(folder).map_err(|e| format!("Failed to read baremes folder: {}", e))?;
+    let entries =
+        fs::read_dir(folder).map_err(|e| format!("Failed to read baremes folder: {}", e))?;
     for entry in entries.flatten() {
         let path = entry.path();
         if path.extension().and_then(|e| e.to_str()) != Some("json") {
@@ -138,7 +138,8 @@ fn cleanup_duplicate_bareme_files(
 
 fn cleanup_same_id_bareme_files(kept_path: Option<&Path>, bareme_id: &str) -> Result<(), String> {
     let folder = paths::baremes_folder()?;
-    let entries = fs::read_dir(folder).map_err(|e| format!("Failed to read baremes folder: {}", e))?;
+    let entries =
+        fs::read_dir(folder).map_err(|e| format!("Failed to read baremes folder: {}", e))?;
 
     for entry in entries.flatten() {
         let path = entry.path();
@@ -183,14 +184,22 @@ fn bareme_fingerprint(value: &serde_json::Value) -> Option<String> {
 
     let mut parts = Vec::with_capacity(criteria.len());
     for criterion in criteria {
-        let criterion_name = normalize_token(criterion.get("name").and_then(|v| v.as_str()).unwrap_or(""));
+        let criterion_name =
+            normalize_token(criterion.get("name").and_then(|v| v.as_str()).unwrap_or(""));
         let criterion_max = criterion
             .get("max")
             .map(number_to_string)
             .unwrap_or_default();
-        let criterion_category =
-            normalize_token(criterion.get("category").and_then(|v| v.as_str()).unwrap_or(""));
-        parts.push(format!("{}:{}:{}", criterion_name, criterion_max, criterion_category));
+        let criterion_category = normalize_token(
+            criterion
+                .get("category")
+                .and_then(|v| v.as_str())
+                .unwrap_or(""),
+        );
+        parts.push(format!(
+            "{}:{}:{}",
+            criterion_name, criterion_max, criterion_category
+        ));
     }
 
     Some(format!("{}|{}", name, parts.join("|")))
@@ -202,7 +211,8 @@ fn imported_bareme_fingerprint(value: &serde_json::Value) -> Option<String> {
 
     let mut parts = Vec::with_capacity(criteria.len());
     for criterion in criteria {
-        let criterion_name = normalize_token(criterion.get("name").and_then(|v| v.as_str()).unwrap_or(""));
+        let criterion_name =
+            normalize_token(criterion.get("name").and_then(|v| v.as_str()).unwrap_or(""));
         let criterion_max = criterion
             .get("max")
             .map(number_to_string)
@@ -214,10 +224,7 @@ fn imported_bareme_fingerprint(value: &serde_json::Value) -> Option<String> {
 }
 
 fn is_auto_imported_bareme(value: &serde_json::Value) -> bool {
-    let id = value
-        .get("id")
-        .and_then(|v| v.as_str())
-        .unwrap_or_default();
+    let id = value.get("id").and_then(|v| v.as_str()).unwrap_or_default();
     let description = normalize_token(
         value
             .get("description")

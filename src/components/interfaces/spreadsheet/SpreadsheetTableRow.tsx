@@ -27,7 +27,11 @@ interface SpreadsheetTableRowProps {
   onOpenPlayerAtFront: () => void
   onSetEditingManualClipId: (clipId: string | null) => void
   onManualClipBlur: (clipId: string, event: FocusEvent<HTMLDivElement>) => void
-  onManualClipFieldChange: (clipId: string, field: 'author' | 'displayName', value: string) => void
+  onManualClipFieldChange: (
+    clipId: string,
+    field: 'author' | 'displayName' | 'contestCategory',
+    value: string,
+  ) => void
   onCellChange: (clipId: string, criterionId: string, value: string) => void
   onCellKeyDown: (event: ReactKeyboardEvent, clipIdx: number, critIdx: number) => void
   onShowSubcategoryBubble: (params: {
@@ -66,12 +70,17 @@ export function SpreadsheetTableRow({
   onCellKeyDown,
   onShowSubcategoryBubble,
 }: SpreadsheetTableRowProps) {
+  const isScored = clip.scored || (currentBareme.criteria.length > 0 && currentBareme.criteria.every((criterion) => {
+    const score = note?.scores?.[criterion.id]
+    if (!score || !score.isValid) return false
+    return score.value !== undefined && score.value !== null && score.value !== ''
+  }))
   const rowClassName = isActive
     ? 'bg-white/[0.07]'
     : clipIdx % 2 === 0
       ? 'bg-white/[0.04]'
       : 'bg-transparent'
-  const stickyCellClassName = 'bg-surface'
+  const stickyCellClassName = 'bg-inherit'
 
   return (
     <tr
@@ -91,7 +100,7 @@ export function SpreadsheetTableRow({
       }}
     >
       <td
-        className={`amv-number-ui w-8 px-2 py-1 text-center text-[10px] text-gray-500 border-r border-gray-800/60 sticky left-0 z-20 ${stickyCellClassName}`}
+        className={`amv-number-ui w-8 px-2 py-1 text-center text-[10px] text-gray-500 border-r border-gray-800/60 bg-inherit ${stickyCellClassName}`}
       >
         {clipIdx + 1}
       </td>
@@ -99,6 +108,7 @@ export function SpreadsheetTableRow({
       <SpreadsheetClipCell
         clip={clip}
         clips={clips}
+        isScored={isScored}
         editingManualClipId={editingManualClipId}
         stickyCellClassName={stickyCellClassName}
         showMiniatures={showMiniatures}

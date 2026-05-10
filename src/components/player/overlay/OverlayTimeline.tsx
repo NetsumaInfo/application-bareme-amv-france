@@ -70,11 +70,6 @@ export function OverlayTimeline({
                     backgroundColor: marker.color,
                     borderColor: 'rgba(15,23,42,0.9)',
                   }}
-                  title={
-                    marker.previewText
-                      ? `${marker.raw} - ${marker.previewText}`
-                      : `${marker.raw} - ${marker.category ?? t('Notes globales')}`
-                  }
                 />
               )
             })}

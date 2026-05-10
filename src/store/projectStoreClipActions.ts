@@ -1,4 +1,5 @@
 import type { Clip } from '@/types/project'
+import { normalizeContestCategory } from '@/utils/contestCategory'
 
 export interface RemovedClipHistoryEntry {
   clip: Clip
@@ -31,6 +32,46 @@ export function updateClipScoredState(
   scored: boolean,
 ): Clip[] {
   return clips.map((clip) => (clip.id === clipId ? { ...clip, scored } : clip))
+}
+
+export function updateClipFavoriteState(
+  clips: Clip[],
+  clipId: string,
+  favorite: boolean,
+  comment?: string,
+): Clip[] {
+  return clips.map((clip) => {
+    if (clip.id !== clipId) return clip
+
+    if (!favorite) {
+      return {
+        ...clip,
+        favorite: false,
+        favoriteComment: '',
+      }
+    }
+
+    return {
+      ...clip,
+      favorite: true,
+      favoriteComment: comment ?? clip.favoriteComment ?? '',
+    }
+  })
+}
+
+export function updateClipContestCategory(
+  clips: Clip[],
+  clipId: string,
+  contestCategory: string,
+): Clip[] {
+  const normalized = normalizeContestCategory(contestCategory)
+  return clips.map((clip) => {
+    if (clip.id !== clipId) return clip
+    return {
+      ...clip,
+      contestCategory: normalized || undefined,
+    }
+  })
 }
 
 export function removeClipAndAdjustSelection(

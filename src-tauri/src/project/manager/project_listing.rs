@@ -1,5 +1,5 @@
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 use super::paths;
 use super::types::ProjectSummary;
@@ -26,7 +26,7 @@ fn parse_project_summary(data: &serde_json::Value, file_path: &Path) -> ProjectS
     }
 }
 
-fn is_json_file(path: &PathBuf) -> bool {
+fn is_json_file(path: &Path) -> bool {
     path.extension().and_then(|e| e.to_str()) == Some("json")
 }
 
@@ -50,7 +50,7 @@ pub fn list_projects(folder_path: String) -> Result<Vec<ProjectSummary>, String>
     let entries = fs::read_dir(path).map_err(|e| e.to_string())?;
     for entry in entries.flatten() {
         let file_path = entry.path();
-        if !is_json_file(&file_path) {
+        if !is_json_file(file_path.as_path()) {
             continue;
         }
 

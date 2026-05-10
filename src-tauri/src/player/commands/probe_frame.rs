@@ -4,7 +4,11 @@ use std::fs;
 use std::process::{Command, Stdio};
 use std::time::{Duration, Instant};
 
-pub(super) fn probe_frame_preview_with_ffmpeg(path: &str, seconds: f64, width: u32) -> Result<String, String> {
+pub(super) fn probe_frame_preview_with_ffmpeg(
+    path: &str,
+    seconds: f64,
+    width: u32,
+) -> Result<String, String> {
     let safe_seconds = if seconds.is_finite() && seconds >= 0.0 {
         seconds
     } else {

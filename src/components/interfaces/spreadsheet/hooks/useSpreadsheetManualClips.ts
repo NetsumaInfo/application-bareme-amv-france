@@ -9,8 +9,14 @@ import {
 import { buildManualFileName } from '@/utils/manualClipParser'
 import { useI18n } from '@/i18n'
 import type { Clip } from '@/types/project'
+import {
+  ALL_CONTEST_CATEGORY_KEY,
+  normalizeContestCategory,
+  UNCATEGORIZED_CONTEST_CATEGORY_KEY,
+} from '@/utils/contestCategory'
 
 interface UseSpreadsheetManualClipsParams {
+  activeContestCategoryView: string
   isDragOver: boolean
   isImportingClipsRef: MutableRefObject<boolean>
   suppressEmptyManualCleanupRef: MutableRefObject<boolean>
@@ -21,6 +27,7 @@ interface UseSpreadsheetManualClipsParams {
 }
 
 export function useSpreadsheetManualClips({
+  activeContestCategoryView,
   isDragOver,
   isImportingClipsRef,
   suppressEmptyManualCleanupRef,
@@ -57,21 +64,43 @@ export function useSpreadsheetManualClips({
     useProjectStore.getState().currentProject?.settings.clipNamePattern ?? 'pseudo_clip'
   ), [])
 
+  const getDefaultContestCategory = useCallback(() => {
+    if (
+      activeContestCategoryView === ALL_CONTEST_CATEGORY_KEY
+      || activeContestCategoryView === UNCATEGORIZED_CONTEST_CATEGORY_KEY
+    ) {
+      return ''
+    }
+    return activeContestCategoryView
+  }, [activeContestCategoryView])
+
   const handleAddManualRow = useCallback(() => {
     const latestClips = useProjectStore.getState().clips
-    const newClip = createManualClip({ displayName: '' }, latestClips.length, getClipNamePattern())
+    const newClip = createManualClip(
+      { displayName: '' },
+      latestClips.length,
+      getClipNamePattern(),
+      getDefaultContestCategory(),
+    )
     setClips([...latestClips, newClip])
     markDirty()
     setCurrentClip(latestClips.length)
     setEditingManualClipId(newClip.id)
-  }, [getClipNamePattern, markDirty, setClips, setCurrentClip])
+  }, [getClipNamePattern, getDefaultContestCategory, markDirty, setClips, setCurrentClip])
 
-  const handleManualClipFieldChange = useCallback((clipId: string, field: 'author' | 'displayName', value: string) => {
+  const handleManualClipFieldChange = useCallback((
+    clipId: string,
+    field: 'author' | 'displayName' | 'contestCategory',
+    value: string,
+  ) => {
     const latestClips = useProjectStore.getState().clips
     const next = latestClips.map((clip) => {
       if (clip.id !== clipId) return clip
       const nextAuthor = field === 'author' ? value : (clip.author ?? '')
       const nextDisplay = field === 'displayName' ? value : clip.displayName
+      const nextContestCategory = field === 'contestCategory'
+        ? value
+        : (clip.contestCategory ?? '')
       const rawAuthor = nextAuthor
       const rawDisplay = nextDisplay
       const keepSourceFileName = Boolean(clip.filePath?.trim())
@@ -79,6 +108,7 @@ export function useSpreadsheetManualClips({
         ...clip,
         author: rawAuthor || undefined,
         displayName: rawDisplay,
+        contestCategory: normalizeContestCategory(nextContestCategory) || undefined,
         fileName: keepSourceFileName
           ? clip.fileName
           : (
@@ -158,6 +188,7 @@ export function useSpreadsheetManualClips({
               ...clip,
               author: normalizedAuthor || undefined,
               displayName: normalizedDisplay,
+              contestCategory: normalizeContestCategory(clip.contestCategory) || undefined,
             }
           }),
         )
@@ -172,6 +203,12 @@ export function useSpreadsheetManualClips({
       const hasAuthor = Boolean(normalizedAuthor)
       const hasDisplay = Boolean(normalizedDisplay)
       if (!hasAuthor && !hasDisplay) {
+        if (latestClips.length <= 1) {
+          if (editingManualClipId !== clipId) {
+            setEditingManualClipId(clipId)
+          }
+          return
+        }
         removeClip(clipId)
         if (editingManualClipId === clipId) {
           setEditingManualClipId(null)
@@ -186,6 +223,7 @@ export function useSpreadsheetManualClips({
             ...clip,
             author: normalizedAuthor || undefined,
             displayName: normalizedDisplay,
+            contestCategory: normalizeContestCategory(clip.contestCategory) || undefined,
             fileName: buildManualFileName(
               { author: normalizedAuthor, displayName: normalizedDisplay },
               getClipNamePattern(),
@@ -251,16 +289,19 @@ export function useSpreadsheetManualClips({
       .filter(Boolean)
 
     const clipNamePattern = getClipNamePattern()
+    const defaultContestCategory = getDefaultContestCategory()
     const entries = lines
       .map((line) => parseManualClipLine(line, clipNamePattern))
       .filter((entry): entry is NonNullable<typeof entry> => Boolean(entry))
 
     const manualClips = (entries.length > 0 ? entries : [{ displayName: '' }]).map((entry, index) =>
-      createManualClip(entry, index, clipNamePattern))
+      createManualClip(entry, index, clipNamePattern, defaultContestCategory))
     setClips(manualClips)
     markDirty()
+    setCurrentClip(0)
+    setEditingManualClipId(entries.length === 0 ? (manualClips[0]?.id ?? null) : null)
     resetNoVideoTableModal()
-  }, [getClipNamePattern, markDirty, noVideoTableInput, resetNoVideoTableModal, setClips])
+  }, [getClipNamePattern, getDefaultContestCategory, markDirty, noVideoTableInput, resetNoVideoTableModal, setClips, setCurrentClip])
 
   return {
     showNoVideoTableModal,

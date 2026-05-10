@@ -11,8 +11,9 @@ import { ResultatsGlobalDetailedTable } from '@/components/interfaces/resultats/
 import { ResultatsGlobalCategoryTable } from '@/components/interfaces/resultats/ResultatsGlobalCategoryTable'
 import { ResultatsTopLists } from '@/components/interfaces/resultats/ResultatsTopLists'
 import { ResultatsViewModeControls } from '@/components/interfaces/resultats/ResultatsViewModeControls'
+import { ResultatsContestCategoryFilter } from '@/components/interfaces/resultats/ResultatsContestCategoryFilter'
 import { ResultatsJudgeNotesView } from '@/components/interfaces/resultats/ResultatsJudgeNotesView'
-import { ResultatsNotesPanel } from '@/components/interfaces/resultats/ResultatsNotesPanel'
+import { ResultatsNotesPanel, type FavoriteJudgeEntry } from '@/components/interfaces/resultats/ResultatsNotesPanel'
 import { ResultatsContextMenus } from '@/components/interfaces/resultats/ResultatsContextMenus'
 import { ResultatsRenameJudgeModal } from '@/components/interfaces/resultats/ResultatsRenameJudgeModal'
 import { useResultatsComputedData } from '@/components/interfaces/resultats/hooks/useResultatsComputedData'
@@ -22,11 +23,18 @@ import { useDetachedFramePreview } from '@/components/notes/detached/useDetached
 import type {
   ResultatsGlobalVariant,
   ResultatsMainView,
+  ResultatsContestCategoryOption,
 } from '@/components/interfaces/resultats/types'
 import { CATEGORY_COLOR_PRESETS, sanitizeColor } from '@/utils/colors'
 import { COLOR_MEMORY_KEYS, readStoredColor } from '@/utils/colorPickerStorage'
 import { shouldHideResultsUntilAllScored } from '@/utils/resultsVisibility'
+import {
+  ALL_CONTEST_CATEGORY_KEY,
+  getClipContestCategory,
+  matchesContestCategoryKey,
+} from '@/utils/contestCategory'
 import { useI18n } from '@/i18n'
+import type { ImportedJudgeNote } from '@/types/project'
 
 type SortMode = 'folder' | 'score'
 type RenameJudgeDialog = {
@@ -60,6 +68,7 @@ function useResultatsInterfaceController() {
     importedJudges,
     setImportedJudges,
     setResultNote,
+    setClipFavorite,
     updateProject,
     updateSettings,
     markDirty,
@@ -99,12 +108,14 @@ function useResultatsInterfaceController() {
     selectedJudgeKey: 'current',
     isJudgeNotesDetached: false,
   })
+  const [selectedContestCategoryKey, setSelectedContestCategoryKey] = useState<string>(ALL_CONTEST_CATEGORY_KEY)
   const [renameJudgeState, setRenameJudgeState] = useState<RenameJudgeState>({
     dialog: null,
     value: '',
     error: null,
   })
   const [hideResultNotes, setHideResultNotes] = useState(false)
+  const [showFavoritesPanel, setShowFavoritesPanel] = useState(false)
   const {
     mainView,
     globalVariant,
@@ -125,6 +136,50 @@ function useResultatsInterfaceController() {
     )
     return acc
   }, {})
+
+  const contestCategoryOptions = useMemo<ResultatsContestCategoryOption[]>(() => {
+    const options: ResultatsContestCategoryOption[] = [
+      {
+        key: ALL_CONTEST_CATEGORY_KEY,
+        label: t('Toutes catégories'),
+        count: sortedClips.length,
+      },
+    ]
+    const categoryCounts = new Map<string, number>()
+
+    for (const clip of sortedClips) {
+      const category = getClipContestCategory(clip)
+      if (!category) continue
+      categoryCounts.set(category, (categoryCounts.get(category) ?? 0) + 1)
+    }
+
+    for (const [category, count] of categoryCounts) {
+      options.push({
+        key: category,
+        label: category,
+        count,
+      })
+    }
+
+    return options
+  }, [sortedClips, t])
+
+  const effectiveSelectedContestCategoryKey = useMemo(() => {
+    if (contestCategoryOptions.some((option) => option.key === selectedContestCategoryKey)) {
+      return selectedContestCategoryKey
+    }
+    return ALL_CONTEST_CATEGORY_KEY
+  }, [contestCategoryOptions, selectedContestCategoryKey])
+
+  const filteredRows = useMemo(
+    () => rows.filter((row) => matchesContestCategoryKey(row.clip, effectiveSelectedContestCategoryKey)),
+    [effectiveSelectedContestCategoryKey, rows],
+  )
+
+  const filteredSortedClips = useMemo(
+    () => sortedClips.filter((clip) => matchesContestCategoryKey(clip, effectiveSelectedContestCategoryKey)),
+    [effectiveSelectedContestCategoryKey, sortedClips],
+  )
 
   const effectiveSelectedJudgeKey = judges.some((judge) => judge.key === selectedJudgeKey)
     ? selectedJudgeKey
@@ -217,7 +272,7 @@ function useResultatsInterfaceController() {
   } = useResultatsInteractions({
     currentBareme,
     clips,
-    sortedClips,
+    sortedClips: filteredSortedClips,
     judges,
     importedJudges,
     setImportedJudges,
@@ -283,12 +338,12 @@ function useResultatsInterfaceController() {
   const { framePreview, hideFramePreview, showFramePreview } = useDetachedFramePreview(selectedClip?.filePath)
 
   const judgeNotesPayload = useMemo(() => ({
-    clips,
+    clips: filteredSortedClips,
     selectedClipId,
     judges,
     categoryGroups,
     judgeColors,
-  }), [categoryGroups, clips, judgeColors, judges, selectedClipId])
+  }), [categoryGroups, filteredSortedClips, judgeColors, judges, selectedClipId])
 
   const emitDetachedJudgeNotesData = useCallback(() => {
     emit('main:resultats-judge-notes-data', judgeNotesPayload).catch(() => {})
@@ -354,6 +409,83 @@ function useResultatsInterfaceController() {
   const selectedResultNoteText = selectedClip
     ? (currentProject?.resultNotes?.[selectedClip.id] ?? '')
     : ''
+  const handleToggleFavoritesPanel = useCallback(() => {
+    setShowFavoritesPanel((current) => !current)
+  }, [])
+  const handleUpdateFavoriteComment = useCallback((clipId: string, judgeKey: string, comment: string) => {
+    if (!clipId) return
+    if (judgeKey === 'current') {
+      setClipFavorite(clipId, true, comment)
+      return
+    }
+
+    const importedIndex = resolveImportedJudgeIndex(judgeKey)
+    if (importedIndex === null || importedIndex >= importedJudges.length) return
+
+    const nextImported = importedJudges.map((judge, index) => {
+      if (index !== importedIndex) return judge
+      const previous = judge.notes[clipId] ?? { scores: {} }
+      const nextNote: ImportedJudgeNote = {
+        ...previous,
+        favorite: true,
+        favoriteComment: comment,
+      }
+      return {
+        ...judge,
+        notes: {
+          ...judge.notes,
+          [clipId]: nextNote,
+        },
+      }
+    })
+
+    setImportedJudges(nextImported)
+  }, [importedJudges, resolveImportedJudgeIndex, setClipFavorite, setImportedJudges])
+  const favoriteJudgesForSelectedClip = useMemo<FavoriteJudgeEntry[]>(() => {
+    if (!selectedClip) return []
+
+    const entries: FavoriteJudgeEntry[] = []
+    const currentJudge = judges.find((judge) => judge.isCurrentJudge)
+    if (selectedClip.favorite) {
+      entries.push({
+        judgeKey: currentJudge?.key ?? 'current',
+        judgeName: currentJudge?.judgeName ?? (currentProject?.judgeName?.trim() || 'Juge courant'),
+        comment: selectedClip.favoriteComment?.trim() || '',
+      })
+    }
+
+    for (const judge of judges) {
+      if (judge.isCurrentJudge) continue
+      const note = judge.notes[selectedClip.id] as unknown as {
+        favorite?: unknown
+        isFavorite?: unknown
+        is_favorite?: unknown
+        favoriteComment?: unknown
+        favorite_comment?: unknown
+      } | undefined
+      if (!note || typeof note !== 'object') continue
+
+      const favoriteRaw = note.favorite ?? note.isFavorite ?? note.is_favorite
+      const isFavorite = typeof favoriteRaw === 'boolean'
+        ? favoriteRaw
+        : favoriteRaw === 1
+          ? true
+          : favoriteRaw === 'true'
+            ? true
+            : false
+      if (!isFavorite) continue
+
+      const favoriteCommentRaw = note.favoriteComment ?? note.favorite_comment
+      const favoriteComment = typeof favoriteCommentRaw === 'string' ? favoriteCommentRaw.trim() : ''
+      entries.push({
+        judgeKey: judge.key,
+        judgeName: judge.judgeName,
+        comment: favoriteComment,
+      })
+    }
+
+    return entries
+  }, [currentProject?.judgeName, judges, selectedClip])
 
   if (!currentBareme) {
     return {
@@ -410,6 +542,8 @@ function useResultatsInterfaceController() {
           onGlobalVariantChange={setGlobalVariant}
           notesPanelHidden={hideResultNotes}
           onToggleNotesPanel={() => setHideResultNotes((current) => !current)}
+          favoritesPanelVisible={showFavoritesPanel}
+          onToggleFavoritesPanel={handleToggleFavoritesPanel}
         />
 
         <ResultatsHeader
@@ -432,13 +566,25 @@ function useResultatsInterfaceController() {
         />
       </div>
 
-      {mainView === 'judge' && selectedJudge && (
+      <ResultatsContestCategoryFilter
+        options={contestCategoryOptions}
+        selectedKey={effectiveSelectedContestCategoryKey}
+        onSelect={setSelectedContestCategoryKey}
+      />
+
+      {filteredRows.length === 0 ? (
+        <div className="flex min-h-0 flex-1 items-center justify-center text-sm text-gray-500">
+          {t('Aucun clip dans cette catégorie')}
+        </div>
+      ) : null}
+
+      {filteredRows.length > 0 && mainView === 'judge' && selectedJudge && (
         <ResultatsJudgeTable
           currentBaremeTotalPoints={currentBareme.totalPoints}
           categoryGroups={categoryGroups}
           judge={selectedJudge}
           judgeIndex={effectiveJudgeIndex}
-          rows={rows}
+          rows={filteredRows}
           selectedClipId={selectedClipId}
           criterionDraftCells={criterionDraftCells}
           onSelectClip={setSelectedClipId}
@@ -453,13 +599,13 @@ function useResultatsInterfaceController() {
         />
       )}
 
-      {mainView === 'global' && globalVariant === 'detailed' && (
+      {filteredRows.length > 0 && mainView === 'global' && globalVariant === 'detailed' && (
         <ResultatsGlobalDetailedTable
           canSortByScore={canSortByScore}
           currentBaremeTotalPoints={currentBareme.totalPoints}
           categoryGroups={categoryGroups}
           judges={judges}
-          rows={rows}
+          rows={filteredRows}
           judgeColors={judgeColors}
           selectedClipId={selectedClipId}
           criterionDraftCells={criterionDraftCells}
@@ -475,13 +621,13 @@ function useResultatsInterfaceController() {
         />
       )}
 
-      {mainView === 'global' && globalVariant === 'category' && (
+      {filteredRows.length > 0 && mainView === 'global' && globalVariant === 'category' && (
         <ResultatsGlobalCategoryTable
           currentBaremeTotalPoints={currentBareme.totalPoints}
           categoryGroups={categoryGroups}
           judges={judges}
           judgeColors={judgeColors}
-          rows={rows}
+          rows={filteredRows}
           selectedClipId={selectedClipId}
           onSelectClip={setSelectedClipId}
           onOpenClipInNotation={openClipInNotation}
@@ -491,11 +637,11 @@ function useResultatsInterfaceController() {
         />
       )}
 
-      {mainView === 'top' && (
+      {filteredRows.length > 0 && mainView === 'top' && (
         <ResultatsTopLists
           canSortByScore={canSortByScore}
           judges={judges}
-          rows={rows}
+          rows={filteredRows}
           judgeColors={judgeColors}
           selectedClipId={selectedClipId}
           onSelectClip={setSelectedClipId}
@@ -505,9 +651,9 @@ function useResultatsInterfaceController() {
         />
       )}
 
-      {mainView === 'judgeNotes' && (
+      {filteredRows.length > 0 && mainView === 'judgeNotes' && (
         <ResultatsJudgeNotesView
-          clips={sortedClips}
+          clips={filteredSortedClips}
           selectedClipId={selectedClipId}
           judges={judges}
           categoryGroups={categoryGroups}
@@ -535,11 +681,17 @@ function useResultatsInterfaceController() {
       )}
 
       <ResultatsNotesPanel
+        key={selectedClip?.id ?? 'resultats-notes-panel'}
         hidden={hideResultNotes}
         selectedClip={selectedClip}
         noteText={selectedResultNoteText}
         selectedClipFps={selectedClipFps}
         shortcutBindings={shortcutBindings}
+        favoriteJudges={favoriteJudgesForSelectedClip}
+        judgeColors={judgeColors}
+        favoritesPanelVisible={showFavoritesPanel}
+        onToggleFavoritesPanel={handleToggleFavoritesPanel}
+        onUpdateFavoriteComment={handleUpdateFavoriteComment}
         onChangeText={(clipId, text) => {
           setResultNote(clipId, text)
         }}

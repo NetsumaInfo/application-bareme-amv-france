@@ -3,6 +3,7 @@ import { withAlpha } from '@/utils/colors'
 import type { CategoryGroup, JudgeSource } from '@/utils/results'
 import type { ResultatsRow } from '@/components/interfaces/resultats/types'
 import { RESULTATS_PARTICIPANT_COLUMN_WIDTH_CLASS } from '@/components/interfaces/resultats/layout'
+import { HoverTextTooltip } from '@/components/ui/HoverTextTooltip'
 import { useI18n } from '@/i18n'
 
 function getGroupStep(criteria: Array<{ step?: number | null }>): number {
@@ -50,19 +51,19 @@ export function ResultatsTable({
 }: ResultatsTableProps) {
   const { t } = useI18n()
   return (
-    <div className={`flex-1 rounded-lg border border-gray-700 ${staticExport ? 'overflow-visible' : 'overflow-auto'}`}>
-      <table className="w-full border-collapse text-xs">
-        <thead className={staticExport ? undefined : 'sticky top-0 z-10'}>
+    <div className={`relative isolate flex-1 rounded-lg border border-gray-700 ${staticExport ? 'overflow-visible' : 'amv-results-scroll'}`}>
+      <table className="w-full border-separate border-spacing-0 text-xs">
+        <thead className={staticExport ? undefined : 'sticky top-0 z-[60] bg-surface-dark shadow-[0_1px_0_rgba(55,65,81,0.75)]'}>
           <tr>
             <th
               rowSpan={2}
-              className={`${staticExport ? '' : 'sticky left-0 z-20'} px-2 py-1.5 text-center text-[10px] font-medium text-gray-500 border-r border-b border-gray-700 w-8 bg-surface-dark`}
+              className={` px-2 py-1.5 text-center text-[10px] font-medium text-gray-500 border-r border-b border-gray-700 w-8 bg-surface-dark`}
             >
               #
             </th>
             <th
               rowSpan={2}
-              className={`${staticExport ? '' : 'sticky left-8 z-20'} px-2 py-1.5 text-left text-[10px] font-medium text-gray-500 border-r border-b border-gray-700 bg-surface-dark ${RESULTATS_PARTICIPANT_COLUMN_WIDTH_CLASS}`}
+              className={` px-2 py-1.5 text-left text-[10px] font-medium text-gray-500 border-r border-b border-gray-700 bg-surface-dark ${RESULTATS_PARTICIPANT_COLUMN_WIDTH_CLASS}`}
             >
               {t('Participant')}
             </th>
@@ -103,9 +104,10 @@ export function ResultatsTable({
                     backgroundColor: withAlpha(group.color, 0.14),
                     color: judge.isCurrentJudge ? '#93c5fd' : '#94a3b8',
                   }}
-                  title={judge.judgeName}
                 >
-                  {judge.judgeName}
+                  <HoverTextTooltip text={judge.judgeName}>
+                    <span className="inline-block max-w-[88px] truncate align-middle">{judge.judgeName}</span>
+                  </HoverTextTooltip>
                 </th>
               )),
             )}
@@ -143,11 +145,11 @@ export function ResultatsTable({
                       : 'bg-transparent'
                 } hover:bg-white/[0.06]`}
               >
-                <td className={`${staticExport ? '' : 'sticky left-0 z-10'} px-2 py-1 text-center text-[10px] text-gray-500 border-r border-gray-800 bg-surface-dark`}>
+                <td className={` px-2 py-1 text-center text-[10px] text-gray-500 border-r border-gray-800 bg-surface-dark`}>
                   {index + 1}
                 </td>
                 <td
-                  className={`${staticExport ? '' : 'sticky left-8 z-10'} px-2 py-1 border-r border-gray-800 bg-surface-dark ${RESULTATS_PARTICIPANT_COLUMN_WIDTH_CLASS}`}
+                  className={` px-2 py-1 border-r border-gray-800 bg-surface-dark ${RESULTATS_PARTICIPANT_COLUMN_WIDTH_CLASS}`}
                   onDoubleClick={(event) => {
                     event.stopPropagation()
                     onOpenClipInNotation(row.clip.id)
@@ -180,32 +182,33 @@ export function ResultatsTable({
                           judge.isCurrentJudge ? 'text-primary-200' : 'text-gray-300'
                         }`}
                       >
-                        <input
-                          type="number"
-                          min={0}
-                          max={group.totalMax}
-                          step={step}
-                          value={displayed}
-                          onContextMenu={(event) => {
-                            event.preventDefault()
-                            event.stopPropagation()
-                            onOpenClipContextMenu(row.clip.id, event.clientX, event.clientY)
-                          }}
-                          onChange={(event) => {
-                            onSetDraftCell(key, event.target.value)
-                          }}
-                          onBlur={() => onCommitDraftCell(row.clip.id, group.category, judge.key)}
-                          onKeyDown={(event) => {
-                            if (event.key === 'Enter') {
+                        <HoverTextTooltip text={`${judge.judgeName} - ${group.category}`} className="block w-full">
+                          <input
+                            type="number"
+                            min={0}
+                            max={group.totalMax}
+                            step={step}
+                            value={displayed}
+                            onContextMenu={(event) => {
                               event.preventDefault()
-                              onCommitDraftCell(row.clip.id, group.category, judge.key)
-                            } else if (event.key === 'Escape') {
-                              onClearDraftCell(key)
-                            }
-                          }}
-                          className="amv-soft-number w-full px-1 py-0.5 rounded bg-transparent border border-transparent hover:bg-surface-light/50 focus:bg-surface-dark focus:border-primary-500 focus-visible:outline-none outline-none text-center"
-                          title={`${judge.judgeName} - ${group.category}`}
-                        />
+                              event.stopPropagation()
+                              onOpenClipContextMenu(row.clip.id, event.clientX, event.clientY)
+                            }}
+                            onChange={(event) => {
+                              onSetDraftCell(key, event.target.value)
+                            }}
+                            onBlur={() => onCommitDraftCell(row.clip.id, group.category, judge.key)}
+                            onKeyDown={(event) => {
+                              if (event.key === 'Enter') {
+                                event.preventDefault()
+                                onCommitDraftCell(row.clip.id, group.category, judge.key)
+                              } else if (event.key === 'Escape') {
+                                onClearDraftCell(key)
+                              }
+                            }}
+                            className="amv-soft-number w-full px-1 py-0.5 rounded bg-transparent border border-transparent hover:bg-surface-light/50 focus:bg-surface-dark focus:border-primary-500 focus-visible:outline-none outline-none text-center"
+                          />
+                        </HoverTextTooltip>
                       </td>
                     )
                   }),
@@ -235,3 +238,5 @@ export function ResultatsTable({
     </div>
   )
 }
+
+

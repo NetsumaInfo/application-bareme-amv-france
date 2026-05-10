@@ -16,15 +16,18 @@ export function useDetachedNoteDebounce({
   const textDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const categoryDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const criterionDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const favoriteDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const pendingTextNoteRef = useRef<string | null>(null)
   const pendingCategoryNoteRef = useRef<{ category: string; text: string } | null>(null)
   const pendingCriterionNoteRef = useRef<{ criterionId: string; text: string } | null>(null)
+  const pendingFavoriteCommentRef = useRef<string | null>(null)
 
   useEffect(() => {
     return () => {
       if (textDebounceRef.current) clearTimeout(textDebounceRef.current)
       if (categoryDebounceRef.current) clearTimeout(categoryDebounceRef.current)
       if (criterionDebounceRef.current) clearTimeout(criterionDebounceRef.current)
+      if (favoriteDebounceRef.current) clearTimeout(favoriteDebounceRef.current)
     }
   }, [])
 
@@ -107,6 +110,21 @@ export function useDetachedNoteDebounce({
     [clip, setLocalNote],
   )
 
+  const handleFavoriteCommentChange = useCallback((text: string) => {
+    if (!clip?.favorite) return
+
+    pendingFavoriteCommentRef.current = text
+
+    if (favoriteDebounceRef.current) clearTimeout(favoriteDebounceRef.current)
+    favoriteDebounceRef.current = setTimeout(() => {
+      pendingFavoriteCommentRef.current = null
+      emit('notes:favorite-comment-updated', {
+        clipId: clip.id,
+        text,
+      }).catch(() => {})
+    }, 250)
+  }, [clip])
+
   const flushPendingNoteUpdates = useCallback(() => {
     if (!clip) return
 
@@ -121,6 +139,10 @@ export function useDetachedNoteDebounce({
     if (criterionDebounceRef.current) {
       clearTimeout(criterionDebounceRef.current)
       criterionDebounceRef.current = null
+    }
+    if (favoriteDebounceRef.current) {
+      clearTimeout(favoriteDebounceRef.current)
+      favoriteDebounceRef.current = null
     }
 
     if (pendingTextNoteRef.current !== null) {
@@ -148,12 +170,21 @@ export function useDetachedNoteDebounce({
       }).catch(() => {})
       pendingCriterionNoteRef.current = null
     }
+
+    if (pendingFavoriteCommentRef.current !== null && clip.favorite) {
+      emit('notes:favorite-comment-updated', {
+        clipId: clip.id,
+        text: pendingFavoriteCommentRef.current,
+      }).catch(() => {})
+      pendingFavoriteCommentRef.current = null
+    }
   }, [clip])
 
   return {
     handleTextChange,
     handleCategoryNoteChange,
     handleCriterionNoteChange,
+    handleFavoriteCommentChange,
     flushPendingNoteUpdates,
   }
 }

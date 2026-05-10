@@ -51,3 +51,21 @@ export async function rememberRecentProjectPath(filePath: string): Promise<void>
     [RECENT_PROJECT_PATHS_KEY]: next,
   })
 }
+
+export async function forgetRecentProjectPath(filePath: string): Promise<void> {
+  const normalized = filePath.trim()
+  if (!normalized) return
+
+  const settings = await loadSettingsRecord()
+  const current = sanitizePaths(settings[RECENT_PROJECT_PATHS_KEY])
+  const next = current.filter((entry) => entry !== normalized)
+
+  if (next.length === current.length) {
+    return
+  }
+
+  await tauri.saveUserSettings({
+    ...settings,
+    [RECENT_PROJECT_PATHS_KEY]: next,
+  })
+}

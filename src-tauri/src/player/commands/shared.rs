@@ -26,7 +26,11 @@ pub struct TrackItem {
     pub external: bool,
 }
 
-pub(super) fn with_player<T, F>(state: &State<'_, AppState>, err_msg: &str, op: F) -> Result<T, String>
+pub(super) fn with_player<T, F>(
+    state: &State<'_, AppState>,
+    err_msg: &str,
+    op: F,
+) -> Result<T, String>
 where
     F: FnOnce(&crate::player::mpv_wrapper::MpvPlayer) -> Result<T, String>,
 {

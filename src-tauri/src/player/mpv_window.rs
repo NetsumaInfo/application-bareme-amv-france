@@ -4,10 +4,10 @@ pub use super::mpv_win32::{set_window_owner_raw, set_window_pos_raw};
 
 #[path = "mpv_window_geometry.rs"]
 mod geometry;
-#[path = "mpv_window_state.rs"]
-mod state;
 #[path = "mpv_window_mode.rs"]
 mod mode;
+#[path = "mpv_window_state.rs"]
+mod state;
 
 /// A Win32 popup window owned by the Tauri main window.
 /// Used as the rendering target for mpv. Floats above the WebView2 layer.

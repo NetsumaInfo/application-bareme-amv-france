@@ -28,17 +28,14 @@ impl MpvPlayer {
         }
 
         // Configure mpv options before initialization
-        let options = vec![
+        let options = [
             ("keep-open", "yes"),
             ("idle", "yes"),
             ("osc", "no"),
             ("input-default-bindings", "no"),
             ("terminal", "no"),
             ("msg-level", "all=no"),
-            (
-                "af",
-                "@dbmeter:lavfi=[astats=metadata=1:reset=1]",
-            ),
+            ("af", "@dbmeter:lavfi=[astats=metadata=1:reset=1]"),
         ];
 
         for (key, value) in &options {
@@ -72,7 +69,7 @@ impl MpvPlayer {
         }
 
         // Observe key properties for updates
-        let properties = vec![
+        let properties = [
             ("time-pos", MPV_FORMAT_DOUBLE),
             ("duration", MPV_FORMAT_DOUBLE),
             ("pause", MPV_FORMAT_FLAG),

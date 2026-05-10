@@ -2,6 +2,7 @@ import { formatTime } from '@/utils/formatters'
 import { AppRangeSlider } from '@/components/ui/AppRangeSlider'
 import type { NoteTimecodeMarker } from '@/utils/timecodes'
 import { useI18n } from '@/i18n'
+import { HoverTextTooltip } from '@/components/ui/HoverTextTooltip'
 
 interface FloatingPlayerTimelineProps {
   currentTime: number
@@ -40,26 +41,25 @@ export function FloatingPlayerTimeline({
           <div className="pointer-events-none absolute left-0 right-0 top-1/2 -translate-y-1/2 h-0">
             {noteMarkers.map((marker) => {
               const left = Math.max(0, Math.min(100, (marker.seconds / duration) * 100))
+              const markerTooltipText = marker.previewText
+                ? `${marker.raw} - ${marker.previewText}`
+                : `${marker.raw} - ${marker.category ?? t('Notes globales')}`
               return (
-                <button
-                  key={marker.key}
-                  type="button"
-                  onClick={(event) => {
-                    event.stopPropagation()
-                    onMarkerJump(marker)
-                  }}
-                  className="pointer-events-auto absolute top-0 -translate-x-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full border shadow-md hover:scale-110 transition-transform"
-                  style={{
-                    left: `${left}%`,
-                    backgroundColor: marker.color,
-                    borderColor: 'rgba(15,23,42,0.85)',
-                  }}
-                  title={
-                    marker.previewText
-                      ? `${marker.raw} - ${marker.previewText}`
-                      : `${marker.raw} - ${marker.category ?? t('Notes globales')}`
-                  }
-                />
+                <HoverTextTooltip key={marker.key} text={markerTooltipText}>
+                  <button
+                    type="button"
+                    onClick={(event) => {
+                      event.stopPropagation()
+                      onMarkerJump(marker)
+                    }}
+                    className="pointer-events-auto absolute top-0 -translate-x-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full border shadow-md hover:scale-110 transition-transform"
+                    style={{
+                      left: `${left}%`,
+                      backgroundColor: marker.color,
+                      borderColor: 'rgba(15,23,42,0.85)',
+                    }}
+                  />
+                </HoverTextTooltip>
               )
             })}
           </div>

@@ -6,13 +6,13 @@ import type {
   MutableRefObject,
   WheelEvent as ReactWheelEvent,
 } from 'react'
-import { listen } from '@tauri-apps/api/event'
-import { readBinaryFile } from '@tauri-apps/api/fs'
+import { readFile } from '@tauri-apps/plugin-fs'
 import { EyeOff, Image as ImageIcon, Layers, Move, Type, Trash2, X } from 'lucide-react'
 import { withAlpha } from '@/utils/colors'
 import { useI18n } from '@/i18n'
 import { AppRangeSlider } from '@/components/ui/AppRangeSlider'
 import { HoverTextTooltip } from '@/components/ui/HoverTextTooltip'
+import { listenNativeFileDrop } from '@/services/tauri'
 import {
   AppContextMenuItem,
   AppContextMenuPanel,
@@ -640,36 +640,32 @@ function useExportPosterPreviewPanelController({
 
   useEffect(() => {
     let unlistenDrop: (() => void) | null = null
-    let unlistenHover: (() => void) | null = null
-    let unlistenCancel: (() => void) | null = null
 
-    listen<string[]>('tauri://file-drop', (event) => {
-      hideImageDragOverlay()
-      if (Date.now() - lastBrowserImageDropTsRef.current < 500) return
-      const imagePaths = (event.payload ?? []).filter(isImagePath)
-      for (const imagePath of imagePaths) {
-        readBinaryFile(imagePath)
-          .then((bytes) => {
-            const buffer = new ArrayBuffer(bytes.byteLength)
-            new Uint8Array(buffer).set(bytes)
-            const file = new File(
-              [new Blob([buffer], { type: getImageMimeType(imagePath) })],
-              getFileNameFromPath(imagePath),
-              { type: getImageMimeType(imagePath) },
-            )
-            onAddImage(file)
-          })
-          .catch((errorValue) => {
-            console.error('Dropped poster image import failed:', errorValue)
-          })
-      }
+    listenNativeFileDrop({
+      onDrop: (paths) => {
+        hideImageDragOverlay()
+        if (Date.now() - lastBrowserImageDropTsRef.current < 500) return
+        const imagePaths = paths.filter(isImagePath)
+        for (const imagePath of imagePaths) {
+          readFile(imagePath)
+            .then((bytes) => {
+              const buffer = new ArrayBuffer(bytes.byteLength)
+              new Uint8Array(buffer).set(bytes)
+              const file = new File(
+                [new Blob([buffer], { type: getImageMimeType(imagePath) })],
+                getFileNameFromPath(imagePath),
+                { type: getImageMimeType(imagePath) },
+              )
+              onAddImage(file)
+            })
+            .catch((errorValue) => {
+              console.error('Dropped poster image import failed:', errorValue)
+            })
+        }
+      },
+      onHover: showImageDragOverlay,
+      onCancel: hideImageDragOverlay,
     }).then((fn) => { unlistenDrop = fn })
-
-    listen('tauri://file-drop-hover', showImageDragOverlay)
-      .then((fn) => { unlistenHover = fn })
-
-    listen('tauri://file-drop-cancelled', hideImageDragOverlay)
-      .then((fn) => { unlistenCancel = fn })
 
     const preventBrowserFileDrop = (event: DragEvent) => {
       if (!event.dataTransfer?.types?.includes('Files')) return
@@ -688,8 +684,6 @@ function useExportPosterPreviewPanelController({
 
     return () => {
       if (unlistenDrop) unlistenDrop()
-      if (unlistenHover) unlistenHover()
-      if (unlistenCancel) unlistenCancel()
       window.removeEventListener('dragenter', preventBrowserFileDrop)
       window.removeEventListener('dragover', preventBrowserFileDrop)
       window.removeEventListener('drop', preventBrowserFileDrop)

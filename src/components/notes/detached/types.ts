@@ -4,7 +4,7 @@ import type { Note } from '@/types/notation'
 import type { Criterion } from '@/types/bareme'
 
 export interface ActiveNoteField {
-  kind: 'category' | 'global'
+  kind: 'category' | 'global' | 'favorite'
   category?: string
 }
 

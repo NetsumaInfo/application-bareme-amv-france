@@ -19,17 +19,17 @@ export function SpreadsheetTableHeader({
   const { t } = useI18n()
 
   return (
-    <thead className="sticky top-0 z-40 bg-surface-dark">
+    <thead className="sticky top-0 z-[60] bg-surface-dark shadow-[0_1px_0_rgba(55,65,81,0.75)]">
       <tr>
         <th
           rowSpan={2}
-          className="px-2 py-1.5 text-center text-[10px] font-medium text-gray-500 border-r border-b border-gray-700/60 w-8 bg-surface sticky left-0 z-50"
+          className="px-2 py-1.5 text-center text-[10px] font-medium text-gray-500 border-r border-b border-gray-700/60 w-8 bg-surface"
         >
           #
         </th>
         <th
           rowSpan={2}
-          className={`px-2 py-1.5 text-left text-[10px] font-medium text-gray-500 border-r border-b border-gray-700/60 bg-surface sticky left-8 z-50 ${PARTICIPANT_COLUMN_WIDTH_CLASS}`}
+          className={`px-2 py-1.5 text-left text-[10px] font-medium text-gray-500 border-r border-b border-gray-700/60 bg-surface ${PARTICIPANT_COLUMN_WIDTH_CLASS}`}
         >
           {t('Participant')}
         </th>

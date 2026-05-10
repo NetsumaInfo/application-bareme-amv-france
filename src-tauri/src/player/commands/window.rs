@@ -21,19 +21,24 @@ pub fn player_set_geometry(
 pub fn player_show(state: State<'_, AppState>, app_handle: tauri::AppHandle) -> Result<(), String> {
     with_child_window(&state, |cw| {
         cw.show();
-        super::overlay::sync_overlay_with_child(&app_handle, cw, false);
+        let mut overlay_sync = state.overlay_sync.lock().map_err(|e| e.to_string())?;
+        super::overlay::sync_overlay_with_child(&app_handle, cw, false, &mut overlay_sync);
         Ok(())
     })
 }
 
 #[tauri::command]
 pub fn player_hide(state: State<'_, AppState>, app_handle: tauri::AppHandle) -> Result<(), String> {
-    use tauri::Manager;
+    use tauri::{Emitter, Manager};
     with_child_window(&state, |cw| {
         cw.hide();
-        if let Some(overlay) = app_handle.get_window("fullscreen-overlay") {
+        if let Some(overlay) = app_handle.get_webview_window("fullscreen-overlay") {
             let _ = overlay.set_fullscreen(false);
             let _ = overlay.hide();
+            let _ = overlay.emit("overlay:visibility", false);
+        }
+        if let Ok(mut overlay_sync) = state.overlay_sync.lock() {
+            *overlay_sync = crate::state::OverlaySyncState::default();
         }
         Ok(())
     })
@@ -55,15 +60,21 @@ pub fn player_set_fullscreen(
 ) -> Result<(), String> {
     use tauri::Manager;
     with_child_window(&state, |cw| {
+        let mut overlay_sync = state.overlay_sync.lock().map_err(|e| e.to_string())?;
         if fullscreen {
             cw.show();
             cw.set_fullscreen(true);
-            super::overlay::sync_overlay_with_child(&app_handle, cw, true);
+            super::overlay::sync_overlay_with_child(&app_handle, cw, true, &mut overlay_sync);
         } else {
             cw.set_fullscreen(false);
-            super::overlay::sync_overlay_with_child(&app_handle, cw, cw.is_detached());
+            super::overlay::sync_overlay_with_child(
+                &app_handle,
+                cw,
+                cw.is_detached(),
+                &mut overlay_sync,
+            );
             if !cw.is_detached() {
-                if let Some(main) = app_handle.get_window("main") {
+                if let Some(main) = app_handle.get_webview_window("main") {
                     let _ = main.set_focus();
                 }
             }
@@ -88,9 +99,11 @@ pub fn player_is_visible(state: State<'_, AppState>) -> Result<bool, String> {
 pub fn player_sync_overlay(
     state: State<'_, AppState>,
     app_handle: tauri::AppHandle,
-) -> Result<(), String> {
+) -> Result<bool, String> {
     with_child_window(&state, |cw| {
-        super::overlay::sync_overlay_with_child(&app_handle, cw, false);
-        Ok(())
+        let mut overlay_sync = state.overlay_sync.lock().map_err(|e| e.to_string())?;
+        let previous = *overlay_sync;
+        super::overlay::sync_overlay_with_child(&app_handle, cw, false, &mut overlay_sync);
+        Ok(previous != *overlay_sync)
     })
 }

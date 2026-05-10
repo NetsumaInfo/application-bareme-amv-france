@@ -4,6 +4,8 @@ import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Check, ChevronDown, Plus, Settings2, X } from 'lucide-react'
 import { createCreateProjectSchema, type CreateProjectFormData } from '@/schemas/projectSchema'
+import { SettingsToggle } from '@/components/settings/SettingsToggle'
+import { ContestCategoriesEditor } from '@/components/project/ContestCategoriesEditor'
 import { useProjectStore } from '@/store/useProjectStore'
 import { useNotationStore } from '@/store/useNotationStore'
 import { useUIStore } from '@/store/useUIStore'
@@ -13,6 +15,7 @@ import { useI18n } from '@/i18n'
 import { rememberRecentProjectPath } from '@/services/recentProjects'
 import type { Bareme } from '@/types/bareme'
 import type { ClipNamePattern } from '@/types/project'
+import { normalizeContestCategoryEditorItems, type ContestCategoryEditorItem } from '@/utils/contestCategory'
 
 const DEFAULT_CLIP_NAME_PATTERN: ClipNamePattern = 'pseudo_clip'
 
@@ -214,6 +217,8 @@ export default function CreateProjectModal() {
   const { t } = useI18n()
   const createProjectSchema = createCreateProjectSchema(t)
   const [baremeMenuOpen, setBaremeMenuOpen] = useState(false)
+  const [contestCategoriesEnabled, setContestCategoriesEnabled] = useState(false)
+  const [contestCategoryItems, setContestCategoryItems] = useState<ContestCategoryEditorItem[]>([])
   const baremeMenuRef = useRef<HTMLDivElement>(null)
 
   const {
@@ -241,6 +246,8 @@ export default function CreateProjectModal() {
       baremeId: availableBaremes[0]?.id || '',
       clipNamePattern: DEFAULT_CLIP_NAME_PATTERN,
     })
+    setContestCategoriesEnabled(false)
+    setContestCategoryItems([])
   }, [availableBaremes, reset, showProjectModal])
 
   useEffect(() => {
@@ -272,9 +279,17 @@ export default function CreateProjectModal() {
     createProject(data.name, data.judgeName, data.baremeId)
     setClips([])
     setBareme(selected)
+    const normalizedContestCategories = normalizeContestCategoryEditorItems(contestCategoryItems)
     updateSettings({
       hideFinalScoreUntilEnd: Boolean(selected.hideTotalsUntilAllScored),
       clipNamePattern: data.clipNamePattern,
+      contestCategoriesEnabled,
+      contestCategoryPresets: contestCategoriesEnabled
+        ? normalizedContestCategories.presets
+        : [],
+      contestCategoryColors: contestCategoriesEnabled
+        ? normalizedContestCategories.colors
+        : {},
     })
 
     reset()
@@ -363,6 +378,30 @@ export default function CreateProjectModal() {
             errorMessage={errors.clipNamePattern?.message}
             onSelect={(pattern) => setValue('clipNamePattern', pattern, { shouldDirty: true, shouldValidate: true })}
           />
+
+          <div className="rounded-lg border border-gray-700 bg-surface-dark/40 px-3 py-2.5">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-sm text-gray-200">{t('Activer les catégories concours rapides')}</p>
+                <p className="text-[10px] text-gray-500">{t('Ajoute des boutons de catégories au centre de la barre d’actions')}</p>
+              </div>
+              <SettingsToggle
+                checked={contestCategoriesEnabled}
+                onChange={() => setContestCategoriesEnabled((current) => !current)}
+              />
+            </div>
+            {contestCategoriesEnabled ? (
+              <div className="mt-2.5">
+                <label className="mb-1 block text-xs font-medium text-gray-400">
+                  {t('Catégories et couleurs')}
+                </label>
+                <ContestCategoriesEditor
+                  items={contestCategoryItems}
+                  onChange={setContestCategoryItems}
+                />
+              </div>
+            ) : null}
+          </div>
 
           <BaremeField
             availableBaremes={availableBaremes}

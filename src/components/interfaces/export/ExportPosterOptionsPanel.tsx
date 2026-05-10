@@ -9,6 +9,7 @@ import { ColorSwatchPicker } from '@/components/ui/ColorSwatchPicker'
 import { HoverTextTooltip } from '@/components/ui/HoverTextTooltip'
 import { useI18n } from '@/i18n'
 import type {
+  ExportContestCategoryOption,
   ExportJsonJudgeOption,
   ExportJsonMode,
   ExportPosterBlock,
@@ -52,6 +53,8 @@ interface ExportPosterOptionsPanelProps {
   jsonExportMode: ExportJsonMode
   jsonJudgeKey: string
   jsonJudgeOptions: ExportJsonJudgeOption[]
+  contestCategoryKey: string
+  contestCategoryOptions: ExportContestCategoryOption[]
   onSelectBlock: (id: ExportPosterBlockId) => void
   onPatchBlock: (id: ExportPosterBlockId, patch: Partial<ExportPosterBlock>) => void
   onSetFontSearch: (value: string) => void
@@ -74,6 +77,7 @@ interface ExportPosterOptionsPanelProps {
   onSetTopCount: (count: number) => void
   onSetJsonExportMode: (mode: ExportJsonMode) => void
   onSetJsonJudgeKey: (judgeKey: string) => void
+  onSetContestCategoryKey: (categoryKey: string) => void
   onToggleClipNameInTop: () => void
   onToggleScoreInTop: () => void
   onGenerateTopIntoBlock: () => void
@@ -198,6 +202,8 @@ function renderExportPosterOptionsPanel({
   jsonExportMode,
   jsonJudgeKey,
   jsonJudgeOptions,
+  contestCategoryKey,
+  contestCategoryOptions,
   onSelectBlock,
   onPatchBlock,
   onSetFontSearch,
@@ -218,6 +224,7 @@ function renderExportPosterOptionsPanel({
   onSetTopCount,
   onSetJsonExportMode,
   onSetJsonJudgeKey,
+  onSetContestCategoryKey,
   onToggleClipNameInTop,
   onToggleScoreInTop,
   onGenerateTopIntoBlock,
@@ -269,6 +276,19 @@ function renderExportPosterOptionsPanel({
 
       {/* ── Format & Zoom ── */}
       <PanelSection title={t('Format')}>
+        <div>
+          <label className="block text-[10.5px] text-gray-400 mb-1">{t('Catégories concours')}</label>
+          <AppSelect
+            value={contestCategoryKey}
+            onChange={onSetContestCategoryKey}
+            ariaLabel={t('Catégories concours')}
+            className="w-full"
+            options={contestCategoryOptions.map((option) => ({
+              value: option.key,
+              label: option.label,
+            }))}
+          />
+        </div>
         <AppSelect
           value={selectedSizePreset}
           onChange={onSetSizePreset}

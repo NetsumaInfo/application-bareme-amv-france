@@ -39,7 +39,9 @@ pub fn player_seek(state: State<'_, AppState>, position: f64) -> Result<(), Stri
 
 #[tauri::command]
 pub fn player_seek_relative(state: State<'_, AppState>, offset: f64) -> Result<(), String> {
-    with_player(&state, "Player not initialized", |p| p.seek_relative(offset))
+    with_player(&state, "Player not initialized", |p| {
+        p.seek_relative(offset)
+    })
 }
 
 #[tauri::command]
@@ -118,7 +120,9 @@ pub fn player_set_subtitle_track(
     state: State<'_, AppState>,
     id: Option<i64>,
 ) -> Result<(), String> {
-    with_player(&state, "Player not initialized", |p| p.set_subtitle_track(id))
+    with_player(&state, "Player not initialized", |p| {
+        p.set_subtitle_track(id)
+    })
 }
 
 #[tauri::command]

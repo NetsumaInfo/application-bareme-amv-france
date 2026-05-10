@@ -34,7 +34,8 @@ pub fn player_get_media_info(
             if let Ok(player) = state.player.try_lock() {
                 if let Some(p) = &*player {
                     let current_path = super::parsing::normalize_path(&p.get_current_path());
-                    if !current_path.is_empty() && current_path.eq_ignore_ascii_case(&normalized_target)
+                    if !current_path.is_empty()
+                        && current_path.eq_ignore_ascii_case(&normalized_target)
                     {
                         let info = catch_unwind(AssertUnwindSafe(|| p.get_media_info()))
                             .unwrap_or_else(|_| crate::player::mpv_wrapper::MediaInfo::empty());
@@ -87,7 +88,9 @@ pub async fn player_get_frame_preview(
 
     let safe_width = width.unwrap_or(320).clamp(120, 640);
     let normalized_path = super::parsing::normalize_path(target_path.trim());
-    if let Some(cached) = super::cache::get_frame_preview_cached(&normalized_path, seconds, safe_width) {
+    if let Some(cached) =
+        super::cache::get_frame_preview_cached(&normalized_path, seconds, safe_width)
+    {
         return Ok(cached);
     }
 
@@ -104,7 +107,12 @@ pub async fn player_get_frame_preview(
 
     match result {
         Ok(image) => {
-            super::cache::put_frame_preview_cache(&normalized_path, seconds, safe_width, image.clone());
+            super::cache::put_frame_preview_cache(
+                &normalized_path,
+                seconds,
+                safe_width,
+                image.clone(),
+            );
             Ok(image)
         }
         Err(error) => Err(error),

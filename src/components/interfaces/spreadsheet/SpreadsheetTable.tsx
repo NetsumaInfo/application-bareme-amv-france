@@ -41,7 +41,11 @@ interface SpreadsheetTableProps {
   onOpenPlayerAtFront: () => void
   onSetEditingManualClipId: (clipId: string | null) => void
   onManualClipBlur: (clipId: string, event: FocusEvent<HTMLDivElement>) => void
-  onManualClipFieldChange: (clipId: string, field: 'author' | 'displayName', value: string) => void
+  onManualClipFieldChange: (
+    clipId: string,
+    field: 'author' | 'displayName' | 'contestCategory',
+    value: string,
+  ) => void
   onCellChange: (clipId: string, criterionId: string, value: string) => void
   onCellKeyDown: (event: ReactKeyboardEvent, clipIdx: number, critIdx: number) => void
   onSeekAndPauseToTimecode: (seconds: number) => Promise<void>
@@ -214,8 +218,8 @@ export function SpreadsheetTable({
   const currentClip = clips[currentClipIndex]
 
   return (
-    <div className="relative flex-1 overflow-auto">
-      <table className="w-full border-collapse text-xs">
+    <div className="relative isolate flex-1 overflow-auto">
+      <table className="w-full border-separate border-spacing-0 text-xs">
         <SpreadsheetTableHeader
           categoryGroups={categoryGroups}
           currentBareme={currentBareme}

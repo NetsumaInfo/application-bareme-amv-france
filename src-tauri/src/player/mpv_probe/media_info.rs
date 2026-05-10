@@ -1,8 +1,8 @@
-use crate::player::mpv_wrapper::MediaInfo;
 use crate::player::mpv_probe::parsing::{
     infer_bit_depth_from_pix_fmt, parse_f64, parse_i64, parse_ratio, parse_str, parse_stream_i64,
     parse_stream_str, parse_stream_tag_i64,
 };
+use crate::player::mpv_wrapper::MediaInfo;
 use serde_json::Value;
 
 fn normalize_rotation(raw: i64) -> i64 {

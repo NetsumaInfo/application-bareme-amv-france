@@ -1,4 +1,4 @@
-import { open, save } from '@tauri-apps/api/dialog'
+import { open, save } from '@tauri-apps/plugin-dialog'
 import { join } from '@tauri-apps/api/path'
 
 export async function openProjectDialog(): Promise<string | null> {

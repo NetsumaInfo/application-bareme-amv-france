@@ -1,5 +1,5 @@
-use crate::player::mpv_win32::*;
 use super::MpvChildWindow;
+use crate::player::mpv_win32::*;
 
 impl MpvChildWindow {
     pub fn show(&self) {

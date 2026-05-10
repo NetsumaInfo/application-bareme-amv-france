@@ -27,6 +27,11 @@ pub fn export_json(data: serde_json::Value, file_path: String) -> Result<(), Str
 }
 
 #[tauri::command]
+pub fn delete_project(file_path: String) -> Result<(), String> {
+    project_files::delete_project_file(file_path)
+}
+
+#[tauri::command]
 pub fn get_default_projects_folder() -> Result<String, String> {
     project_listing::default_projects_folder()
 }

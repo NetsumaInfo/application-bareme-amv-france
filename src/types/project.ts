@@ -19,10 +19,13 @@ export interface Clip {
   filePath: string
   displayName: string
   author?: string
+  contestCategory?: string
   duration: number
   hasInternalSubtitles: boolean
   audioTrackCount: number
   scored: boolean
+  favorite?: boolean
+  favoriteComment?: string
   order: number
   thumbnailTime?: number
 }
@@ -40,6 +43,9 @@ export interface ProjectSettings {
   multiPseudoDisplayMode: MultiPseudoDisplayMode
   clipNamePattern: ClipNamePattern
   thumbnailDefaultTimeSec: number
+  contestCategoriesEnabled: boolean
+  contestCategoryPresets: string[]
+  contestCategoryColors: Record<string, string>
 }
 
 export type MultiPseudoDisplayMode = 'collab_mep' | 'first_three' | 'all'
@@ -84,6 +90,8 @@ export interface ImportedJudgeNote {
   textNotes?: string
   criterionNotes?: Record<string, string>
   categoryNotes?: Record<string, string>
+  favorite?: boolean
+  favoriteComment?: string
 }
 
 export interface ImportedJudgeData {
@@ -104,4 +112,7 @@ export const DEFAULT_PROJECT_SETTINGS: ProjectSettings = {
   multiPseudoDisplayMode: 'all',
   clipNamePattern: 'pseudo_clip',
   thumbnailDefaultTimeSec: 10,
+  contestCategoriesEnabled: false,
+  contestCategoryPresets: [],
+  contestCategoryColors: {},
 }

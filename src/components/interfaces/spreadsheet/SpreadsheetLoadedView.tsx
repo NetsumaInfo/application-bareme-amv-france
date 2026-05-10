@@ -3,9 +3,11 @@ import { Download } from 'lucide-react'
 import MediaInfoPanel from '@/components/player/MediaInfoPanel'
 import { FramePreviewTooltip } from '@/components/interfaces/spreadsheet/FramePreviewTooltip'
 import { ClipContextMenu } from '@/components/interfaces/spreadsheet/ClipContextMenu'
+import { ContestCategorySelectorDialog } from '@/components/interfaces/spreadsheet/ContestCategorySelectorDialog'
 import { SpreadsheetTable } from '@/components/interfaces/spreadsheet/SpreadsheetTable'
 import { SpreadsheetNotesPanel } from '@/components/interfaces/spreadsheet/SpreadsheetNotesPanel'
 import { SpreadsheetToolbar } from '@/components/interfaces/spreadsheet/SpreadsheetToolbar'
+import { ClipFavoriteDialog } from '@/components/project/ClipFavoriteDialog'
 import { useI18n } from '@/i18n'
 
 interface SpreadsheetLoadedViewProps {
@@ -17,6 +19,8 @@ interface SpreadsheetLoadedViewProps {
   notesPanelProps: ComponentProps<typeof SpreadsheetNotesPanel> | null
   framePreviewProps: ComponentProps<typeof FramePreviewTooltip>
   contextMenuProps: ComponentProps<typeof ClipContextMenu>
+  favoriteDialogProps: ComponentProps<typeof ClipFavoriteDialog> | null
+  contestCategoryDialogProps: ComponentProps<typeof ContestCategorySelectorDialog> | null
   mediaInfoClip: { name: string; path: string } | null
   onCloseMediaInfo: () => void
 }
@@ -30,6 +34,8 @@ export function SpreadsheetLoadedView({
   notesPanelProps,
   framePreviewProps,
   contextMenuProps,
+  favoriteDialogProps,
+  contestCategoryDialogProps,
   mediaInfoClip,
   onCloseMediaInfo,
 }: SpreadsheetLoadedViewProps) {
@@ -52,6 +58,8 @@ export function SpreadsheetLoadedView({
 
       <FramePreviewTooltip {...framePreviewProps} />
       <ClipContextMenu {...contextMenuProps} />
+      {favoriteDialogProps && <ClipFavoriteDialog {...favoriteDialogProps} />}
+      {contestCategoryDialogProps && <ContestCategorySelectorDialog {...contestCategoryDialogProps} />}
 
       {mediaInfoClip && (
         <MediaInfoPanel

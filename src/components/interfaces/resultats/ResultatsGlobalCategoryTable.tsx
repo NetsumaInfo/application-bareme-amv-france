@@ -4,6 +4,7 @@ import { hasAnyCriterionScore, type CategoryGroup, type JudgeSource, type NoteLi
 import type { ResultatsRow } from '@/components/interfaces/resultats/types'
 import { RESULTATS_PARTICIPANT_COLUMN_WIDTH_CLASS } from '@/components/interfaces/resultats/layout'
 import { ClipMiniaturePreview } from '@/components/interfaces/spreadsheet/miniaturePreview'
+import { HoverTextTooltip } from '@/components/ui/HoverTextTooltip'
 import { useI18n } from '@/i18n'
 
 interface ResultatsGlobalCategoryTableProps {
@@ -47,19 +48,19 @@ export function ResultatsGlobalCategoryTable({
   const judgeBandMinWidth = Math.max(184, (judges.length + 1) * 68)
 
   return (
-    <div className={`min-h-0 flex-1 ${staticExport ? 'overflow-visible' : 'overflow-auto'}`}>
-      <table className="w-full min-w-max border-collapse text-[11px]">
-        <thead className={staticExport ? undefined : 'sticky top-0 z-10'}>
+    <div className={`relative isolate min-h-0 flex-1 ${staticExport ? 'overflow-visible' : 'amv-results-scroll'}`}>
+      <table className="w-full min-w-max border-separate border-spacing-0 text-[11px]">
+        <thead className={staticExport ? undefined : 'sticky top-0 z-[60] bg-surface-dark shadow-[0_1px_0_rgba(55,65,81,0.75)]'}>
           <tr>
             <th
               rowSpan={2}
-              className={`${staticExport ? '' : 'sticky left-0 z-20'} w-8 border-b border-r border-gray-700/60 bg-surface px-2 py-1 text-center text-[10px] font-medium text-gray-500`}
+              className={` w-8 border-b border-r border-gray-700/60 bg-surface px-2 py-1 text-center text-[10px] font-medium text-gray-500`}
             >
               #
             </th>
             <th
               rowSpan={2}
-              className={`${staticExport ? '' : 'sticky left-8 z-20'} border-b border-r border-gray-700/60 bg-surface px-2 py-1 text-left text-[10px] font-medium text-gray-500 ${RESULTATS_PARTICIPANT_COLUMN_WIDTH_CLASS}`}
+              className={` border-b border-r border-gray-700/60 bg-surface px-2 py-1 text-left text-[10px] font-medium text-gray-500 ${RESULTATS_PARTICIPANT_COLUMN_WIDTH_CLASS}`}
             >
               {t('Participant')}
             </th>
@@ -104,9 +105,10 @@ export function ResultatsGlobalCategoryTable({
                         color: judgeColors[judge.key] ?? '#60a5fa',
                         backgroundColor: withAlpha(judgeColors[judge.key] ?? '#60a5fa', 0.05),
                       }}
-                      title={judge.judgeName}
                     >
-                      {judge.judgeName}
+                      <HoverTextTooltip text={judge.judgeName}>
+                        <span className="block truncate">{judge.judgeName}</span>
+                      </HoverTextTooltip>
                     </div>
                   ))}
                   <div className="bg-surface px-1.5 py-1 text-center text-[9px] text-gray-500">{t('Moy.')}</div>
@@ -134,11 +136,11 @@ export function ResultatsGlobalCategoryTable({
                       : 'bg-transparent'
                 } hover:bg-white/[0.05]`}
               >
-                <td className={`${staticExport ? '' : 'sticky left-0 z-10'} border-r border-gray-800/60 bg-surface px-2 py-1 text-center text-[10px] text-gray-500`}>
+                <td className={` border-r border-gray-800/60 bg-surface px-2 py-1 text-center text-[10px] text-gray-500`}>
                   {index + 1}
                 </td>
                 <td
-                  className={`${staticExport ? '' : 'sticky left-8 z-10'} border-r border-gray-800/60 bg-surface px-2 py-1 ${RESULTATS_PARTICIPANT_COLUMN_WIDTH_CLASS}`}
+                  className={` border-r border-gray-800/60 bg-surface px-2 py-1 ${RESULTATS_PARTICIPANT_COLUMN_WIDTH_CLASS}`}
                   onDoubleClick={(event) => {
                     event.stopPropagation()
                     onOpenClipInNotation(row.clip.id)
@@ -217,3 +219,5 @@ export function ResultatsGlobalCategoryTable({
     </div>
   )
 }
+
+

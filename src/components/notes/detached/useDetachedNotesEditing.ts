@@ -16,6 +16,7 @@ type UseDetachedNotesEditingParams = {
   clipFps: number | null
   setLocalNote: Dispatch<SetStateAction<Note | null>>
   categoryTextareaRefs: MutableRefObject<Map<string, HTMLTextAreaElement>>
+  favoriteTextareaRef: MutableRefObject<HTMLTextAreaElement | null>
   globalTextareaRef: MutableRefObject<HTMLTextAreaElement | null>
   activeNoteFieldRef: MutableRefObject<ActiveNoteField | null>
 }
@@ -25,6 +26,7 @@ export function useDetachedNotesEditing({
   clipFps,
   setLocalNote,
   categoryTextareaRefs,
+  favoriteTextareaRef,
   globalTextareaRef,
   activeNoteFieldRef,
 }: UseDetachedNotesEditingParams) {
@@ -32,6 +34,7 @@ export function useDetachedNotesEditing({
     handleTextChange,
     handleCategoryNoteChange,
     handleCriterionNoteChange,
+    handleFavoriteCommentChange,
     flushPendingNoteUpdates,
   } = useDetachedNoteDebounce({
     clip,
@@ -82,6 +85,18 @@ export function useDetachedNotesEditing({
     const preciseSeconds = snapToFrameSeconds(status.current_time, clipFps)
     const timecode = formatPreciseTimecode(preciseSeconds)
 
+    if (target.kind === 'favorite') {
+      const textarea = favoriteTextareaRef.current
+      if (!textarea) return
+      const { nextValue, caret } = insertTextAtCursor(textarea, timecode)
+      handleFavoriteCommentChange(nextValue)
+      requestAnimationFrame(() => {
+        textarea.focus()
+        textarea.setSelectionRange(caret, caret)
+      })
+      return
+    }
+
     if (target.kind === 'global') {
       const textarea = globalTextareaRef.current
       if (!textarea) return
@@ -109,8 +124,10 @@ export function useDetachedNotesEditing({
     clipFps,
     activeNoteFieldRef,
     categoryTextareaRefs,
+    favoriteTextareaRef,
     globalTextareaRef,
     handleCategoryNoteChange,
+    handleFavoriteCommentChange,
     handleTextChange,
   ])
 
@@ -119,6 +136,7 @@ export function useDetachedNotesEditing({
     handleTextChange,
     handleCategoryNoteChange,
     handleCriterionNoteChange,
+    handleFavoriteCommentChange,
     flushPendingNoteUpdates,
     insertCurrentTimecode,
   }

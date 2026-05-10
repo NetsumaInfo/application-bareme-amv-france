@@ -4,12 +4,14 @@ import { ResultatsGlobalCategoryTable } from '@/components/interfaces/resultats/
 import { ResultatsGlobalDetailedTable } from '@/components/interfaces/resultats/ResultatsGlobalDetailedTable'
 import { ResultatsJudgeTable } from '@/components/interfaces/resultats/ResultatsJudgeTable'
 import { ResultatsTopLists } from '@/components/interfaces/resultats/ResultatsTopLists'
+import { ClipFavoritesPanel } from '@/components/project/ClipFavoritesPanel'
 import type {
   ResultatsGlobalVariant,
   ResultatsMainView,
   ResultatsRow,
 } from '@/components/interfaces/resultats/types'
 import type { CategoryGroup, JudgeSource } from '@/utils/results'
+import type { Clip } from '@/types/project'
 import { useI18n } from '@/i18n'
 
 interface ExportPreviewPanelProps {
@@ -22,6 +24,7 @@ interface ExportPreviewPanelProps {
   categoryGroups: CategoryGroup[]
   judges: JudgeSource[]
   rows: ResultatsRow[]
+  favoriteClips: Clip[]
   judgeColors: Record<string, string>
   selectedJudgeIndex: number
   rowsPerImage: number
@@ -188,6 +191,7 @@ export function ExportPreviewPanel({
   categoryGroups,
   judges,
   rows,
+  favoriteClips,
   judgeColors,
   selectedJudgeIndex,
   rowsPerImage,
@@ -201,7 +205,8 @@ export function ExportPreviewPanel({
   )
 
   return (
-    <div data-screenshot-zone="export-table" className="flex-1 min-h-0 overflow-hidden">
+    <div data-screenshot-zone="export-table" className="flex flex-1 min-h-0 flex-col overflow-hidden">
+      <ClipFavoritesPanel clips={favoriteClips} compact />
       <ResultatsExportSurface
         mainView={mainView}
         globalVariant={globalVariant}
@@ -218,6 +223,7 @@ export function ExportPreviewPanel({
 
       <div className="fixed left-[-20000px] top-0 z-[-1] min-w-[1400px] pointer-events-none" style={{ zoom: 1 }} aria-hidden="true">
         <div ref={previewRef} data-export-preview="true" className="amv-export-static-target min-h-0 bg-surface p-1">
+          <ClipFavoritesPanel clips={favoriteClips} compact />
           <ResultatsExportSurface
             mainView={mainView}
             globalVariant={globalVariant}
@@ -244,6 +250,7 @@ export function ExportPreviewPanel({
             data-export-page-index={String(pageIndex)}
             className="amv-export-static-target mt-8 min-h-0 bg-surface p-1 first:mt-0"
           >
+            <ClipFavoritesPanel clips={favoriteClips} compact />
             <ResultatsExportSurface
               mainView={mainView}
               globalVariant={globalVariant}

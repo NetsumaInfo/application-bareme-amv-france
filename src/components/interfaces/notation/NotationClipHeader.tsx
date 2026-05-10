@@ -1,4 +1,4 @@
-import { ChevronLeft, ChevronRight, Play } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Play, Star } from 'lucide-react'
 import { HoverTextTooltip } from '@/components/ui/HoverTextTooltip'
 import { getClipPrimaryLabel, getClipSecondaryLabel } from '@/utils/formatters'
 import type { Clip } from '@/types/project'
@@ -77,6 +77,13 @@ export function NotationClipHeader({
                 <span className="text-primary-300 truncate max-w-[32%]">{getClipSecondaryLabel(clip)}</span>
               </>
             )}
+            {clip.favorite ? (
+              <HoverTextTooltip text={clip.favoriteComment?.trim() || t('Favori')}>
+                <span className="inline-flex h-4 w-4 items-center justify-center rounded-md border border-amber-300/35 bg-amber-400/12 text-amber-200">
+                  <Star size={9} fill="currentColor" aria-hidden="true" />
+                </span>
+              </HoverTextTooltip>
+            ) : null}
             <span className="text-gray-500 shrink-0">
               {currentClipIndex + 1}/{totalClips}
             </span>

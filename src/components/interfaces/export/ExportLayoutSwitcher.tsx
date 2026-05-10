@@ -44,6 +44,13 @@ export function ExportLayoutSwitcher({
   return (
     <div className="flex min-w-0 flex-wrap items-center gap-0.5">
       <SegmentedButton
+        active={layoutMode === 'discord'}
+        onClick={() => onSetLayoutMode('discord')}
+        tooltip={t('Préparer une annonce Discord avec aperçu')}
+      >
+        {t('Discord')}
+      </SegmentedButton>
+      <SegmentedButton
         active={layoutMode === 'poster'}
         onClick={() => onSetLayoutMode('poster')}
         tooltip={t('Préparer une affiche visuelle à exporter')}

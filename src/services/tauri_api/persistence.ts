@@ -1,4 +1,4 @@
-import { invoke } from '@tauri-apps/api/tauri'
+import { invoke } from '@tauri-apps/api/core'
 
 export async function saveProjectFile(data: unknown, filePath: string): Promise<void> {
   await invoke('save_project', { data, filePath })
@@ -10,6 +10,10 @@ export async function loadProjectFile(filePath: string): Promise<unknown> {
 
 export async function exportJsonFile(data: unknown, filePath: string): Promise<void> {
   await invoke('export_json', { data, filePath })
+}
+
+export async function deleteProjectFile(filePath: string): Promise<void> {
+  await invoke('delete_project', { filePath })
 }
 
 export interface ProjectSummary {

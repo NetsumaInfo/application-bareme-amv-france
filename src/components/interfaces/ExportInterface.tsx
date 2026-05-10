@@ -9,6 +9,8 @@ import { ExportOptionsPanel } from '@/components/interfaces/export/ExportOptions
 import { ExportPosterOptionsPanel } from '@/components/interfaces/export/ExportPosterOptionsPanel'
 import { ExportPreviewPanel } from '@/components/interfaces/export/ExportPreviewPanel'
 import { ExportPosterPreviewPanel } from '@/components/interfaces/export/ExportPosterPreviewPanel'
+import { ExportDiscordOptionsPanel } from '@/components/interfaces/export/ExportDiscordOptionsPanel'
+import { ExportDiscordPreviewPanel } from '@/components/interfaces/export/ExportDiscordPreviewPanel'
 import { ResultatsHeader } from '@/components/interfaces/resultats/ResultatsHeader'
 import { ResultatsViewModeControls } from '@/components/interfaces/resultats/ResultatsViewModeControls'
 import { useResultatsComputedData } from '@/components/interfaces/resultats/hooks/useResultatsComputedData'
@@ -35,6 +37,12 @@ import { COLOR_MEMORY_KEYS, readStoredColor } from '@/utils/colorPickerStorage'
 import { shouldHideResultsUntilAllScored } from '@/utils/resultsVisibility'
 import { useI18n } from '@/i18n'
 import {
+  ALL_CONTEST_CATEGORY_KEY,
+  getClipContestCategory,
+  matchesContestCategoryKey,
+  normalizeContestCategoryPresets,
+} from '@/utils/contestCategory'
+import {
   clamp,
   MAX_PNG_SCALE,
   MAX_ROWS_PER_IMAGE,
@@ -43,6 +51,56 @@ import {
   normalizeOptionalText,
   sanitizeExportFilePart,
 } from '@/components/interfaces/export/exportInterfaceUtils'
+import {
+  buildDefaultDiscordAnnouncementSettings,
+  buildDiscordAnnouncementContent,
+  serializeDiscordResultAnnouncement,
+  splitDiscordMessages,
+  type DiscordAnnouncementContent,
+  type DiscordAnnouncementFavoriteRow,
+  type DiscordAnnouncementResultRow,
+  type DiscordAnnouncementSettings,
+} from '@/components/interfaces/export/discordAnnouncementTemplate'
+
+async function writeClipboardText(value: string): Promise<void> {
+  if (navigator.clipboard?.writeText) {
+    await navigator.clipboard.writeText(value)
+    return
+  }
+
+  const textarea = document.createElement('textarea')
+  textarea.value = value
+  textarea.setAttribute('readonly', 'true')
+  textarea.style.position = 'fixed'
+  textarea.style.left = '-9999px'
+  document.body.appendChild(textarea)
+  textarea.select()
+  const copied = document.execCommand('copy')
+  document.body.removeChild(textarea)
+  if (!copied) throw new Error('Clipboard copy failed')
+}
+
+function downloadTextFile(fileName: string, text: string) {
+  const blob = new Blob([text], { type: 'text/plain;charset=utf-8' })
+  const url = URL.createObjectURL(blob)
+  const anchor = document.createElement('a')
+  anchor.href = url
+  anchor.download = fileName
+  document.body.appendChild(anchor)
+  anchor.click()
+  document.body.removeChild(anchor)
+  window.setTimeout(() => URL.revokeObjectURL(url), 0)
+}
+
+function MissingBaremeMessage() {
+  const { t } = useI18n()
+
+  return (
+    <div className="flex h-full items-center justify-center text-sm text-gray-500">
+      {t('Aucun barème chargé')}
+    </div>
+  )
+}
 
 function useExportInterfaceController() {
   const { t } = useI18n()
@@ -53,7 +111,7 @@ function useExportInterfaceController() {
   const getProjectData = useProjectStore((state) => state.getProjectData)
   const appTheme = useUIStore((state) => state.appTheme)
 
-  const [layoutMode, setLayoutMode] = useState<ExportLayout>('poster')
+  const [layoutMode, setLayoutMode] = useState<ExportLayout>('discord')
   const [theme] = useState<ExportTheme>('dark')
   const [density] = useState<ExportDensity>('comfortable')
   const [exportMode, setExportMode] = useState<ExportMode>('grouped')
@@ -66,15 +124,54 @@ function useExportInterfaceController() {
   const [jsonJudgeKey, setJsonJudgeKey] = useState<string>('current')
   const [pngScale, setPngScale] = useState(3)
   const [selectedJudgeKey, setSelectedJudgeKey] = useState<string>('current')
+  const [contestCategoryKey, setContestCategoryKey] = useState<string>(ALL_CONTEST_CATEGORY_KEY)
   const accent = '#3b82f6'
   const decimals = 1
   const [rowsPerImage, setRowsPerImage] = useState(20)
+  const [discordContent, setDiscordContent] = useState<DiscordAnnouncementContent>(() =>
+    buildDiscordAnnouncementContent(t),
+  )
+  const [discordSettings, setDiscordSettings] = useState<DiscordAnnouncementSettings>(() =>
+    buildDefaultDiscordAnnouncementSettings(20),
+  )
+  const [discordRowOverrides, setDiscordRowOverrides] = useState<Record<string, string>>({})
+  const [discordSelectedChunkIndex, setDiscordSelectedChunkIndex] = useState(0)
+  const [discordCopyState, setDiscordCopyState] = useState<'all' | 'chunk' | 'download' | 'error' | null>(null)
   const title = `${currentProject?.name || t('Projet')} - ${t('Résultats')}`
 
   const previewRef = useRef<HTMLDivElement | null>(null)
   const exportPageRefs = useRef<Array<HTMLDivElement | null>>([])
   const exportContextMenuRef = useRef<HTMLDivElement | null>(null)
   const [exportContextMenu, setExportContextMenu] = useState<{ x: number; y: number } | null>(null)
+
+  const contestCategoryOptions = useMemo(() => {
+    const presetCategories = normalizeContestCategoryPresets(currentProject?.settings.contestCategoryPresets ?? [])
+    const usedCategories: string[] = []
+    const seen = new Set<string>(presetCategories)
+    for (const clip of clips) {
+      const category = getClipContestCategory(clip)
+      if (!category || seen.has(category)) continue
+      seen.add(category)
+      usedCategories.push(category)
+    }
+    return [
+      { key: ALL_CONTEST_CATEGORY_KEY, label: t('Toutes catégories') },
+      ...presetCategories.map((category) => ({ key: category, label: category })),
+      ...usedCategories.map((category) => ({ key: category, label: category })),
+    ]
+  }, [clips, currentProject?.settings.contestCategoryPresets, t])
+
+  const effectiveContestCategoryKey = useMemo(
+    () => contestCategoryOptions.some((option) => option.key === contestCategoryKey)
+      ? contestCategoryKey
+      : ALL_CONTEST_CATEGORY_KEY,
+    [contestCategoryKey, contestCategoryOptions],
+  )
+
+  const exportClips = useMemo(
+    () => clips.filter((clip) => matchesContestCategoryKey(clip, effectiveContestCategoryKey)),
+    [clips, effectiveContestCategoryKey],
+  )
 
   const {
     categoryGroups,
@@ -87,7 +184,7 @@ function useExportInterfaceController() {
     currentBareme,
     notes,
     currentProject,
-    clips,
+    clips: exportClips,
     importedJudges,
     exportMode,
     selectedJudgeKey,
@@ -97,7 +194,7 @@ function useExportInterfaceController() {
   const hideTotalsSetting = Boolean(currentProject?.settings.hideTotals)
   const hideTotalsUntilAllScored = shouldHideResultsUntilAllScored(
     currentProject,
-    clips,
+    exportClips,
     currentBareme,
     (clipId) => notes[clipId],
   )
@@ -111,7 +208,7 @@ function useExportInterfaceController() {
     currentJudgeName: currentProject?.judgeName,
     notes,
     importedJudges,
-    clips,
+    clips: exportClips,
     sortMode: 'score',
     canSortByScore,
   })
@@ -153,12 +250,132 @@ function useExportInterfaceController() {
   ])
 
   const projectName = currentProject?.name || 'resultats'
+  const favoriteClips = useMemo(
+    () => exportClips.filter((clip) => clip.favorite),
+    [exportClips],
+  )
   const notesData = useMemo(() => getNotesData(), [getNotesData])
+  const exportClipIdSet = useMemo(
+    () => new Set(exportClips.map((clip) => clip.id)),
+    [exportClips],
+  )
+  const filteredNotesData = useMemo(
+    () => Object.fromEntries(
+      Object.entries(notesData).filter(([clipId]) => exportClipIdSet.has(clipId)),
+    ),
+    [exportClipIdSet, notesData],
+  )
+  const filteredImportedJudges = useMemo(
+    () => importedJudges.map((judge) => ({
+      ...judge,
+      notes: Object.fromEntries(
+        Object.entries(judge.notes).filter(([clipId]) => exportClipIdSet.has(clipId)),
+      ),
+    })),
+    [exportClipIdSet, importedJudges],
+  )
   const fullProjectData = useMemo(
     () => getProjectData(notesData, currentBareme),
     [currentBareme, getProjectData, notesData],
   )
+  const fullProjectDataFiltered = useMemo(() => {
+    if (!fullProjectData) return null
+    return {
+      ...fullProjectData,
+      project: {
+        ...fullProjectData.project,
+        resultNotes: Object.fromEntries(
+          Object.entries(fullProjectData.project.resultNotes ?? {})
+            .filter(([clipId]) => exportClipIdSet.has(clipId)),
+        ),
+      },
+      clips: exportClips,
+      notes: filteredNotesData,
+      importedJudges: filteredImportedJudges,
+    }
+  }, [
+    exportClipIdSet,
+    exportClips,
+    filteredImportedJudges,
+    filteredNotesData,
+    fullProjectData,
+  ])
   const formatScore = useCallback((value: number) => value.toFixed(decimals), [decimals])
+  const discordResultRows = useMemo<DiscordAnnouncementResultRow[]>(() => (
+    resultatsRows.map((row, index) => ({
+      clipId: row.clip.id,
+      rank: index + 1,
+      participant: getClipPrimaryLabel(row.clip),
+      clipName: getClipSecondaryLabel(row.clip) ?? '',
+      score: row.averageTotal,
+      totalPoints: currentBareme?.totalPoints ?? 0,
+    }))
+  ), [currentBareme?.totalPoints, resultatsRows])
+  const discordFavoriteRows = useMemo<DiscordAnnouncementFavoriteRow[]>(() => (
+    favoriteClips.map((clip) => ({
+      clipId: clip.id,
+      participant: getClipPrimaryLabel(clip),
+      clipName: getClipSecondaryLabel(clip) ?? '',
+      comment: clip.favoriteComment ?? '',
+    }))
+  ), [favoriteClips])
+  const discordText = useMemo(() => (
+    serializeDiscordResultAnnouncement({
+      content: discordContent,
+      rows: discordResultRows,
+      favoriteRows: discordFavoriteRows,
+      rowOverrides: discordRowOverrides,
+      settings: discordSettings,
+    })
+  ), [discordContent, discordFavoriteRows, discordResultRows, discordRowOverrides, discordSettings])
+  const discordChunks = useMemo(() => splitDiscordMessages(discordText), [discordText])
+  const safeDiscordSelectedChunkIndex = Math.min(
+    Math.max(discordSelectedChunkIndex, 0),
+    Math.max(discordChunks.length - 1, 0),
+  )
+
+  const patchDiscordContent = useCallback((patch: Partial<DiscordAnnouncementContent>) => {
+    setDiscordContent((current) => ({ ...current, ...patch }))
+  }, [])
+
+  const patchDiscordSettings = useCallback((patch: Partial<DiscordAnnouncementSettings>) => {
+    setDiscordSettings((current) => {
+      const next = { ...current, ...patch }
+      const maxRows = Math.max(discordResultRows.length, 1)
+      next.topCount = clamp(next.topCount, 1, maxRows)
+      next.scoreDecimals = clamp(Math.round(next.scoreDecimals), 0, 2)
+      return next
+    })
+  }, [discordResultRows.length])
+
+  const setDiscordRowOverride = useCallback((clipId: string, value: string) => {
+    setDiscordRowOverrides((current) => ({ ...current, [clipId]: value }))
+  }, [])
+
+  useEffect(() => {
+    if (!discordCopyState) return
+    const timeoutId = window.setTimeout(() => setDiscordCopyState(null), 1800)
+    return () => window.clearTimeout(timeoutId)
+  }, [discordCopyState])
+
+  const copyDiscordText = useCallback((value: string, state: 'all' | 'chunk') => {
+    writeClipboardText(value)
+      .then(() => setDiscordCopyState(state))
+      .catch(() => setDiscordCopyState('error'))
+  }, [])
+
+  const resetDiscordAnnouncement = useCallback(() => {
+    setDiscordContent(buildDiscordAnnouncementContent(t, currentProject?.name))
+    setDiscordSettings(buildDefaultDiscordAnnouncementSettings(discordResultRows.length))
+    setDiscordRowOverrides({})
+    setDiscordSelectedChunkIndex(0)
+  }, [currentProject?.name, discordResultRows.length, t])
+
+  const downloadDiscordAnnouncement = useCallback(() => {
+    const safeProjectName = sanitizeExportFilePart(currentProject?.name || 'annonce')
+    downloadTextFile(`${safeProjectName}_discord.txt`, discordText)
+    setDiscordCopyState('download')
+  }, [currentProject?.name, discordText])
 
   const getDisplayTotal = useCallback((row: (typeof displayRows)[number]) => {
     return exportMode === 'individual'
@@ -325,6 +542,8 @@ function useExportInterfaceController() {
       tableView,
       resultatsMainView,
       resultatsGlobalVariant,
+      contestCategory: effectiveContestCategoryKey === ALL_CONTEST_CATEGORY_KEY ? null : effectiveContestCategoryKey,
+      exportedClipCount: exportClips.length,
       selectedJudge: selectedJudge?.judgeName ?? null,
       notesPdfMode,
       jsonExportMode,
@@ -362,6 +581,8 @@ function useExportInterfaceController() {
       rank: rankByClipId.get(row.clip.id) ?? null,
       pseudo: getClipPrimaryLabel(row.clip),
       clipName: getClipSecondaryLabel(row.clip),
+      favorite: Boolean(row.clip.favorite),
+      favoriteComment: row.clip.favoriteComment ?? '',
       categoryAverages: row.categoryAverages,
       averageTotal: row.averageTotal,
       displayedTotal:
@@ -383,10 +604,12 @@ function useExportInterfaceController() {
   }), [
     accent,
     categoryGroups,
+    effectiveContestCategoryKey,
     currentProject?.name,
     decimals,
     density,
     displayRows,
+    exportClips.length,
     exportMode,
     jsonExportMode,
     jsonJudgeKey,
@@ -424,16 +647,19 @@ function useExportInterfaceController() {
 
   const jsonPayload = useMemo(() => {
     const exportedAt = new Date().toISOString()
-    const clipEntries = clips.map((clip) => ({
+    const clipEntries = exportClips.map((clip) => ({
       id: clip.id,
       fileName: clip.fileName,
       displayName: clip.displayName,
       author: clip.author,
+      contestCategory: getClipContestCategory(clip) || null,
       filePath: clip.filePath,
       duration: clip.duration,
       order: clip.order,
       scored: clip.scored,
       thumbnailTime: clip.thumbnailTime ?? null,
+      favorite: Boolean(clip.favorite),
+      favoriteComment: clip.favoriteComment ?? '',
     }))
 
     if (jsonExportMode === 'full_project') {
@@ -443,7 +669,7 @@ function useExportInterfaceController() {
         exportedAt,
         projectName,
         bareme: currentBareme,
-        projectData: fullProjectData,
+        projectData: fullProjectDataFiltered,
         exportSnapshot,
       }
     }
@@ -451,8 +677,11 @@ function useExportInterfaceController() {
     if (jsonExportMode === 'single_judge') {
       const targetJudge = judges.find((judge) => judge.key === jsonJudgeKey) ?? judges[0]
       const judgeNotes = targetJudge?.isCurrentJudge
-        ? notesData
-        : (importedJudges[Number((targetJudge?.key ?? '').replace('imported-', ''))]?.notes ?? {})
+        ? filteredNotesData
+        : (
+            filteredImportedJudges[Number((targetJudge?.key ?? '').replace('imported-', ''))]?.notes
+            ?? {}
+          )
 
       return {
         version: '1.0',
@@ -480,24 +709,24 @@ function useExportInterfaceController() {
       notes: {
         currentJudge: {
           judgeName: currentProject?.judgeName ?? 'juge',
-          notes: notesData,
+          notes: filteredNotesData,
         },
-        importedJudges,
+        importedJudges: filteredImportedJudges,
       },
       exportSnapshot,
     }
   }, [
-    clips,
     currentBareme,
     currentProject?.baremeId,
     currentProject?.judgeName,
+    exportClips,
     exportSnapshot,
-    fullProjectData,
-    importedJudges,
+    filteredImportedJudges,
+    filteredNotesData,
+    fullProjectDataFiltered,
     jsonExportMode,
     jsonJudgeKey,
     judges,
-    notesData,
     projectName,
   ])
 
@@ -533,13 +762,14 @@ function useExportInterfaceController() {
   // access to exportContainer or exportCaptureOptions through the component tree.
   useEffect(() => {
     const handleScreenshot = () => {
+      if (layoutMode === 'discord') return
       exportContainer('png', exportCaptureOptions).catch(() => {})
     }
     window.addEventListener('amv:export-screenshot', handleScreenshot)
     return () => {
       window.removeEventListener('amv:export-screenshot', handleScreenshot)
     }
-  }, [exportCaptureOptions, exportContainer])
+  }, [exportCaptureOptions, exportContainer, layoutMode])
 
   useEffect(() => {
     if (!exportContextMenu) return
@@ -561,16 +791,6 @@ function useExportInterfaceController() {
       window.removeEventListener('keydown', handleEscape)
     }
   }, [exportContextMenu])
-
-  if (!currentBareme) {
-    return {
-      renderContent: () => (
-        <div className="flex items-center justify-center h-full text-gray-500 text-sm">
-          {t('Aucun barème chargé')}
-        </div>
-      ),
-    }
-  }
 
   const renderContent = () => (
     <div
@@ -639,7 +859,29 @@ function useExportInterfaceController() {
       <div className="flex flex-1 min-h-0 overflow-hidden">
         <div className="w-[300px] shrink-0 min-h-0 flex flex-col gap-0 overflow-y-auto border-r border-gray-700/40 py-2">
 
-        {layoutMode === 'table' ? (
+        {layoutMode === 'discord' ? (
+          <ExportDiscordOptionsPanel
+            mention={discordContent.mention}
+            textLength={discordText.length}
+            chunks={discordChunks}
+            selectedChunkIndex={safeDiscordSelectedChunkIndex}
+            copyState={discordCopyState}
+            resultCount={discordResultRows.length}
+            favoriteCount={discordFavoriteRows.length}
+            settings={discordSettings}
+            contestCategoryKey={effectiveContestCategoryKey}
+            contestCategoryOptions={contestCategoryOptions}
+            onSetMention={(mention) => patchDiscordContent({ mention })}
+            onSelectChunk={setDiscordSelectedChunkIndex}
+            onPatchSettings={patchDiscordSettings}
+            onSetContestCategoryKey={setContestCategoryKey}
+            onCopyAll={() => copyDiscordText(discordText, 'all')}
+            onCopySelectedChunk={() => copyDiscordText(discordChunks[safeDiscordSelectedChunkIndex] ?? discordText, 'chunk')}
+            onDownloadText={downloadDiscordAnnouncement}
+            onResetAnnouncement={resetDiscordAnnouncement}
+          />
+        ) : layoutMode === 'table' ? (
+          currentBareme ? (
           <div className="px-3">
           <ExportOptionsPanel
             exportMode={exportMode}
@@ -654,6 +896,8 @@ function useExportInterfaceController() {
             jsonExportMode={jsonExportMode}
             jsonJudgeKey={jsonJudgeKey}
             jsonJudgeOptions={jsonJudgeOptions}
+            contestCategoryKey={effectiveContestCategoryKey}
+            contestCategoryOptions={contestCategoryOptions}
             onSetExportMode={(mode) => {
               setExportMode(mode)
               setResultatsMainView(mode === 'individual' ? 'judge' : 'global')
@@ -676,6 +920,7 @@ function useExportInterfaceController() {
             }}
             onSetJsonExportMode={setJsonExportMode}
             onSetJsonJudgeKey={setJsonJudgeKey}
+            onSetContestCategoryKey={setContestCategoryKey}
             onExportPng={() => { exportContainer('png', exportCaptureOptions).catch(() => {}) }}
             onExportPdf={() => { exportContainer('pdf', exportCaptureOptions).catch(() => {}) }}
             onExportNotesPdf={() => { exportNotesPdf().catch(() => {}) }}
@@ -684,7 +929,10 @@ function useExportInterfaceController() {
             onExportHtml={() => { exportHtml().catch(() => {}) }}
           />
           </div>
-        ) : (
+          ) : (
+            <div className="px-3"><MissingBaremeMessage /></div>
+          )
+        ) : currentBareme ? (
           <ExportPosterOptionsPanel
             blocks={posterBlocks}
             activeBlockId={activePosterBlockId}
@@ -720,6 +968,8 @@ function useExportInterfaceController() {
             jsonExportMode={jsonExportMode}
             jsonJudgeKey={jsonJudgeKey}
             jsonJudgeOptions={jsonJudgeOptions}
+            contestCategoryKey={effectiveContestCategoryKey}
+            contestCategoryOptions={contestCategoryOptions}
             onSelectBlock={(id) => {
               setActivePosterBlockId(id)
               setActivePosterImageId(null)
@@ -748,6 +998,7 @@ function useExportInterfaceController() {
             onSetTopCount={setTopCountSafe}
             onSetJsonExportMode={setJsonExportMode}
             onSetJsonJudgeKey={setJsonJudgeKey}
+            onSetContestCategoryKey={setContestCategoryKey}
             onToggleClipNameInTop={() => setIncludeClipNameInTop((prev) => !prev)}
             onToggleScoreInTop={() => setIncludeScoreInTop((prev) => !prev)}
             onGenerateTopIntoBlock={generateTopIntoBlock}
@@ -765,28 +1016,45 @@ function useExportInterfaceController() {
             onExportPdf={() => { exportContainer('pdf', exportCaptureOptions).catch(() => {}) }}
             onExportJson={() => { exportJson().catch(() => {}) }}
           />
+        ) : (
+          <div className="px-3"><MissingBaremeMessage /></div>
         )}
       </div>
 
       <div className="flex flex-1 min-h-0 flex-col overflow-hidden">
-      {layoutMode === 'table' ? (
-        <ExportPreviewPanel
-          previewRef={previewRef}
-          exportPageRefs={exportPageRefs}
-          mainView={resultatsMainView}
-          globalVariant={resultatsGlobalVariant}
-          canSortByScore={canSortByScore}
-          currentBaremeTotalPoints={currentBareme.totalPoints}
-          categoryGroups={resultatsCategoryGroups}
-          judges={resultatsJudges}
-          rows={resultatsRows}
-          judgeColors={judgeColors}
-          selectedJudgeIndex={resultatsSelectedJudgeIndex}
-          rowsPerImage={rowsPerImage}
-          showMiniatures={Boolean(currentProject?.settings.showMiniatures)}
-          thumbnailDefaultSeconds={currentProject?.settings.thumbnailDefaultTimeSec ?? 10}
+      {layoutMode === 'discord' ? (
+        <ExportDiscordPreviewPanel
+          content={discordContent}
+          settings={discordSettings}
+          rows={discordResultRows}
+          favoriteRows={discordFavoriteRows}
+          rowOverrides={discordRowOverrides}
+          selectedChunkIndex={safeDiscordSelectedChunkIndex}
+          chunks={discordChunks}
+          onPatchContent={patchDiscordContent}
+          onSetRowOverride={setDiscordRowOverride}
         />
-      ) : (
+      ) : layoutMode === 'table' ? (
+        currentBareme ? (
+          <ExportPreviewPanel
+            previewRef={previewRef}
+            exportPageRefs={exportPageRefs}
+            mainView={resultatsMainView}
+            globalVariant={resultatsGlobalVariant}
+            canSortByScore={canSortByScore}
+            currentBaremeTotalPoints={currentBareme.totalPoints}
+            categoryGroups={resultatsCategoryGroups}
+            judges={resultatsJudges}
+            rows={resultatsRows}
+            favoriteClips={favoriteClips}
+            judgeColors={judgeColors}
+            selectedJudgeIndex={resultatsSelectedJudgeIndex}
+            rowsPerImage={rowsPerImage}
+            showMiniatures={Boolean(currentProject?.settings.showMiniatures)}
+            thumbnailDefaultSeconds={currentProject?.settings.thumbnailDefaultTimeSec ?? 10}
+          />
+        ) : <MissingBaremeMessage />
+      ) : currentBareme ? (
         <ExportPosterPreviewPanel
           previewRef={previewRef}
           accent={accent}
@@ -819,7 +1087,7 @@ function useExportInterfaceController() {
           onMoveImage={movePosterImage}
           onMoveBackground={moveBackground}
         />
-      )}
+      ) : <MissingBaremeMessage />}
       </div>
       </div>
 

@@ -1,4 +1,4 @@
-import { FileText } from 'lucide-react'
+import { FileText, Star } from 'lucide-react'
 import type { ReactNode } from 'react'
 import type {
   ResultatsGlobalVariant,
@@ -14,6 +14,8 @@ interface ResultatsViewModeControlsProps {
   onGlobalVariantChange: (variant: ResultatsGlobalVariant) => void
   notesPanelHidden: boolean
   onToggleNotesPanel: () => void
+  favoritesPanelVisible?: boolean
+  onToggleFavoritesPanel?: () => void
   showJudgeNotesView?: boolean
   showNotesPanelToggle?: boolean
 }
@@ -54,6 +56,8 @@ export function ResultatsViewModeControls({
   onGlobalVariantChange,
   notesPanelHidden,
   onToggleNotesPanel,
+  favoritesPanelVisible = false,
+  onToggleFavoritesPanel,
   showJudgeNotesView = true,
   showNotesPanelToggle = true,
 }: ResultatsViewModeControlsProps) {
@@ -115,20 +119,38 @@ export function ResultatsViewModeControls({
         )}
 
         {showNotesPanelToggle && (
-          <HoverTextTooltip text={notesPanelHidden ? t('Afficher note générale') : t('Masquer note générale')}>
-            <button
-              type="button"
-              onClick={onToggleNotesPanel}
-              aria-label={notesPanelHidden ? t('Afficher note générale') : t('Masquer note générale')}
-              className={`ml-1 inline-flex h-6 w-6 items-center justify-center rounded-md transition-colors ${
-                notesPanelHidden
-                  ? 'text-gray-500 hover:bg-white/5 hover:text-white'
-                  : 'bg-surface-dark/90 text-gray-200 hover:bg-white/5 hover:text-white'
-              }`}
-            >
-              <FileText size={14} />
-            </button>
-          </HoverTextTooltip>
+          <>
+            <HoverTextTooltip text={notesPanelHidden ? t('Afficher note générale') : t('Masquer note générale')}>
+              <button
+                type="button"
+                onClick={onToggleNotesPanel}
+                aria-label={notesPanelHidden ? t('Afficher note générale') : t('Masquer note générale')}
+                className={`ml-1 inline-flex h-6 w-6 items-center justify-center rounded-md transition-colors ${
+                  notesPanelHidden
+                    ? 'text-gray-500 hover:bg-white/5 hover:text-white'
+                    : 'bg-surface-dark/90 text-gray-200 hover:bg-white/5 hover:text-white'
+                }`}
+              >
+                <FileText size={14} />
+              </button>
+            </HoverTextTooltip>
+            {onToggleFavoritesPanel ? (
+              <HoverTextTooltip text={t('Afficher les favoris')}>
+                <button
+                  type="button"
+                  onClick={onToggleFavoritesPanel}
+                  aria-label={t('Afficher les favoris')}
+                  className={`inline-flex h-6 w-6 items-center justify-center rounded-md transition-colors ${
+                    favoritesPanelVisible
+                      ? 'bg-amber-400/14 text-amber-200'
+                      : 'text-gray-500 hover:bg-white/5 hover:text-amber-200'
+                  }`}
+                >
+                  <Star size={14} fill={favoritesPanelVisible ? 'currentColor' : 'none'} />
+                </button>
+              </HoverTextTooltip>
+            ) : null}
+          </>
         )}
       </div>
     </div>

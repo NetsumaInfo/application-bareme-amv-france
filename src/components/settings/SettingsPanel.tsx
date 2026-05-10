@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { X, FolderOpen, SlidersHorizontal, Keyboard } from 'lucide-react'
+import { X, FolderOpen, SlidersHorizontal, Keyboard, Info } from 'lucide-react'
 import { useProjectStore } from '@/store/useProjectStore'
 import { useNotationStore } from '@/store/useNotationStore'
 import { useUIStore } from '@/store/useUIStore'
@@ -9,6 +9,7 @@ import { SettingsGeneralTab } from '@/components/settings/SettingsGeneralTab'
 import { SettingsNotationTab } from '@/components/settings/SettingsNotationTab'
 import { SettingsProjectTab } from '@/components/settings/SettingsProjectTab'
 import { SettingsShortcutsTab } from '@/components/settings/SettingsShortcutsTab'
+import { SettingsAboutTab } from '@/components/settings/SettingsAboutTab'
 import { getSettingsTabs, type SettingsTab } from '@/components/settings/settingsPanelConfig'
 import { HoverTextTooltip } from '@/components/ui/HoverTextTooltip'
 import { useI18n } from '@/i18n'
@@ -20,6 +21,7 @@ const TAB_ICONS: Record<SettingsTab, React.FC<{ size?: number; className?: strin
   notation: UI_ICONS.notation,
   application: SlidersHorizontal,
   raccourcis: Keyboard,
+  apropos: Info,
 }
 
 export default function SettingsPanel({ onClose }: { onClose: () => void }) {
@@ -129,10 +131,11 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
         <div className="flex flex-1 min-h-0 flex-col overflow-hidden">
           {/* Tabs bar */}
           <nav
-            className="grid grid-cols-4 gap-1 overflow-x-auto border-b border-primary-400/10 px-0 pt-0"
+            className="grid gap-1 overflow-x-auto border-b border-primary-400/10 px-0 pt-0"
             role="tablist"
             aria-orientation="horizontal"
             aria-label={t('Paramètres')}
+            style={{ gridTemplateColumns: `repeat(${settingsTabs.length}, minmax(0, 1fr))` }}
           >
             {settingsTabs.map((tab) => {
               const Icon = TAB_ICONS[tab.id]
@@ -224,6 +227,8 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                 onResetShortcuts={resetShortcuts}
               />
             )}
+
+            {activeTab === 'apropos' && <SettingsAboutTab />}
           </div>
         </div>
 

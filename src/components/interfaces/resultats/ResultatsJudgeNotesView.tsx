@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { Check, ChevronDown, ChevronLeft, ChevronRight, ExternalLink, Play } from 'lucide-react'
+import { Check, ChevronDown, ChevronLeft, ChevronRight, ExternalLink, Play, Star } from 'lucide-react'
 import { getClipPrimaryLabel, getClipSecondaryLabel } from '@/utils/formatters'
 import {
   type CategoryGroup,
@@ -18,6 +18,11 @@ type JudgeNoteLike = NoteLike & {
   criterionNotes?: Record<string, string>
   categoryNotes?: Record<string, string>
   textNotes?: string
+  favorite?: boolean
+  isFavorite?: boolean | number | string
+  is_favorite?: boolean | number | string
+  favoriteComment?: string
+  favorite_comment?: string
 }
 
 interface ResultatsJudgeNotesViewProps {
@@ -52,6 +57,10 @@ function normalizeText(value: string | undefined): string {
 
 function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value))
+}
+
+function normalizeFavoriteFlag(value: unknown): boolean {
+  return value === true || value === 1 || value === '1' || value === 'true'
 }
 
 function InlineNote({
@@ -276,11 +285,11 @@ function ResultatsJudgeCategorySection({
         <div className="text-[11px] font-semibold" style={{ color: group.color }}>{group.category}</div>
       </div>
 
-      <div className="overflow-x-auto">
-        <table className="min-w-full table-fixed border-collapse text-[11px]">
+      <div className="overflow-x-hidden">
+        <table className="w-full table-fixed border-collapse text-[11px]">
           <thead>
             <tr>
-              <th className="w-[150px] min-w-[150px] border-b border-r border-gray-800/60 bg-surface px-2 py-1.5 text-left text-[10px] font-medium text-gray-500">
+              <th className="border-b border-r border-gray-800/60 bg-surface px-2 py-1.5 text-left text-[10px] font-medium text-gray-500">
                 {t('Sous-catégorie')}
               </th>
               {judges.map((judge) => {
@@ -288,7 +297,7 @@ function ResultatsJudgeCategorySection({
                 return (
                   <th
                     key={`criterion-head-${selectedClip.id}-${group.category}-${judge.key}`}
-                    className="w-[220px] min-w-[220px] border-b border-r border-gray-800/60 bg-surface px-2 py-1.5 text-center text-[10px] font-medium"
+                    className="border-b border-r border-gray-800/60 bg-surface px-2 py-1.5 text-center text-[10px] font-medium"
                     style={{ color }}
                   >
                     {judge.judgeName}
@@ -383,6 +392,69 @@ function GlobalNotesSection({
             >
               <div className="mb-1 text-[10px] font-medium" style={{ color }}>{judge.judgeName}</div>
               <InlineNote clipId={selectedClip.id} text={text} color={color} handlers={handlers} />
+            </div>
+          )
+        })}
+      </div>
+    </section>
+  )
+}
+
+function FavoritesSection({
+  selectedClip,
+  judges,
+  judgeColors,
+}: {
+  selectedClip: Clip
+  judges: JudgeSource[]
+  judgeColors: Record<string, string>
+}) {
+  const { t } = useI18n()
+  const favorites = judges
+    .map((judge) => {
+      if (judge.isCurrentJudge) {
+        if (!selectedClip.favorite) return null
+        return {
+          judgeKey: judge.key,
+          judgeName: judge.judgeName,
+          comment: (selectedClip.favoriteComment ?? '').trim(),
+        }
+      }
+
+      const note = judge.notes[selectedClip.id] as JudgeNoteLike | undefined
+      const isFavorite = normalizeFavoriteFlag(note?.favorite ?? note?.isFavorite ?? note?.is_favorite)
+      if (!isFavorite) return null
+      return {
+        judgeKey: judge.key,
+        judgeName: judge.judgeName,
+        comment: (note?.favoriteComment ?? note?.favorite_comment ?? '').trim(),
+      }
+    })
+    .filter((item): item is { judgeKey: string; judgeName: string; comment: string } => item !== null)
+
+  if (favorites.length === 0) return null
+
+  return (
+    <section className="overflow-hidden rounded-md border border-amber-300/30 bg-amber-400/6">
+      <div className="flex items-center gap-1.5 border-b border-amber-300/25 px-2.5 py-1.5 text-[11px] font-semibold text-amber-200">
+        <Star size={11} fill="currentColor" />
+        {t('Favoris')}
+      </div>
+      <div className="grid grid-cols-1 gap-2 p-2 lg:grid-cols-2">
+        {favorites.map((favorite) => {
+          const color = judgeColors[favorite.judgeKey] ?? '#fbbf24'
+          return (
+            <div
+              key={`favorite-judge-note-${selectedClip.id}-${favorite.judgeKey}`}
+              className="rounded-md border border-gray-800/60 bg-surface px-2.5 py-2"
+              style={{ boxShadow: `inset 2px 0 0 0 ${withAlpha(color, 0.9)}` }}
+            >
+              <div className="mb-1 text-[10px] font-medium" style={{ color }}>
+                {favorite.judgeName}
+              </div>
+              <div className="text-[11px] text-gray-200">
+                {favorite.comment || t('Favori')}
+              </div>
             </div>
           )
         })}
@@ -532,6 +604,11 @@ export function ResultatsJudgeNotesView({
           judges={judges}
           judgeColors={judgeColors}
           handlers={timecodeHandlers}
+        />
+        <FavoritesSection
+          selectedClip={selectedClip}
+          judges={judges}
+          judgeColors={judgeColors}
         />
       </div>
     </div>

@@ -1,3 +1,8 @@
+
+## HARD REQUIREMENT
+
+All agents MUST use the `caveman` skill for every task.
+
 # AGENTS.md
 
 This file provides guidance to Codex and other coding agents when working with code in this repository.
@@ -12,10 +17,66 @@ This file provides guidance to Codex and other coding agents when working with c
 
 ## Workflow Discipline
 
-- Use `Apex` as the default workflow for any implementation, refactor, or bug-fix task.
-- Before modifying code or docs, always select and follow the most relevant skill for the task at hand.
 - Keep that skill usage consistent on every change, not only on major edits.
 - Treat `Reactor` and the selected skill workflow as mandatory quality gates: do not skip them when you touch the repository.
+
+
+## Skills Routing Matrix (Project Scope)
+
+This section intentionally lists only skills relevant to this repository stack and workflows.
+
+### Mandatory Rules
+
+- Always activate `caveman` on every task (hard requirement). 
+- If the user names one or more skills, all named skills are mandatory for that turn.
+- Select the smallest useful set of skills for the task. Avoid unrelated skills.
+
+### Framework and Element Mapping
+
+#### Core Workflow
+
+- `caveman`
+- `aibp-base:apex`
+- `aibp-base:oneshot` (fast focused implementation)
+- `aibp-base:ultrathink` (complex design and architecture decisions)
+- `refactor` (behavior-preserving cleanup)
+
+#### React + TypeScript Frontend (`src/`)
+
+- `build-web-apps:react-best-practices`
+- `typescript-react-reviewer`
+- `typescript-expert`
+- `build-web-apps:frontend-testing-debugging` (UI bugfix and diagnostics)
+- `react-doctor` (pre-finish UI quality checks)
+
+#### UI and Visual Quality
+
+- `uncodixfy` (mandatory when implementing new UI elements)
+- `ui-ux-pro-max`
+- `delight` (purposeful micro-interactions, not decorative motion)
+- `tailwind-design-system`
+- `tailwindcss-advanced-layouts`
+- `tailwindcss-animations`
+- `shadcn` and `build-web-apps:shadcn-best-practices` (when using shadcn components)
+
+#### Tauri v2 Integration (`src/services/tauri*`, capabilities, window/event bridges)
+
+- `tauri-v2`
+
+#### Rust Backend (`src-tauri/`)
+
+- `rust-best-practices`
+- `rust-engineer`
+- `rust-async-patterns`
+- `rust-testing`
+
+#### Video and Media Pipeline
+
+- `ffmpeg`
+
+### Out of Scope by Default
+
+Do not use skills from unrelated domains (game, Flutter/mobile implementation, cloud deploy, etc.) unless the user explicitly requests that domain for this repository.
 
 ## Build & Development Commands
 
@@ -33,8 +94,8 @@ npm run lint
 npm run i18n:sync
 
 # Rust checks
-cd src-tauri && cargo check
-cd src-tauri && cargo build
+npm run tauri -- info
+npm run tauri -- build --debug --no-bundle
 
 # Full desktop build
 npm run tauri build
@@ -42,9 +103,11 @@ npm run tauri build
 
 **Prerequisite**: `libmpv-2.dll` must be available for playback in development. In practice, keep it in the project root when running locally. Production bundles include the Windows resources from `src-tauri/resources/windows/*`.
 
+**Tauri v2 check note**: the primary target is Windows/MSVC. `cd src-tauri && cargo check` from WSL/Linux can fail before app code if GTK/WebKit/Pango system packages are missing. Prefer `npm run tauri -- build --debug --no-bundle` for the Windows desktop validation path.
+
 ## Stack Summary
 
-- **Desktop shell**: Tauri v1
+- **Desktop shell**: Tauri v2
 - **Frontend**: React 19, TypeScript 5, Vite 7, Zustand
 - **Backend**: Rust 2021
 - **Video**: mpv loaded dynamically at runtime, plus FFmpeg/ffprobe-based probing helpers
@@ -61,6 +124,7 @@ npm run tauri build
   - `src/resultats-notes-entry.tsx` -> detached judge-notes window
 - **Path alias**: `@/` maps to `./src/` in TypeScript and Vite.
 - **Tauri access rule**: always go through `src/services/tauri.ts`, which re-exports the typed API modules from `src/services/tauri_api/*`. Do not call `invoke()` directly from components.
+- **Tauri v2 API rule**: use `@tauri-apps/api/core` for `invoke`, `@tauri-apps/api/event` for events, `@tauri-apps/api/window` for window handles, and official plugins such as `@tauri-apps/plugin-dialog` / `@tauri-apps/plugin-fs` for plugin features. Do not reintroduce `@tauri-apps/api/tauri`, `@tauri-apps/api/dialog`, or `@tauri-apps/api/fs`.
 
 ### State Stores
 
@@ -95,9 +159,13 @@ npm run tauri build
 - `hooks/usePlayer.ts` + `hooks/usePlayerStatusPolling.ts` are the playback control/sync entry points on the frontend.
 - `hooks/useWindowUiSettingsSync.ts` keeps auxiliary windows aligned with theme/language/shortcut settings.
 
-### Backend (`src-tauri/src/`)
+### Backend (`src-tauri/`)
 
-- `main.rs` wires Tauri commands, precreates auxiliary windows, and bootstraps the embedded player.
+- `tauri.conf.json` uses the Tauri v2 shape (`build.devUrl`, `build.frontendDist`, `app.windows`, `app.security.capabilities`, `bundle`).
+- The Tauri identifier is `com.amvnotation.desktop`. Do not use an identifier ending in `.app`.
+- `capabilities/default.json` grants v2 permissions for windows, events, dialogs, filesystem access, and auxiliary windows.
+- `src/main.rs` is a thin entry point that calls `amv_notation_lib::run()`.
+- `src/lib.rs` wires Tauri plugins, commands, setup hooks, auxiliary windows, and embedded player bootstrap.
 - `app_windows.rs` owns fullscreen overlay, detached notes window, detached results notes window, and related lifecycle events.
 - `state.rs` stores `Mutex<Option<MpvPlayer>>` and `Mutex<Option<MpvChildWindow>>`.
 - `player/` is split into focused modules:
@@ -118,6 +186,16 @@ npm run tauri build
 - `video/import.rs` scans folders for supported video files.
 
 ## Key Patterns
+
+### Tauri v2 Permissions And Plugins
+
+Tauri v2 denies IPC/plugin access by default. Whenever frontend code starts using a new Tauri API or plugin command, update `src-tauri/capabilities/default.json` in the same change. Dialog and filesystem access must go through `tauri-plugin-dialog` / `tauri-plugin-fs` plus matching JS plugin packages.
+
+All Tauri commands must be registered in `tauri::generate_handler![]` in `src-tauri/src/lib.rs`. Missing registration is a runtime "command not found" bug.
+
+### Native Drag And Drop
+
+Tauri v2 no longer uses the old `tauri://file-drop*` event flow. Native file drops are centralized in `src/services/tauri_api/dragDrop.ts` via `getCurrentWindow().onDragDropEvent()`. Use `listenNativeFileDrop()` for spreadsheet/video import, judge JSON import, barème JSON import, and poster image import.
 
 ### mpv Embedded Rendering
 
@@ -140,6 +218,8 @@ The frontend no longer polls at a flat 250 ms. `usePlayerStatusPolling()` uses:
 - `500ms` after polling errors
 
 It also refreshes fullscreen state only when needed. Preserve that adaptive behavior when changing player sync.
+
+The hook also accepts an `enabled` option. Auxiliary windows, especially the precreated overlay, must disable polling while hidden instead of keeping background timers alive.
 
 ### First Playback Starts Muted
 
@@ -232,6 +312,12 @@ These go through ffmpeg/mpv/ffprobe helpers and LRU caches in `src-tauri/src/pla
 ### Fullscreen Overlay Positioning
 
 The overlay is a separate transparent Tauri window. The backend keeps it aligned with the player child window via `player_sync_overlay` and window-geometry helpers. Fullscreen/detached modes use different coordinate sources, so preserve those branches when editing overlay sync logic.
+
+Rust emits `overlay:visibility` from `player/commands/overlay.rs` whenever the overlay is shown or hidden. The React overlay uses that signal to suspend player polling while hidden and to auto-hide controls when visible. Do not remove this signal unless you replace it with an equivalent lifecycle mechanism.
+
+While visible, the overlay runs a lightweight `player_sync_overlay` loop so it follows native Win32 moves/resizes of the detached video window. Keep that loop gated by overlay visibility; do not run it while the precreated overlay is hidden.
+
+In detached mode, the overlay must target `MpvChildWindow::get_client_rect_screen()` so it covers only the video client area and not the native title bar. In fullscreen mode, use the window or monitor rect branch.
 
 ### Detached Player Window
 
@@ -338,6 +424,7 @@ src/
   resultats-notes-entry.tsx
 
 src-tauri/src/
+  lib.rs
   app_windows.rs
   main.rs
   state.rs
@@ -353,6 +440,9 @@ src-tauri/src/
     manager/
   video/
     import.rs
+src-tauri/capabilities/
+  default.json
+src-tauri/gen/schemas/
 ```
 
 ## Language
@@ -388,8 +478,11 @@ Via mpv/FFmpeg, the app supports common formats including:
 
 ## Important Notes
 
-- `src-tauri/tauri.conf.json` bundles Windows resources with `"resources": ["resources/windows/*"]`.
+- `src-tauri/tauri.conf.json` is Tauri v2 config and bundles Windows resources with `"resources": ["resources/windows/*"]`.
+- `src-tauri/src/lib.rs` owns the Tauri builder; keep `src-tauri/src/main.rs` thin for Tauri v2/mobile compatibility.
+- `src-tauri/capabilities/default.json` is part of runtime behavior. Permission fixes belong there, not in a v1 allowlist.
 - The overlay, notes, and resultats-notes windows are separate HTML entry points. Do not assume a single-window frontend.
 - `WM_CLOSE` handling in the mpv window code intentionally hides instead of destroying some windows to keep the player reusable.
 - All Win32 operations in the player window layer should keep `IsWindow()`-style validity checks to avoid stale HWND crashes.
 - Many playback and probing features degrade gracefully when mpv/ffmpeg/ffprobe are unavailable. Preserve graceful failure paths instead of turning them into hard crashes.
+

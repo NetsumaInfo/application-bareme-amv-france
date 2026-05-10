@@ -92,7 +92,7 @@ export const usePlayerStore = create<PlayerStore>((set) => ({
       const nextMuted = nextVolume <= 0.001
 
       const hasPlayingChanged = state.isPlaying !== isPlaying
-      const hasTimeChanged = Math.abs(state.currentTime - nextTime) >= 0.05
+      const hasTimeChanged = Math.abs(state.currentTime - nextTime) >= 0.01
       const hasDurationChanged = Math.abs(state.duration - nextDuration) >= 0.1
       const hasVolumeChanged = Math.abs(state.volume - nextVolume) >= 0.1
       const hasMutedChanged = state.muted !== nextMuted

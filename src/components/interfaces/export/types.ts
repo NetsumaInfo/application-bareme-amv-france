@@ -3,7 +3,7 @@ import type { Clip } from '@/types/project'
 export type ExportTheme = 'dark' | 'light'
 export type ExportDensity = 'comfortable' | 'compact'
 export type ExportMode = 'grouped' | 'individual'
-export type ExportLayout = 'table' | 'poster'
+export type ExportLayout = 'discord' | 'table' | 'poster'
 export type ExportPngMode = 'single' | 'paged' | 'both'
 export type ExportRankBadgeStyle = 'filled' | 'outline' | 'plain'
 export type ExportTableView = 'summary' | 'detailed'
@@ -22,6 +22,11 @@ export interface ExportJudge {
 export interface ExportJsonJudgeOption {
   key: string
   judgeName: string
+}
+
+export interface ExportContestCategoryOption {
+  key: string
+  label: string
 }
 
 export interface ExportRow {

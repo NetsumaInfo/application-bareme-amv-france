@@ -16,7 +16,9 @@ pub(super) fn build_minimal_media_info(path: &str) -> crate::player::mpv_wrapper
     info
 }
 
-fn probe_media_info_via_mediainfo(path: &str) -> Result<crate::player::mpv_wrapper::MediaInfo, String> {
+fn probe_media_info_via_mediainfo(
+    path: &str,
+) -> Result<crate::player::mpv_wrapper::MediaInfo, String> {
     let mut command = Command::new(super::tools::resolve_tool("mediainfo.exe"));
     super::tools::configure_hidden_process(&mut command);
     let mut child = command
@@ -52,8 +54,8 @@ fn probe_media_info_via_mediainfo(path: &str) -> Result<crate::player::mpv_wrapp
         return Err(String::from_utf8_lossy(&output.stderr).to_string());
     }
 
-    let root: Value =
-        serde_json::from_slice(&output.stdout).map_err(|e| format!("mediainfo JSON invalide: {}", e))?;
+    let root: Value = serde_json::from_slice(&output.stdout)
+        .map_err(|e| format!("mediainfo JSON invalide: {}", e))?;
     let tracks = root
         .get("media")
         .and_then(|m| m.get("track"))
@@ -117,19 +119,28 @@ fn probe_media_info_via_mediainfo(path: &str) -> Result<crate::player::mpv_wrapp
         format_name: super::parsing::parse_json_string(general.and_then(|g| g.get("Format"))),
         duration,
         format_long_name: {
-            let name = super::parsing::parse_json_string(general.and_then(|g| g.get("Format_Commercial_IfAny")));
+            let name = super::parsing::parse_json_string(
+                general.and_then(|g| g.get("Format_Commercial_IfAny")),
+            );
             if name.is_empty() {
                 super::parsing::parse_json_string(general.and_then(|g| g.get("Format_String")))
             } else {
                 name
             }
         },
-        overall_bitrate: super::parsing::parse_json_i64(general.and_then(|g| g.get("OverallBitRate"))),
-        video_profile: super::parsing::parse_json_string(video.and_then(|v| v.get("Format_Profile"))),
-        pixel_format: super::parsing::parse_json_string(video.and_then(|v| v.get("ChromaSubsampling"))),
+        overall_bitrate: super::parsing::parse_json_i64(
+            general.and_then(|g| g.get("OverallBitRate")),
+        ),
+        video_profile: super::parsing::parse_json_string(
+            video.and_then(|v| v.get("Format_Profile")),
+        ),
+        pixel_format: super::parsing::parse_json_string(
+            video.and_then(|v| v.get("ChromaSubsampling")),
+        ),
         color_space: super::parsing::parse_json_string(video.and_then(|v| v.get("ColorSpace"))),
         color_primaries: {
-            let value = super::parsing::parse_json_string(video.and_then(|s| s.get("colour_primaries")));
+            let value =
+                super::parsing::parse_json_string(video.and_then(|s| s.get("colour_primaries")));
             if value.is_empty() {
                 super::parsing::parse_json_string(video.and_then(|s| s.get("ColorPrimaries")))
             } else {
@@ -137,22 +148,32 @@ fn probe_media_info_via_mediainfo(path: &str) -> Result<crate::player::mpv_wrapp
             }
         },
         color_transfer: {
-            let value = super::parsing::parse_json_string(video.and_then(|s| s.get("transfer_characteristics")));
+            let value = super::parsing::parse_json_string(
+                video.and_then(|s| s.get("transfer_characteristics")),
+            );
             if value.is_empty() {
-                super::parsing::parse_json_string(video.and_then(|s| s.get("TransferCharacteristics")))
+                super::parsing::parse_json_string(
+                    video.and_then(|s| s.get("TransferCharacteristics")),
+                )
             } else {
                 value
             }
         },
         video_bit_depth: super::parsing::parse_json_i64(video.and_then(|v| v.get("BitDepth"))),
-        audio_channel_layout: super::parsing::parse_json_string(audio.and_then(|a| a.get("ChannelLayout"))),
+        audio_channel_layout: super::parsing::parse_json_string(
+            audio.and_then(|a| a.get("ChannelLayout")),
+        ),
         audio_language: super::parsing::parse_json_string(audio.and_then(|a| a.get("Language"))),
         audio_track_count,
         video_track_count,
         subtitle_track_count,
         video_frame_count: super::parsing::parse_json_i64(video.and_then(|v| v.get("FrameCount"))),
-        sample_aspect_ratio: super::parsing::parse_json_string(video.and_then(|v| v.get("PixelAspectRatio"))),
-        display_aspect_ratio: super::parsing::parse_json_string(video.and_then(|v| v.get("DisplayAspectRatio"))),
+        sample_aspect_ratio: super::parsing::parse_json_string(
+            video.and_then(|v| v.get("PixelAspectRatio")),
+        ),
+        display_aspect_ratio: super::parsing::parse_json_string(
+            video.and_then(|v| v.get("DisplayAspectRatio")),
+        ),
         rotation_degrees: {
             let raw = super::parsing::parse_json_i64(video.and_then(|v| v.get("Rotation")));
             let mut normalized = raw % 360;
@@ -164,10 +185,13 @@ fn probe_media_info_via_mediainfo(path: &str) -> Result<crate::player::mpv_wrapp
     })
 }
 
-pub(super) fn probe_media_info_open_source(path: &str) -> Result<crate::player::mpv_wrapper::MediaInfo, String> {
+pub(super) fn probe_media_info_open_source(
+    path: &str,
+) -> Result<crate::player::mpv_wrapper::MediaInfo, String> {
     match crate::player::mpv_wrapper::MpvPlayer::probe_media_info(path) {
         Ok(info) => Ok(info),
-        Err(ffprobe_err) => probe_media_info_via_mediainfo(path)
-            .map_err(|mediainfo_err| format!("ffprobe: {}; mediainfo: {}", ffprobe_err, mediainfo_err)),
+        Err(ffprobe_err) => probe_media_info_via_mediainfo(path).map_err(|mediainfo_err| {
+            format!("ffprobe: {}; mediainfo: {}", ffprobe_err, mediainfo_err)
+        }),
     }
 }

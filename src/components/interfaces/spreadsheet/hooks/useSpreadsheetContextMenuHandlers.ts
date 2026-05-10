@@ -15,6 +15,8 @@ interface UseSpreadsheetContextMenuHandlersOptions {
   setClipScored: (clipId: string, scored: boolean) => void
   setCurrentClip: (index: number) => void
   setNotesDetached: (detached: boolean) => void
+  openContestCategorySelector: (clipId: string) => void
+  openFavoriteDialog: (clip: Clip) => void
   handleAttachVideoToClip: (clipId: string) => Promise<void>
   startClipIdentityEdit: (clipId: string) => void
   swapClipAuthorAndDisplayName: (clipId: string) => void
@@ -32,6 +34,8 @@ export function useSpreadsheetContextMenuHandlers({
   setClipScored,
   setCurrentClip,
   setNotesDetached,
+  openContestCategorySelector,
+  openFavoriteDialog,
   handleAttachVideoToClip,
   startClipIdentityEdit,
   swapClipAuthorAndDisplayName,
@@ -58,6 +62,11 @@ export function useSpreadsheetContextMenuHandlers({
     closeContextMenu()
   }, [clips, closeContextMenu, setCurrentClip, setNotesDetached])
 
+  const handleOpenFavorite = useCallback((clip: Clip) => {
+    openFavoriteDialog(clip)
+    closeContextMenu()
+  }, [closeContextMenu, openFavoriteDialog])
+
   const handleAttachVideo = useCallback((clip: Clip) => {
     handleAttachVideoToClip(clip.id).catch(() => {})
     closeContextMenu()
@@ -67,6 +76,11 @@ export function useSpreadsheetContextMenuHandlers({
     startClipIdentityEdit(clip.id)
     closeContextMenu()
   }, [closeContextMenu, startClipIdentityEdit])
+
+  const handleEditContestCategory = useCallback((clip: Clip) => {
+    openContestCategorySelector(clip.id)
+    closeContextMenu()
+  }, [closeContextMenu, openContestCategorySelector])
 
   const handleSwapPseudoAndClipName = useCallback((clip: Clip) => {
     swapClipAuthorAndDisplayName(clip.id)
@@ -111,9 +125,11 @@ export function useSpreadsheetContextMenuHandlers({
   return {
     closeContextMenu,
     handleToggleScored,
+    handleOpenFavorite,
     handleOpenNotes,
     handleAttachVideo,
     handleRenameClip,
+    handleEditContestCategory,
     handleSwapPseudoAndClipName,
     handleSetMiniatureFromCurrentFrame,
     handleResetMiniature,

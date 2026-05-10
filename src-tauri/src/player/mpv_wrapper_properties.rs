@@ -1,5 +1,5 @@
-use crate::player::mpv_ffi::*;
 use super::MpvPlayer;
+use crate::player::mpv_ffi::*;
 use std::os::raw::{c_double, c_int, c_void};
 
 impl MpvPlayer {
@@ -49,8 +49,9 @@ impl MpvPlayer {
     pub(super) fn set_property_string(&self, name: &str, value: &str) -> Result<(), String> {
         let name_c = to_cstring(name);
         let value_c = to_cstring(value);
-        let result =
-            unsafe { (self.lib.set_property_string)(self.handle, name_c.as_ptr(), value_c.as_ptr()) };
+        let result = unsafe {
+            (self.lib.set_property_string)(self.handle, name_c.as_ptr(), value_c.as_ptr())
+        };
         if result < 0 {
             return Err(format!("Failed to set property {}: error {}", name, result));
         }

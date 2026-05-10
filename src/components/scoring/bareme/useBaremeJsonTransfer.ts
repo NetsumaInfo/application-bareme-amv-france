@@ -1,5 +1,4 @@
 import { useCallback, useEffect } from 'react'
-import { listen } from '@tauri-apps/api/event'
 import * as tauri from '@/services/tauri'
 import { importBaremesFromData } from '@/components/scoring/bareme/baremeJsonImport'
 import type { Bareme } from '@/types/bareme'
@@ -46,38 +45,40 @@ export function useBaremeJsonTransfer({
   useEffect(() => {
     let unlistenDrop: (() => void) | null = null
 
-    listen<string[]>('tauri://file-drop', (event) => {
-      const jsonPaths = (event.payload ?? []).filter((pathValue) => pathValue.toLowerCase().endsWith('.json'))
-      if (jsonPaths.length === 0) {
-        return
-      }
+    tauri.listenNativeFileDrop({
+      onDrop: (paths) => {
+        const jsonPaths = paths.filter((pathValue) => pathValue.toLowerCase().endsWith('.json'))
+        if (jsonPaths.length === 0) {
+          return
+        }
 
-      void (async () => {
-        let importedCount = 0
-        let workingBaremes = [...availableBaremes]
+        void (async () => {
+          let importedCount = 0
+          let workingBaremes = [...availableBaremes]
 
-        for (const filePath of jsonPaths) {
-          try {
-            const data = await tauri.loadProjectFile(filePath)
-            const importedBaremes = importFromJsonData(data, workingBaremes)
-            importedCount += importedBaremes.length
-            if (importedBaremes.length > 0) {
-              const importedIds = new Set(importedBaremes.map((bareme) => bareme.id))
-              workingBaremes = [
-                ...workingBaremes.filter((bareme) => !importedIds.has(bareme.id)),
-                ...importedBaremes,
-              ]
+          for (const filePath of jsonPaths) {
+            try {
+              const data = await tauri.loadProjectFile(filePath)
+              const importedBaremes = importFromJsonData(data, workingBaremes)
+              importedCount += importedBaremes.length
+              if (importedBaremes.length > 0) {
+                const importedIds = new Set(importedBaremes.map((bareme) => bareme.id))
+                workingBaremes = [
+                  ...workingBaremes.filter((bareme) => !importedIds.has(bareme.id)),
+                  ...importedBaremes,
+                ]
+              }
+            } catch (errorValue) {
+              console.error('Bareme JSON dropped import failed:', errorValue)
             }
-          } catch (errorValue) {
-            console.error('Bareme JSON dropped import failed:', errorValue)
           }
-        }
 
-        if (importedCount > 0) {
-          onDropImportSuccess?.()
-          alert(t('{count} barème(s) importé(s).', { count: importedCount }))
-        }
-      })()
+          if (importedCount > 0) {
+            onDropImportSuccess?.()
+            alert(t('{count} barème(s) importé(s).', { count: importedCount }))
+          }
+        })()
+      },
     }).then((fn) => {
       unlistenDrop = fn
     })

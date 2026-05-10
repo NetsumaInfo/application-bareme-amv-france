@@ -45,7 +45,7 @@ export function usePlayer() {
       volume: status.volume,
       isFullscreen: fullscreen,
     })
-  })
+  }, { ultraSnap: true })
 
   const togglePause = useCallback(async () => {
     try {

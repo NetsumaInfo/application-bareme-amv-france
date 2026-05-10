@@ -2,6 +2,7 @@ import type { Clip, ClipNamePattern } from '@/types/project'
 import { generateId, parseClipName } from '@/utils/formatters'
 import { findMatchingLinkedClipIndex, findMatchingPlaceholderIndex } from '@/utils/clipImportTokens'
 import { normalizeFilePath } from '@/utils/path'
+import { normalizeContestCategory } from '@/utils/contestCategory'
 import {
   buildManualFileName,
   sanitizeManualPart,
@@ -23,15 +24,18 @@ export function createManualClip(
   entry: ManualClipEntry,
   order: number,
   clipNamePattern: ClipNamePattern = 'pseudo_clip',
+  contestCategory?: string,
 ): Clip {
   const author = sanitizeManualPart(entry.author)
   const displayName = sanitizeManualPart(entry.displayName)
+  const normalizedContestCategory = normalizeContestCategory(contestCategory)
   return {
     id: generateId(),
     fileName: buildManualFileName(entry, clipNamePattern),
     filePath: '',
     displayName,
     author: author || undefined,
+    contestCategory: normalizedContestCategory || undefined,
     duration: 0,
     hasInternalSubtitles: false,
     audioTrackCount: 1,
@@ -44,15 +48,18 @@ export function createClipFromFilePath(
   filePath: string,
   order: number,
   clipNamePattern: ClipNamePattern = 'pseudo_clip',
+  contestCategory?: string,
 ): Clip {
   const fileName = filePath.split(/[\\/]/).pop() || filePath
   const parsed = parseClipName(fileName, clipNamePattern)
+  const normalizedContestCategory = normalizeContestCategory(contestCategory)
   return {
     id: generateId(),
     fileName,
     filePath,
     displayName: parsed.displayName,
     author: parsed.author,
+    contestCategory: normalizedContestCategory || undefined,
     duration: 0,
     hasInternalSubtitles: false,
     audioTrackCount: 1,
@@ -65,14 +72,17 @@ export function createClipFromVideoMeta(
   metadata: { file_name: string; file_path: string },
   order: number,
   clipNamePattern: ClipNamePattern = 'pseudo_clip',
+  contestCategory?: string,
 ): Clip {
   const parsed = parseClipName(metadata.file_name, clipNamePattern)
+  const normalizedContestCategory = normalizeContestCategory(contestCategory)
   return {
     id: generateId(),
     fileName: metadata.file_name,
     filePath: metadata.file_path,
     displayName: parsed.displayName,
     author: parsed.author,
+    contestCategory: normalizedContestCategory || undefined,
     duration: 0,
     hasInternalSubtitles: false,
     audioTrackCount: 1,
@@ -122,6 +132,7 @@ export function mergeImportedVideosWithClips(
         duration: imported.duration || placeholder.duration,
         hasInternalSubtitles: imported.hasInternalSubtitles,
         audioTrackCount: imported.audioTrackCount || placeholder.audioTrackCount || 1,
+        contestCategory: placeholder.contestCategory || imported.contestCategory,
       }
       continue
     }
@@ -138,6 +149,7 @@ export function mergeImportedVideosWithClips(
         duration: imported.duration || linkedClip.duration,
         hasInternalSubtitles: imported.hasInternalSubtitles,
         audioTrackCount: imported.audioTrackCount || linkedClip.audioTrackCount || 1,
+        contestCategory: linkedClip.contestCategory || imported.contestCategory,
       }
       continue
     }

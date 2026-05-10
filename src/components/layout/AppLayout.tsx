@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { appWindow } from '@tauri-apps/api/window'
+import { getCurrentWindow } from '@tauri-apps/api/window'
 import { AppMainContent } from '@/components/layout/AppMainContent'
 import { AppFloatingLayers } from '@/components/layout/AppFloatingLayers'
 import { useAutoDetachNotesWindow } from '@/components/layout/hooks/useAutoDetachNotesWindow'
@@ -106,7 +106,7 @@ export default function AppLayout() {
     const nextTitle = judgeName ? `${projectName} — ${judgeName}` : projectName
 
     document.title = nextTitle
-    appWindow.setTitle(nextTitle).catch(() => {})
+    getCurrentWindow().setTitle(nextTitle).catch(() => {})
   }, [currentProject?.judgeName, currentProject?.name])
 
   useEffect(() => {

@@ -1,10 +1,11 @@
 import { useState, useEffect, useCallback } from 'react'
-import { FilePlus, FolderOpen, Folder } from 'lucide-react'
+import { FilePlus, FolderOpen, Folder, Trash2 } from 'lucide-react'
 import { useUIStore } from '@/store/useUIStore'
 import * as tauri from '@/services/tauri'
-import { listRecentProjectPaths, rememberRecentProjectPath, setRecentProjectPaths } from '@/services/recentProjects'
+import { forgetRecentProjectPath, listRecentProjectPaths, rememberRecentProjectPath, setRecentProjectPaths } from '@/services/recentProjects'
 import { loadAndApplyProjectFile } from '@/services/projectSession'
 import { HoverTextTooltip } from '@/components/ui/HoverTextTooltip'
+import { ProjectDeletionConfirmDialog } from '@/components/project/ProjectDeletionConfirmDialog'
 import { useI18n } from '@/i18n'
 
 interface ProjectListItem {
@@ -43,6 +44,8 @@ export function WelcomeScreen() {
     folderPath: '',
     loading: true,
   })
+  const [projectToDelete, setProjectToDelete] = useState<ProjectListItem | null>(null)
+  const [isDeletingProject, setIsDeletingProject] = useState(false)
   const applyLoadedProjects = useCallback((nextFolderPath: string, nextProjects: ProjectListItem[]) => {
     setScreenState({
       projects: nextProjects,
@@ -144,6 +147,39 @@ export function WelcomeScreen() {
     }
   }
 
+  const handleRequestProjectDeletion = useCallback((project: ProjectListItem) => {
+    setProjectToDelete(project)
+  }, [])
+
+  const handleCancelProjectDeletion = useCallback(() => {
+    if (isDeletingProject) return
+    setProjectToDelete(null)
+  }, [isDeletingProject])
+
+  const handleConfirmProjectDeletion = useCallback(async () => {
+    if (!projectToDelete || isDeletingProject) return
+
+    const filePath = projectToDelete.filePath
+    setIsDeletingProject(true)
+
+    try {
+      await tauri.deleteProjectFile(filePath)
+      setScreenState((current) => ({
+        ...current,
+        projects: current.projects.filter((project) => project.filePath !== filePath),
+      }))
+      setProjectToDelete(null)
+      void forgetRecentProjectPath(filePath).catch((recentError) => {
+        console.error('Failed to update recent projects after deletion:', recentError)
+      })
+    } catch (error) {
+      console.error('Failed to delete project:', error)
+      alert(t('Impossible de supprimer ce projet: {error}', { error: String(error) }))
+    } finally {
+      setIsDeletingProject(false)
+    }
+  }, [isDeletingProject, projectToDelete, t])
+
   return (
     <div className="relative flex-1 flex items-center justify-center" data-context-scope="welcome">
       <div className="w-full max-w-md px-6">
@@ -154,14 +190,14 @@ export function WelcomeScreen() {
         <div className="flex gap-3 mb-8">
           <button
             onClick={() => setShowProjectModal(true)}
-            className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-primary-600 hover:bg-primary-500 text-white text-sm font-medium transition-colors"
+            className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg bg-primary-600 hover:bg-primary-500 text-white text-sm font-medium transition-colors"
           >
             <FilePlus size={16} />
             {t('Nouveau projet')}
           </button>
           <button
             onClick={handleOpenProject}
-            className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-surface hover:bg-surface-light text-gray-300 hover:text-white text-sm font-medium transition-colors border border-gray-700"
+            className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg bg-surface hover:bg-surface-light text-gray-300 hover:text-white text-sm font-medium transition-colors border border-gray-700"
           >
             <FolderOpen size={16} />
             {t('Ouvrir un projet')}
@@ -178,29 +214,45 @@ export function WelcomeScreen() {
             </h3>
             <div className="space-y-1">
               {projects.map((project) => (
-                <button
+                <div
                   key={project.filePath}
-                  onClick={() => openProjectFromFile(project.filePath)}
-                  className="w-full text-left px-3 py-2.5 rounded-lg bg-surface/50 hover:bg-surface-light border border-gray-800 hover:border-gray-700 transition-colors group flex items-center gap-3"
+                  className="flex items-stretch gap-2 rounded-lg border border-gray-800 bg-surface/50 p-0.5 transition-colors hover:border-gray-700 hover:bg-surface-light"
                 >
-                  <div className="flex-1 min-w-0">
-                    <div className="text-sm text-white font-medium truncate">{project.name}</div>
-                    <div className="text-[10px] text-gray-500 truncate">
-                      {project.judgeName && (
-                        <span className="text-gray-400">
-                          {project.judgeName} —{' '}
-                        </span>
-                      )}
-                      {formatDate(project.updatedAt, {
-                        day: 'numeric',
-                        month: 'short',
-                        year: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit',
-                      })}
+                  <button
+                    type="button"
+                    onClick={() => openProjectFromFile(project.filePath)}
+                    className="flex min-w-0 flex-1 items-center gap-3 rounded-md px-3 py-2 text-left transition-colors hover:bg-black/10"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <div className="text-sm font-medium text-white truncate">{project.name}</div>
+                      <div className="text-[10px] text-gray-500 truncate">
+                        {project.judgeName && (
+                          <span className="text-gray-400">
+                            {project.judgeName} —{' '}
+                          </span>
+                        )}
+                        {formatDate(project.updatedAt, {
+                          day: 'numeric',
+                          month: 'short',
+                          year: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })}
+                      </div>
                     </div>
-                  </div>
-                </button>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(event) => {
+                      event.stopPropagation()
+                      handleRequestProjectDeletion(project)
+                    }}
+                    aria-label={t('Supprimer ce projet')}
+                    className="flex w-9 shrink-0 items-center justify-center rounded-md bg-transparent text-red-500 transition-colors hover:bg-red-500/10 hover:text-red-400"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                </div>
               ))}
             </div>
           </div>
@@ -216,6 +268,25 @@ export function WelcomeScreen() {
           </div>
         )}
       </div>
+
+      {projectToDelete ? (
+        <ProjectDeletionConfirmDialog
+          projectName={projectToDelete.name}
+          projectDetails={[
+            projectToDelete.judgeName.trim(),
+            formatDate(projectToDelete.updatedAt, {
+              day: 'numeric',
+              month: 'short',
+              year: 'numeric',
+              hour: '2-digit',
+              minute: '2-digit',
+            }),
+          ].filter(Boolean).join(' — ')}
+          isDeleting={isDeletingProject}
+          onCancel={handleCancelProjectDeletion}
+          onConfirm={handleConfirmProjectDeletion}
+        />
+      ) : null}
     </div>
   )
 }

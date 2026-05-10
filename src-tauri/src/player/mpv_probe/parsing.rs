@@ -99,7 +99,11 @@ pub(super) fn parse_stream_i64(stream: Option<&Value>, field: &str) -> i64 {
 }
 
 pub(super) fn parse_stream_tag_i64(stream: Option<&Value>, field: &str) -> i64 {
-    parse_i64(stream.and_then(|s| s.get("tags")).and_then(|t| t.get(field)))
+    parse_i64(
+        stream
+            .and_then(|s| s.get("tags"))
+            .and_then(|t| t.get(field)),
+    )
 }
 
 pub(super) fn parse_stream_str(stream: Option<&Value>, field: &str) -> String {

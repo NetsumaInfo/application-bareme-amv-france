@@ -1,4 +1,4 @@
-import { invoke } from '@tauri-apps/api/tauri'
+import { invoke } from '@tauri-apps/api/core'
 
 let lastGeometryKey: string | null = null
 
@@ -107,8 +107,8 @@ export async function playerIsVisible(): Promise<boolean> {
   return await invoke('player_is_visible')
 }
 
-export async function playerSyncOverlay(): Promise<void> {
-  await invoke('player_sync_overlay')
+export async function playerSyncOverlay(): Promise<boolean> {
+  return await invoke('player_sync_overlay')
 }
 
 export async function playerFrameStep(): Promise<void> {

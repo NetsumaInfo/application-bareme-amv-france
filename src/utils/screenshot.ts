@@ -1,4 +1,4 @@
-import { writeBinaryFile } from '@tauri-apps/api/fs'
+import { writeFile } from '@tauri-apps/plugin-fs'
 import * as tauri from '@/services/tauri'
 
 function screenshotTimestamp() {
@@ -70,6 +70,6 @@ export async function captureElementToPngFile(
     canvas = await html2canvas(element, baseOptions)
   }
   const dataUrl = canvas.toDataURL('image/png')
-  await writeBinaryFile(path, dataUrlToBytes(dataUrl))
+  await writeFile(path, dataUrlToBytes(dataUrl))
   return true
 }

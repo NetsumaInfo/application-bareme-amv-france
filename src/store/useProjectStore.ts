@@ -16,6 +16,8 @@ import {
   restoreRemovedClip,
   type RemovedClipHistoryEntry,
   updateClipScoredState,
+  updateClipFavoriteState,
+  updateClipContestCategory,
   updateClipThumbnail,
 } from '@/store/projectStoreClipActions'
 import {
@@ -45,6 +47,8 @@ interface ProjectStore {
   previousClip: () => void
   markClipScored: (clipId: string) => void
   setClipScored: (clipId: string, scored: boolean) => void
+  setClipFavorite: (clipId: string, favorite: boolean, comment?: string) => void
+  setClipContestCategory: (clipId: string, category: string) => void
   removeClip: (clipId: string) => void
   addImportedJudge: (judge: ImportedJudgeData) => void
   removeImportedJudge: (index: number) => void
@@ -182,6 +186,22 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
     const { clips } = get()
     set({
       clips: updateClipScoredState(clips, clipId, scored),
+      isDirty: true,
+    })
+  },
+
+  setClipFavorite: (clipId: string, favorite: boolean, comment?: string) => {
+    const { clips } = get()
+    set({
+      clips: updateClipFavoriteState(clips, clipId, favorite, comment),
+      isDirty: true,
+    })
+  },
+
+  setClipContestCategory: (clipId: string, category: string) => {
+    const { clips } = get()
+    set({
+      clips: updateClipContestCategory(clips, clipId, category),
       isDirty: true,
     })
   },

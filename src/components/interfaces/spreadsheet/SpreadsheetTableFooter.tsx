@@ -37,7 +37,7 @@ export function SpreadsheetTableFooter({
       <tr className="bg-surface-dark">
         <td
           colSpan={2}
-          className="px-2 py-2 font-bold text-[10px] uppercase tracking-wider text-gray-300 border-r border-gray-600 sticky left-0 z-10 bg-surface-dark"
+          className="px-2 py-2 font-bold text-[10px] uppercase tracking-wider text-gray-300 border-r border-gray-600 bg-surface-dark"
         >
           {t('Moyennes')}
         </td>

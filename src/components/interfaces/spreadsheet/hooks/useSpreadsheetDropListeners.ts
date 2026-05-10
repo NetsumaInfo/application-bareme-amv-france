@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type MutableRefObject } from 'react'
-import { listen } from '@tauri-apps/api/event'
+import { listenNativeFileDrop } from '@/services/tauri'
 
 interface UseSpreadsheetDropListenersParams {
   handleFileDrop: (paths: string[]) => Promise<void>
@@ -18,8 +18,6 @@ export function useSpreadsheetDropListeners({
 
   useEffect(() => {
     let unlistenDrop: (() => void) | null = null
-    let unlistenHover: (() => void) | null = null
-    let unlistenCancel: (() => void) | null = null
 
     const resetCleanupSuppressionSoon = (delayMs: number) => {
       window.setTimeout(() => {
@@ -29,40 +27,34 @@ export function useSpreadsheetDropListeners({
       }, delayMs)
     }
 
-    listen<string[]>('tauri://file-drop', (event) => {
-      setIsDragOver(false)
-      dragHoverTsRef.current = 0
-      suppressEmptyManualCleanupRef.current = true
-      isImportingClipsRef.current = true
-      if (event.payload && event.payload.length > 0) {
-        handleFileDrop(event.payload)
-          .finally(() => {
-            isImportingClipsRef.current = false
-            resetCleanupSuppressionSoon(320)
-          })
-      } else {
-        isImportingClipsRef.current = false
-        resetCleanupSuppressionSoon(150)
-      }
+    listenNativeFileDrop({
+      onDrop: (paths) => {
+        setIsDragOver(false)
+        dragHoverTsRef.current = 0
+        suppressEmptyManualCleanupRef.current = true
+        isImportingClipsRef.current = true
+        if (paths.length > 0) {
+          handleFileDrop(paths)
+            .finally(() => {
+              isImportingClipsRef.current = false
+              resetCleanupSuppressionSoon(320)
+            })
+        } else {
+          isImportingClipsRef.current = false
+          resetCleanupSuppressionSoon(150)
+        }
+      },
+      onHover: () => {
+        dragHoverTsRef.current = Date.now()
+        suppressEmptyManualCleanupRef.current = true
+        setIsDragOver(true)
+      },
+      onCancel: () => {
+        setIsDragOver(false)
+        dragHoverTsRef.current = 0
+        resetCleanupSuppressionSoon(100)
+      },
     }).then((fn) => { unlistenDrop = fn })
-
-    listen('tauri://file-drop-hover', () => {
-      // Guard against false positives (text selection/internal drags).
-      // Tauri hover can fire without payload, so we only trust it shortly
-      // after a native dragenter/dragover that explicitly carries Files.
-      if (Date.now() - fileDragDetectedTsRef.current > 900) {
-        return
-      }
-      dragHoverTsRef.current = Date.now()
-      suppressEmptyManualCleanupRef.current = true
-      setIsDragOver(true)
-    }).then((fn) => { unlistenHover = fn })
-
-    listen('tauri://file-drop-cancelled', () => {
-      setIsDragOver(false)
-      dragHoverTsRef.current = 0
-      resetCleanupSuppressionSoon(100)
-    }).then((fn) => { unlistenCancel = fn })
 
     const preventBrowserFileDrop = (event: DragEvent) => {
       if (event.dataTransfer?.types?.includes('Files')) {
@@ -104,8 +96,6 @@ export function useSpreadsheetDropListeners({
 
     return () => {
       if (unlistenDrop) unlistenDrop()
-      if (unlistenHover) unlistenHover()
-      if (unlistenCancel) unlistenCancel()
       window.clearInterval(watchdog)
       window.removeEventListener('blur', forceReset)
       window.removeEventListener('mouseleave', forceReset)
