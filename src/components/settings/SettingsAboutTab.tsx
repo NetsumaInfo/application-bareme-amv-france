@@ -1,5 +1,7 @@
 import { useCallback, useEffect } from 'react'
+import type { MouseEvent } from 'react'
 import { useI18n } from '@/i18n'
+import { openExternalUrl } from '@/services/tauri'
 import { useAppUpdateStore } from '@/store/useAppUpdateStore'
 import { GITHUB_REPOSITORY_URL, GITHUB_RELEASES_URL } from '@/constants/projectLinks'
 
@@ -27,6 +29,14 @@ export function SettingsAboutTab() {
   const handleManualUpdateCheck = useCallback(() => {
     checkForUpdates(true).catch(() => {})
   }, [checkForUpdates])
+  const handleOpenReleaseUrl = useCallback((event: MouseEvent<HTMLAnchorElement>) => {
+    event.preventDefault()
+    openExternalUrl(resolvedReleaseUrl).catch(() => {})
+  }, [resolvedReleaseUrl])
+  const handleOpenRepositoryUrl = useCallback((event: MouseEvent<HTMLAnchorElement>) => {
+    event.preventDefault()
+    openExternalUrl(GITHUB_REPOSITORY_URL).catch(() => {})
+  }, [])
 
   useEffect(() => {
     checkForUpdates().catch(() => {})
@@ -120,6 +130,7 @@ export function SettingsAboutTab() {
             href={resolvedReleaseUrl}
             target="_blank"
             rel="noreferrer"
+            onClick={handleOpenReleaseUrl}
             className="inline-flex text-primary-300 underline decoration-primary-400/60 hover:text-primary-200"
           >
             {hasUpdateAvailable ? t('Télécharger la mise à jour') : t('Voir les releases GitHub')}
@@ -173,6 +184,7 @@ export function SettingsAboutTab() {
           href={GITHUB_REPOSITORY_URL}
           target="_blank"
           rel="noreferrer"
+          onClick={handleOpenRepositoryUrl}
           className="mt-2 inline-flex text-xs text-primary-300 hover:text-primary-200 underline decoration-primary-400/60"
         >
           {t('https://github.com/NetsumaInfo/application-bareme-amv-france')}
