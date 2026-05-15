@@ -10,7 +10,7 @@ export interface CategoryGroup {
   color: string
 }
 
-export interface NoteScoreLike {
+interface NoteScoreLike {
   value: number | string | boolean
   isValid?: boolean
 }

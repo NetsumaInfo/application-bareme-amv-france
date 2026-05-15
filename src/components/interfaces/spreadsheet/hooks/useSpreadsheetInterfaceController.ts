@@ -70,6 +70,34 @@ export function useSpreadsheetInterfaceController(): SpreadsheetInterfaceControl
   const rowRefs = useRef<Map<number, HTMLTableRowElement>>(new Map())
   const notesTextareaRef = useRef<HTMLTextAreaElement | null>(null)
   const [activeContestCategoryView, setActiveContestCategoryView] = useState<string>(ALL_CONTEST_CATEGORY_KEY)
+  const contestCategoriesEnabledSetting = Boolean(currentProject?.settings.contestCategoriesEnabled)
+  const contestCategoryPresetSettings = useMemo(
+    () => normalizeContestCategoryPresets(currentProject?.settings.contestCategoryPresets ?? []),
+    [currentProject?.settings.contestCategoryPresets],
+  )
+  const resolvedContestCategoryView = useMemo(() => {
+    if (!contestCategoriesEnabledSetting || contestCategoryPresetSettings.length === 0) {
+      return ALL_CONTEST_CATEGORY_KEY
+    }
+    if (
+      activeContestCategoryView !== ALL_CONTEST_CATEGORY_KEY
+      && !contestCategoryPresetSettings.includes(activeContestCategoryView)
+    ) {
+      return ALL_CONTEST_CATEGORY_KEY
+    }
+    return activeContestCategoryView
+  }, [activeContestCategoryView, contestCategoriesEnabledSetting, contestCategoryPresetSettings])
+  const handleSelectContestCategoryView = useCallback((value: string) => {
+    if (!contestCategoriesEnabledSetting || contestCategoryPresetSettings.length === 0) {
+      setActiveContestCategoryView(ALL_CONTEST_CATEGORY_KEY)
+      return
+    }
+    if (value !== ALL_CONTEST_CATEGORY_KEY && !contestCategoryPresetSettings.includes(value)) {
+      setActiveContestCategoryView(ALL_CONTEST_CATEGORY_KEY)
+      return
+    }
+    setActiveContestCategoryView(value)
+  }, [contestCategoriesEnabledSetting, contestCategoryPresetSettings])
 
   const [mediaInfoClip, setMediaInfoClip] = useState<{ name: string; path: string } | null>(null)
   const [favoriteDialogClipId, setFavoriteDialogClipId] = useState<string | null>(null)
@@ -83,7 +111,7 @@ export function useSpreadsheetInterfaceController(): SpreadsheetInterfaceControl
     handleImportFiles,
   } = useSpreadsheetImport({
     currentProject,
-    activeContestCategoryView,
+    activeContestCategoryView: resolvedContestCategoryView,
     markDirty,
     setClips,
     updateProject,
@@ -110,7 +138,7 @@ export function useSpreadsheetInterfaceController(): SpreadsheetInterfaceControl
     resetNoVideoTableModal,
     handleCreateNoVideoTable,
   } = useSpreadsheetManualClips({
-    activeContestCategoryView,
+    activeContestCategoryView: resolvedContestCategoryView,
     isDragOver,
     isImportingClipsRef,
     suppressEmptyManualCleanupRef,
@@ -130,10 +158,7 @@ export function useSpreadsheetInterfaceController(): SpreadsheetInterfaceControl
   const contestCategoryDialogClip = contestCategoryDialogClipId
     ? (clips.find((clip) => clip.id === contestCategoryDialogClipId) ?? null)
     : null
-  const contestCategoryDialogOptions = useMemo(
-    () => normalizeContestCategoryPresets(currentProject?.settings.contestCategoryPresets ?? []),
-    [currentProject?.settings.contestCategoryPresets],
-  )
+  const contestCategoryDialogOptions = contestCategoryPresetSettings
 
   const handleRenameCurrentClip = useCallback(() => {
     if (!currentClip) return
@@ -165,8 +190,6 @@ export function useSpreadsheetInterfaceController(): SpreadsheetInterfaceControl
     hideTotalsUntilAllScored,
     showMiniatures,
     showQuickActions,
-    contestCategoriesEnabled,
-    contestCategoryPresets,
     contestCategoryColors,
     getCategoryScore,
     hasAnyScoreInGroup,
@@ -178,25 +201,9 @@ export function useSpreadsheetInterfaceController(): SpreadsheetInterfaceControl
     getNoteForClip,
   })
 
-  useEffect(() => {
-    if (!contestCategoriesEnabled || contestCategoryPresets.length === 0) {
-      if (activeContestCategoryView !== ALL_CONTEST_CATEGORY_KEY) {
-        setActiveContestCategoryView(ALL_CONTEST_CATEGORY_KEY)
-      }
-      return
-    }
-
-    if (
-      activeContestCategoryView !== ALL_CONTEST_CATEGORY_KEY
-      && !contestCategoryPresets.includes(activeContestCategoryView)
-    ) {
-      setActiveContestCategoryView(ALL_CONTEST_CATEGORY_KEY)
-    }
-  }, [activeContestCategoryView, contestCategoriesEnabled, contestCategoryPresets])
-
   const visibleSortedClips = useMemo(
-    () => sortedClips.filter((clip) => matchesContestCategoryKey(clip, activeContestCategoryView)),
-    [activeContestCategoryView, sortedClips],
+    () => sortedClips.filter((clip) => matchesContestCategoryKey(clip, resolvedContestCategoryView)),
+    [resolvedContestCategoryView, sortedClips],
   )
 
   useEffect(() => {
@@ -288,11 +295,11 @@ export function useSpreadsheetInterfaceController(): SpreadsheetInterfaceControl
   const noVideoStateProps = useSpreadsheetNoVideoProps({
     isDragOver,
     clipNamePattern: currentProject?.settings.clipNamePattern ?? 'pseudo_clip',
-    contestCategoriesEnabled,
-    contestCategoryPresets,
+    contestCategoriesEnabled: contestCategoriesEnabledSetting,
+    contestCategoryPresets: contestCategoryPresetSettings,
     contestCategoryColors,
-    activeContestCategoryView,
-    onSelectContestCategoryView: setActiveContestCategoryView,
+    activeContestCategoryView: resolvedContestCategoryView,
+    onSelectContestCategoryView: handleSelectContestCategoryView,
     showNoVideoTableModal,
     noVideoTableAccepted,
     noVideoTableInput,
@@ -320,11 +327,11 @@ export function useSpreadsheetInterfaceController(): SpreadsheetInterfaceControl
     hideAverages,
     showMiniatures,
     showQuickActions,
-    contestCategoriesEnabled,
-    contestCategoryPresets,
+    contestCategoriesEnabled: contestCategoriesEnabledSetting,
+    contestCategoryPresets: contestCategoryPresetSettings,
     contestCategoryColors,
-    activeContestCategoryView,
-    onSelectContestCategoryView: setActiveContestCategoryView,
+    activeContestCategoryView: resolvedContestCategoryView,
+    onSelectContestCategoryView: handleSelectContestCategoryView,
     hasAnyLinkedVideo,
     shortcutBindings,
     currentProject,

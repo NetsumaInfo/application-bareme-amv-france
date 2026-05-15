@@ -6,22 +6,6 @@
     "src/resultats-notes-entry.tsx"
   ],
   "ignoreFiles": [
-    "src/i18n/seed.ts",
-    "src/schemas/baremeSchema.ts",
-    "src/schemas/notationSchema.ts",
-    "src/utils/videoElement.ts",
-    "src/components/layout/Sidebar.tsx",
-    "src/components/notes/TimecodeChipList.tsx",
-    "src/components/project/ProgressIndicator.tsx",
-    "src/components/project/VideoList.tsx",
-    "src/components/player/PlayerControls.tsx",
-    "src/components/player/PlayerMainControls.tsx",
-    "src/components/player/PlayerSeekBar.tsx",
-    "src/components/player/VideoPlayer.tsx",
-    "src/components/interfaces/resultats/ResultatsGlobalJudgeColorTable.tsx",
-    "src/components/interfaces/resultats/ResultatsJudgeNotesModal.tsx",
-    "src/components/interfaces/resultats/ResultatsTable.tsx",
-    "src/components/interfaces/resultats/hooks/useResultatsCategoryValue.ts",
-    "src/components/interfaces/resultats/hooks/useResultatsDraftCells.ts"
+    "src/i18n/seed.ts"
   ]
 }

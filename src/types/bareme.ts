@@ -1,6 +1,6 @@
-export type CriterionType = 'numeric' | 'slider' | 'boolean' | 'select' | 'text'
+type CriterionType = 'numeric' | 'slider' | 'boolean' | 'select' | 'text'
 
-export interface ValidationRule {
+interface ValidationRule {
   type: 'min' | 'max' | 'required' | 'step'
   value: number | boolean
   message: string

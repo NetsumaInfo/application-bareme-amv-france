@@ -58,7 +58,6 @@ interface UIStore {
   hideTextNotes: boolean
   showAudioDb: boolean
   confirmClipDeletion: boolean
-  sidebarCollapsed: boolean
   showProjectModal: boolean
   showBaremeEditor: boolean
   requestedBaremeEditorId: string | null
@@ -80,7 +79,6 @@ interface UIStore {
   toggleTextNotes: () => void
   toggleAudioDb: () => void
   toggleConfirmClipDeletion: () => void
-  toggleSidebar: () => void
   setShowProjectModal: (show: boolean) => void
   setShowBaremeEditor: (show: boolean) => void
   setRequestedBaremeEditorId: (baremeId: string | null) => void
@@ -112,7 +110,6 @@ export const useUIStore = create<UIStore>((set) => ({
   hideTextNotes: false,
   showAudioDb: readAudioDbPref(),
   confirmClipDeletion: true,
-  sidebarCollapsed: false,
   showProjectModal: false,
   showBaremeEditor: false,
   requestedBaremeEditorId: null,
@@ -147,7 +144,6 @@ export const useUIStore = create<UIStore>((set) => ({
       emitUiSettingsUpdated({ confirmClipDeletion: next })
       return { confirmClipDeletion: next }
     }),
-  toggleSidebar: () => set((s) => ({ sidebarCollapsed: !s.sidebarCollapsed })),
   setShowProjectModal: (show) => set({ showProjectModal: show }),
   setShowBaremeEditor: (show) => set((state) => ({
     showBaremeEditor: show,

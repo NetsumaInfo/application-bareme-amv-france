@@ -3,7 +3,7 @@ import { checkGithubReleaseUpdate } from '@/services/githubUpdate'
 
 const UPDATE_CHECK_COOLDOWN_MS = 30 * 60 * 1000
 
-export type AppUpdateStatus = 'idle' | 'checking' | 'up_to_date' | 'update_available' | 'error'
+type AppUpdateStatus = 'idle' | 'checking' | 'up_to_date' | 'update_available' | 'error'
 
 interface AppUpdateStore {
   status: AppUpdateStatus

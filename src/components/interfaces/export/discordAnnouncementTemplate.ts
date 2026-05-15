@@ -1,13 +1,11 @@
 import type { TranslateFn } from '@/i18n/context'
 
 export const DISCORD_MESSAGE_LIMIT = 2000
-const DISCORD_SNOWFLAKE_REGEX = /^\d{17,20}$/
 
-export type DiscordTitleStyle = 'h1' | 'h2' | 'h3' | 'bold'
-export type DiscordRankingStyle = 'numbered' | 'bullet' | 'compact' | 'quote'
-export type DiscordScoreMode = 'hidden' | 'score' | 'score_total'
-export type DiscordRowTextStyle = 'plain' | 'bold' | 'italic' | 'underline' | 'strike' | 'spoiler' | 'code'
-export type DiscordMentionType = 'user' | 'role' | 'channel'
+type DiscordTitleStyle = 'h1' | 'h2' | 'h3' | 'bold'
+type DiscordRankingStyle = 'numbered' | 'bullet' | 'compact' | 'quote'
+type DiscordScoreMode = 'hidden' | 'score' | 'score_total'
+type DiscordRowTextStyle = 'plain' | 'bold' | 'italic' | 'underline' | 'strike' | 'spoiler' | 'code'
 
 export interface DiscordAnnouncementContent {
   mention: string
@@ -71,22 +69,6 @@ export function buildDefaultDiscordAnnouncementSettings(rowCount: number): Disco
   }
 }
 
-export function normalizeDiscordSnowflake(value: string): string {
-  return value.replace(/[^\d]/g, '').slice(0, 20)
-}
-
-export function isValidDiscordSnowflake(value: string): boolean {
-  return DISCORD_SNOWFLAKE_REGEX.test(value.trim())
-}
-
-export function buildDiscordMentionToken(type: DiscordMentionType, snowflake: string): string | null {
-  const cleanSnowflake = normalizeDiscordSnowflake(snowflake)
-  if (!isValidDiscordSnowflake(cleanSnowflake)) return null
-  if (type === 'user') return `<@${cleanSnowflake}>`
-  if (type === 'role') return `<@&${cleanSnowflake}>`
-  return `<#${cleanSnowflake}>`
-}
-
 function normalizeDiscordMentionToken(token: string): string {
   const clean = token.trim()
   if (!clean) return ''
@@ -129,7 +111,7 @@ function formatHeading(text: string, style: DiscordTitleStyle): string {
   return `**${clean}**`
 }
 
-export function applyDiscordInlineStyle(text: string, style: DiscordRowTextStyle): string {
+function applyDiscordInlineStyle(text: string, style: DiscordRowTextStyle): string {
   const clean = text.trim()
   if (!clean) return ''
 

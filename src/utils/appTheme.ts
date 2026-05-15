@@ -1,7 +1,7 @@
-export const APP_THEME_PRESETS = ['absolute', 'black', 'midnight', 'graphite', 'studio', 'abyss', 'porcelain', 'pearl', 'ivory', 'sand'] as const
+const APP_THEME_PRESETS = ['absolute', 'black', 'midnight', 'graphite', 'studio', 'abyss', 'porcelain', 'pearl', 'ivory', 'sand'] as const
 export type AppThemePreset = typeof APP_THEME_PRESETS[number]
 
-export const PRIMARY_COLOR_PRESETS = ['ocean', 'sky', 'petrol', 'turquoise', 'indigo', 'lavender', 'plum', 'cranberry', 'sage', 'emerald', 'forest', 'honey', 'marigold', 'brown', 'slate'] as const
+const PRIMARY_COLOR_PRESETS = ['ocean', 'sky', 'petrol', 'turquoise', 'indigo', 'lavender', 'plum', 'cranberry', 'sage', 'emerald', 'forest', 'honey', 'marigold', 'brown', 'slate'] as const
 export type PrimaryColorPreset = typeof PRIMARY_COLOR_PRESETS[number]
 
 export const APP_THEME_OPTIONS: Array<{

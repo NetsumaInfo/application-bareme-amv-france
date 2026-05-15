@@ -205,9 +205,8 @@ function BaremeField({
   )
 }
 
-export default function CreateProjectModal() {
+function CreateProjectModalContent() {
   const {
-    showProjectModal,
     setShowProjectModal,
     setShowBaremeEditor,
     setRequestedBaremeEditorId,
@@ -239,18 +238,6 @@ export default function CreateProjectModal() {
   })
 
   useEffect(() => {
-    if (!showProjectModal) return
-    reset({
-      name: '',
-      judgeName: '',
-      baremeId: availableBaremes[0]?.id || '',
-      clipNamePattern: DEFAULT_CLIP_NAME_PATTERN,
-    })
-    setContestCategoriesEnabled(false)
-    setContestCategoryItems([])
-  }, [availableBaremes, reset, showProjectModal])
-
-  useEffect(() => {
     if (!baremeMenuOpen) return
 
     const handlePointerDown = (event: MouseEvent) => {
@@ -269,8 +256,6 @@ export default function CreateProjectModal() {
     () => availableBaremes.find((bareme) => bareme.id === selectedBaremeId) ?? availableBaremes[0] ?? null,
     [availableBaremes, selectedBaremeId],
   )
-
-  if (!showProjectModal) return null
 
   const onSubmit = async (data: CreateProjectFormData) => {
     const selected = availableBaremes.find((entry) => entry.id === data.baremeId)
@@ -445,4 +430,10 @@ export default function CreateProjectModal() {
       </div>
     </div>
   )
+}
+
+export default function CreateProjectModal() {
+  const showProjectModal = useUIStore((state) => state.showProjectModal)
+  if (!showProjectModal) return null
+  return <CreateProjectModalContent />
 }

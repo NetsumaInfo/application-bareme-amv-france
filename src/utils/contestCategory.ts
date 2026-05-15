@@ -38,19 +38,6 @@ export function normalizeContestCategoryPresets(value: unknown): string[] {
   return Array.from(unique)
 }
 
-export function parseContestCategoryPresetsText(value: string): string[] {
-  if (typeof value !== 'string') return []
-  const tokens = value
-    .split(/[\n,;|]+/g)
-    .map((item) => normalizeContestCategory(item))
-    .filter((item) => item.length > 0)
-  return normalizeContestCategoryPresets(tokens)
-}
-
-export function formatContestCategoryPresetsText(values: string[]): string {
-  return normalizeContestCategoryPresets(values).join('\n')
-}
-
 export function normalizeContestCategoryColorMap(
   value: unknown,
   categories: string[] = [],

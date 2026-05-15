@@ -5,13 +5,12 @@ export type ExportDensity = 'comfortable' | 'compact'
 export type ExportMode = 'grouped' | 'individual'
 export type ExportLayout = 'discord' | 'table' | 'poster'
 export type ExportPngMode = 'single' | 'paged' | 'both'
-export type ExportRankBadgeStyle = 'filled' | 'outline' | 'plain'
 export type ExportTableView = 'summary' | 'detailed'
 export type ExportNotesPdfMode = 'general' | 'judges' | 'both'
 export type ExportJsonMode = 'full_project' | 'single_judge' | 'notes_only'
 
 export type ExportPosterBlockId = 'title' | 'subtitle' | 'top' | 'footer'
-export type ExportPosterTextAlign = 'left' | 'center' | 'right'
+type ExportPosterTextAlign = 'left' | 'center' | 'right'
 export type ExportPosterShadowStyle = 'none' | 'soft' | 'strong' | 'outline' | 'glow'
 
 export interface ExportJudge {

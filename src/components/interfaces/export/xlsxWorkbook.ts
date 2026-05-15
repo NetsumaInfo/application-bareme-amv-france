@@ -31,9 +31,9 @@ export interface XlsxCell {
   style?: XlsxCellStyle
 }
 
-export type XlsxCellInput = XlsxCellValue | XlsxCell
+type XlsxCellInput = XlsxCellValue | XlsxCell
 
-export interface XlsxFreezePane {
+interface XlsxFreezePane {
   xSplit?: number
   ySplit?: number
   topLeftCell?: string

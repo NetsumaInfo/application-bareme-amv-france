@@ -7,7 +7,7 @@ export interface CategoryGroup {
   color: string
 }
 
-export interface SpreadsheetNoteScore {
+interface SpreadsheetNoteScore {
   value: number | string | boolean
   isValid: boolean
 }
