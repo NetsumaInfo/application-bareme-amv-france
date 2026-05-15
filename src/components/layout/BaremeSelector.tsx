@@ -3,7 +3,6 @@ import { ChevronDown, Plus, Settings2 } from 'lucide-react'
 import { useNotationStore } from '@/store/useNotationStore'
 import { useProjectStore } from '@/store/useProjectStore'
 import { useUIStore } from '@/store/useUIStore'
-import { HoverTextTooltip } from '@/components/ui/HoverTextTooltip'
 import { useI18n } from '@/i18n'
 
 export function BaremeSelector() {
@@ -34,22 +33,20 @@ export function BaremeSelector() {
 
   return (
     <div className="relative inline-flex items-center" ref={dropdownRef}>
-      <HoverTextTooltip text={t('Barème')}>
-        <button
-          onClick={() => setOpen((value) => !value)}
-          aria-label={t('Barème')}
-          data-open={open ? 'true' : 'false'}
-          className="app-header-trigger gap-0.5"
-        >
-          <span className="inline-flex items-center gap-0.5 leading-none">
-            <span className="max-w-[150px] truncate font-medium leading-none">{currentBareme?.name || t('Barème')}</span>
-            <ChevronDown
-              size={10}
-              className={`app-header-trigger-chevron shrink-0 transition-transform ${open ? 'rotate-180' : ''}`}
-            />
-          </span>
-        </button>
-      </HoverTextTooltip>
+      <button
+        onClick={() => setOpen((value) => !value)}
+        aria-label={t('Barème')}
+        data-open={open ? 'true' : 'false'}
+        className="app-header-trigger gap-0.5"
+      >
+        <span className="inline-flex items-center gap-0.5 leading-none">
+          <span className="max-w-[150px] truncate font-medium leading-none">{currentBareme?.name || t('Barème')}</span>
+          <ChevronDown
+            size={10}
+            className={`app-header-trigger-chevron shrink-0 transition-transform ${open ? 'rotate-180' : ''}`}
+          />
+        </span>
+      </button>
 
       {open ? (
         <div className="absolute top-full right-0 z-50 mt-2 w-64 overflow-hidden rounded-[12px] border border-gray-700 bg-surface shadow-xl">

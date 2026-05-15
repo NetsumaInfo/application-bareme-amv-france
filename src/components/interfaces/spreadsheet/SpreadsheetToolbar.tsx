@@ -1,6 +1,6 @@
 import type { DragEvent, MouseEvent } from 'react'
 import type { LucideIcon } from 'lucide-react'
-import { CheckCircle2, Link2, Star, TextCursorInput, Trash2 } from 'lucide-react'
+import { CheckCircle2, Link2, Star, Tags, TextCursorInput, Trash2 } from 'lucide-react'
 import { HoverTextTooltip } from '@/components/ui/HoverTextTooltip'
 import { useI18n } from '@/i18n'
 import type { Clip } from '@/types/project'
@@ -86,6 +86,7 @@ interface SpreadsheetToolbarProps {
   onOpenNotes: (clip: Clip) => void
   onAttachVideo: (clip: Clip) => void
   onRenameClip: (clip: Clip) => void
+  onEditContestCategory: (clip: Clip) => void
   onSwapPseudoAndClipName: (clip: Clip) => void
   onToggleMiniatures: () => void
   onShowMediaInfo: (clip: Clip) => void
@@ -93,6 +94,7 @@ interface SpreadsheetToolbarProps {
   onTogglePipVideo: () => void
   showMiniatures: boolean
   hasAnyLinkedVideo: boolean
+  hasContestCategories: boolean
   showPipVideo: boolean
 }
 
@@ -108,6 +110,7 @@ export function SpreadsheetToolbar({
   onOpenNotes,
   onAttachVideo,
   onRenameClip,
+  onEditContestCategory,
   onSwapPseudoAndClipName,
   onToggleMiniatures,
   onShowMediaInfo,
@@ -115,10 +118,11 @@ export function SpreadsheetToolbar({
   onTogglePipVideo,
   showMiniatures,
   hasAnyLinkedVideo,
+  hasContestCategories,
   showPipVideo,
 }: SpreadsheetToolbarProps) {
   const { t } = useI18n()
-  const detailedNotesIcon = UI_ICONS.detailedNotes
+  const detailedNotesIcon = UI_ICONS.generalNote
   const miniaturesIcon = UI_ICONS.miniatures
   const addRowIcon = UI_ICONS.addRow
   const showIcon = UI_ICONS.show
@@ -135,13 +139,16 @@ export function SpreadsheetToolbar({
   const favoriteLabel = hasCurrentClip
     ? (currentClip?.favorite ? t('Modifier le favori') : t('Mettre en favori'))
     : t('Sélectionnez un clip')
-  const notesLabel = hasCurrentClip ? t('Notes du clip') : t('Sélectionnez un clip')
+  const notesLabel = hasCurrentClip ? t('Commentaires du clip') : t('Sélectionnez un clip')
   const attachVideoLabel = hasCurrentClip ? t('Lier une vidéo à cette ligne...') : t('Sélectionnez un clip')
   const miniaturesLabel = hasAnyLinkedVideo
     ? (showMiniatures ? t('Masquer les miniatures') : t('Afficher les miniatures'))
     : t('Miniatures indisponibles (pas de média)')
   const addManualRowLabel = t('Ajouter une ligne sans vidéo')
   const renameClipLabel = hasCurrentClip ? t('Renommer') : t('Sélectionnez un clip')
+  const contestCategoryLabel = hasCurrentClip
+    ? (currentClip?.contestCategory?.trim() ? t('Modifier catégorie clip') : t('Définir catégorie clip'))
+    : t('Sélectionnez un clip')
   const swapClipLabel = hasCurrentClip ? t('Échanger pseudo et nom du clip') : t('Sélectionnez un clip')
   const mediaInfoLabel = hasCurrentClip
     ? (hasCurrentClipVideo ? t('Afficher MediaInfo') : t('MediaInfo indisponible (pas de vidéo)'))
@@ -150,7 +157,7 @@ export function SpreadsheetToolbar({
     ? (hasCurrentClipVideo ? t('Supprimer la vidéo du participant') : t('Supprimer le participant'))
     : t('Sélectionnez un clip')
   const pipLabel = hasCurrentClipVideo
-    ? (showPipVideo ? t('Masquer la vidéo PiP') : t('Afficher la vidéo PiP'))
+    ? (showPipVideo ? t('Masquer la vidéo PiP') : t('Ouvrir la vidéo'))
     : t('Vidéo PiP indisponible (pas de média)')
   const showContestCategoryBar = contestCategoriesEnabled && contestCategoryViewTabs.length > 1
   const isFileDragEvent = (event: DragEvent<HTMLButtonElement>) => (
@@ -174,6 +181,14 @@ export function SpreadsheetToolbar({
           title={addManualRowLabel}
           icon={addRowIcon}
           onClick={onAddManualRow}
+        />
+
+        <ToolbarIconButton
+          ariaLabel={contestCategoryLabel}
+          title={contestCategoryLabel}
+          icon={Tags}
+          disabled={!currentClip || !hasContestCategories}
+          onClick={currentClip && hasContestCategories ? () => onEditContestCategory(currentClip) : undefined}
         />
 
         <ToolbarIconButton

@@ -11,7 +11,6 @@ import type {
   ExportTableView,
 } from '@/components/interfaces/export/types'
 import { AppSelect } from '@/components/ui/AppSelect'
-import { HoverTextTooltip } from '@/components/ui/HoverTextTooltip'
 import { useI18n } from '@/i18n'
 
 // ─── Download button ──────────────────────────────────────────────────────────
@@ -19,31 +18,27 @@ import { useI18n } from '@/i18n'
 function DlBtn({
   icon: Icon,
   label,
-  tooltip,
   loading,
   onClick,
 }: {
   icon: ElementType
   label: string
-  tooltip: string
   loading: boolean
   onClick: () => void
 }) {
   return (
-    <HoverTextTooltip text={tooltip} className="inline-flex">
-      <button
-        type="button"
-        onClick={onClick}
-        disabled={loading}
-        aria-label={tooltip}
-        className="group flex min-w-[42px] flex-col items-center gap-0.5 rounded-md px-2 py-1.5 text-gray-400 transition-colors hover:bg-white/[0.06] hover:text-white disabled:opacity-40 active:scale-[0.97]"
-      >
-        <span className="flex h-6 w-6 items-center justify-center rounded-md bg-white/[0.06] text-gray-400 transition-colors group-hover:bg-primary-600/20 group-hover:text-primary-300">
-          {loading ? <Loader2 size={13} className="animate-spin" /> : <Icon size={13} />}
-        </span>
-        <span className="text-[10px] font-medium leading-tight">{label}</span>
-      </button>
-    </HoverTextTooltip>
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={loading}
+      aria-label={label}
+      className="group flex min-w-[42px] flex-col items-center gap-0.5 rounded-md px-2 py-1.5 text-gray-400 transition-colors hover:bg-white/[0.06] hover:text-white disabled:opacity-40 active:scale-[0.97]"
+    >
+      <span className="flex h-6 w-6 items-center justify-center rounded-md bg-white/[0.06] text-gray-400 transition-colors group-hover:bg-primary-600/20 group-hover:text-primary-300">
+        {loading ? <Loader2 size={13} className="animate-spin" /> : <Icon size={13} />}
+      </span>
+      <span className="text-[10px] font-medium leading-tight">{label}</span>
+    </button>
   )
 }
 
@@ -148,42 +143,36 @@ export function ExportOptionsPanel({
         <DlBtn
           icon={FileImage}
           label="PNG"
-          tooltip={t('Exporter une image PNG')}
           loading={exporting}
           onClick={onExportPng}
         />
         <DlBtn
           icon={FileText}
           label="PDF"
-          tooltip={t('Exporter un PDF')}
           loading={exporting}
           onClick={onExportPdf}
         />
         <DlBtn
           icon={FileSpreadsheet}
           label="Excel"
-          tooltip={t('Exporter un fichier Excel')}
           loading={exporting}
           onClick={onExportSpreadsheet}
         />
         <DlBtn
           icon={Code2}
           label="HTML"
-          tooltip={t('Exporter une page HTML/CSS')}
           loading={exporting}
           onClick={onExportHtml}
         />
         <DlBtn
           icon={FileText}
           label={t('Notes')}
-          tooltip={t('Exporter les notes en PDF')}
           loading={exporting}
           onClick={onExportNotesPdf}
         />
         <DlBtn
           icon={FileJson}
           label="JSON"
-          tooltip={t('Exporter les données JSON')}
           loading={exporting}
           onClick={onExportJson}
         />
@@ -275,11 +264,11 @@ export function ExportOptionsPanel({
         )}
 
         <div className="flex items-center justify-between gap-2">
-          <span className="text-[10px] text-gray-500 shrink-0">{t('Catégories concours')}</span>
+          <span className="text-[10px] text-gray-500 shrink-0">{t('Catégories clip')}</span>
           <AppSelect
             value={contestCategoryKey}
             onChange={onSetContestCategoryKey}
-            ariaLabel={t('Catégories concours')}
+            ariaLabel={t('Catégories clip')}
             className="w-32"
             options={contestCategoryOptions.map((option) => ({ value: option.key, label: option.label }))}
           />

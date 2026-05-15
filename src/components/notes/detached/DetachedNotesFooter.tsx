@@ -76,7 +76,7 @@ export function DetachedNotesFooter({
           textareaRef={(el) => {
             globalTextareaRef.current = el
           }}
-          placeholder={t('Notes générales...')}
+          placeholder={t('Commentaire général...')}
           value={globalNotes}
           onChange={onTextChange}
           onFocus={() => {

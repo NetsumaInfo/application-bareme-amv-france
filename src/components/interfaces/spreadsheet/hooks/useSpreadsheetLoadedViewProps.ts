@@ -192,6 +192,7 @@ export function useSpreadsheetLoadedViewProps({
       count: allSortedClips.filter((clip) => getClipContestCategory(clip) === category).length,
     })),
   ]
+  const hasContestCategories = normalizedContestPresets.length > 0
 
   const tableProps = buildSpreadsheetTableProps({
     clips,
@@ -251,6 +252,7 @@ export function useSpreadsheetLoadedViewProps({
     showMiniatures,
     showQuickActions,
     hasAnyLinkedVideo,
+    hasContestCategories,
     shortcutBindings,
     contextMenuRef,
     handleToggleScored,
@@ -284,6 +286,7 @@ export function useSpreadsheetLoadedViewProps({
       onOpenNotes: handleOpenNotes,
       onAttachVideo: handleAttachVideo,
       onRenameClip: handleRenameClip,
+      onEditContestCategory: handleEditContestCategory,
       onSwapPseudoAndClipName: handleSwapPseudoAndClipName,
       onToggleMiniatures: handleToggleMiniatures,
       onShowMediaInfo: handleShowMediaInfo,
@@ -291,6 +294,7 @@ export function useSpreadsheetLoadedViewProps({
       onTogglePipVideo: () => setShowPipVideo(!showPipVideo),
       showMiniatures,
       hasAnyLinkedVideo,
+      hasContestCategories,
       showPipVideo,
     },
     tableProps,

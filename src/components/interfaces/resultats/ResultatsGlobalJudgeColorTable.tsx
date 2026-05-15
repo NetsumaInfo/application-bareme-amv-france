@@ -3,8 +3,8 @@ import { withAlpha } from '@/utils/colors'
 import type { CategoryGroup, JudgeSource } from '@/utils/results'
 import type { ResultatsRow } from '@/components/interfaces/resultats/types'
 import { RESULTATS_PARTICIPANT_COLUMN_WIDTH_CLASS } from '@/components/interfaces/resultats/layout'
-import { HoverTextTooltip } from '@/components/ui/HoverTextTooltip'
 import { useI18n } from '@/i18n'
+import { HoverTextTooltip } from '@/components/ui/HoverTextTooltip'
 
 function getGroupStep(criteria: Array<{ step?: number | null }>): number {
   const steps = criteria
@@ -209,33 +209,31 @@ export function ResultatsGlobalJudgeColorTable({
                         className="amv-number-ui px-1 py-1 text-center border-r border-gray-800"
                         style={{ color: judgeColor, backgroundColor: withAlpha(judgeColor, 0.08) }}
                       >
-                        <HoverTextTooltip text={`${judge.judgeName} - ${group.category}`} className="block w-full">
-                          <input
-                            type="number"
-                            min={0}
-                            max={group.totalMax}
-                            step={step}
-                            value={displayed}
-                            onContextMenu={(event) => {
+                        <input
+                          type="number"
+                          min={0}
+                          max={group.totalMax}
+                          step={step}
+                          value={displayed}
+                          onContextMenu={(event) => {
+                            event.preventDefault()
+                            event.stopPropagation()
+                            onOpenClipContextMenu(row.clip.id, event.clientX, event.clientY)
+                          }}
+                          onChange={(event) => {
+                            onSetDraftCell(key, event.target.value)
+                          }}
+                          onBlur={() => onCommitDraftCell(row.clip.id, group.category, judge.key)}
+                          onKeyDown={(event) => {
+                            if (event.key === 'Enter') {
                               event.preventDefault()
-                              event.stopPropagation()
-                              onOpenClipContextMenu(row.clip.id, event.clientX, event.clientY)
-                            }}
-                            onChange={(event) => {
-                              onSetDraftCell(key, event.target.value)
-                            }}
-                            onBlur={() => onCommitDraftCell(row.clip.id, group.category, judge.key)}
-                            onKeyDown={(event) => {
-                              if (event.key === 'Enter') {
-                                event.preventDefault()
-                                onCommitDraftCell(row.clip.id, group.category, judge.key)
-                              } else if (event.key === 'Escape') {
-                                onClearDraftCell(key)
-                              }
-                            }}
-                            className="amv-soft-number w-full px-1 py-0.5 rounded bg-transparent border border-transparent hover:bg-surface-light/50 focus:bg-surface-dark focus:border-primary-500 focus-visible:outline-none outline-none text-center"
-                          />
-                        </HoverTextTooltip>
+                              onCommitDraftCell(row.clip.id, group.category, judge.key)
+                            } else if (event.key === 'Escape') {
+                              onClearDraftCell(key)
+                            }
+                          }}
+                          className="amv-soft-number w-full px-1 py-0.5 rounded bg-transparent border border-transparent hover:bg-surface-light/50 focus:bg-surface-dark focus:border-primary-500 focus-visible:outline-none outline-none text-center"
+                        />
                       </td>
                     )
                   }),

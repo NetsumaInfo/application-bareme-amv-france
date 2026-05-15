@@ -57,7 +57,7 @@ export default function DetachedResultatsJudgeNotesWindow() {
   if (!payload) {
     return (
       <div className="flex items-center justify-center h-screen w-full bg-surface-dark text-gray-400 text-sm">
-        {t('Chargement des notes juges...')}
+        {t('Chargement des commentaires des juges...')}
       </div>
     )
   }

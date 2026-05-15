@@ -134,6 +134,8 @@ export function SpreadsheetClipCell({
     : ''
   const contestCategoryRowTint = contestCategory ? withAlpha(contestCategoryColor, 0.08) : undefined
   const contestCategoryRowLine = contestCategory ? withAlpha(contestCategoryColor, 0.3) : undefined
+  const hasContestCategoryPresets = contestCategoryPresets.some((category) => category.trim().length > 0)
+  const shouldShowContestCategoryInput = hasContestCategoryPresets || Boolean(clip.contestCategory?.trim())
 
   const pseudoTextNode = showCollabBadge ? (
     <span className="inline-flex items-center rounded px-1 py-[1px] border border-primary-500/30 bg-primary-500/10 text-primary-100">
@@ -200,15 +202,17 @@ export function SpreadsheetClipCell({
             onChange={(event) => onManualClipFieldChange(clip.id, 'displayName', event.target.value)}
             className="w-full px-1.5 py-0.5 rounded border border-gray-700 bg-surface-dark/70 text-[10px] text-gray-200 placeholder:text-gray-500 focus:outline-none focus:border-primary-500"
           />
-          <input
-            type="text"
-            value={clip.contestCategory ?? ''}
-            placeholder={t('Catégorie concours (optionnel)')}
-            onClick={(event) => event.stopPropagation()}
-            onFocus={handleManualFieldFocus}
-            onChange={(event) => onManualClipFieldChange(clip.id, 'contestCategory', event.target.value)}
-            className="w-full px-1.5 py-0.5 rounded border border-gray-700 bg-surface-dark/70 text-[10px] text-gray-300 placeholder:text-gray-500 focus:outline-none focus:border-primary-500"
-          />
+          {shouldShowContestCategoryInput ? (
+            <input
+              type="text"
+              value={clip.contestCategory ?? ''}
+              placeholder={t('Catégorie clip')}
+              onClick={(event) => event.stopPropagation()}
+              onFocus={handleManualFieldFocus}
+              onChange={(event) => onManualClipFieldChange(clip.id, 'contestCategory', event.target.value)}
+              className="w-full px-1.5 py-0.5 rounded border border-gray-700 bg-surface-dark/70 text-[10px] text-gray-300 placeholder:text-gray-500 focus:outline-none focus:border-primary-500"
+            />
+          ) : null}
         </div>
       ) : (
         <div className={`relative flex flex-col min-w-0 leading-tight ${contentPaddingClass}`}>

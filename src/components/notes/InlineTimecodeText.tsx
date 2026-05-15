@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo } from 'react'
 import { extractTimecodesFromText, type ParsedTimecode } from '@/utils/timecodes'
 import { HoverTextTooltip } from '@/components/ui/HoverTextTooltip'
 import { useI18n } from '@/i18n'
@@ -27,6 +27,15 @@ export default function InlineTimecodeText({
 }: InlineTimecodeTextProps) {
   const { t } = useI18n()
   const timecodes = useMemo(() => extractTimecodesFromText(text), [text])
+  useEffect(() => {
+    if (timecodes.length > 0) return
+    onLeave?.()
+  }, [onLeave, timecodes.length])
+
+  useEffect(() => () => {
+    onLeave?.()
+  }, [onLeave])
+
   const hasTimecodes = timecodes.length > 0
   if (!text.trim() || !hasTimecodes) return null
 
@@ -60,6 +69,7 @@ export default function InlineTimecodeText({
           <HoverTextTooltip
             key={`time-${segment.item.index}-${segment.item.raw}`}
             text={t('Aller à {timecode}', { timecode: segment.item.raw })}
+            placement="above"
           >
             <button
               type="button"

@@ -10,6 +10,7 @@ import { SettingsNotationTab } from '@/components/settings/SettingsNotationTab'
 import { SettingsProjectTab } from '@/components/settings/SettingsProjectTab'
 import { SettingsShortcutsTab } from '@/components/settings/SettingsShortcutsTab'
 import { SettingsAboutTab } from '@/components/settings/SettingsAboutTab'
+import { SettingsTabErrorBoundary } from '@/components/settings/SettingsTabErrorBoundary'
 import { getSettingsTabs, type SettingsTab } from '@/components/settings/settingsPanelConfig'
 import { HoverTextTooltip } from '@/components/ui/HoverTextTooltip'
 import { useI18n } from '@/i18n'
@@ -169,66 +170,72 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
             aria-labelledby={`settings-tab-${activeTab}`}
             className="flex-1 min-w-0 min-h-0 overflow-y-auto overflow-x-hidden p-5 space-y-4"
           >
-            {activeTab === 'project' && (
-              <SettingsProjectTab
-                currentProject={currentProject}
-                settings={settings}
-                onUpdateProject={updateProject}
-                onUpdateSettings={updateSettings}
-              />
-            )}
+            <SettingsTabErrorBoundary
+              resetKey={activeTab}
+              fallbackTitle={t('Une erreur est survenue dans ce panneau.')}
+              fallbackDescription={t('Fermez puis rouvrez les paramètres. Si le problème persiste, redémarrez l’application.')}
+            >
+              {activeTab === 'project' && (
+                <SettingsProjectTab
+                  currentProject={currentProject}
+                  settings={settings}
+                  onUpdateProject={updateProject}
+                  onUpdateSettings={updateSettings}
+                />
+              )}
 
-            {activeTab === 'application' && (
-              <SettingsGeneralTab
-                currentInterface={currentInterface}
-                zoomMode={zoomMode}
-                zoomLevel={zoomLevel}
-                appTheme={appTheme}
-                primaryColorPreset={primaryColorPreset}
-                showAudioDb={showAudioDb}
-                confirmClipDeletion={confirmClipDeletion}
-                projectsFolderPath={projectsFolderPath ?? ''}
-                baremesFolderPath={baremesFolderPath ?? ''}
-                onSwitchInterface={switchInterface}
-                onSetZoomMode={setZoomMode}
-                onSetZoomLevel={setZoomLevel}
-                onSetAppTheme={setAppTheme}
-                onSetPrimaryColorPreset={setPrimaryColorPreset}
-                onToggleAudioDb={toggleAudioDb}
-                onToggleConfirmClipDeletion={toggleConfirmClipDeletion}
-                onChangeProjectsFolder={handleChangeProjectsFolder}
-                onChangeBaremesFolder={handleChangeBaremesFolder}
-              />
-            )}
+              {activeTab === 'application' && (
+                <SettingsGeneralTab
+                  currentInterface={currentInterface}
+                  zoomMode={zoomMode}
+                  zoomLevel={zoomLevel}
+                  appTheme={appTheme}
+                  primaryColorPreset={primaryColorPreset}
+                  showAudioDb={showAudioDb}
+                  confirmClipDeletion={confirmClipDeletion}
+                  projectsFolderPath={projectsFolderPath ?? ''}
+                  baremesFolderPath={baremesFolderPath ?? ''}
+                  onSwitchInterface={switchInterface}
+                  onSetZoomMode={setZoomMode}
+                  onSetZoomLevel={setZoomLevel}
+                  onSetAppTheme={setAppTheme}
+                  onSetPrimaryColorPreset={setPrimaryColorPreset}
+                  onToggleAudioDb={toggleAudioDb}
+                  onToggleConfirmClipDeletion={toggleConfirmClipDeletion}
+                  onChangeProjectsFolder={handleChangeProjectsFolder}
+                  onChangeBaremesFolder={handleChangeBaremesFolder}
+                />
+              )}
 
-            {activeTab === 'notation' && (
-              <SettingsNotationTab
-                currentBareme={currentBareme}
-                settings={settings}
-                hideFinalScore={hideFinalScore}
-                hideAverages={hideAverages}
-                hideTextNotes={hideTextNotes}
-                onOpenBaremeEditor={() => {
-                  onClose()
-                  setShowBaremeEditor(true)
-                }}
-                onToggleFinalScore={toggleFinalScore}
-                onToggleAverages={toggleAverages}
-                onToggleTextNotes={toggleTextNotes}
-                onUpdateSettings={updateSettings}
-              />
-            )}
+              {activeTab === 'notation' && (
+                <SettingsNotationTab
+                  currentBareme={currentBareme}
+                  settings={settings}
+                  hideFinalScore={hideFinalScore}
+                  hideAverages={hideAverages}
+                  hideTextNotes={hideTextNotes}
+                  onOpenBaremeEditor={() => {
+                    onClose()
+                    setShowBaremeEditor(true)
+                  }}
+                  onToggleFinalScore={toggleFinalScore}
+                  onToggleAverages={toggleAverages}
+                  onToggleTextNotes={toggleTextNotes}
+                  onUpdateSettings={updateSettings}
+                />
+              )}
 
-            {activeTab === 'raccourcis' && (
-              <SettingsShortcutsTab
-                editingShortcut={editingShortcut}
-                shortcutBindings={shortcutBindings}
-                onSetEditingShortcut={setEditingShortcut}
-                onResetShortcuts={resetShortcuts}
-              />
-            )}
+              {activeTab === 'raccourcis' && (
+                <SettingsShortcutsTab
+                  editingShortcut={editingShortcut}
+                  shortcutBindings={shortcutBindings}
+                  onSetEditingShortcut={setEditingShortcut}
+                  onResetShortcuts={resetShortcuts}
+                />
+              )}
 
-            {activeTab === 'apropos' && <SettingsAboutTab />}
+              {activeTab === 'apropos' && <SettingsAboutTab />}
+            </SettingsTabErrorBoundary>
           </div>
         </div>
 

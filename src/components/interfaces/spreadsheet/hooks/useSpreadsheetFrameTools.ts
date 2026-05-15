@@ -83,7 +83,8 @@ export function useSpreadsheetFrameTools({
   }, [clipFps, currentClip, insertTextAtCursor, markDirty, notesTextareaRef, setTextNotes])
 
   const hideFramePreview = useCallback(() => {
-    setFramePreview((prev) => ({ ...prev, visible: false }))
+    hoverRequestRef.current += 1
+    setFramePreview((prev) => ({ ...prev, visible: false, loading: false }))
   }, [])
 
   const showFramePreview = useCallback(async (params: { seconds: number; anchorRect: DOMRect }) => {

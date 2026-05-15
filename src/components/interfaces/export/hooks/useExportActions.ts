@@ -739,10 +739,10 @@ export function useExportActions({
       writeLines(
         `${t('Mode')}: ${
           notesPdfPayload.mode === 'general'
-            ? t('Notes générales')
+            ? t('Commentaires généraux')
             : notesPdfPayload.mode === 'judges'
-              ? t('Notes des juges')
-              : t('Notes générales + notes des juges')
+              ? t('Commentaires des juges')
+              : t('Commentaires généraux + commentaires des juges')
         }`,
         10,
         'normal',
@@ -770,7 +770,7 @@ export function useExportActions({
             const firstJudge = entry.judges[0]
             const firstJudgePreview = firstJudge.generalNote.trim().length > 0
               ? firstJudge.generalNote
-              : t('Aucune note générale.')
+              : t('Aucun commentaire général.')
             minimumEntryHeight += 2 + lineHeight
             minimumEntryHeight += Math.min(2, getLineCount(firstJudgePreview, 10, 18, 'normal')) * lineHeight
           }
@@ -781,7 +781,7 @@ export function useExportActions({
 
         if (hasGeneralSection) {
           writeGap(2)
-          writeLines(t('Note générale'), 10, 'bold', 6)
+          writeLines(t('Commentaire général'), 10, 'bold', 6)
           writeLines(entry.generalNote, 10, 'normal', 12)
         }
 
@@ -791,13 +791,13 @@ export function useExportActions({
             ? lineHeight * 2
             : lineHeight * 3
           ensureSpace(judgesHeaderReserve)
-          writeLines(t('Notes des juges'), 10, 'bold', 6)
+          writeLines(t('Commentaires des juges'), 10, 'bold', 6)
 
           if (entry.judges.length === 0) {
             writeLines(t('Aucune note juge.'), 10, 'normal', 12)
           } else {
             entry.judges.forEach((judge) => {
-              const judgePreview = judge.generalNote.trim().length > 0 ? judge.generalNote : t('Aucune note générale.')
+              const judgePreview = judge.generalNote.trim().length > 0 ? judge.generalNote : t('Aucun commentaire général.')
               const judgeIntroHeight =
                 2
                 + lineHeight
@@ -809,14 +809,14 @@ export function useExportActions({
               if (judge.generalNote.trim().length > 0) {
                 writeLines(judge.generalNote, 10, 'normal', 18)
               } else {
-                writeLines(t('Aucune note générale.'), 10, 'normal', 18)
+                writeLines(t('Aucun commentaire général.'), 10, 'normal', 18)
               }
 
               if (judge.categoryNotes.length > 0) {
                 const firstCategoryLine = `- ${judge.categoryNotes[0].category}: ${judge.categoryNotes[0].text}`
                 const categoryHeaderHeight = lineHeight + (Math.min(2, getLineCount(firstCategoryLine, 9, 24, 'normal')) * lineHeight)
                 ensureSpace(categoryHeaderHeight)
-                writeLines(`${t('Notes catégorie')}:`, 9, 'bold', 18)
+                writeLines(`${t('Commentaires catégorie')}:`, 9, 'bold', 18)
                 judge.categoryNotes.forEach((item) => {
                   writeLines(`- ${item.category}: ${item.text}`, 9, 'normal', 24)
                 })
@@ -826,7 +826,7 @@ export function useExportActions({
                 const firstCriterionLine = `- ${judge.criterionNotes[0].criterion}: ${judge.criterionNotes[0].text}`
                 const criterionHeaderHeight = lineHeight + (Math.min(2, getLineCount(firstCriterionLine, 9, 24, 'normal')) * lineHeight)
                 ensureSpace(criterionHeaderHeight)
-                writeLines(`${t('Notes sous-catégorie')}:`, 9, 'bold', 18)
+                writeLines(`${t('Commentaires sous-catégorie')}:`, 9, 'bold', 18)
                 judge.criterionNotes.forEach((item) => {
                   writeLines(`- ${item.criterion}: ${item.text}`, 9, 'normal', 24)
                 })

@@ -19,6 +19,7 @@ export default function TimecodeChipList({ items, color = '#60a5fa', onSelect }:
         <HoverTextTooltip
           key={`${item.index}-${item.raw}`}
           text={t('Aller à {timecode}', { timecode: item.raw })}
+          placement="above"
         >
           <button
             type="button"

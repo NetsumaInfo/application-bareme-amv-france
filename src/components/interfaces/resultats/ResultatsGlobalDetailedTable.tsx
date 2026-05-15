@@ -9,7 +9,6 @@ import {
 import type { ResultatsRow } from '@/components/interfaces/resultats/types'
 import { RESULTATS_PARTICIPANT_COLUMN_WIDTH_CLASS } from '@/components/interfaces/resultats/layout'
 import { ClipMiniaturePreview } from '@/components/interfaces/spreadsheet/miniaturePreview'
-import { HoverTextTooltip } from '@/components/ui/HoverTextTooltip'
 import { useI18n } from '@/i18n'
 
 interface ResultatsGlobalDetailedTableProps {
@@ -163,11 +162,9 @@ export function ResultatsGlobalDetailedTable({
                         backgroundColor: withAlpha(color, 0.05),
                       }}
                     >
-                      <HoverTextTooltip text={judge.judgeName}>
-                        <span className="truncate inline-block max-w-[82px] align-middle">
-                          {judge.judgeName}
-                        </span>
-                      </HoverTextTooltip>
+                      <span className="truncate inline-block max-w-[82px] align-middle">
+                        {judge.judgeName}
+                      </span>
                     </th>
                   )
                 }),
@@ -238,39 +235,35 @@ export function ResultatsGlobalDetailedTable({
                           style={{ color: judgeColor, backgroundColor: withAlpha(judgeColor, 0.05) }}
                         >
                           {readOnly ? (
-                            <HoverTextTooltip text={`${judge.judgeName} - ${group.category} - ${criterion.name}`} className="block w-full">
-                              <span className="block w-full rounded-sm border border-transparent bg-transparent px-1 py-0.5 text-center">
-                                {displayed}
-                              </span>
-                            </HoverTextTooltip>
+                            <span className="block w-full rounded-sm border border-transparent bg-transparent px-1 py-0.5 text-center">
+                              {displayed}
+                            </span>
                           ) : (
-                            <HoverTextTooltip text={`${judge.judgeName} - ${group.category} - ${criterion.name}`} className="block w-full">
-                              <input
-                                type="number"
-                                min={Number.isFinite(criterion.min) ? Number(criterion.min) : 0}
-                                max={Number.isFinite(criterion.max) ? Number(criterion.max) : undefined}
-                                step={Number.isFinite(criterion.step) ? Number(criterion.step) : 0.5}
-                                value={displayed}
-                                onContextMenu={(event) => {
+                            <input
+                              type="number"
+                              min={Number.isFinite(criterion.min) ? Number(criterion.min) : 0}
+                              max={Number.isFinite(criterion.max) ? Number(criterion.max) : undefined}
+                              step={Number.isFinite(criterion.step) ? Number(criterion.step) : 0.5}
+                              value={displayed}
+                              onContextMenu={(event) => {
+                                event.preventDefault()
+                                event.stopPropagation()
+                                onOpenClipContextMenu(row.clip.id, event.clientX, event.clientY)
+                              }}
+                              onChange={(event) => {
+                                onSetCriterionDraftCell(key, event.target.value)
+                              }}
+                              onBlur={() => onCommitCriterionDraftCell(row.clip.id, criterion.id, judge.key)}
+                              onKeyDown={(event) => {
+                                if (event.key === 'Enter') {
                                   event.preventDefault()
-                                  event.stopPropagation()
-                                  onOpenClipContextMenu(row.clip.id, event.clientX, event.clientY)
-                                }}
-                                onChange={(event) => {
-                                  onSetCriterionDraftCell(key, event.target.value)
-                                }}
-                                onBlur={() => onCommitCriterionDraftCell(row.clip.id, criterion.id, judge.key)}
-                                onKeyDown={(event) => {
-                                  if (event.key === 'Enter') {
-                                    event.preventDefault()
-                                    onCommitCriterionDraftCell(row.clip.id, criterion.id, judge.key)
-                                  } else if (event.key === 'Escape') {
-                                    onClearCriterionDraftCell(key)
-                                  }
-                                }}
-                                className="amv-soft-number w-full rounded-sm border border-transparent bg-transparent px-1 py-0.5 text-center hover:bg-white/[0.05] focus:bg-surface-dark focus:border-gray-600 focus-visible:outline-none outline-none"
-                              />
-                            </HoverTextTooltip>
+                                  onCommitCriterionDraftCell(row.clip.id, criterion.id, judge.key)
+                                } else if (event.key === 'Escape') {
+                                  onClearCriterionDraftCell(key)
+                                }
+                              }}
+                              className="amv-soft-number w-full rounded-sm border border-transparent bg-transparent px-1 py-0.5 text-center hover:bg-white/[0.05] focus:bg-surface-dark focus:border-gray-600 focus-visible:outline-none outline-none"
+                            />
                           )}
                         </td>
                       )

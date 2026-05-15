@@ -8,6 +8,7 @@ interface HoverTextTooltipProps {
   children: ReactNode
   className?: string
   maxWidthPx?: number
+  placement?: 'auto' | 'above' | 'below'
 }
 
 function getTooltipPosition(
@@ -16,6 +17,7 @@ function getTooltipPosition(
   tooltipWidth: number,
   tooltipHeight: number,
   zoomScale: number,
+  placement: 'auto' | 'above' | 'below',
 ): { left: number; top: number } {
   const margin = 10
   const offsetY = 18
@@ -28,6 +30,21 @@ function getTooltipPosition(
   if (typeof window !== 'undefined') {
     const viewportW = window.innerWidth
     const viewportH = window.innerHeight
+    const canFitAbove = normalizedPointerY - offsetY - tooltipHeight >= margin
+    const canFitBelow = normalizedPointerY + offsetY + tooltipHeight <= viewportH - margin
+
+    if (placement === 'above') {
+      top = canFitAbove
+        ? normalizedPointerY - tooltipHeight - offsetY
+        : normalizedPointerY + offsetY
+    } else if (placement === 'below') {
+      top = canFitBelow
+        ? normalizedPointerY + offsetY
+        : normalizedPointerY - tooltipHeight - offsetY
+    } else {
+      top = normalizedPointerY + offsetY
+    }
+
     if (left < margin) {
       left = margin
     }
@@ -36,6 +53,8 @@ function getTooltipPosition(
     }
     if (top + tooltipHeight > viewportH - margin) {
       top = Math.max(margin, normalizedPointerY - tooltipHeight - 10)
+    } else if (top < margin) {
+      top = margin
     }
   }
 
@@ -47,6 +66,7 @@ export function HoverTextTooltip({
   children,
   className,
   maxWidthPx = 320,
+  placement = 'auto',
 }: HoverTextTooltipProps) {
   const safeText = text.trim()
   const tooltipRef = useRef<HTMLDivElement | null>(null)
@@ -100,11 +120,11 @@ export function HoverTextTooltip({
     const node = tooltipRef.current
     if (!node) return
 
-    const pos = getTooltipPosition(pointerX, pointerY, node.offsetWidth, node.offsetHeight, zoomScale)
+    const pos = getTooltipPosition(pointerX, pointerY, node.offsetWidth, node.offsetHeight, zoomScale, placement)
     node.style.left = `${pos.left}px`
     node.style.top = `${pos.top}px`
     node.style.visibility = 'visible'
-  }, [zoomScale])
+  }, [placement, zoomScale])
 
   useLayoutEffect(() => {
     if (!visible) return

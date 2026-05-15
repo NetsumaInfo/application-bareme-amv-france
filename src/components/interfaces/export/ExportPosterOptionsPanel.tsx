@@ -277,11 +277,11 @@ function renderExportPosterOptionsPanel({
       {/* ── Format & Zoom ── */}
       <PanelSection title={t('Format')}>
         <div>
-          <label className="block text-[10.5px] text-gray-400 mb-1">{t('Catégories concours')}</label>
+          <label className="block text-[10.5px] text-gray-400 mb-1">{t('Catégories clip')}</label>
           <AppSelect
             value={contestCategoryKey}
             onChange={onSetContestCategoryKey}
-            ariaLabel={t('Catégories concours')}
+            ariaLabel={t('Catégories clip')}
             className="w-full"
             options={contestCategoryOptions.map((option) => ({
               value: option.key,

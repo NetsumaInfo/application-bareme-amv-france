@@ -84,6 +84,7 @@ function useResultatsInterfaceController() {
   )
   const canSortByScore = !hideTotalsSetting && !hideTotalsUntilAllScored
   const showMiniatures = Boolean(currentProject?.settings.showMiniatures)
+  const hasAnyLinkedVideo = clips.some((clip) => Boolean(clip.filePath))
   const thumbnailDefaultSeconds = currentProject?.settings.thumbnailDefaultTimeSec ?? 10
 
   const sortMode: SortMode = 'score'
@@ -412,6 +413,10 @@ function useResultatsInterfaceController() {
   const handleToggleFavoritesPanel = useCallback(() => {
     setShowFavoritesPanel((current) => !current)
   }, [])
+  const handleToggleMiniatures = useCallback(() => {
+    if (!hasAnyLinkedVideo) return
+    updateSettings({ showMiniatures: !showMiniatures })
+  }, [hasAnyLinkedVideo, showMiniatures, updateSettings])
   const handleUpdateFavoriteComment = useCallback((clipId: string, judgeKey: string, comment: string) => {
     if (!clipId) return
     if (judgeKey === 'current') {
@@ -544,6 +549,9 @@ function useResultatsInterfaceController() {
           onToggleNotesPanel={() => setHideResultNotes((current) => !current)}
           favoritesPanelVisible={showFavoritesPanel}
           onToggleFavoritesPanel={handleToggleFavoritesPanel}
+          showMiniatures={showMiniatures}
+          hasAnyLinkedVideo={hasAnyLinkedVideo}
+          onToggleMiniatures={handleToggleMiniatures}
         />
 
         <ResultatsHeader
@@ -737,6 +745,9 @@ function useResultatsInterfaceController() {
         onRemoveClip={requestClipDeletion}
         hideGeneralNotes={hideResultNotes}
         onToggleGeneralNotes={() => setHideResultNotes((current) => !current)}
+        showMiniatures={showMiniatures}
+        hasAnyLinkedVideo={hasAnyLinkedVideo}
+        onToggleMiniatures={handleToggleMiniatures}
       />
 
       {renameJudgeDialog && (

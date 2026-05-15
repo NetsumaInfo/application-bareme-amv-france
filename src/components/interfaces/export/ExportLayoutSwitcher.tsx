@@ -1,5 +1,4 @@
 import type { ReactNode } from 'react'
-import { HoverTextTooltip } from '@/components/ui/HoverTextTooltip'
 import { useI18n } from '@/i18n'
 import type { ExportLayout } from '@/components/interfaces/export/types'
 
@@ -7,28 +6,26 @@ function SegmentedButton({
   active,
   children,
   onClick,
-  tooltip,
+  ariaLabel,
 }: {
   active: boolean
   children: ReactNode
   onClick: () => void
-  tooltip: string
+  ariaLabel: string
 }) {
   return (
-    <HoverTextTooltip text={tooltip} className="inline-flex">
-      <button
-        type="button"
-        onClick={onClick}
-        aria-label={tooltip}
-        className={`inline-flex h-6 items-center rounded-md px-2 text-[11px] transition-colors ${
-          active
-            ? 'bg-surface-dark/80 text-white'
-            : 'text-gray-400 hover:bg-white/5 hover:text-white'
-        }`}
-      >
-        {children}
-      </button>
-    </HoverTextTooltip>
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={ariaLabel}
+      className={`inline-flex h-6 items-center rounded-md px-2 text-[11px] transition-colors ${
+        active
+          ? 'bg-surface-dark/80 text-white'
+          : 'text-gray-400 hover:bg-white/5 hover:text-white'
+      }`}
+    >
+      {children}
+    </button>
   )
 }
 
@@ -46,21 +43,21 @@ export function ExportLayoutSwitcher({
       <SegmentedButton
         active={layoutMode === 'discord'}
         onClick={() => onSetLayoutMode('discord')}
-        tooltip={t('Préparer une annonce Discord avec aperçu')}
+        ariaLabel={t('Discord')}
       >
         {t('Discord')}
       </SegmentedButton>
       <SegmentedButton
         active={layoutMode === 'poster'}
         onClick={() => onSetLayoutMode('poster')}
-        tooltip={t('Préparer une affiche visuelle à exporter')}
+        ariaLabel={t('Affiche créative')}
       >
         {t('Affiche créative')}
       </SegmentedButton>
       <SegmentedButton
         active={layoutMode === 'table'}
         onClick={() => onSetLayoutMode('table')}
-        tooltip={t('Exporter les résultats sous forme de tableau')}
+        ariaLabel={t('Tableau complet')}
       >
         {t('Tableau complet')}
       </SegmentedButton>

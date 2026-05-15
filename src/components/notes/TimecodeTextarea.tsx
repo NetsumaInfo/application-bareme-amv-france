@@ -78,6 +78,15 @@ export default function TimecodeTextarea({
     return () => window.removeEventListener('resize', syncTextareaLayout)
   }, [syncTextareaLayout])
 
+  useEffect(() => {
+    if (timecodes.length > 0) return
+    onTimecodeLeave?.()
+  }, [onTimecodeLeave, timecodes.length])
+
+  useEffect(() => () => {
+    onTimecodeLeave?.()
+  }, [onTimecodeLeave])
+
   const segments = useMemo(() => {
     if (!value || timecodes.length === 0) {
       return [{ type: 'text' as const, value, start: 0 }]
@@ -138,6 +147,7 @@ export default function TimecodeTextarea({
                 <HoverTextTooltip
                   key={`time-${segment.item.index}-${segment.item.raw}`}
                   text={t('Aller à {timecode}', { timecode: segment.item.raw })}
+                  placement="above"
                 >
                   <button
                     type="button"

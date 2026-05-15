@@ -44,6 +44,9 @@ interface ResultatsContextMenusProps {
   onRemoveClip: (clipId: string) => void
   hideGeneralNotes: boolean
   onToggleGeneralNotes: () => void
+  showMiniatures: boolean
+  hasAnyLinkedVideo: boolean
+  onToggleMiniatures: () => void
 }
 
 export function ResultatsContextMenus({
@@ -66,12 +69,16 @@ export function ResultatsContextMenus({
   onRemoveClip,
   hideGeneralNotes,
   onToggleGeneralNotes,
+  showMiniatures,
+  hasAnyLinkedVideo,
+  onToggleMiniatures,
 }: ResultatsContextMenusProps) {
   const { t } = useI18n()
   const playerIcon = UI_ICONS.player
   const detailedNotesIcon = UI_ICONS.detailedNotes
   const detailedNotesSecondaryIcon = UI_ICONS.detailedNotesSecondary
   const generalNoteIcon = UI_ICONS.generalNote
+  const miniaturesIcon = UI_ICONS.miniatures
   const showIcon = UI_ICONS.show
   const hideIcon = UI_ICONS.hide
   const canRemoveSelectedJudge = Boolean(memberContextMenu?.judgeKey.startsWith('imported-'))
@@ -140,7 +147,7 @@ export function ResultatsContextMenus({
                     onOpenDetailedNotes(clip)
                     onCloseClipMenu()
                   }}
-                  label={t('Notes détaillées des juges')}
+                  label={t('Commentaires détaillés des juges')}
                   icon={detailedNotesIcon}
                   iconSecondary={detailedNotesSecondaryIcon}
                 />
@@ -150,9 +157,20 @@ export function ResultatsContextMenus({
                     onToggleGeneralNotes()
                     onCloseClipMenu()
                   }}
-                  label={hideGeneralNotes ? t('Afficher note générale') : t('Masquer note générale')}
+                  label={hideGeneralNotes ? t('Afficher commentaire général') : t('Masquer commentaire général')}
                   icon={generalNoteIcon}
                   iconSecondary={hideGeneralNotes ? showIcon : hideIcon}
+                />
+                <AppContextMenuItem
+                  onClick={() => {
+                    if (!hasAnyLinkedVideo) return
+                    onToggleMiniatures()
+                    onCloseClipMenu()
+                  }}
+                  label={showMiniatures ? t('Masquer les miniatures') : t('Afficher les miniatures')}
+                  icon={miniaturesIcon}
+                  iconSecondary={showMiniatures ? hideIcon : showIcon}
+                  disabled={!hasAnyLinkedVideo}
                 />
                 <AppContextMenuSeparator />
               </>
@@ -182,9 +200,20 @@ export function ResultatsContextMenus({
               onToggleGeneralNotes()
               onCloseEmptyMenu()
             }}
-            label={hideGeneralNotes ? t('Afficher note générale') : t('Masquer note générale')}
+            label={hideGeneralNotes ? t('Afficher commentaire général') : t('Masquer commentaire général')}
             icon={generalNoteIcon}
             iconSecondary={hideGeneralNotes ? showIcon : hideIcon}
+          />
+          <AppContextMenuItem
+            onClick={() => {
+              if (!hasAnyLinkedVideo) return
+              onToggleMiniatures()
+              onCloseEmptyMenu()
+            }}
+            label={showMiniatures ? t('Masquer les miniatures') : t('Afficher les miniatures')}
+            icon={miniaturesIcon}
+            iconSecondary={showMiniatures ? hideIcon : showIcon}
+            disabled={!hasAnyLinkedVideo}
           />
           <AppContextMenuSeparator />
           <AppContextMenuItem
@@ -213,7 +242,7 @@ export function ResultatsContextMenus({
                   onOpenDetailedNotes(selectedClip)
                   onCloseEmptyMenu()
                 }}
-                label={t('Notes détaillées des juges (clip sélectionné)')}
+                label={t('Commentaires détaillés des juges (clip sélectionné)')}
                 icon={detailedNotesIcon}
                 iconSecondary={detailedNotesSecondaryIcon}
               />

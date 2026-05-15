@@ -11,6 +11,7 @@ import { HoverTextTooltip } from '@/components/ui/HoverTextTooltip'
 import { useI18n } from '@/i18n'
 import { LanguageSwitcher } from '@/components/layout/LanguageSwitcher'
 import { useJudgeImport } from '@/components/project/useJudgeImport'
+import { useAppUpdateStore } from '@/store/useAppUpdateStore'
 
 export default function Header({
   onOpenSettings,
@@ -23,6 +24,7 @@ export default function Header({
   const currentTab = useUIStore((state) => state.currentTab)
   const { handleExportJudgeNotes } = useProjectMenuActions()
   const { importing, handleImportJudgeJson } = useJudgeImport()
+  const updateStatus = useAppUpdateStore((state) => state.status)
   const { t } = useI18n()
   const projectName = currentProject?.name?.trim() || 'AMV Notation'
   const judgeName = currentProject?.judgeName?.trim() || ''
@@ -35,6 +37,10 @@ export default function Header({
     : currentBareme
       ? t('Exporter notation (<concours>_<pseudo>.json)')
       : t('Aucun barème sélectionné')
+  const hasUpdateAvailable = updateStatus === 'update_available'
+  const settingsTooltip = hasUpdateAvailable
+    ? t('Mise à jour disponible (ouvrez les paramètres)')
+    : t('Paramètres')
 
   const handleCloseProject = () => {
     if (isDirty) {
@@ -131,13 +137,19 @@ export default function Header({
         <LanguageSwitcher compact />
         {showProjectActions && <BaremeSelector />}
         {currentProject && <ProjectManager />}
-        <HoverTextTooltip text={t('Paramètres')}>
+        <HoverTextTooltip text={settingsTooltip}>
           <button
             onClick={onOpenSettings}
-            aria-label={t('Paramètres')}
-            className="app-header-trigger app-header-trigger-icon"
+            aria-label={hasUpdateAvailable ? t('Paramètres (mise à jour disponible)') : t('Paramètres')}
+            className={`app-header-trigger app-header-trigger-icon relative ${hasUpdateAvailable ? 'ring-1 ring-inset ring-emerald-400/40' : ''}`}
           >
             <SlidersHorizontal size={12} className="shrink-0" />
+            {hasUpdateAvailable ? (
+              <span
+                className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_0_2px_rgba(0,0,0,0.6)]"
+                aria-hidden
+              />
+            ) : null}
           </button>
         </HoverTextTooltip>
       </div>

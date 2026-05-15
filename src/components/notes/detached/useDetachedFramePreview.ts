@@ -34,7 +34,8 @@ export function useDetachedFramePreview(clipFilePath?: string) {
   const [framePreview, setFramePreview] = useState<FramePreviewState>(INITIAL_PREVIEW_STATE)
 
   const hideFramePreview = useCallback(() => {
-    setFramePreview((prev) => ({ ...prev, visible: false }))
+    hoverRequestRef.current += 1
+    setFramePreview((prev) => ({ ...prev, visible: false, loading: false }))
   }, [])
 
   const showFramePreview = useCallback(async ({ seconds, anchorRect }: ShowFramePreviewParams) => {

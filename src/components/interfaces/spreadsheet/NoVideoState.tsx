@@ -2,7 +2,6 @@ import { AlertTriangle, Download, FilePlus, FolderPlus, Table2 } from 'lucide-re
 import { AppCheckbox } from '@/components/ui/AppCheckbox'
 import { useI18n } from '@/i18n'
 import type { ClipNamePattern } from '@/types/project'
-import { ALL_CONTEST_CATEGORY_KEY } from '@/utils/contestCategory'
 
 interface NoVideoStateProps {
   isDragOver: boolean
@@ -77,17 +76,11 @@ export function NoVideoState({
               <div className="flex max-w-[30rem] flex-wrap items-center justify-center gap-1">
                 {contestCategoryTabs.map((tab) => {
                   const active = activeContestCategoryView === tab.key
-                  const isAll = tab.key === ALL_CONTEST_CATEGORY_KEY
                   return (
                     <button
                       key={`no-video-category-${tab.key}`}
                       type="button"
                       onClick={() => onSelectContestCategoryView(tab.key)}
-                      title={
-                        isAll
-                          ? t('Afficher tous les clips')
-                          : t('Filtrer sur la catégorie {category}', { category: tab.label })
-                      }
                       className={`rounded-md border px-2 py-0.5 text-[10px] font-semibold transition-colors ${
                         active
                           ? 'border-white/20 bg-surface-dark/90'

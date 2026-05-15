@@ -98,28 +98,31 @@ export function ResultatsNotesPanel({
   return (
     <div className="shrink-0 border-t border-gray-700 bg-surface px-3 py-2">
       <div className="mb-1 flex items-center gap-2">
-        <span className="text-[10px] uppercase tracking-wider text-gray-500">{t('Note générale')}</span>
-        <HoverTextTooltip text={t('Afficher les favoris')}>
-          <button
-            type="button"
-            onClick={hasFavoriteJudges ? onToggleFavoritesPanel : undefined}
-            aria-label={t('Afficher les favoris')}
-            disabled={!hasFavoriteJudges}
-            className={`inline-flex h-5 w-5 items-center justify-center rounded-md border transition-colors ${
-              favoritesPanelVisible
-                ? 'border-amber-300/45 bg-amber-400/14 text-amber-200'
-                : 'border-gray-700/70 bg-surface-dark/55 text-gray-400 hover:border-amber-300/35 hover:text-amber-200'
-            } disabled:cursor-not-allowed disabled:opacity-35`}
-          >
-            <Star size={11} fill="currentColor" />
-          </button>
-        </HoverTextTooltip>
+        <span className="text-[10px] uppercase tracking-wider text-gray-500">{t('Commentaire général')}</span>
         <span className="text-[10px] text-gray-600">—</span>
-        <span className="min-w-0 text-[10px] text-gray-400">
+        <span className="flex min-w-0 items-center text-[10px] text-gray-400">
           <span className="text-primary-400">{getClipPrimaryLabel(selectedClip)}</span>
           {secondaryLabel ? (
-            <span className="ml-1 text-gray-500">- {secondaryLabel}</span>
+            <>
+              <span className="mx-1 text-gray-600">-</span>
+              <span className="text-gray-500">{secondaryLabel}</span>
+            </>
           ) : null}
+          <HoverTextTooltip text={t('Afficher les favoris')}>
+            <button
+              type="button"
+              onClick={hasFavoriteJudges ? onToggleFavoritesPanel : undefined}
+              aria-label={t('Afficher les favoris')}
+              disabled={!hasFavoriteJudges}
+              className={`ml-1 inline-flex h-3.5 w-3.5 shrink-0 items-center justify-center p-0 leading-none transition-colors ${
+                favoritesPanelVisible
+                  ? 'text-amber-200'
+                  : 'text-gray-400 hover:text-amber-200'
+              } disabled:cursor-not-allowed disabled:opacity-35`}
+            >
+              <Star size={9} fill="currentColor" />
+            </button>
+          </HoverTextTooltip>
         </span>
       </div>
       {favoritesPanelVisible && hasFavoriteJudges ? (
@@ -177,7 +180,7 @@ export function ResultatsNotesPanel({
           fpsHint={selectedClipFps ?? undefined}
           rows={2}
           textareaClassName="text-xs min-h-[40px]"
-          placeholder={t('Notes générales...')}
+          placeholder={t('Commentaire général...')}
         />
       ) : null}
     </div>

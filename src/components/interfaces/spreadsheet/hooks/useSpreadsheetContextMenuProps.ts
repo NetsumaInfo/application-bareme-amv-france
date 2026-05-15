@@ -10,6 +10,7 @@ interface UseSpreadsheetContextMenuPropsParams {
   showMiniatures: boolean
   showQuickActions: boolean
   hasAnyLinkedVideo: boolean
+  hasContestCategories: boolean
   shortcutBindings: Record<ShortcutAction, string>
   contextMenuRef: MutableRefObject<HTMLDivElement | null>
   handleToggleScored: (clip: Clip) => void
@@ -34,6 +35,7 @@ export function buildSpreadsheetContextMenuProps({
   showMiniatures,
   showQuickActions,
   hasAnyLinkedVideo,
+  hasContestCategories,
   shortcutBindings,
   contextMenuRef,
   handleToggleScored,
@@ -57,6 +59,7 @@ export function buildSpreadsheetContextMenuProps({
     showMiniatures,
     showQuickActions,
     hasAnyLinkedVideo,
+    hasContestCategories,
     shortcutBindings,
     contextMenuRef,
     onToggleScored: handleToggleScored,

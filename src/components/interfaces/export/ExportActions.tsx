@@ -130,9 +130,9 @@ export function ExportActions({
             ariaLabel={t('Export notes (PDF)')}
             className="w-full"
             options={[
-              { value: 'general', label: t('Notes générales') },
-              { value: 'judges', label: t('Notes des juges') },
-              { value: 'both', label: t('Générales + juges') },
+              { value: 'general', label: t('Commentaires généraux') },
+              { value: 'judges', label: t('Commentaires des juges') },
+              { value: 'both', label: t('Commentaires généraux + juges') },
             ]}
           />
           <button

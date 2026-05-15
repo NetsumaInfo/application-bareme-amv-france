@@ -31,6 +31,7 @@ interface ClipContextMenuProps {
   showMiniatures: boolean
   showQuickActions: boolean
   hasAnyLinkedVideo: boolean
+  hasContestCategories: boolean
   shortcutBindings: Record<ShortcutAction, string>
   contextMenuRef: RefObject<HTMLDivElement | null>
   onToggleScored: (clip: Clip) => void
@@ -55,6 +56,7 @@ export function ClipContextMenu({
   showMiniatures,
   showQuickActions,
   hasAnyLinkedVideo,
+  hasContestCategories,
   shortcutBindings,
   contextMenuRef,
   onToggleScored,
@@ -122,7 +124,8 @@ export function ClipContextMenu({
           />
           <AppContextMenuItem
             onClick={() => onEditContestCategory(contextClip)}
-            label={contextClip.contestCategory?.trim() ? t('Modifier catégorie concours') : t('Définir catégorie concours')}
+            disabled={!hasContestCategories}
+            label={contextClip.contestCategory?.trim() ? t('Modifier catégorie clip') : t('Définir catégorie clip')}
             icon={contestCategoryIcon}
           />
           <AppContextMenuItem

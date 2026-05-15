@@ -103,12 +103,12 @@ export function SettingsNotationTab({
         </div>
       </div>
 
-      {/* ── Notes texte ── */}
+      {/* ── Commentaires ── */}
       <div className={CARD}>
-        <p className={SECTION_LABEL}>{t('Prise de notes')}</p>
+        <p className={SECTION_LABEL}>{t('Commentaires')}</p>
         <div className="space-y-2">
           <div className={ROW}>
-            <span className="min-w-0 pr-2 text-sm text-gray-300">{t('Masquer la prise de notes')}</span>
+            <span className="min-w-0 pr-2 text-sm text-gray-300">{t('Masquer les commentaires')}</span>
             <SettingsToggle checked={hideTextNotes} onChange={onToggleTextNotes} />
           </div>
         </div>

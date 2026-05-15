@@ -337,7 +337,7 @@ function ResultatsJudgeCategorySection({
             ))}
             <tr className="align-top">
               <td className="border-b border-r border-gray-800/60 bg-surface-dark/32 px-2 py-1.5">
-                <div className="text-gray-200 font-medium">{t('Note catégorie')}</div>
+                <div className="text-gray-200 font-medium">{t('Commentaire catégorie')}</div>
               </td>
               {judges.map((judge) => {
                 const color = judgeColors[judge.key] ?? '#60a5fa'
@@ -377,7 +377,7 @@ function GlobalNotesSection({
   return (
     <section className="overflow-hidden rounded-md border border-gray-700/60 bg-surface-dark/26">
       <div className="border-b border-gray-700/60 bg-surface px-2.5 py-1.5 text-[11px] font-semibold text-gray-300">
-        {t('Notes générales')}
+        {t('Commentaires généraux')}
       </div>
       <div className="grid grid-cols-1 gap-2 p-2 lg:grid-cols-2">
         {judges.map((judge) => {

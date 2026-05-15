@@ -110,29 +110,27 @@ function AccentPill({
   t: TranslateFn
 }) {
   return (
-    <HoverTextTooltip text={t(option.label)}>
-      <button
-        onClick={() => onSetPrimaryColorPreset(option.value)}
-        className={`appearance-accent-pill flex items-center gap-2 rounded-full px-2 py-1.5 text-xs font-medium transition-all ${SUBTLE_BORDER} ${
-          active ? 'bg-primary-600/10' : 'bg-black/18 hover:bg-white/[0.04]'
-        }`}
-        style={
-          active
-            ? {
-                color: isLightAppearanceTheme
-                  ? 'rgb(var(--color-primary-700))'
-                  : 'rgb(255 255 255)',
-              }
-            : undefined
-        }
-      >
-        <span
-          className={`h-4 w-4 rounded-full ${SUBTLE_BORDER}`}
-          style={{ backgroundColor: option.color }}
-        />
-        <span>{t(option.label)}</span>
-      </button>
-    </HoverTextTooltip>
+    <button
+      onClick={() => onSetPrimaryColorPreset(option.value)}
+      className={`appearance-accent-pill flex items-center gap-2 rounded-full px-2 py-1.5 text-xs font-medium transition-all ${SUBTLE_BORDER} ${
+        active ? 'bg-primary-600/10' : 'bg-black/18 hover:bg-white/[0.04]'
+      }`}
+      style={
+        active
+          ? {
+              color: isLightAppearanceTheme
+                ? 'rgb(var(--color-primary-700))'
+                : 'rgb(255 255 255)',
+            }
+          : undefined
+      }
+    >
+      <span
+        className={`h-4 w-4 rounded-full ${SUBTLE_BORDER}`}
+        style={{ backgroundColor: option.color }}
+      />
+      <span>{t(option.label)}</span>
+    </button>
   )
 }
 
@@ -337,21 +335,18 @@ function InterfaceSection({
   )
 }
 
-// ── Lecteur ────────────────────────────────────────────────────────────────
+// ── Projet ─────────────────────────────────────────────────────────────────
 
-function PlayerSection({
-  showAudioDb,
+function ProjectSafetySection({
   confirmClipDeletion,
-  onToggleAudioDb,
   onToggleConfirmClipDeletion,
   t,
-}: Pick<
-  SettingsGeneralTabProps,
-  'showAudioDb' | 'confirmClipDeletion' | 'onToggleAudioDb' | 'onToggleConfirmClipDeletion'
-> & { t: TranslateFn }) {
+}: Pick<SettingsGeneralTabProps, 'confirmClipDeletion' | 'onToggleConfirmClipDeletion'> & {
+  t: TranslateFn
+}) {
   return (
     <Card>
-      <p className={SECTION_LABEL}>{t('Lecteur')}</p>
+      <p className={SECTION_LABEL}>{t('Projet')}</p>
       <div className="space-y-2">
         <div className={ROW}>
           <span className="min-w-0 pr-2 text-sm text-gray-300">
@@ -359,6 +354,25 @@ function PlayerSection({
           </span>
           <SettingsToggle checked={confirmClipDeletion} onChange={onToggleConfirmClipDeletion} />
         </div>
+      </div>
+    </Card>
+  )
+}
+
+// ── Lecteur ────────────────────────────────────────────────────────────────
+
+function PlayerSection({
+  showAudioDb,
+  onToggleAudioDb,
+  t,
+}: Pick<
+  SettingsGeneralTabProps,
+  'showAudioDb' | 'onToggleAudioDb'
+> & { t: TranslateFn }) {
+  return (
+    <Card>
+      <p className={SECTION_LABEL}>{t('Lecteur vidéo')}</p>
+      <div className="space-y-2">
         <div className={ROW}>
           <span className="min-w-0 pr-2 text-sm text-gray-300">
             {t('Afficher VU-mètre audio L/R (dB)')}
@@ -542,11 +556,14 @@ export function SettingsGeneralTab({
         onSetZoomLevel={onSetZoomLevel}
         t={t}
       />
+      <ProjectSafetySection
+        confirmClipDeletion={confirmClipDeletion}
+        onToggleConfirmClipDeletion={onToggleConfirmClipDeletion}
+        t={t}
+      />
       <PlayerSection
         showAudioDb={showAudioDb}
-        confirmClipDeletion={confirmClipDeletion}
         onToggleAudioDb={onToggleAudioDb}
-        onToggleConfirmClipDeletion={onToggleConfirmClipDeletion}
         t={t}
       />
       <FoldersSection

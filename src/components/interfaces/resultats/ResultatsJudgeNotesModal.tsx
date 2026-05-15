@@ -73,12 +73,12 @@ export function ResultatsJudgeNotesModal({
         onKeyDown={(event) => event.stopPropagation()}
         role="dialog"
         aria-modal="true"
-        aria-label={t('Notes détaillées des juges')}
+        aria-label={t('Commentaires détaillés des juges')}
       >
         <div className="shrink-0 px-4 py-3 border-b border-gray-700 flex items-start justify-between gap-3">
           <div className="min-w-0">
             <h2 className="text-sm font-semibold text-white">
-              {t('Notes détaillées des juges')}
+              {t('Commentaires détaillés des juges')}
             </h2>
             <p className="text-xs text-gray-400 truncate">
               <span className="text-primary-300">{getClipPrimaryLabel(clip)}</span>
@@ -190,7 +190,7 @@ export function ResultatsJudgeNotesModal({
                     ))}
                     <tr className="align-top">
                       <td className="px-3 py-2 border-r border-b border-gray-800 bg-surface-dark/36">
-                        <div className="text-gray-200 font-medium">{t('Note catégorie')}</div>
+                        <div className="text-gray-200 font-medium">{t('Commentaire catégorie')}</div>
                       </td>
                       {judges.map((judge) => {
                         const color = judgeColors[judge.key] ?? '#60a5fa'
@@ -227,7 +227,7 @@ export function ResultatsJudgeNotesModal({
 
           <section className="rounded-lg border border-gray-700 overflow-hidden">
             <div className="px-3 py-2 border-b border-gray-700 bg-surface-dark text-xs font-semibold uppercase tracking-wide text-primary-300">
-              {t('Notes générales')}
+              {t('Commentaires généraux')}
             </div>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-2 p-2">
               {judges.map((judge) => {

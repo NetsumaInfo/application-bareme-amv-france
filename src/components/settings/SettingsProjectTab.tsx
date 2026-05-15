@@ -191,7 +191,7 @@ export function SettingsProjectTab({
 
           {contestCategoriesEnabled ? (
             <div>
-              <label className="text-xs font-medium text-gray-400 mb-2 block">{t('Catégories concours')}</label>
+              <label className="text-xs font-medium text-gray-400 mb-2 block">{t('Catégories clip')}</label>
               <ContestCategoriesEditor
                 items={contestCategoryItems}
                 onChange={(nextItems) => {

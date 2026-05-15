@@ -40,7 +40,7 @@ export function SpreadsheetNotesPanel({
   return (
     <div className="px-3 py-2 border-t border-gray-700 bg-surface shrink-0">
       <div className="flex items-center gap-2 mb-1">
-        <span className="text-[10px] text-gray-500 uppercase tracking-wider">{t('Notes')}</span>
+        <span className="text-[10px] text-gray-500 uppercase tracking-wider">{t('Commentaire général')}</span>
         <span className="text-[10px] text-gray-600">—</span>
         <span className="text-[10px] text-gray-400">
           <span className="text-primary-300">{getClipPrimaryLabel(currentClip)}</span>
@@ -60,7 +60,7 @@ export function SpreadsheetNotesPanel({
         </span>
       </div>
       <TimecodeTextarea
-        placeholder={t('Notes libres pour ce clip...')}
+        placeholder={t('Commentaire général...')}
         value={currentNoteText}
         onChange={onChangeText}
         rows={2}

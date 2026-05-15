@@ -827,6 +827,9 @@ function useExportInterfaceController() {
               }}
               notesPanelHidden
               onToggleNotesPanel={() => {}}
+              showMiniatures={Boolean(currentProject?.settings.showMiniatures)}
+              hasAnyLinkedVideo={false}
+              onToggleMiniatures={() => {}}
               showJudgeNotesView={false}
               showNotesPanelToggle={false}
             />

@@ -2,7 +2,6 @@ import { Check, Copy, Download, RefreshCw, Scissors } from 'lucide-react'
 import type { ElementType } from 'react'
 import { AppCheckbox } from '@/components/ui/AppCheckbox'
 import { AppSelect } from '@/components/ui/AppSelect'
-import { HoverTextTooltip } from '@/components/ui/HoverTextTooltip'
 import { useI18n } from '@/i18n'
 import {
   DISCORD_MESSAGE_LIMIT,
@@ -36,38 +35,34 @@ interface ExportDiscordOptionsPanelProps {
 function ActionButton({
   icon: Icon,
   label,
-  tooltip,
   active = false,
   danger = false,
   onClick,
 }: {
   icon: ElementType
   label: string
-  tooltip: string
   active?: boolean
   danger?: boolean
   onClick: () => void
 }) {
   return (
-    <HoverTextTooltip text={tooltip} className="block">
-      <button
-        type="button"
-        onClick={onClick}
-        aria-label={tooltip}
-        className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-[11px] font-medium transition-colors active:scale-[0.99] ${
-          danger
-            ? 'text-rose-200 hover:bg-rose-500/10'
-            : active
-              ? 'bg-primary-600/20 text-primary-200'
-              : 'text-gray-300 hover:bg-white/[0.06] hover:text-white'
-        }`}
-      >
-        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-white/[0.06]">
-          <Icon size={13} />
-        </span>
-        <span className="min-w-0 truncate">{label}</span>
-      </button>
-    </HoverTextTooltip>
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={label}
+      className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-[11px] font-medium transition-colors active:scale-[0.99] ${
+        danger
+          ? 'text-rose-200 hover:bg-rose-500/10'
+          : active
+            ? 'bg-primary-600/20 text-primary-200'
+            : 'text-gray-300 hover:bg-white/[0.06] hover:text-white'
+      }`}
+    >
+      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-white/[0.06]">
+        <Icon size={13} />
+      </span>
+      <span className="min-w-0 truncate">{label}</span>
+    </button>
   )
 }
 
@@ -143,11 +138,11 @@ export function ExportDiscordOptionsPanel({
       </div>
 
       <div className="space-y-1">
-        <span className="text-[10px] font-medium uppercase tracking-wide text-gray-500">{t('Catégories concours')}</span>
+        <span className="text-[10px] font-medium uppercase tracking-wide text-gray-500">{t('Catégories clip')}</span>
         <AppSelect
           value={contestCategoryKey}
           onChange={onSetContestCategoryKey}
-          ariaLabel={t('Catégories concours')}
+          ariaLabel={t('Catégories clip')}
           className="w-full"
           options={contestCategoryOptions.map((option) => ({ value: option.key, label: option.label }))}
         />
@@ -188,28 +183,24 @@ export function ExportDiscordOptionsPanel({
         <ActionButton
           icon={copyState === 'all' ? Check : Copy}
           label={t('Copier l’annonce')}
-          tooltip={t('Copier tout le message Discord')}
           active={copyState === 'all'}
           onClick={onCopyAll}
         />
         <ActionButton
           icon={copyState === 'chunk' ? Check : Scissors}
           label={t('Copier le bloc sélectionné')}
-          tooltip={t('Copier uniquement le bloc Discord sélectionné')}
           active={copyState === 'chunk'}
           onClick={onCopySelectedChunk}
         />
         <ActionButton
           icon={copyState === 'download' ? Check : Download}
           label={t('Télécharger en TXT')}
-          tooltip={t('Télécharger le message dans un fichier texte')}
           active={copyState === 'download'}
           onClick={onDownloadText}
         />
         <ActionButton
           icon={RefreshCw}
           label={t('Régénérer depuis les résultats')}
-          tooltip={t('Réinitialiser le texte et les lignes avec les résultats actuels')}
           danger
           onClick={onResetAnnouncement}
         />

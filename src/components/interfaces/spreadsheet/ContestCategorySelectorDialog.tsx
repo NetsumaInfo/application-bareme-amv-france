@@ -31,7 +31,7 @@ export function ContestCategorySelectorDialog({
     return [currentCategory, ...base]
   }, [categories, currentCategory])
   const [selectedCategory, setSelectedCategory] = useState(currentCategory)
-  const title = currentCategory ? t('Modifier catégorie concours') : t('Définir catégorie concours')
+  const title = currentCategory ? t('Modifier catégorie clip') : t('Définir catégorie clip')
   const secondaryLabel = getClipSecondaryLabel(clip)
 
   const options = useMemo(
@@ -76,12 +76,12 @@ export function ContestCategorySelectorDialog({
         <div className="space-y-3 px-4 py-4">
           <label className="block space-y-1.5">
             <span className="text-[11px] font-medium uppercase tracking-wide text-gray-500">
-              {t('Catégorie concours (optionnel)')}
+              {t('Catégorie clip')}
             </span>
             <AppSelect
               value={selectedCategory}
               onChange={setSelectedCategory}
-              ariaLabel={t('Catégories concours')}
+              ariaLabel={t('Catégories clip')}
               className="w-full"
               options={options}
               size="md"
