@@ -190,7 +190,7 @@ export function OverlayUtilityControls({
         </HoverTextTooltip>
 
         {iconOnlyAudio && volumePanelOpen && (
-          <div className="absolute bottom-full right-0 mb-2 min-w-[170px] bg-black/90 border border-white/20 rounded-lg shadow-xl p-2 z-50 backdrop-blur-sm">
+          <div className="absolute bottom-full right-0 mb-2 min-w-[170px] bg-black/90 border border-white/20 rounded-lg shadow-xl p-2 z-50 backdrop-blur-xs">
             <div className="flex items-center gap-2">
               <HoverTextTooltip text={isMuted ? t('Activer le son') : t('Couper le son')}>
                 <button

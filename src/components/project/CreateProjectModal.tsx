@@ -139,7 +139,7 @@ function BaremeField({
           onClick={onToggleMenu}
           aria-haspopup="listbox"
           aria-expanded={baremeMenuOpen}
-          className="flex w-full items-center justify-between rounded-[10px] border border-gray-700 bg-surface-dark px-3 py-2 text-left text-sm text-white transition-colors hover:border-gray-600 focus:border-primary-500 focus:outline-none"
+          className="flex w-full items-center justify-between rounded-[10px] border border-gray-700 bg-surface-dark px-3 py-2 text-left text-sm text-white transition-colors hover:border-gray-600 focus:border-primary-500 focus:outline-hidden"
         >
           <span className="truncate">
             {selectedBareme
@@ -317,7 +317,7 @@ function CreateProjectModalContent() {
             <button
               onClick={onClose}
               aria-label={t('Fermer')}
-              className="rounded p-1 text-gray-400 transition-colors hover:bg-surface-light hover:text-white"
+              className="rounded-sm p-1 text-gray-400 transition-colors hover:bg-surface-light hover:text-white"
             >
               <X size={18} />
             </button>
@@ -336,7 +336,7 @@ function CreateProjectModalContent() {
               {...register('name')}
               type="text"
               placeholder={t('ex: Concours Japan Expo')}
-              className="w-full rounded-lg border border-gray-700 bg-surface-dark px-3 py-2 text-sm text-white placeholder-gray-500 focus:border-primary-500 focus:outline-none"
+              className="w-full rounded-lg border border-gray-700 bg-surface-dark px-3 py-2 text-sm text-white placeholder-gray-500 focus:border-primary-500 focus:outline-hidden"
             />
             {errors.name ? (
               <p className="mt-1 text-xs text-accent">{errors.name.message}</p>
@@ -351,7 +351,7 @@ function CreateProjectModalContent() {
               {...register('judgeName')}
               type="text"
               placeholder={t('ex: Netsuma')}
-              className="w-full rounded-lg border border-gray-700 bg-surface-dark px-3 py-2 text-sm text-white placeholder-gray-500 focus:border-primary-500 focus:outline-none"
+              className="w-full rounded-lg border border-gray-700 bg-surface-dark px-3 py-2 text-sm text-white placeholder-gray-500 focus:border-primary-500 focus:outline-hidden"
             />
             {errors.judgeName ? (
               <p className="mt-1 text-xs text-accent">{errors.judgeName.message}</p>

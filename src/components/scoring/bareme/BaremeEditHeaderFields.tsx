@@ -35,7 +35,7 @@ export function BaremeEditHeaderFields({
             value={name}
             onChange={(event) => onNameChange(event.target.value)}
             placeholder={t('Japan Expo 2025')}
-            className="w-full px-3 py-2 bg-surface-dark border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:border-primary-500 focus:outline-none text-sm"
+            className="w-full px-3 py-2 bg-surface-dark border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:border-primary-500 focus:outline-hidden text-sm"
             disabled={readOnly}
           />
         </div>
@@ -52,7 +52,7 @@ export function BaremeEditHeaderFields({
         <input
           value={description}
           onChange={(event) => onDescriptionChange(event.target.value)}
-          className="w-full px-3 py-2 bg-surface-dark border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:border-primary-500 focus:outline-none text-sm"
+          className="w-full px-3 py-2 bg-surface-dark border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:border-primary-500 focus:outline-hidden text-sm"
           disabled={readOnly}
         />
       </div>

@@ -32,7 +32,7 @@ export function DetachedCategoryHeader({
       }}
     >
       <div className="flex items-center gap-2">
-        <span className="w-2.5 h-2.5 rounded-sm shrink-0" style={{ backgroundColor: color }} />
+        <span className="w-2.5 h-2.5 rounded-xs shrink-0" style={{ backgroundColor: color }} />
         <span className="text-[11px] font-semibold uppercase tracking-wider" style={{ color }}>
           {category}
         </span>

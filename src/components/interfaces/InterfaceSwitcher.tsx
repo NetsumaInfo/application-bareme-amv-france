@@ -30,7 +30,7 @@ export default function InterfaceSwitcher() {
               aria-label={annotation}
               className={`flex h-[22px] items-center gap-0.5 px-1.5 text-[11px] leading-none transition-all first:rounded-l-[5px] last:rounded-r-[5px] ${
                 isActive
-                  ? 'bg-primary-600/80 text-white shadow-sm'
+                  ? 'bg-primary-600/80 text-white shadow-xs'
                   : 'text-gray-400 hover:bg-white/5 hover:text-white'
               }`}
             >

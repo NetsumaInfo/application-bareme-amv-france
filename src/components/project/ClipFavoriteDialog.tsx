@@ -25,7 +25,7 @@ export function ClipFavoriteDialog({
   const normalizedComment = useMemo(() => comment.trim(), [comment])
 
   return (
-    <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black/65 px-4">
+    <div className="fixed inset-0 z-90 flex items-center justify-center bg-black/65 px-4">
       <div
         role="dialog"
         aria-modal="true"
@@ -49,7 +49,7 @@ export function ClipFavoriteDialog({
             type="button"
             onClick={onClose}
             aria-label={t('Fermer')}
-            className="flex h-7 w-7 items-center justify-center rounded-md text-gray-400 transition-colors hover:bg-white/[0.06] hover:text-white"
+            className="flex h-7 w-7 items-center justify-center rounded-md text-gray-400 transition-colors hover:bg-white/6 hover:text-white"
           >
             <X size={15} />
           </button>
@@ -67,7 +67,7 @@ export function ClipFavoriteDialog({
               value={comment}
               onChange={(event) => setComment(event.target.value)}
               placeholder={t('Pourquoi ce clip est un favori ?')}
-              className="min-h-[120px] w-full resize-y rounded-md border border-gray-700 bg-surface-dark px-3 py-2 text-sm text-gray-100 outline-none placeholder:text-gray-500 focus:border-primary-500"
+              className="min-h-[120px] w-full resize-y rounded-md border border-gray-700 bg-surface-dark px-3 py-2 text-sm text-gray-100 outline-hidden placeholder:text-gray-500 focus:border-primary-500"
             />
           </label>
         </div>

@@ -59,7 +59,7 @@ export default function InlineTimecodeText({
 
   return (
     <div
-      className={`mt-1 whitespace-pre-wrap break-words text-[11px] leading-relaxed text-gray-400 ${className}`}
+      className={`mt-1 whitespace-pre-wrap wrap-break-word text-[11px] leading-relaxed text-gray-400 ${className}`}
     >
       {segments.map((segment) => {
         if (segment.type === 'text') {

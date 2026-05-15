@@ -105,7 +105,7 @@ export default function SubtitleSelector() {
     ? createPortal(
       <div
         ref={menuRef}
-        className="fixed min-w-[220px] bg-gray-900 border border-gray-700 rounded-lg shadow-xl py-1 z-[120]"
+        className="fixed min-w-[220px] bg-gray-900 border border-gray-700 rounded-lg shadow-xl py-1 z-120"
         style={{ top: menuStyle.top, left: menuStyle.left, width: menuStyle.width }}
       >
         <button

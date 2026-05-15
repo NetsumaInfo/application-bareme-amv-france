@@ -50,7 +50,7 @@ export function ResultatsGlobalCategoryTable({
   return (
     <div className={`relative isolate min-h-0 flex-1 ${staticExport ? 'overflow-visible' : 'amv-results-scroll'}`}>
       <table className="w-full min-w-max border-separate border-spacing-0 text-[11px]">
-        <thead className={staticExport ? undefined : 'sticky top-0 z-[60] bg-surface-dark shadow-[0_1px_0_rgba(55,65,81,0.75)]'}>
+        <thead className={staticExport ? undefined : 'sticky top-0 z-60 bg-surface-dark shadow-[0_1px_0_rgba(55,65,81,0.75)]'}>
           <tr>
             <th
               rowSpan={2}
@@ -130,11 +130,11 @@ export function ResultatsGlobalCategoryTable({
                 onClick={() => onSelectClip(row.clip.id)}
                 className={`cursor-pointer transition-colors ${
                   isSelected
-                    ? 'bg-white/[0.06]'
+                    ? 'bg-white/6'
                     : index % 2 === 0
                       ? 'bg-surface-dark/16'
                       : 'bg-transparent'
-                } hover:bg-white/[0.05]`}
+                } hover:bg-white/5`}
               >
                 <td className={` border-r border-gray-800/60 bg-surface px-2 py-1 text-center text-[10px] text-gray-500`}>
                   {index + 1}
@@ -152,9 +152,9 @@ export function ResultatsGlobalCategoryTable({
                   }}
                 >
                   <div className={`flex flex-col min-w-0 ${staticExport ? 'leading-snug' : 'leading-tight'}`}>
-                    <span className={`${staticExport ? 'whitespace-normal break-words' : 'truncate'} text-[11px] font-semibold text-primary-300`}>{getClipPrimaryLabel(row.clip)}</span>
+                    <span className={`${staticExport ? 'whitespace-normal wrap-break-word' : 'truncate'} text-[11px] font-semibold text-primary-300`}>{getClipPrimaryLabel(row.clip)}</span>
                     {getClipSecondaryLabel(row.clip) && (
-                      <span className={`${staticExport ? 'whitespace-normal break-words' : 'truncate'} text-[8px] text-gray-500`}>{getClipSecondaryLabel(row.clip)}</span>
+                      <span className={`${staticExport ? 'whitespace-normal wrap-break-word' : 'truncate'} text-[8px] text-gray-500`}>{getClipSecondaryLabel(row.clip)}</span>
                     )}
                     {showMiniatures && row.clip.filePath ? (
                       <ClipMiniaturePreview

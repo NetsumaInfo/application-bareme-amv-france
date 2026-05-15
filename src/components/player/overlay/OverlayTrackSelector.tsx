@@ -51,7 +51,7 @@ export function OverlayTrackSelector({
         </button>
       </HoverTextTooltip>
       {open && enabled && (
-        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 min-w-[180px] bg-black/90 border border-white/20 rounded-lg shadow-xl py-1 z-50 backdrop-blur-sm">
+        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 min-w-[180px] bg-black/90 border border-white/20 rounded-lg shadow-xl py-1 z-50 backdrop-blur-xs">
           {options.map((option) => (
             <button
               key={option.key}

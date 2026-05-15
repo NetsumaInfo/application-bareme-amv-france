@@ -53,7 +53,7 @@ export function ResultatsJudgeTable({
   return (
     <div className={`relative isolate min-h-0 flex-1 ${staticExport ? 'overflow-visible' : 'amv-results-scroll'}`}>
       <table className="w-full border-separate border-spacing-0 text-[11px]">
-        <thead className={staticExport ? undefined : 'sticky top-0 z-[60] bg-surface-dark shadow-[0_1px_0_rgba(55,65,81,0.75)]'}>
+        <thead className={staticExport ? undefined : 'sticky top-0 z-60 bg-surface-dark shadow-[0_1px_0_rgba(55,65,81,0.75)]'}>
           <tr>
             <th
               rowSpan={2}
@@ -119,9 +119,9 @@ export function ResultatsJudgeTable({
                   isSelected
                     ? 'bg-white/[0.07]'
                     : index % 2 === 0
-                      ? 'bg-white/[0.04]'
+                      ? 'bg-white/4'
                       : 'bg-transparent'
-                } hover:bg-white/[0.06]`}
+                } hover:bg-white/6`}
               >
                 <td className={` border-r border-gray-800/60 bg-surface px-2 py-1 text-center text-[10px] text-gray-500`}>
                   {index + 1}
@@ -139,9 +139,9 @@ export function ResultatsJudgeTable({
                   }}
                 >
                   <div className={`flex flex-col min-w-0 ${staticExport ? 'leading-snug' : 'leading-tight'}`}>
-                    <span className={`${staticExport ? 'whitespace-normal break-words' : 'truncate'} text-[11px] font-semibold text-primary-300`}>{getClipPrimaryLabel(row.clip)}</span>
+                    <span className={`${staticExport ? 'whitespace-normal wrap-break-word' : 'truncate'} text-[11px] font-semibold text-primary-300`}>{getClipPrimaryLabel(row.clip)}</span>
                     {getClipSecondaryLabel(row.clip) && (
-                      <span className={`${staticExport ? 'whitespace-normal break-words' : 'truncate'} text-[9px] text-gray-500`}>{getClipSecondaryLabel(row.clip)}</span>
+                      <span className={`${staticExport ? 'whitespace-normal wrap-break-word' : 'truncate'} text-[9px] text-gray-500`}>{getClipSecondaryLabel(row.clip)}</span>
                     )}
                     {showMiniatures && row.clip.filePath ? (
                       <ClipMiniaturePreview
@@ -169,7 +169,7 @@ export function ResultatsJudgeTable({
                         className="amv-number-ui border-r border-gray-800/60 px-1 py-1 text-center text-gray-100"
                       >
                         {readOnly ? (
-                          <span className="block w-full rounded-sm border border-transparent bg-transparent px-1 py-0.5 text-center">
+                          <span className="block w-full rounded-xs border border-transparent bg-transparent px-1 py-0.5 text-center">
                             {displayed}
                           </span>
                         ) : (
@@ -196,7 +196,7 @@ export function ResultatsJudgeTable({
                                 onClearCriterionDraftCell(key)
                               }
                             }}
-                            className="amv-soft-number w-full rounded-sm border border-transparent bg-transparent px-1 py-0.5 text-center hover:bg-white/[0.05] focus:bg-surface-dark focus:border-gray-600 focus-visible:outline-none outline-none"
+                            className="amv-soft-number w-full rounded-xs border border-transparent bg-transparent px-1 py-0.5 text-center hover:bg-white/5 focus:bg-surface-dark focus:border-gray-600 focus-visible:outline-hidden outline-hidden"
                           />
                         )}
                       </td>

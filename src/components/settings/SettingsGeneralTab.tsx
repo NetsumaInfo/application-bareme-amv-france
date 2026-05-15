@@ -113,7 +113,7 @@ function AccentPill({
     <button
       onClick={() => onSetPrimaryColorPreset(option.value)}
       className={`appearance-accent-pill flex items-center gap-2 rounded-full px-2 py-1.5 text-xs font-medium transition-all ${SUBTLE_BORDER} ${
-        active ? 'bg-primary-600/10' : 'bg-black/18 hover:bg-white/[0.04]'
+        active ? 'bg-primary-600/10' : 'bg-black/18 hover:bg-white/4'
       }`}
       style={
         active
@@ -272,7 +272,7 @@ function InterfaceSection({
                   <Icon size={14} />
                   {IconSecondary && <IconSecondary size={14} />}
                 </span>
-                <span className="whitespace-normal break-words leading-tight">{label}</span>
+                <span className="whitespace-normal wrap-break-word leading-tight">{label}</span>
               </button>
             ))}
           </div>

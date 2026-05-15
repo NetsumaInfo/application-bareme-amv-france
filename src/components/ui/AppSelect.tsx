@@ -213,7 +213,7 @@ export function AppSelect<T extends AppSelectValue>({
     ? createPortal(
       <div
         ref={menuRef}
-        className={`fixed z-[2300] overflow-hidden rounded-lg bg-surface p-1.5 shadow-2xl ring-1 ring-inset ring-primary-400/10 ${menuClassName}`.trim()}
+        className={`fixed z-2300 overflow-hidden rounded-lg bg-surface p-1.5 shadow-2xl ring-1 ring-inset ring-primary-400/10 ${menuClassName}`.trim()}
         style={{
           left: `${menuPosition.left}px`,
           top: `${menuPosition.top}px`,
@@ -242,8 +242,8 @@ export function AppSelect<T extends AppSelectValue>({
                   selected
                     ? 'bg-primary-600/15 text-white'
                     : active
-                      ? 'bg-white/[0.05] text-white'
-                      : 'text-gray-300 hover:bg-white/[0.04] hover:text-white'
+                      ? 'bg-white/5 text-white'
+                      : 'text-gray-300 hover:bg-white/4 hover:text-white'
                 }`}
                 role="option"
                 aria-selected={selected}
@@ -273,7 +273,7 @@ export function AppSelect<T extends AppSelectValue>({
         }}
         onKeyDown={handleTriggerKeyDown}
         data-open={open ? 'true' : 'false'}
-        className={`inline-flex w-full items-center justify-between gap-2 rounded-lg bg-surface-dark/70 text-left text-gray-200 ring-1 ring-inset ring-primary-400/10 transition-colors hover:bg-surface-light/70 focus:outline-none focus:ring-2 focus:ring-primary-500/30 disabled:cursor-not-allowed disabled:opacity-50 ${
+        className={`inline-flex w-full items-center justify-between gap-2 rounded-lg bg-surface-dark/70 text-left text-gray-200 ring-1 ring-inset ring-primary-400/10 transition-colors hover:bg-surface-light/70 focus:outline-hidden focus:ring-2 focus:ring-primary-500/30 disabled:cursor-not-allowed disabled:opacity-50 ${
           size === 'md' ? 'h-8 px-2.5 text-xs' : 'h-7 px-2 text-xs'
         } ${triggerClassName}`.trim()}
         aria-label={ariaLabel ?? textLabel}

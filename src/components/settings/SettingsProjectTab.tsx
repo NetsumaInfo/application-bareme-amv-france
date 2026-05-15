@@ -64,7 +64,7 @@ export function SettingsProjectTab({
               value={currentProject?.judgeName ?? ''}
               onChange={(e) => onUpdateProject({ judgeName: e.target.value })}
               placeholder={t('ex: Netsuma')}
-              className={`w-full px-3 py-2 bg-surface-dark/45 rounded-lg text-sm text-white placeholder-gray-500 ${SUBTLE_BORDER} focus:outline-none`}
+              className={`w-full px-3 py-2 bg-surface-dark/45 rounded-lg text-sm text-white placeholder-gray-500 ${SUBTLE_BORDER} focus:outline-hidden`}
             />
           </div>
           <div>
@@ -73,7 +73,7 @@ export function SettingsProjectTab({
               value={currentProject?.name ?? ''}
               onChange={(e) => onUpdateProject({ name: e.target.value })}
               placeholder={t('ex: Concours Japan Expo')}
-              className={`w-full px-3 py-2 bg-surface-dark/45 rounded-lg text-sm text-white placeholder-gray-500 ${SUBTLE_BORDER} focus:outline-none`}
+              className={`w-full px-3 py-2 bg-surface-dark/45 rounded-lg text-sm text-white placeholder-gray-500 ${SUBTLE_BORDER} focus:outline-hidden`}
             />
           </div>
         </div>
@@ -155,7 +155,7 @@ export function SettingsProjectTab({
                       : 'bg-surface-dark/45 text-gray-300 hover:bg-surface-light/50 hover:text-white'
                   }`}
                 >
-                  <span className="whitespace-normal break-words leading-tight">{opt.label}</span>
+                  <span className="whitespace-normal wrap-break-word leading-tight">{opt.label}</span>
                 </button>
               ))}
             </div>
@@ -240,7 +240,7 @@ export function SettingsProjectTab({
                   if (!Number.isFinite(raw)) return
                   onUpdateSettings({ thumbnailDefaultTimeSec: Math.max(0, Math.min(600, raw)) })
                 }}
-                className={`w-28 rounded-lg bg-surface-dark/45 px-3 py-2 text-sm text-white placeholder-gray-500 ${SUBTLE_BORDER} focus:outline-none`}
+                className={`w-28 rounded-lg bg-surface-dark/45 px-3 py-2 text-sm text-white placeholder-gray-500 ${SUBTLE_BORDER} focus:outline-hidden`}
               />
               <span className="text-xs text-gray-500">{t('secondes')}</span>
             </div>

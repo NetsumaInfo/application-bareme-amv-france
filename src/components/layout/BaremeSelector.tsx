@@ -76,7 +76,7 @@ export function BaremeSelector() {
                       {t('{count} critères — {points} pts', { count: bareme.criteria.length, points: bareme.totalPoints })}
                     </div>
                   </div>
-                  <div className="mt-[1px] shrink-0 text-[11px] text-gray-500">
+                  <div className="mt-px shrink-0 text-[11px] text-gray-500">
                     {bareme.totalPoints} pts
                   </div>
                 </button>

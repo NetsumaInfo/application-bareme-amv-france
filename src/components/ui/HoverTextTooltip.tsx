@@ -154,7 +154,7 @@ export function HoverTextTooltip({
     <div
       ref={tooltipRef}
       role="tooltip"
-      className="fixed z-[10010] pointer-events-none rounded-md border border-gray-700 bg-surface px-2 py-1 text-[11px] text-gray-100 shadow-xl leading-snug w-max whitespace-normal break-words"
+      className="fixed z-10010 pointer-events-none rounded-md border border-gray-700 bg-surface px-2 py-1 text-[11px] text-gray-100 shadow-xl leading-snug w-max whitespace-normal wrap-break-word"
       style={{ left: 0, top: 0, maxWidth: `${maxWidthPx}px`, visibility: 'hidden' }}
     >
       {safeText}

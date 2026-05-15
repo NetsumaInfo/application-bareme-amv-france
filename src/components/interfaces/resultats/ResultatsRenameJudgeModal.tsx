@@ -42,7 +42,7 @@ export function ResultatsRenameJudgeModal({
 
   return (
     <div
-      className="fixed inset-0 z-[120] flex items-center justify-center bg-black/60 p-4"
+      className="fixed inset-0 z-120 flex items-center justify-center bg-black/60 p-4"
       onClick={onCancel}
       onKeyDown={(event) => {
         if (event.key === 'Enter' || event.key === ' ') {
@@ -69,7 +69,7 @@ export function ResultatsRenameJudgeModal({
               type="button"
               onClick={onCancel}
               aria-label={t('Fermer')}
-              className="rounded p-1 text-gray-400 hover:bg-surface-light hover:text-white transition-colors"
+              className="rounded-sm p-1 text-gray-400 hover:bg-surface-light hover:text-white transition-colors"
             >
               <X size={16} />
             </button>
@@ -91,7 +91,7 @@ export function ResultatsRenameJudgeModal({
                 onConfirm()
               }
             }}
-            className="w-full rounded-lg border border-gray-700 bg-surface-dark px-3 py-2 text-sm text-white outline-none focus:border-primary-500"
+            className="w-full rounded-lg border border-gray-700 bg-surface-dark px-3 py-2 text-sm text-white outline-hidden focus:border-primary-500"
             placeholder={t('Nom du juge')}
           />
           {errorMessage && (

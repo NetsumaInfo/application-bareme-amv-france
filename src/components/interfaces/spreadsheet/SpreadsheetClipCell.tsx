@@ -138,7 +138,7 @@ export function SpreadsheetClipCell({
   const shouldShowContestCategoryInput = hasContestCategoryPresets || Boolean(clip.contestCategory?.trim())
 
   const pseudoTextNode = showCollabBadge ? (
-    <span className="inline-flex items-center rounded px-1 py-[1px] border border-primary-500/30 bg-primary-500/10 text-primary-100">
+    <span className="inline-flex items-center rounded-sm px-1 py-px border border-primary-500/30 bg-primary-500/10 text-primary-100">
       {pseudoDisplayLabel}
     </span>
   ) : (
@@ -180,7 +180,7 @@ export function SpreadsheetClipCell({
         </>
       ) : null}
 
-      <div className="relative z-[1]">
+      <div className="relative z-1">
       {shouldShowInlineEditor ? (
         <div className="flex w-full min-w-0 flex-col gap-1" onBlur={(event) => onManualClipBlur(clip.id, event)}>
           <input
@@ -191,7 +191,7 @@ export function SpreadsheetClipCell({
             onClick={(event) => event.stopPropagation()}
             onFocus={handleManualFieldFocus}
             onChange={(event) => onManualClipFieldChange(clip.id, 'author', event.target.value)}
-            className="w-full px-1.5 py-0.5 rounded border border-gray-700 bg-surface-dark/70 text-[10px] text-primary-300 placeholder:text-gray-500 focus:outline-none focus:border-primary-500"
+            className="w-full px-1.5 py-0.5 rounded-sm border border-gray-700 bg-surface-dark/70 text-[10px] text-primary-300 placeholder:text-gray-500 focus:outline-hidden focus:border-primary-500"
           />
           <input
             type="text"
@@ -200,7 +200,7 @@ export function SpreadsheetClipCell({
             onClick={(event) => event.stopPropagation()}
             onFocus={handleManualFieldFocus}
             onChange={(event) => onManualClipFieldChange(clip.id, 'displayName', event.target.value)}
-            className="w-full px-1.5 py-0.5 rounded border border-gray-700 bg-surface-dark/70 text-[10px] text-gray-200 placeholder:text-gray-500 focus:outline-none focus:border-primary-500"
+            className="w-full px-1.5 py-0.5 rounded-sm border border-gray-700 bg-surface-dark/70 text-[10px] text-gray-200 placeholder:text-gray-500 focus:outline-hidden focus:border-primary-500"
           />
           {shouldShowContestCategoryInput ? (
             <input
@@ -210,13 +210,13 @@ export function SpreadsheetClipCell({
               onClick={(event) => event.stopPropagation()}
               onFocus={handleManualFieldFocus}
               onChange={(event) => onManualClipFieldChange(clip.id, 'contestCategory', event.target.value)}
-              className="w-full px-1.5 py-0.5 rounded border border-gray-700 bg-surface-dark/70 text-[10px] text-gray-300 placeholder:text-gray-500 focus:outline-none focus:border-primary-500"
+              className="w-full px-1.5 py-0.5 rounded-sm border border-gray-700 bg-surface-dark/70 text-[10px] text-gray-300 placeholder:text-gray-500 focus:outline-hidden focus:border-primary-500"
             />
           ) : null}
         </div>
       ) : (
         <div className={`relative flex flex-col min-w-0 leading-tight ${contentPaddingClass}`}>
-          <span className={`${allowPseudoWrap ? 'text-primary-300 text-[11px] font-semibold break-words' : 'truncate text-primary-300 text-[11px] font-semibold'}`}>
+          <span className={`${allowPseudoWrap ? 'text-primary-300 text-[11px] font-semibold wrap-break-word' : 'truncate text-primary-300 text-[11px] font-semibold'}`}>
             {showPseudoTooltip ? (
               <HoverTextTooltip text={fullPseudosLabel}>
                 <span className="inline-flex min-w-0 max-w-full">{pseudoTextNode}</span>
@@ -229,7 +229,7 @@ export function SpreadsheetClipCell({
             <span className="truncate text-[9px] text-gray-500">{clipSecondaryLabel}</span>
           ) : null}
           {hasStatusIcons ? (
-            <span className={`pointer-events-none absolute left-0 z-[2] inline-flex w-3.5 flex-col items-center ${statusIconsHeightClass} ${statusIconsTopClass} ${hasBothStatusIcons ? 'justify-between' : 'justify-center'}`}>
+            <span className={`pointer-events-none absolute left-0 z-2 inline-flex w-3.5 flex-col items-center ${statusIconsHeightClass} ${statusIconsTopClass} ${hasBothStatusIcons ? 'justify-between' : 'justify-center'}`}>
               {isScored ? (
                 <HoverTextTooltip text={t('Noté')}>
                   <span

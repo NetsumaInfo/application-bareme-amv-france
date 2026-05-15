@@ -27,8 +27,8 @@ export function AppCheckbox({ checked, label, onChange, className = '', disabled
         className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-[4px] ring-1 transition-colors peer-focus-visible:ring-2 peer-focus-visible:ring-primary-500/35 ${
           checked
             ? 'bg-primary-500/12 ring-primary-400/14 text-primary-200'
-            : 'bg-white/[0.03] ring-primary-400/10 text-transparent'
-        } ${disabled ? '' : 'group-hover:bg-white/[0.06]'}`}
+            : 'bg-white/3 ring-primary-400/10 text-transparent'
+        } ${disabled ? '' : 'group-hover:bg-white/6'}`}
       >
         <Check size={11} strokeWidth={2.5} />
       </span>

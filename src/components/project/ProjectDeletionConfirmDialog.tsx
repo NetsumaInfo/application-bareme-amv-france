@@ -86,7 +86,7 @@ export function ProjectDeletionConfirmDialog({
 
   return (
     <div
-      className="fixed inset-0 z-[80] flex items-center justify-center bg-black/65 px-4"
+      className="fixed inset-0 z-80 flex items-center justify-center bg-black/65 px-4"
       onClick={() => {
         if (!isDeleting) {
           onCancel()
@@ -106,7 +106,7 @@ export function ProjectDeletionConfirmDialog({
     >
       <div
         ref={dialogRef}
-        className="w-full max-w-[28rem] rounded-lg border border-gray-700 bg-surface p-4 shadow-2xl"
+        className="w-full max-w-md rounded-lg border border-gray-700 bg-surface p-4 shadow-2xl"
         role="dialog"
         aria-modal="true"
         aria-labelledby="project-deletion-dialog-title"
@@ -142,7 +142,7 @@ export function ProjectDeletionConfirmDialog({
             type="button"
             onClick={onCancel}
             disabled={isDeleting}
-            className="rounded-md border border-gray-700 bg-white/[0.04] px-3 py-1.5 text-[11px] font-medium text-gray-300 transition-colors hover:bg-white/[0.07] hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
+            className="rounded-md border border-gray-700 bg-white/4 px-3 py-1.5 text-[11px] font-medium text-gray-300 transition-colors hover:bg-white/[0.07] hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
           >
             {t('Annuler')}
           </button>

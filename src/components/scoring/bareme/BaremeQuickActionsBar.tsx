@@ -50,7 +50,7 @@ export function BaremeQuickActionsBar({
                 value={globalStep}
                 onChange={(event) => onGlobalStepChange(Number(event.target.value))}
                 aria-label={t('Pas global')}
-                className="w-11 shrink-0 rounded-lg border border-gray-700/70 bg-surface-dark/52 px-1 py-0.5 text-center text-[11px] font-medium text-white transition-colors focus:border-gray-600/80 focus:outline-none"
+                className="w-11 shrink-0 rounded-lg border border-gray-700/70 bg-surface-dark/52 px-1 py-0.5 text-center text-[11px] font-medium text-white transition-colors focus:border-gray-600/80 focus:outline-hidden"
               />
             </HoverTextTooltip>
             <button

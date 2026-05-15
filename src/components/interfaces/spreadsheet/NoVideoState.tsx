@@ -73,7 +73,7 @@ export function NoVideoState({
           <>
             <p className="text-gray-500 text-sm">{t('Glissez-déposez des vidéos ici, ou')}</p>
             {contestCategoryTabs.length > 1 ? (
-              <div className="flex max-w-[30rem] flex-wrap items-center justify-center gap-1">
+              <div className="flex max-w-120 flex-wrap items-center justify-center gap-1">
                 {contestCategoryTabs.map((tab) => {
                   const active = activeContestCategoryView === tab.key
                   return (
@@ -150,7 +150,7 @@ export function NoVideoState({
               value={noVideoTableInput}
               onChange={(event) => onNoVideoTableInputChange(event.target.value)}
               placeholder={tableInputPlaceholder}
-              className="w-full min-h-[220px] resize-y rounded-lg border border-gray-700 bg-surface-dark px-3 py-2 text-sm text-gray-100 placeholder:text-gray-500 focus:outline-none focus:border-primary-500"
+              className="w-full min-h-[220px] resize-y rounded-lg border border-gray-700 bg-surface-dark px-3 py-2 text-sm text-gray-100 placeholder:text-gray-500 focus:outline-hidden focus:border-primary-500"
             />
             {noVideoTableError && <p className="mt-2 text-xs text-red-400">{noVideoTableError}</p>}
 

@@ -11,7 +11,7 @@ export type ExportJsonMode = 'full_project' | 'single_judge' | 'notes_only'
 
 export type ExportPosterBlockId = 'title' | 'subtitle' | 'top' | 'footer'
 type ExportPosterTextAlign = 'left' | 'center' | 'right'
-export type ExportPosterShadowStyle = 'none' | 'soft' | 'strong' | 'outline' | 'glow'
+export type ExportPosterShadowStyle = 'none' | 'soft' | 'strong' | 'outline' | 'outline-solid' | 'glow'
 
 export interface ExportJudge {
   key: string

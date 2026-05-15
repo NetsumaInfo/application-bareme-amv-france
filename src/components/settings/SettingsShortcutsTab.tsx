@@ -26,7 +26,7 @@ export function SettingsShortcutsTab({
         {SHORTCUT_DEFINITIONS.map((shortcut) => (
           <div
             key={shortcut.action}
-            className="flex items-center justify-between px-2 py-1.5 rounded bg-surface-dark/50 text-[11px]"
+            className="flex items-center justify-between px-2 py-1.5 rounded-sm bg-surface-dark/50 text-[11px]"
           >
             <span className="text-gray-300">{t(shortcut.label)}</span>
             <div className="flex items-center gap-2">
@@ -63,7 +63,7 @@ export function SettingsShortcutsTab({
           {CONTEXTUAL_SHORTCUT_DEFINITIONS.map((shortcut) => (
             <div key={shortcut.id} className="flex items-center justify-between gap-2">
               <span>{t(shortcut.label)}</span>
-              <kbd className="px-1.5 py-0.5 rounded text-[10px] font-mono bg-surface text-gray-400 border border-gray-700">
+              <kbd className="px-1.5 py-0.5 rounded-sm text-[10px] font-mono bg-surface text-gray-400 border border-gray-700">
                 {t(shortcut.shortcut)}
               </kbd>
             </div>

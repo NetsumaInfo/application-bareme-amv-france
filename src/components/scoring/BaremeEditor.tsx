@@ -64,7 +64,7 @@ export default function BaremeEditor() {
                   ? t('Modifier le barème')
                   : t('Nouveau barème')}
           </h2>
-          <button onClick={onClose} className="p-1 rounded hover:bg-surface-light text-gray-400 hover:text-white">
+          <button onClick={onClose} className="p-1 rounded-sm hover:bg-surface-light text-gray-400 hover:text-white">
             <X size={18} />
           </button>
         </div>

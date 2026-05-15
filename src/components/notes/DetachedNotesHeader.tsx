@@ -46,7 +46,7 @@ export function DetachedNotesHeader({
             onClick={() => onNavigate('prev')}
             disabled={clipIndex === 0}
             aria-label={prevClipLabel}
-            className="p-1 rounded hover:bg-surface-light text-gray-400 hover:text-white disabled:opacity-30 transition-colors"
+            className="p-1 rounded-sm hover:bg-surface-light text-gray-400 hover:text-white disabled:opacity-30 transition-colors"
           >
             <ChevronLeft size={16} />
           </button>
@@ -65,7 +65,7 @@ export function DetachedNotesHeader({
                 }}
                 disabled={!hasVideo}
                 aria-label={hasVideo ? t('Ouvrir la vidéo') : t('Vidéo indisponible')}
-                className="p-0.5 rounded hover:bg-surface-light text-gray-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors shrink-0"
+                className="p-0.5 rounded-sm hover:bg-surface-light text-gray-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors shrink-0"
               >
                 <Play size={13} />
               </button>
@@ -94,7 +94,7 @@ export function DetachedNotesHeader({
             onClick={() => onNavigate('next')}
             disabled={clipIndex >= totalClips - 1}
             aria-label={nextClipLabel}
-            className="p-1 rounded hover:bg-surface-light text-gray-400 hover:text-white disabled:opacity-30 transition-colors"
+            className="p-1 rounded-sm hover:bg-surface-light text-gray-400 hover:text-white disabled:opacity-30 transition-colors"
           >
             <ChevronRight size={16} />
           </button>

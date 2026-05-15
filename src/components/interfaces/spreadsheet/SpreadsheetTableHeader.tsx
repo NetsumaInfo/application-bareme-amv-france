@@ -19,7 +19,7 @@ export function SpreadsheetTableHeader({
   const { t } = useI18n()
 
   return (
-    <thead className="sticky top-0 z-[60] bg-surface-dark shadow-[0_1px_0_rgba(55,65,81,0.75)]">
+    <thead className="sticky top-0 z-60 bg-surface-dark shadow-[0_1px_0_rgba(55,65,81,0.75)]">
       <tr>
         <th
           rowSpan={2}

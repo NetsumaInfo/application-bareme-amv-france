@@ -17,7 +17,7 @@ interface TimecodeInlineTextProps {
 export function TimecodeInlineText({
   text,
   color = '#60a5fa',
-  className = 'text-[11px] text-gray-200 leading-snug whitespace-pre-wrap break-words',
+  className = 'text-[11px] text-gray-200 leading-snug whitespace-pre-wrap wrap-break-word',
   emptyLabel,
   fpsHint,
   onTimecodeSelect,

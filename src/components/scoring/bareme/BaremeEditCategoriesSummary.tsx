@@ -70,7 +70,7 @@ export function BaremeEditCategoriesSummary({
                       onClick={() => onMoveCategory(category, 'up')}
                       disabled={index === 0}
                       aria-label={t('Monter {category}', { category })}
-                      className={`${compact ? 'p-[2px]' : 'p-0.5'} rounded text-gray-500 transition-colors hover:bg-surface hover:text-white disabled:cursor-not-allowed disabled:opacity-30`}
+                      className={`${compact ? 'p-[2px]' : 'p-0.5'} rounded-sm text-gray-500 transition-colors hover:bg-surface hover:text-white disabled:cursor-not-allowed disabled:opacity-30`}
                     >
                       <ArrowUp size={compact ? 10 : 12} />
                     </button>
@@ -81,7 +81,7 @@ export function BaremeEditCategoriesSummary({
                       onClick={() => onMoveCategory(category, 'down')}
                       disabled={index >= visibleCategories.length - 1}
                       aria-label={t('Descendre {category}', { category })}
-                      className={`${compact ? 'p-[2px]' : 'p-0.5'} rounded text-gray-500 transition-colors hover:bg-surface hover:text-white disabled:cursor-not-allowed disabled:opacity-30`}
+                      className={`${compact ? 'p-[2px]' : 'p-0.5'} rounded-sm text-gray-500 transition-colors hover:bg-surface hover:text-white disabled:cursor-not-allowed disabled:opacity-30`}
                     >
                       <ArrowDown size={compact ? 10 : 12} />
                     </button>

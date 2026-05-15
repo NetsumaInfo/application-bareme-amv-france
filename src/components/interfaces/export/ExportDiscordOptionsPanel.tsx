@@ -55,10 +55,10 @@ function ActionButton({
           ? 'text-rose-200 hover:bg-rose-500/10'
           : active
             ? 'bg-primary-600/20 text-primary-200'
-            : 'text-gray-300 hover:bg-white/[0.06] hover:text-white'
+            : 'text-gray-300 hover:bg-white/6 hover:text-white'
       }`}
     >
-      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-white/[0.06]">
+      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-white/6">
         <Icon size={13} />
       </span>
       <span className="min-w-0 truncate">{label}</span>
@@ -68,7 +68,7 @@ function ActionButton({
 
 function Metric({ label, value, tone = 'neutral' }: { label: string; value: string; tone?: 'neutral' | 'warning' }) {
   return (
-    <div className="rounded-md border border-gray-700/45 bg-white/[0.025] px-2 py-1.5">
+    <div className="rounded-md border border-gray-700/45 bg-white/2.5 px-2 py-1.5">
       <div className="text-[9px] uppercase tracking-wide text-gray-500">{label}</div>
       <div className={`mt-0.5 text-[13px] font-semibold ${tone === 'warning' ? 'text-amber-200' : 'text-white'}`}>
         {value}
@@ -165,14 +165,14 @@ export function ExportDiscordOptionsPanel({
           <button
             type="button"
             onClick={() => appendMention('@everyone')}
-            className="rounded-md border border-gray-700/60 px-2 py-1 text-[10px] font-medium text-slate-200 transition-colors hover:bg-white/[0.06]"
+            className="rounded-md border border-gray-700/60 px-2 py-1 text-[10px] font-medium text-slate-200 transition-colors hover:bg-white/6"
           >
             @everyone
           </button>
           <button
             type="button"
             onClick={() => appendMention('@here')}
-            className="rounded-md border border-gray-700/60 px-2 py-1 text-[10px] font-medium text-slate-200 transition-colors hover:bg-white/[0.06]"
+            className="rounded-md border border-gray-700/60 px-2 py-1 text-[10px] font-medium text-slate-200 transition-colors hover:bg-white/6"
           >
             @here
           </button>
@@ -246,7 +246,7 @@ export function ExportDiscordOptionsPanel({
               const value = Number(event.target.value)
               onPatchSettings({ topCount: Number.isFinite(value) ? Math.max(1, Math.round(value)) : 1 })
             }}
-            className="h-7 w-full rounded-md border border-gray-700/55 bg-transparent px-2 text-[11px] text-white outline-none focus:border-primary-500"
+            className="h-7 w-full rounded-md border border-gray-700/55 bg-transparent px-2 text-[11px] text-white outline-hidden focus:border-primary-500"
           />
         </label>
         <AppCheckbox

@@ -27,9 +27,9 @@ export function ClipDeletionConfirmDialog() {
   const clipSecondaryLabel = getClipSecondaryLabel(clip)
 
   return (
-    <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/60 px-4">
+    <div className="fixed inset-0 z-80 flex items-center justify-center bg-black/60 px-4">
       <div
-        className="relative w-full max-w-[28rem] rounded-[12px] bg-surface px-2.5 py-2 shadow-2xl"
+        className="relative w-full max-w-md rounded-[12px] bg-surface px-2.5 py-2 shadow-2xl"
         role="dialog"
         aria-modal="true"
         aria-labelledby="clip-deletion-dialog-title"
@@ -67,7 +67,7 @@ export function ClipDeletionConfirmDialog() {
                 setDisableFutureWarnings(false)
                 cancelClipDeletion()
               }}
-              className="rounded-lg bg-white/[0.06] px-2.5 py-1.5 text-[11px] font-medium text-gray-300 transition-colors hover:bg-white/[0.09] hover:text-white"
+              className="rounded-lg bg-white/6 px-2.5 py-1.5 text-[11px] font-medium text-gray-300 transition-colors hover:bg-white/9 hover:text-white"
             >
               {t('Annuler')}
             </button>

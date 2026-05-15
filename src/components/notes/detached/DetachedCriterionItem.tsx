@@ -79,7 +79,7 @@ export function DetachedCriterionItem({
               event.target.value,
             )}
           onKeyDown={(event) => onInputKeyDown(event, flatIndex)}
-          className="amv-soft-number w-14 rounded-md border border-transparent px-2 py-1 text-center text-[12px] font-mono text-white focus:border-primary-500/18 focus:outline-none focus-visible:outline-none"
+          className="amv-soft-number w-14 rounded-md border border-transparent px-2 py-1 text-center text-[12px] font-mono text-white focus:border-primary-500/18 focus:outline-hidden focus-visible:outline-hidden"
           style={{
             backgroundColor: 'rgb(var(--color-surface-light) / 0.86)',
             boxShadow: `inset 0 0 0 1px ${withAlpha(color, 0.08)}`,

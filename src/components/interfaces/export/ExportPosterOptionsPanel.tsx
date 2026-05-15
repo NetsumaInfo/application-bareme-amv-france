@@ -140,7 +140,7 @@ function PanelSection({
   children: React.ReactNode
 }) {
   return (
-    <section className="rounded border border-gray-700/50 bg-surface-dark/24 overflow-hidden">
+    <section className="rounded-sm border border-gray-700/50 bg-surface-dark/24 overflow-hidden">
       <div className="flex items-center gap-1.5 px-2 py-1.5 border-b border-gray-700/35 bg-surface-dark/35">
         {icon && <span className="text-gray-500 shrink-0">{icon}</span>}
         <span className="text-[10.5px] font-semibold text-gray-300">{title}</span>
@@ -311,7 +311,7 @@ function renderExportPosterOptionsPanel({
               max={8000}
               value={posterWidth}
               onChange={(event) => onSetPosterWidth(Number(event.target.value))}
-              className="h-7 w-full px-2 rounded border border-gray-700 bg-surface-dark text-[11px] text-white focus:border-primary-500 focus:outline-none"
+              className="h-7 w-full px-2 rounded-sm border border-gray-700 bg-surface-dark text-[11px] text-white focus:border-primary-500 focus:outline-hidden"
             />
           </div>
           <div>
@@ -322,7 +322,7 @@ function renderExportPosterOptionsPanel({
               max={8000}
               value={posterHeight}
               onChange={(event) => onSetPosterHeight(Number(event.target.value))}
-              className="h-7 w-full px-2 rounded border border-gray-700 bg-surface-dark text-[11px] text-white focus:border-primary-500 focus:outline-none"
+              className="h-7 w-full px-2 rounded-sm border border-gray-700 bg-surface-dark text-[11px] text-white focus:border-primary-500 focus:outline-hidden"
             />
           </div>
         </div>
@@ -343,7 +343,7 @@ function renderExportPosterOptionsPanel({
           <div className="mb-1 flex items-center gap-2">
             <span className="min-w-0 truncate text-[10.5px] text-gray-400">{t('Couleur du fond')}</span>
             {backgroundColor ? (
-              <span className="ml-auto shrink-0 rounded border border-gray-700/70 bg-surface-dark px-1.5 py-0.5 text-[10px] text-gray-400">
+              <span className="ml-auto shrink-0 rounded-sm border border-gray-700/70 bg-surface-dark px-1.5 py-0.5 text-[10px] text-gray-400">
                 {t('Personnalisée')}
               </span>
             ) : null}
@@ -390,7 +390,7 @@ function renderExportPosterOptionsPanel({
           <button
             type="button"
             onClick={() => bgFileInputRef.current?.click()}
-            className="h-7 flex-1 px-2 rounded border border-gray-700 bg-surface-dark text-[11px] text-gray-200 hover:text-white hover:border-gray-600 transition-colors"
+            className="h-7 flex-1 px-2 rounded-sm border border-gray-700 bg-surface-dark text-[11px] text-gray-200 hover:text-white hover:border-gray-600 transition-colors"
           >
             {backgroundImage ? t('Remplacer image') : t('Choisir image')}
           </button>
@@ -398,7 +398,7 @@ function renderExportPosterOptionsPanel({
             <button
               type="button"
               onClick={onClearBackground}
-              className="h-7 px-2 rounded border border-gray-700 bg-surface-dark text-[11px] text-red-300 hover:text-red-200 hover:border-red-500/60 transition-colors shrink-0"
+              className="h-7 px-2 rounded-sm border border-gray-700 bg-surface-dark text-[11px] text-red-300 hover:text-red-200 hover:border-red-500/60 transition-colors shrink-0"
             >
               {t('Retirer')}
             </button>
@@ -483,7 +483,7 @@ function renderExportPosterOptionsPanel({
           <button
             type="button"
             onClick={() => overlayFileInputRef.current?.click()}
-            className="h-7 flex-1 px-2 rounded border border-gray-700 bg-surface-dark text-[11px] text-gray-200 hover:text-white hover:border-gray-600 transition-colors"
+            className="h-7 flex-1 px-2 rounded-sm border border-gray-700 bg-surface-dark text-[11px] text-gray-200 hover:text-white hover:border-gray-600 transition-colors"
           >
             {t('Ajouter image')}
           </button>
@@ -491,7 +491,7 @@ function renderExportPosterOptionsPanel({
             <button
               type="button"
               onClick={() => onRemoveOverlayImage(activeImage.id)}
-              className="h-7 px-2 rounded border border-gray-700 bg-surface-dark text-[11px] text-red-300 hover:text-red-200 hover:border-red-500/60 transition-colors shrink-0"
+              className="h-7 px-2 rounded-sm border border-gray-700 bg-surface-dark text-[11px] text-red-300 hover:text-red-200 hover:border-red-500/60 transition-colors shrink-0"
             >
               {t('Supprimer')}
             </button>
@@ -532,7 +532,7 @@ function renderExportPosterOptionsPanel({
                         type="button"
                         onClick={() => onReorderOverlayImage(activeImage.id, 'front')}
                         aria-label={t('Tout devant')}
-                        className="h-6 px-2 rounded border border-gray-700 bg-surface-dark text-[11px] text-gray-200 hover:text-white hover:border-gray-600 transition-colors"
+                        className="h-6 px-2 rounded-sm border border-gray-700 bg-surface-dark text-[11px] text-gray-200 hover:text-white hover:border-gray-600 transition-colors"
                       >
                         ↟
                       </button>
@@ -541,7 +541,7 @@ function renderExportPosterOptionsPanel({
                       type="button"
                       onClick={() => onReorderOverlayImage(activeImage.id, 'forward')}
                       aria-label={t("Avancer d'un cran")}
-                      className="inline-flex h-6 items-center gap-0.5 px-2 rounded border border-gray-700 bg-surface-dark text-[11px] text-gray-200 hover:text-white hover:border-gray-600 transition-colors"
+                      className="inline-flex h-6 items-center gap-0.5 px-2 rounded-sm border border-gray-700 bg-surface-dark text-[11px] text-gray-200 hover:text-white hover:border-gray-600 transition-colors"
                     >
                       <ArrowUp size={10} />
                     </button>
@@ -549,7 +549,7 @@ function renderExportPosterOptionsPanel({
                       type="button"
                       onClick={() => onReorderOverlayImage(activeImage.id, 'backward')}
                       aria-label={t("Reculer d'un cran")}
-                      className="inline-flex h-6 items-center gap-0.5 px-2 rounded border border-gray-700 bg-surface-dark text-[11px] text-gray-200 hover:text-white hover:border-gray-600 transition-colors"
+                      className="inline-flex h-6 items-center gap-0.5 px-2 rounded-sm border border-gray-700 bg-surface-dark text-[11px] text-gray-200 hover:text-white hover:border-gray-600 transition-colors"
                     >
                       <ArrowDown size={10} />
                     </button>
@@ -558,7 +558,7 @@ function renderExportPosterOptionsPanel({
                         type="button"
                         onClick={() => onReorderOverlayImage(activeImage.id, 'back')}
                         aria-label={t('Tout derrière')}
-                        className="h-6 px-2 rounded border border-gray-700 bg-surface-dark text-[11px] text-gray-200 hover:text-white hover:border-gray-600 transition-colors"
+                        className="h-6 px-2 rounded-sm border border-gray-700 bg-surface-dark text-[11px] text-gray-200 hover:text-white hover:border-gray-600 transition-colors"
                       >
                         ↡
                       </button>
@@ -625,7 +625,7 @@ function renderExportPosterOptionsPanel({
               max={20}
               value={topCount}
               onChange={(event) => onSetTopCount(Number(event.target.value))}
-              className="h-7 w-full px-2 rounded border border-gray-700 bg-surface-dark text-[11px] text-white focus:border-primary-500 focus:outline-none"
+              className="h-7 w-full px-2 rounded-sm border border-gray-700 bg-surface-dark text-[11px] text-white focus:border-primary-500 focus:outline-hidden"
             />
           </div>
           <div className="space-y-0.5">
@@ -633,21 +633,21 @@ function renderExportPosterOptionsPanel({
             <AppCheckbox checked={includeScoreInTop} onChange={onToggleScoreInTop} label={t('Score')} className="gap-1.5" />
           </div>
         </div>
-        <div className="rounded border border-gray-700 bg-surface-dark px-2 py-1 text-[10.5px] text-gray-300 whitespace-pre-wrap max-h-20 overflow-auto">
+        <div className="rounded-sm border border-gray-700 bg-surface-dark px-2 py-1 text-[10.5px] text-gray-300 whitespace-pre-wrap max-h-20 overflow-auto">
           {generatedTopText || t('Aucune ligne de top disponible.')}
         </div>
         <div className="flex gap-1.5">
           <button
             type="button"
             onClick={onGenerateTopIntoBlock}
-            className="h-7 flex-1 px-2 rounded border border-gray-700 bg-surface-dark text-[11px] text-gray-200 hover:text-white hover:border-gray-600 transition-colors"
+            className="h-7 flex-1 px-2 rounded-sm border border-gray-700 bg-surface-dark text-[11px] text-gray-200 hover:text-white hover:border-gray-600 transition-colors"
           >
             {t('→ Bloc TOP')}
           </button>
           <button
             type="button"
             onClick={onCopyTop}
-            className="h-7 flex-1 px-2 rounded border border-primary-600/50 bg-primary-600/10 text-[11px] text-primary-300 hover:text-primary-200 transition-colors"
+            className="h-7 flex-1 px-2 rounded-sm border border-primary-600/50 bg-primary-600/10 text-[11px] text-primary-300 hover:text-primary-200 transition-colors"
           >
             {copiedTop ? t('Copié ✓') : t('Copier')}
           </button>
@@ -685,7 +685,7 @@ function renderExportPosterOptionsPanel({
             onChange={(event) => onPatchBlock(activeBlock.id, { text: event.target.value })}
             rows={3}
             placeholder={t('Texte...')}
-            className="w-full px-2 py-1 rounded border border-gray-700 bg-surface-dark text-[11px] text-white focus:border-primary-500 focus:outline-none resize-y"
+            className="w-full px-2 py-1 rounded-sm border border-gray-700 bg-surface-dark text-[11px] text-white focus:border-primary-500 focus:outline-hidden resize-y"
           />
 
           {/* Police */}
@@ -694,7 +694,7 @@ function renderExportPosterOptionsPanel({
               <input
                 value={fontSearch}
                 onChange={(event) => onSetFontSearch(event.target.value)}
-                className="h-7 w-full px-2 rounded border border-gray-700 bg-surface-dark text-[11px] text-white focus:border-primary-500 focus:outline-none"
+                className="h-7 w-full px-2 rounded-sm border border-gray-700 bg-surface-dark text-[11px] text-white focus:border-primary-500 focus:outline-hidden"
                 placeholder={t('Recherche police...')}
               />
             </div>
@@ -704,7 +704,7 @@ function renderExportPosterOptionsPanel({
                 onClick={onLoadSystemFonts}
                 disabled={loadingSystemFonts}
                 aria-label={t('Scanner polices système')}
-                className="h-7 px-2 rounded border border-gray-700 bg-surface-dark text-[11px] text-gray-200 hover:text-white hover:border-gray-600 transition-colors disabled:opacity-60 shrink-0"
+                className="h-7 px-2 rounded-sm border border-gray-700 bg-surface-dark text-[11px] text-gray-200 hover:text-white hover:border-gray-600 transition-colors disabled:opacity-60 shrink-0"
               >
                 {loadingSystemFonts ? '…' : t('Scan')}
               </button>
@@ -728,7 +728,7 @@ function renderExportPosterOptionsPanel({
           <input
             value={activeBlock.fontFamily}
             onChange={(event) => onPatchBlock(activeBlock.id, { fontFamily: event.target.value })}
-            className="h-7 w-full px-2 rounded border border-gray-700 bg-surface-dark text-[11px] text-white focus:border-primary-500 focus:outline-none"
+            className="h-7 w-full px-2 rounded-sm border border-gray-700 bg-surface-dark text-[11px] text-white focus:border-primary-500 focus:outline-hidden"
             placeholder={t('"Nom Police", sans-serif')}
           />
 
@@ -864,7 +864,7 @@ function renderExportPosterOptionsPanel({
       <button
         type="button"
         onClick={onResetPosterLayout}
-        className="flex h-7 w-full items-center justify-center gap-1 rounded border border-gray-700 bg-surface-dark px-2 text-[11px] text-gray-300 hover:text-white hover:border-gray-600 transition-colors"
+        className="flex h-7 w-full items-center justify-center gap-1 rounded-sm border border-gray-700 bg-surface-dark px-2 text-[11px] text-gray-300 hover:text-white hover:border-gray-600 transition-colors"
       >
         <RefreshCw size={11} />
         {t('Réinitialiser la mise en page')}

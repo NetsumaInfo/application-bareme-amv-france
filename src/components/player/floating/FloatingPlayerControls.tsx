@@ -67,7 +67,7 @@ export function FloatingPlayerControls({
         <button
           onClick={() => onSeekRelative(-5)}
           aria-label={seekBackLabel}
-          className="flex items-center justify-center w-6 h-6 rounded hover:bg-gray-700 transition-colors"
+          className="flex items-center justify-center w-6 h-6 rounded-sm hover:bg-gray-700 transition-colors"
           disabled={!isLoaded}
         >
           <SkipBack size={14} className="text-gray-300" />
@@ -78,7 +78,7 @@ export function FloatingPlayerControls({
         <button
           onClick={onTogglePause}
           aria-label={togglePauseLabel}
-          className="flex items-center justify-center w-6 h-6 rounded hover:bg-gray-700 transition-colors"
+          className="flex items-center justify-center w-6 h-6 rounded-sm hover:bg-gray-700 transition-colors"
           disabled={!isLoaded}
         >
           {isPlaying ? (
@@ -93,7 +93,7 @@ export function FloatingPlayerControls({
         <button
           onClick={() => onSeekRelative(5)}
           aria-label={seekForwardLabel}
-          className="flex items-center justify-center w-6 h-6 rounded hover:bg-gray-700 transition-colors"
+          className="flex items-center justify-center w-6 h-6 rounded-sm hover:bg-gray-700 transition-colors"
           disabled={!isLoaded}
         >
           <SkipForward size={14} className="text-gray-300" />
@@ -104,7 +104,7 @@ export function FloatingPlayerControls({
         <button
           onClick={onToggleMuted}
           aria-label={muted ? t('Activer le son') : t('Couper le son')}
-          className="flex items-center justify-center w-6 h-6 rounded hover:bg-gray-700 transition-colors"
+          className="flex items-center justify-center w-6 h-6 rounded-sm hover:bg-gray-700 transition-colors"
         >
           {muted ? (
             <VolumeX size={14} className="text-gray-300" />
@@ -122,7 +122,7 @@ export function FloatingPlayerControls({
         <button
           onClick={onToggleFullscreen}
           aria-label={fullscreenLabel}
-          className="flex items-center justify-center w-6 h-6 rounded hover:bg-gray-700 transition-colors"
+          className="flex items-center justify-center w-6 h-6 rounded-sm hover:bg-gray-700 transition-colors"
           disabled={!isLoaded}
         >
           {isFullscreen ? (
@@ -137,7 +137,7 @@ export function FloatingPlayerControls({
           <button
             onClick={onSetMiniatureFrame}
             aria-label={miniatureLabel}
-            className="flex items-center justify-center w-6 h-6 rounded hover:bg-gray-700 transition-colors"
+            className="flex items-center justify-center w-6 h-6 rounded-sm hover:bg-gray-700 transition-colors"
             disabled={!isLoaded}
           >
             <ImagePlus size={14} className="text-gray-300" />

@@ -166,7 +166,7 @@ export function SpreadsheetToolbar({
 
   return (
     <div className="relative flex shrink-0 items-center border-b border-gray-700/50 py-px">
-      <div className="z-[1] flex items-center gap-0.5 pr-2">
+      <div className="z-1 flex items-center gap-0.5 pr-2">
         <ToolbarIconButton
           ariaLabel={hasCurrentClipVideo ? pipLabel : attachVideoLabel}
           title={hasCurrentClipVideo ? pipLabel : attachVideoLabel}
@@ -262,7 +262,7 @@ export function SpreadsheetToolbar({
       </div>
 
       {showContestCategoryBar ? (
-        <div className="pointer-events-none absolute inset-x-0 top-1/2 z-[2] flex -translate-y-1/2 justify-center px-2">
+        <div className="pointer-events-none absolute inset-x-0 top-1/2 z-2 flex -translate-y-1/2 justify-center px-2">
           <div className="pointer-events-auto flex max-w-[calc(100%-14rem)] min-w-0 items-center gap-1 overflow-x-auto rounded-md px-1 py-0.5">
             {contestCategoryViewTabs.map((tab) => {
               const active = activeContestCategoryView === tab.key
@@ -290,7 +290,7 @@ export function SpreadsheetToolbar({
                     className={`group relative shrink-0 rounded-md border px-2 py-0.5 text-[10px] transition-colors ${
                       active
                         ? 'border-white/15 bg-surface-dark/90'
-                        : 'border-transparent bg-transparent hover:border-white/10 hover:bg-white/[0.04]'
+                        : 'border-transparent bg-transparent hover:border-white/10 hover:bg-white/4'
                     }`}
                     onDragEnter={(event) => {
                       if (!isFileDragEvent(event)) return
@@ -302,12 +302,12 @@ export function SpreadsheetToolbar({
                     }}
                   >
                     <span
-                      className={`absolute inset-x-1 bottom-0 h-[1px] rounded-full ${active ? 'opacity-95' : 'opacity-80'}`}
+                      className={`absolute inset-x-1 bottom-0 h-px rounded-full ${active ? 'opacity-95' : 'opacity-80'}`}
                       style={{ backgroundColor: lineColor }}
                     />
-                    <span className="inline-flex max-w-[12rem] items-center gap-1.5">
+                    <span className="inline-flex max-w-48 items-center gap-1.5">
                       <span
-                        className={`max-w-[9rem] truncate text-[10px] font-semibold leading-none ${active ? '' : 'opacity-90 group-hover:opacity-100'}`}
+                        className={`max-w-36 truncate text-[10px] font-semibold leading-none ${active ? '' : 'opacity-90 group-hover:opacity-100'}`}
                         style={{ color: labelColor }}
                       >
                         {tab.label}

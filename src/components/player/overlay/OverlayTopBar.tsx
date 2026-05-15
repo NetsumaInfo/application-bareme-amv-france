@@ -23,8 +23,8 @@ export function OverlayTopBar({
     <div
       className={`absolute top-0 left-0 right-0 ${compactControls ? 'px-3 py-2' : 'px-6 py-4'} ${
         isPlayerFullscreen
-          ? 'bg-gradient-to-b from-black/55 via-slate-950/25 to-transparent'
-          : 'bg-gradient-to-b from-black/34 via-slate-950/14 to-transparent'
+          ? 'bg-linear-to-b from-black/55 via-slate-950/25 to-transparent'
+          : 'bg-linear-to-b from-black/34 via-slate-950/14 to-transparent'
       } transition-opacity duration-300 ${
         controlsVisible ? 'opacity-100' : 'opacity-0 pointer-events-none'
       }`}
@@ -35,7 +35,7 @@ export function OverlayTopBar({
             {clipInfo.name || 'Video'}
           </p>
           {clipInfo.total > 0 && (
-            <p className={`${compactControls ? 'text-xs' : 'text-sm'} text-gray-300 drop-shadow`}>
+            <p className={`${compactControls ? 'text-xs' : 'text-sm'} text-gray-300 drop-shadow-sm`}>
               {t('Clip')} {clipInfo.index + 1} / {clipInfo.total}
             </p>
           )}

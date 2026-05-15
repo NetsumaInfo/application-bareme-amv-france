@@ -425,14 +425,14 @@ function useColorSwatchPickerController({
                   ? 'h-4 w-4 hover:bg-white/5'
                   : 'h-5 w-5 hover:bg-white/5'
               }`
-              : `${triggerSize === 'sm' ? 'h-[28px] px-2 gap-1.5' : 'h-8 px-2 gap-1.5'} rounded border border-gray-700 bg-surface-dark/80 hover:border-gray-500 disabled:opacity-40 disabled:cursor-not-allowed inline-flex items-center`
+              : `${triggerSize === 'sm' ? 'h-[28px] px-2 gap-1.5' : 'h-8 px-2 gap-1.5'} rounded-sm border border-gray-700 bg-surface-dark/80 hover:border-gray-500 disabled:opacity-40 disabled:cursor-not-allowed inline-flex items-center`
           }
         >
           <span
             className={
               triggerVariant === 'dot'
                 ? `${triggerSize === 'sm' ? 'h-2.5 w-2.5' : 'h-3 w-3'} inline-block rounded-full`
-                : `${triggerSize === 'sm' ? 'w-4 h-4' : 'w-4 h-4'} inline-block rounded border border-white/20`
+                : `${triggerSize === 'sm' ? 'w-4 h-4' : 'w-4 h-4'} inline-block rounded-sm border border-white/20`
             }
             style={{ backgroundColor: normalizedValue }}
           />
@@ -443,7 +443,7 @@ function useColorSwatchPickerController({
       {open && !disabled && createPortal(
         <div
           ref={pickerRef}
-          className="fixed rounded-xl border border-gray-700 bg-surface-dark shadow-2xl z-[140] p-2.5"
+          className="fixed rounded-xl border border-gray-700 bg-surface-dark shadow-2xl z-140 p-2.5"
           style={{ width: pickerStyle.width, top: pickerStyle.top, left: pickerStyle.left }}
         >
           <div
@@ -460,7 +460,7 @@ function useColorSwatchPickerController({
             <div className="absolute inset-0" style={{ background: 'linear-gradient(to right, #ffffff, rgba(255,255,255,0))' }} />
             <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, #000000, rgba(0,0,0,0))' }} />
             <div
-              className="absolute w-3 h-3 rounded-full border-2 border-white pointer-events-none shadow"
+              className="absolute w-3 h-3 rounded-full border-2 border-white pointer-events-none shadow-sm"
               style={{
                 left: `${hsv.s * 100}%`,
                 top: `${(1 - hsv.v) * 100}%`,
@@ -514,7 +514,7 @@ function useColorSwatchPickerController({
                   onClick={() => commitHex(defaultColor, true)}
                   onContextMenu={(event) => openColorContextMenu(event, defaultColor)}
                   aria-label={t('{color} (couleur par défaut)', { color: defaultColor })}
-                  className="h-6 w-full rounded border border-gray-700 hover:border-gray-500"
+                  className="h-6 w-full rounded-sm border border-gray-700 hover:border-gray-500"
                   style={{ backgroundColor: defaultColor }}
                 />
               </HoverTextTooltip>
@@ -617,13 +617,13 @@ function useColorSwatchPickerController({
                     commitHex(draftHex, true)
                   }
                 }}
-                className="w-full h-8 px-2 rounded border border-gray-700 bg-surface text-xs text-gray-200 focus:outline-none focus:border-primary-500"
+                className="w-full h-8 px-2 rounded-sm border border-gray-700 bg-surface text-xs text-gray-200 focus:outline-hidden focus:border-primary-500"
                 placeholder={t('#6366f1')}
               />
               <button
                 type="button"
                 onClick={() => commitHex(draftHex, true)}
-                className="h-8 px-2 rounded border border-gray-700 text-[11px] text-gray-200 hover:border-gray-500"
+                className="h-8 px-2 rounded-sm border border-gray-700 text-[11px] text-gray-200 hover:border-gray-500"
                 style={{ backgroundColor: withAlpha(displayColor, 0.14) }}
               >
                 {t('OK')}
@@ -637,7 +637,7 @@ function useColorSwatchPickerController({
       {contextMenu && !disabled && (
         <div
           ref={contextMenuRef}
-          className="fixed z-[70] w-52 rounded-lg border border-gray-700 bg-surface-dark shadow-2xl p-1"
+          className="fixed z-70 w-52 rounded-lg border border-gray-700 bg-surface-dark shadow-2xl p-1"
           style={{
             left: clamp(contextMenu.x, 8, window.innerWidth * zoomScale - 220),
             top: clamp(contextMenu.y, 8, window.innerHeight * zoomScale - 180),
@@ -645,7 +645,7 @@ function useColorSwatchPickerController({
         >
           <button
             type="button"
-            className="w-full text-left px-2 py-1.5 text-xs text-gray-200 hover:bg-surface rounded"
+            className="w-full text-left px-2 py-1.5 text-xs text-gray-200 hover:bg-surface rounded-sm"
             onClick={() => {
               if (!contextColor) return
               if (contextIsFavorite) removeFavorite(contextColor)
@@ -658,7 +658,7 @@ function useColorSwatchPickerController({
 
           <button
             type="button"
-            className="w-full text-left px-2 py-1.5 text-xs text-gray-200 hover:bg-surface rounded"
+            className="w-full text-left px-2 py-1.5 text-xs text-gray-200 hover:bg-surface rounded-sm"
             onClick={() => {
               if (!contextColor) return
               saveDefaultColor(contextColor)
@@ -671,7 +671,7 @@ function useColorSwatchPickerController({
           {defaultColor && (
             <button
               type="button"
-              className="w-full text-left px-2 py-1.5 text-xs text-gray-200 hover:bg-surface rounded"
+              className="w-full text-left px-2 py-1.5 text-xs text-gray-200 hover:bg-surface rounded-sm"
               onClick={() => {
                 saveDefaultColor(null)
                 setContextMenu(null)
@@ -684,7 +684,7 @@ function useColorSwatchPickerController({
           {defaultColor && (
             <button
               type="button"
-              className="w-full text-left px-2 py-1.5 text-xs text-gray-200 hover:bg-surface rounded"
+              className="w-full text-left px-2 py-1.5 text-xs text-gray-200 hover:bg-surface rounded-sm"
               onClick={() => {
                 commitHex(defaultColor, true)
                 setContextMenu(null)
@@ -697,7 +697,7 @@ function useColorSwatchPickerController({
           {favoriteColors.length > 0 && (
             <button
               type="button"
-              className="w-full text-left px-2 py-1.5 text-xs text-red-300 hover:bg-surface rounded"
+              className="w-full text-left px-2 py-1.5 text-xs text-red-300 hover:bg-surface rounded-sm"
               onClick={() => {
                 setFavorites([])
                 setContextMenu(null)

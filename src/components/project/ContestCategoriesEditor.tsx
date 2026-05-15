@@ -54,7 +54,7 @@ export function ContestCategoriesEditor({ items, onChange }: ContestCategoriesEd
                 onChange(nextItems)
                 target.blur()
               }}
-              className="min-w-0 flex-1 rounded-md border border-gray-700 bg-surface-dark/60 px-2 py-1 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-primary-500"
+              className="min-w-0 flex-1 rounded-md border border-gray-700 bg-surface-dark/60 px-2 py-1 text-xs text-white placeholder-gray-500 focus:outline-hidden focus:border-primary-500"
             />
             <button
               type="button"

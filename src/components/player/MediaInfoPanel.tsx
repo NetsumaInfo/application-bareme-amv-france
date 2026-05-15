@@ -71,14 +71,14 @@ export default function MediaInfoPanel({ clipName, filePath, onClose }: MediaInf
               <button
                 onClick={copyToClipboard}
                 aria-label={t('Copier les infos')}
-                className="p-1 rounded hover:bg-surface-light text-gray-400 hover:text-white transition-colors shrink-0"
+                className="p-1 rounded-sm hover:bg-surface-light text-gray-400 hover:text-white transition-colors shrink-0"
               >
                 <Copy size={14} />
               </button>
             </HoverTextTooltip>
             <button
               onClick={onClose}
-              className="p-1 rounded hover:bg-surface-light text-gray-400 hover:text-white transition-colors shrink-0"
+              className="p-1 rounded-sm hover:bg-surface-light text-gray-400 hover:text-white transition-colors shrink-0"
             >
               <X size={16} />
             </button>

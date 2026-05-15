@@ -31,7 +31,7 @@ export function ResultatsContestCategoryFilter({
               aria-pressed={active}
             >
               <span className="max-w-[180px] truncate">{option.label}</span>
-              <span className={`rounded-sm px-1 py-[1px] text-[10px] ${active ? 'bg-primary-500/20 text-primary-100' : 'bg-surface-dark/70 text-gray-400'}`}>
+              <span className={`rounded-xs px-1 py-px text-[10px] ${active ? 'bg-primary-500/20 text-primary-100' : 'bg-surface-dark/70 text-gray-400'}`}>
                 {option.count}
               </span>
             </button>

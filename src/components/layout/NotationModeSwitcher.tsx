@@ -53,7 +53,7 @@ export function NotationModeSwitcher() {
         onClick={toggleSpreadsheet}
         className={`h-[22px] rounded-l-[5px] px-1.5 text-[11px] leading-none transition-all ${
           spreadsheetActive
-            ? 'bg-primary-600/80 text-white shadow-sm'
+            ? 'bg-primary-600/80 text-white shadow-xs'
             : 'text-gray-400 hover:bg-white/5 hover:text-white'
         }`}
       >
@@ -66,7 +66,7 @@ export function NotationModeSwitcher() {
         onClick={toggleNotation}
         className={`h-[22px] rounded-r-[5px] px-1.5 text-[11px] leading-none transition-all ${
           notationActive
-            ? 'bg-primary-600/80 text-white shadow-sm'
+            ? 'bg-primary-600/80 text-white shadow-xs'
             : 'text-gray-400 hover:bg-white/5 hover:text-white'
         }`}
       >

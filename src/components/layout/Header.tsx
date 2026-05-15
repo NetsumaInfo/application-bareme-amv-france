@@ -54,7 +54,7 @@ export default function Header({
   }
 
   return (
-    <header className="relative z-[60] grid min-h-[22px] grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-1 bg-surface px-3 py-0">
+    <header className="relative z-60 grid min-h-[22px] grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-1 bg-surface px-3 py-0">
       {currentProject && (
         <div className="pointer-events-none absolute inset-x-0 top-1/2 z-0 flex -translate-y-1/2 justify-center px-3">
           <div className="pointer-events-auto relative">

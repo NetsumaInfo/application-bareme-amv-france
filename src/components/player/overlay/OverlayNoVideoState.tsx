@@ -8,7 +8,7 @@ interface OverlayNoVideoStateProps {
 export function OverlayNoVideoState({ compactControls }: OverlayNoVideoStateProps) {
   const { t } = useI18n()
   return (
-    <div className="absolute inset-0 z-[3] flex items-center justify-center pointer-events-none">
+    <div className="absolute inset-0 z-3 flex items-center justify-center pointer-events-none">
       <div className="absolute inset-0 bg-slate-950/86" />
       <div className="relative flex flex-col items-center gap-2 rounded-xl border border-white/15 bg-slate-950/80 px-5 py-4 text-center">
         <AlertTriangle size={compactControls ? 18 : 22} className="text-amber-400" />

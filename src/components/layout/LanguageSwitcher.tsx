@@ -99,7 +99,7 @@ export function LanguageSwitcher({
           className={
             compact
               ? 'app-header-trigger gap-0.5 px-1.5'
-              : 'inline-flex h-9 items-center gap-2.5 rounded-lg bg-black/18 px-3 text-xs text-gray-200 transition-colors ring-1 ring-inset ring-primary-400/10 hover:bg-white/[0.04] hover:text-white'
+              : 'inline-flex h-9 items-center gap-2.5 rounded-lg bg-black/18 px-3 text-xs text-gray-200 transition-colors ring-1 ring-inset ring-primary-400/10 hover:bg-white/4 hover:text-white'
           }
           aria-label={`${t('Changer la langue')} · ${currentNativeLabel}`}
           aria-haspopup="menu"
@@ -112,7 +112,7 @@ export function LanguageSwitcher({
           ) : (
             <LanguageFlagIcon language={currentOption.value} size="md" />
           )}
-          {!compact ? <span className="max-w-[8rem] truncate text-xs font-medium">{currentNativeLabel}</span> : null}
+          {!compact ? <span className="max-w-32 truncate text-xs font-medium">{currentNativeLabel}</span> : null}
           <ChevronDown
             size={compact ? 10 : 12}
             className={`shrink-0 transition-transform ${compact ? 'app-header-trigger-chevron' : 'text-gray-500'} ${open ? 'rotate-180' : ''}`}
@@ -123,7 +123,7 @@ export function LanguageSwitcher({
       {open ? createPortal(
         <div
           ref={menuRef}
-          className="fixed z-[2000] rounded-xl bg-surface p-2 shadow-2xl ring-1 ring-inset ring-primary-400/10"
+          className="fixed z-2000 rounded-xl bg-surface p-2 shadow-2xl ring-1 ring-inset ring-primary-400/10"
           style={{
             left: `${menuPosition.left}px`,
             top: `${menuPosition.top}px`,

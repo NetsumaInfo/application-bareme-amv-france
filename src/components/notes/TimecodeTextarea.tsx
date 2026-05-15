@@ -108,7 +108,7 @@ export default function TimecodeTextarea({
   }, [value, timecodes])
 
   return (
-    <div className={`relative isolate overflow-hidden rounded ${className}`}>
+    <div className={`relative isolate overflow-hidden rounded-sm ${className}`}>
       <textarea
         ref={setTextareaRef}
         placeholder={placeholder}
@@ -124,15 +124,15 @@ export default function TimecodeTextarea({
         spellCheck={false}
         rows={rows}
         style={style}
-        className={`relative z-[1] min-h-[42px] w-full resize-none overflow-x-hidden rounded border border-transparent bg-surface-dark px-2 py-1.5 text-[11px] leading-[1.4] text-transparent caret-gray-200 placeholder:text-gray-600 focus:border-primary-500/25 focus:outline-none ${textareaClassName}`}
+        className={`relative z-1 min-h-[42px] w-full resize-none overflow-x-hidden rounded-sm border border-transparent bg-surface-dark px-2 py-1.5 text-[11px] leading-[1.4] text-transparent caret-gray-200 placeholder:text-gray-600 focus:border-primary-500/25 focus:outline-hidden ${textareaClassName}`}
       />
       {value.trim().length > 0 && (
         <div
-          className="pointer-events-none absolute inset-px z-[2] overflow-hidden rounded-[6px]"
+          className="pointer-events-none absolute inset-px z-2 overflow-hidden rounded-[6px]"
           aria-hidden="true"
         >
           <div
-            className="whitespace-pre-wrap break-words px-2 py-1.5 text-[11px] leading-[1.4] text-gray-300 select-none"
+            className="whitespace-pre-wrap wrap-break-word px-2 py-1.5 text-[11px] leading-[1.4] text-gray-300 select-none"
             style={{
               transform: `translate(${-scrollLeft}px, ${-scrollTop}px)`,
               overflowWrap: 'break-word',

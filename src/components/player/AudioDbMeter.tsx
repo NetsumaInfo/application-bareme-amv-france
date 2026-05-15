@@ -61,7 +61,7 @@ export default function AudioDbMeter({ enabled, compact, tiny, muted, className 
         <span className={`${compact ? 'text-[10px]' : 'text-[10px]'} text-gray-500 font-mono`}>L</span>
         <div className={`relative ${tiny ? 'w-8 h-1.5' : compact ? 'w-12 h-2' : 'w-14 h-2'} rounded-full bg-white/15 overflow-hidden`}>
           <div
-            className={`absolute left-0 top-0 h-full rounded-full bg-gradient-to-r transition-[width] duration-150 ${leftBarClass}`}
+            className={`absolute left-0 top-0 h-full rounded-full bg-linear-to-r transition-[width] duration-150 ${leftBarClass}`}
             style={{ width: `${leftPercent}%` }}
           />
         </div>
@@ -73,7 +73,7 @@ export default function AudioDbMeter({ enabled, compact, tiny, muted, className 
         <span className={`${compact ? 'text-[10px]' : 'text-[10px]'} text-gray-500 font-mono`}>R</span>
         <div className={`relative ${tiny ? 'w-8 h-1.5' : compact ? 'w-12 h-2' : 'w-14 h-2'} rounded-full bg-white/15 overflow-hidden`}>
           <div
-            className={`absolute left-0 top-0 h-full rounded-full bg-gradient-to-r transition-[width] duration-150 ${rightBarClass}`}
+            className={`absolute left-0 top-0 h-full rounded-full bg-linear-to-r transition-[width] duration-150 ${rightBarClass}`}
             style={{ width: `${rightPercent}%` }}
           />
         </div>

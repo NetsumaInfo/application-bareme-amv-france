@@ -131,7 +131,7 @@ export function BaremeCriterionCard({
                 onCategoryFieldBlur(criterion.id)
               }}
               placeholder={t('Montage')}
-              className="w-full rounded-lg border bg-surface px-3 py-2 text-sm text-white focus:border-primary-500 focus:outline-none"
+              className="w-full rounded-lg border bg-surface px-3 py-2 text-sm text-white focus:border-primary-500 focus:outline-hidden"
               style={{ borderColor: withAlpha(color, 0.45) }}
               disabled={readOnly}
             />
@@ -181,7 +181,7 @@ export function BaremeCriterionCard({
             value={criterion.name}
             onChange={(event) => onUpdateCriterion(index, { name: event.target.value })}
             placeholder={t('Rythme / Synchro')}
-            className="w-full rounded-lg border border-gray-700 bg-surface px-3 py-2 text-sm text-white focus:border-primary-500 focus:outline-none"
+            className="w-full rounded-lg border border-gray-700 bg-surface px-3 py-2 text-sm text-white focus:border-primary-500 focus:outline-hidden"
             disabled={readOnly}
           />
         </div>
@@ -194,7 +194,7 @@ export function BaremeCriterionCard({
             onChange={(event) => onUpdateCriterion(index, { max: Number(event.target.value) })}
             min={1}
             step={1}
-            className="amv-soft-number w-full rounded-lg border border-gray-700 bg-surface px-3 py-2 text-center text-sm text-white focus:border-primary-500 focus:outline-none"
+            className="amv-soft-number w-full rounded-lg border border-gray-700 bg-surface px-3 py-2 text-center text-sm text-white focus:border-primary-500 focus:outline-hidden"
             disabled={readOnly}
           />
         </div>
@@ -206,7 +206,7 @@ export function BaremeCriterionCard({
             value={criterion.step ?? 0.5}
             onChange={(event) => onUpdateCriterion(index, { step: Number(event.target.value) })}
             step={0.1}
-            className="amv-soft-number w-full rounded-lg border border-gray-700 bg-surface px-3 py-2 text-center text-sm text-white focus:border-primary-500 focus:outline-none"
+            className="amv-soft-number w-full rounded-lg border border-gray-700 bg-surface px-3 py-2 text-center text-sm text-white focus:border-primary-500 focus:outline-hidden"
             disabled={readOnly}
           />
         </div>
@@ -232,7 +232,7 @@ export function BaremeCriterionCard({
             value={criterion.description || ''}
             onChange={(event) => onUpdateCriterion(index, { description: event.target.value })}
             placeholder={t('Optionnel')}
-            className="w-full rounded-lg border border-gray-700 bg-surface px-3 py-2 text-sm text-white focus:border-primary-500 focus:outline-none"
+            className="w-full rounded-lg border border-gray-700 bg-surface px-3 py-2 text-sm text-white focus:border-primary-500 focus:outline-hidden"
             disabled={readOnly}
           />
         </div>

@@ -90,7 +90,7 @@ export const AppContextMenuPanel = forwardRef<HTMLDivElement, AppContextMenuPane
     const content = (
       <div
         ref={setRefs}
-        className={`fixed z-[100] ${minWidthClassName} overflow-hidden rounded-md border border-slate-700/70 bg-[linear-gradient(180deg,rgba(20,24,36,0.98),rgba(12,16,26,0.98))] shadow-[0_14px_32px_rgba(2,6,23,0.34)] backdrop-blur-xl ${className}`}
+        className={`fixed z-100 ${minWidthClassName} overflow-hidden rounded-md border border-slate-700/70 bg-[linear-gradient(180deg,rgba(20,24,36,0.98),rgba(12,16,26,0.98))] shadow-[0_14px_32px_rgba(2,6,23,0.34)] backdrop-blur-xl ${className}`}
         style={position}
         onClick={(event) => event.stopPropagation()}
         onKeyDown={(event) => event.stopPropagation()}

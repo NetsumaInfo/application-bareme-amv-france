@@ -46,7 +46,7 @@ export function DetachedFavoriteComment({
         }}
       >
         <div className="flex items-center gap-2">
-          <span className="inline-flex h-3 w-3 shrink-0 items-center justify-center rounded-sm" style={{ backgroundColor: color }}>
+          <span className="inline-flex h-3 w-3 shrink-0 items-center justify-center rounded-xs" style={{ backgroundColor: color }}>
             <Star size={8} fill="rgb(10 15 26 / 0.95)" color="rgb(10 15 26 / 0.95)" aria-hidden="true" />
           </span>
           <span className="text-[11px] font-semibold uppercase tracking-wider" style={{ color }}>

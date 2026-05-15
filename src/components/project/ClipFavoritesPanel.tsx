@@ -59,7 +59,7 @@ export function ClipFavoritesPanel({
           const className = `min-w-[190px] max-w-[280px] rounded-md border px-2 py-1.5 text-left transition-colors ${
             selected
               ? 'border-amber-300/45 bg-amber-400/12'
-              : 'border-gray-700/50 bg-white/[0.025] hover:border-amber-300/35 hover:bg-amber-400/8'
+              : 'border-gray-700/50 bg-white/2.5 hover:border-amber-300/35 hover:bg-amber-400/8'
           }`
 
           if (!isInteractive) {

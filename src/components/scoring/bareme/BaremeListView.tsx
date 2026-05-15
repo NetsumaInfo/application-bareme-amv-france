@@ -56,7 +56,7 @@ export function BaremeListView({
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-semibold text-white truncate">{bareme.name}</span>
                   {bareme.hideTotalsUntilAllScored && (
-                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 shrink-0">
+                    <span className="text-[10px] px-1.5 py-0.5 rounded-sm bg-amber-500/20 text-amber-300 shrink-0">
                       {t('Totaux cachés')}
                     </span>
                   )}
@@ -79,7 +79,7 @@ export function BaremeListView({
                     return (
                       <span
                         key={`${bareme.id}-${category}`}
-                        className="text-[10px] px-2 py-0.5 rounded border"
+                        className="text-[10px] px-2 py-0.5 rounded-sm border"
                         style={{
                           borderColor: withAlpha(color, 0.45),
                           backgroundColor: withAlpha(color, 0.18),
@@ -95,7 +95,7 @@ export function BaremeListView({
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => onEdit(bareme)}
-                  className="px-3 py-1 text-xs rounded bg-surface-light text-gray-300 hover:text-white transition-colors"
+                  className="px-3 py-1 text-xs rounded-sm bg-surface-light text-gray-300 hover:text-white transition-colors"
                 >
                   {bareme.isOfficial ? t('Voir') : t('Modifier')}
                 </button>
@@ -103,7 +103,7 @@ export function BaremeListView({
                   <button
                     onClick={() => onDuplicate(bareme)}
                     aria-label={t('Dupliquer')}
-                    className="p-1 rounded text-gray-400 hover:text-white hover:bg-surface-light transition-colors"
+                    className="p-1 rounded-sm text-gray-400 hover:text-white hover:bg-surface-light transition-colors"
                   >
                     <Copy size={14} />
                   </button>
@@ -112,7 +112,7 @@ export function BaremeListView({
                   <button
                     onClick={() => onExportJson(bareme)}
                     aria-label={t('Exporter JSON')}
-                    className="p-1 rounded text-gray-400 hover:text-white hover:bg-surface-light transition-colors"
+                    className="p-1 rounded-sm text-gray-400 hover:text-white hover:bg-surface-light transition-colors"
                   >
                     <Download size={14} />
                   </button>
@@ -122,7 +122,7 @@ export function BaremeListView({
                     <button
                       onClick={() => onDelete(bareme.id)}
                       aria-label={t('Supprimer')}
-                      className="p-1 rounded text-gray-500 hover:text-accent hover:bg-surface-light transition-colors"
+                      className="p-1 rounded-sm text-gray-500 hover:text-accent hover:bg-surface-light transition-colors"
                     >
                       <Trash2 size={14} />
                     </button>

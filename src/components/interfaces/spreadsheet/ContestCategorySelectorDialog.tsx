@@ -43,7 +43,7 @@ export function ContestCategorySelectorDialog({
   )
 
   return (
-    <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black/65 px-4">
+    <div className="fixed inset-0 z-90 flex items-center justify-center bg-black/65 px-4">
       <div
         role="dialog"
         aria-modal="true"
@@ -67,7 +67,7 @@ export function ContestCategorySelectorDialog({
             type="button"
             onClick={onClose}
             aria-label={t('Fermer')}
-            className="flex h-7 w-7 items-center justify-center rounded-md text-gray-400 transition-colors hover:bg-white/[0.06] hover:text-white"
+            className="flex h-7 w-7 items-center justify-center rounded-md text-gray-400 transition-colors hover:bg-white/6 hover:text-white"
           >
             <X size={15} />
           </button>

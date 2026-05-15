@@ -121,7 +121,7 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
             <button
               onClick={onClose}
               aria-label={t('Fermer')}
-              className="p-1 rounded hover:bg-surface-light text-gray-400 hover:text-white"
+              className="p-1 rounded-sm hover:bg-surface-light text-gray-400 hover:text-white"
             >
               <X size={16} />
             </button>

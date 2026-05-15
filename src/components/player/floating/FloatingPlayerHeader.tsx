@@ -21,7 +21,7 @@ export function FloatingPlayerHeader({
   return (
     <div
       onMouseDown={onMouseDown}
-      className={`flex items-center justify-between bg-gradient-to-r from-gray-900 to-gray-800 px-3 py-1.5 cursor-move select-none ${
+      className={`flex items-center justify-between bg-linear-to-r from-gray-900 to-gray-800 px-3 py-1.5 cursor-move select-none ${
         isDragging ? 'opacity-100' : 'opacity-90 hover:opacity-100'
       }`}
       role="presentation"
@@ -32,7 +32,7 @@ export function FloatingPlayerHeader({
           <button
             onClick={onClose}
             aria-label={t('Fermer')}
-            className="flex items-center justify-center w-4 h-4 rounded hover:bg-gray-700 transition-colors"
+            className="flex items-center justify-center w-4 h-4 rounded-sm hover:bg-gray-700 transition-colors"
           >
             <X size={12} className="text-gray-400" />
           </button>

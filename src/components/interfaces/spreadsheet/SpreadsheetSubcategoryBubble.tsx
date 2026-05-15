@@ -63,7 +63,7 @@ export function SpreadsheetSubcategoryBubble({
   return (
     <div
       ref={bubbleRef}
-      className="fixed z-[125] pointer-events-auto rounded-xl border border-primary-500/18 bg-surface/95 backdrop-blur-sm shadow-2xl overflow-hidden"
+      className="fixed z-125 pointer-events-auto rounded-xl border border-primary-500/18 bg-surface/95 backdrop-blur-xs shadow-2xl overflow-hidden"
       style={style}
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
@@ -106,7 +106,7 @@ export function SpreadsheetSubcategoryBubble({
 
             {group.categoryComment ? (
               <div className="px-2 py-1 border-b border-gray-800/60">
-                <p className="text-[10px] text-primary-200 whitespace-pre-wrap break-words">
+                <p className="text-[10px] text-primary-200 whitespace-pre-wrap wrap-break-word">
                   {group.categoryComment}
                 </p>
                 <InlineTimecodeText
@@ -141,7 +141,7 @@ export function SpreadsheetSubcategoryBubble({
                     </span>
                     ) : null}
                   </div>
-                  <p className="text-[10px] text-primary-200 whitespace-pre-wrap break-words">
+                  <p className="text-[10px] text-primary-200 whitespace-pre-wrap wrap-break-word">
                     {criterion.comment}
                   </p>
                   <InlineTimecodeText

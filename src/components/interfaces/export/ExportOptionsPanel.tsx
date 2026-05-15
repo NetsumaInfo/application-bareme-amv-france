@@ -32,9 +32,9 @@ function DlBtn({
       onClick={onClick}
       disabled={loading}
       aria-label={label}
-      className="group flex min-w-[42px] flex-col items-center gap-0.5 rounded-md px-2 py-1.5 text-gray-400 transition-colors hover:bg-white/[0.06] hover:text-white disabled:opacity-40 active:scale-[0.97]"
+      className="group flex min-w-[42px] flex-col items-center gap-0.5 rounded-md px-2 py-1.5 text-gray-400 transition-colors hover:bg-white/6 hover:text-white disabled:opacity-40 active:scale-[0.97]"
     >
-      <span className="flex h-6 w-6 items-center justify-center rounded-md bg-white/[0.06] text-gray-400 transition-colors group-hover:bg-primary-600/20 group-hover:text-primary-300">
+      <span className="flex h-6 w-6 items-center justify-center rounded-md bg-white/6 text-gray-400 transition-colors group-hover:bg-primary-600/20 group-hover:text-primary-300">
         {loading ? <Loader2 size={13} className="animate-spin" /> : <Icon size={13} />}
       </span>
       <span className="text-[10px] font-medium leading-tight">{label}</span>
@@ -215,7 +215,7 @@ export function ExportOptionsPanel({
               max={80}
               value={rowsPerImage}
               onChange={(e) => onSetRowsPerImage(Number(e.target.value))}
-              className="w-14 rounded border border-gray-700/50 bg-transparent px-1.5 py-0.5 text-center text-[10px] text-white focus:border-primary-500 focus:outline-none"
+              className="w-14 rounded-sm border border-gray-700/50 bg-transparent px-1.5 py-0.5 text-center text-[10px] text-white focus:border-primary-500 focus:outline-hidden"
             />
           </div>
         )}

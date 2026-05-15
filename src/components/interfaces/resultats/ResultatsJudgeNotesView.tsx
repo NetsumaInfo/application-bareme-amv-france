@@ -108,7 +108,7 @@ function ClipMenu({
   return createPortal(
     <div
       ref={menuRef}
-      className="fixed z-[2100] overflow-hidden rounded-md border border-gray-800 bg-[#0a0d12] shadow-2xl"
+      className="fixed z-2100 overflow-hidden rounded-md border border-gray-800 bg-[#0a0d12] shadow-2xl"
       style={{ top: `${menuStyle.top}px`, left: `${menuStyle.left}px`, width: `${menuStyle.width}px` }}
     >
       <div
@@ -128,10 +128,10 @@ function ClipMenu({
                 onSelectClip(clip.id)
                 onClose()
               }}
-              className={`flex w-full items-center gap-2 rounded-sm px-2.5 py-1.5 text-left text-[11px] transition-colors ${
+              className={`flex w-full items-center gap-2 rounded-xs px-2.5 py-1.5 text-left text-[11px] transition-colors ${
                 isSelected
-                  ? 'bg-white/[0.06] text-white'
-                  : 'text-gray-300 hover:bg-white/[0.05] hover:text-white'
+                  ? 'bg-white/6 text-white'
+                  : 'text-gray-300 hover:bg-white/5 hover:text-white'
               }`}
               role="option"
               aria-selected={isSelected}
@@ -193,7 +193,7 @@ function JudgeNotesToolbar({
           ref={clipMenuButtonRef}
           type="button"
           onClick={onToggleClipMenu}
-          className="flex h-6 w-full items-center gap-2 rounded-md bg-transparent px-2 text-left text-[11px] text-gray-200 transition-colors hover:bg-white/[0.05] focus:outline-none"
+          className="flex h-6 w-full items-center gap-2 rounded-md bg-transparent px-2 text-left text-[11px] text-gray-200 transition-colors hover:bg-white/5 focus:outline-hidden"
           aria-label={clipOptions[effectiveClipIndex]?.label ?? selectedClip.id}
           aria-haspopup="listbox"
           aria-expanded={clipMenuOpen}

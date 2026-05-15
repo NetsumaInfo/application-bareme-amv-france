@@ -77,7 +77,7 @@ export function OverlayTimeline({
         )}
         {markerTooltip && (
           <div
-            className="pointer-events-none absolute -top-8 -translate-x-1/2 px-2 py-1 rounded bg-slate-900/95 border border-white/15 text-[10px] text-gray-100 whitespace-nowrap max-w-[260px] overflow-hidden text-ellipsis"
+            className="pointer-events-none absolute -top-8 -translate-x-1/2 px-2 py-1 rounded-sm bg-slate-900/95 border border-white/15 text-[10px] text-gray-100 whitespace-nowrap max-w-[260px] overflow-hidden text-ellipsis"
             style={{ left: `${markerTooltip.left}%` }}
           >
             {markerTooltip.text}

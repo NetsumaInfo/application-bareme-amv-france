@@ -78,7 +78,7 @@ export function SpreadsheetTableRow({
   const rowClassName = isActive
     ? 'bg-white/[0.07]'
     : clipIdx % 2 === 0
-      ? 'bg-white/[0.04]'
+      ? 'bg-white/4'
       : 'bg-transparent'
   const stickyCellClassName = 'bg-inherit'
 

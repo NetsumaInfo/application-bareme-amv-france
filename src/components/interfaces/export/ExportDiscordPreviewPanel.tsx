@@ -82,7 +82,7 @@ function EditableText({
       onInput={(event) => onChange(normalizeEditableText(event.currentTarget.innerText))}
       onPaste={handlePaste}
       onKeyDown={handleKeyDown}
-      className={`${className} rounded-[4px] outline-none transition-colors empty:before:text-slate-500 empty:before:content-[attr(data-placeholder)] focus:bg-white/[0.035] focus:ring-1 focus:ring-[#5865f2]/55`}
+      className={`${className} rounded-[4px] outline-hidden transition-colors empty:before:text-slate-500 empty:before:content-[attr(data-placeholder)] focus:bg-white/[0.035] focus:ring-1 focus:ring-[#5865f2]/55`}
     />
   )
 }
@@ -112,8 +112,8 @@ function getRowTextClassName(style: DiscordAnnouncementSettings['rowTextStyle'])
   if (style === 'italic') return 'italic'
   if (style === 'underline') return 'underline'
   if (style === 'strike') return 'line-through'
-  if (style === 'code') return 'font-mono rounded bg-black/25 px-1.5 py-0.5 text-[13px]'
-  if (style === 'spoiler') return 'rounded bg-slate-900 px-1.5 py-0.5 text-transparent hover:text-slate-100'
+  if (style === 'code') return 'font-mono rounded-sm bg-black/25 px-1.5 py-0.5 text-[13px]'
+  if (style === 'spoiler') return 'rounded-sm bg-slate-900 px-1.5 py-0.5 text-transparent hover:text-slate-100'
   return ''
 }
 
@@ -235,7 +235,7 @@ export function ExportDiscordPreviewPanel({
                             className={`min-h-[24px] text-[15px] leading-6 text-slate-100 ${settings.rowTextStyle === 'bold' ? 'font-semibold' : ''} ${rowTextClassName}`}
                           />
                           {scoreLabel ? (
-                            <span className="rounded-md bg-white/[0.055] px-2 py-1 text-[12px] font-semibold leading-4 text-slate-200">
+                            <span className="rounded-md bg-white/5.5 px-2 py-1 text-[12px] font-semibold leading-4 text-slate-200">
                               {scoreLabel}
                             </span>
                           ) : null}

@@ -106,6 +106,7 @@ function getTextShadow(shadowStyle: ExportPosterShadowStyle, shadowColor: string
     case 'strong':
       return `0 5px 18px ${withAlpha(shadowColor, 0.88)}`
     case 'outline':
+    case 'outline-solid':
       return `-1px -1px 0 ${withAlpha(shadowColor, 0.95)}, 1px -1px 0 ${withAlpha(shadowColor, 0.95)}, -1px 1px 0 ${withAlpha(shadowColor, 0.95)}, 1px 1px 0 ${withAlpha(shadowColor, 0.95)}`
     case 'glow':
       return `0 0 8px ${withAlpha(shadowColor, 0.85)}, 0 0 22px ${withAlpha(shadowColor, 0.5)}`
@@ -344,7 +345,7 @@ function PosterCanvasScene({
                     onCommitEditingBlock()
                   }
                 }}
-                className="block min-h-[2lh] w-full resize-none overflow-hidden rounded bg-black/35 px-1 py-0.5 outline-none ring-1 ring-white/25"
+                className="block min-h-[2lh] w-full resize-none overflow-hidden rounded-sm bg-black/35 px-1 py-0.5 outline-hidden ring-1 ring-white/25"
                 style={{
                   color: block.color,
                   fontFamily: block.fontFamily,
@@ -357,7 +358,7 @@ function PosterCanvasScene({
               />
             ) : (
               <div
-                className="whitespace-pre-wrap break-words"
+                className="whitespace-pre-wrap wrap-break-word"
                 style={{
                   color: block.color,
                   fontFamily: block.fontFamily,
@@ -700,7 +701,7 @@ function useExportPosterPreviewPanelController({
   const renderContent = () => (
     <div
       data-screenshot-zone="export-poster"
-      className={`flex-1 min-h-0 overflow-auto ${isDraggingImageFile ? 'outline outline-1 outline-primary-400/70 outline-offset-[-1px]' : ''}`}
+      className={`flex-1 min-h-0 overflow-auto ${isDraggingImageFile ? 'outline-solid outline-1 outline-primary-400/70 -outline-offset-1' : ''}`}
       onWheel={handlePreviewWheel}
       onDragEnter={(event) => {
         if (hasDraggedImagePayload(event)) showImageDragOverlay()
@@ -946,7 +947,7 @@ function useExportPosterPreviewPanelController({
         >
           <div className="p-2">
             <div className="mb-2 flex items-center gap-2">
-              <div className="h-12 w-12 overflow-hidden rounded border border-white/10 bg-black/30">
+              <div className="h-12 w-12 overflow-hidden rounded-sm border border-white/10 bg-black/30">
                 <img src={editingImage.src} alt={editingImage.label} className="h-full w-full object-contain" />
               </div>
               <div className="min-w-0 flex-1">
@@ -956,7 +957,7 @@ function useExportPosterPreviewPanelController({
               <button
                 type="button"
                 onClick={() => setFloatingEditorState((prev) => ({ ...prev, imageEditor: null }))}
-                className="rounded p-1 text-slate-400 hover:bg-white/5 hover:text-white"
+                className="rounded-sm p-1 text-slate-400 hover:bg-white/5 hover:text-white"
                 aria-label={t('Fermer')}
               >
                 <X size={14} />
@@ -1009,7 +1010,7 @@ function useExportPosterPreviewPanelController({
                   type="button"
                   onClick={() => onReorderImage(editingImage.id, 'front')}
                   aria-label={t('Tout devant')}
-                  className="rounded border border-slate-700 bg-slate-900 px-1 py-1 text-[10px] text-slate-300 hover:text-white"
+                  className="rounded-sm border border-slate-700 bg-slate-900 px-1 py-1 text-[10px] text-slate-300 hover:text-white"
                 >
                   ↟
                 </button>
@@ -1019,7 +1020,7 @@ function useExportPosterPreviewPanelController({
                   type="button"
                   onClick={() => onReorderImage(editingImage.id, 'forward')}
                   aria-label={t("Avancer d'un cran")}
-                  className="rounded border border-slate-700 bg-slate-900 px-1 py-1 text-[10px] text-slate-300 hover:text-white"
+                  className="rounded-sm border border-slate-700 bg-slate-900 px-1 py-1 text-[10px] text-slate-300 hover:text-white"
                 >
                   ↑
                 </button>
@@ -1029,7 +1030,7 @@ function useExportPosterPreviewPanelController({
                   type="button"
                   onClick={() => onReorderImage(editingImage.id, 'backward')}
                   aria-label={t("Reculer d'un cran")}
-                  className="rounded border border-slate-700 bg-slate-900 px-1 py-1 text-[10px] text-slate-300 hover:text-white"
+                  className="rounded-sm border border-slate-700 bg-slate-900 px-1 py-1 text-[10px] text-slate-300 hover:text-white"
                 >
                   ↓
                 </button>
@@ -1039,7 +1040,7 @@ function useExportPosterPreviewPanelController({
                   type="button"
                   onClick={() => onReorderImage(editingImage.id, 'back')}
                   aria-label={t('Tout derrière')}
-                  className="rounded border border-slate-700 bg-slate-900 px-1 py-1 text-[10px] text-slate-300 hover:text-white"
+                  className="rounded-sm border border-slate-700 bg-slate-900 px-1 py-1 text-[10px] text-slate-300 hover:text-white"
                 >
                   ↡
                 </button>

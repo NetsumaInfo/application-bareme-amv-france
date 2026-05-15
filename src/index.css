@@ -1,287 +1,128 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import 'tailwindcss';
 
-:root {
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  color-scheme: dark;
-  --app-bg: 15 15 35;
-  --app-bg-secondary: 10 11 26;
-  --app-text: 224 224 224;
-  --app-accent-glow: 59 130 246;
-  --color-surface: 26 26 46;
-  --color-surface-light: 22 33 62;
-  --color-surface-dark: 15 15 35;
-  --scrollbar-track: 26 26 46;
-  --scrollbar-thumb: 59 59 92;
-  --scrollbar-thumb-hover: 74 74 106;
-  --color-primary-50: 239 246 255;
-  --color-primary-100: 219 234 254;
-  --color-primary-200: 191 219 254;
-  --color-primary-300: 147 197 253;
-  --color-primary-400: 96 165 250;
-  --color-primary-500: 59 130 246;
-  --color-primary-600: 37 99 235;
-  --color-primary-700: 29 78 216;
-  --color-primary-800: 30 64 175;
-  --color-primary-900: 30 58 138;
-  --color-primary-950: 23 37 84;
+@theme inline {
+  --color-primary-50: rgb(var(--color-primary-50));
+  --color-primary-100: rgb(var(--color-primary-100));
+  --color-primary-200: rgb(var(--color-primary-200));
+  --color-primary-300: rgb(var(--color-primary-300));
+  --color-primary-400: rgb(var(--color-primary-400));
+  --color-primary-500: rgb(var(--color-primary-500));
+  --color-primary-600: rgb(var(--color-primary-600));
+  --color-primary-700: rgb(var(--color-primary-700));
+  --color-primary-800: rgb(var(--color-primary-800));
+  --color-primary-900: rgb(var(--color-primary-900));
+  --color-primary-950: rgb(var(--color-primary-950));
+
+  --color-surface: rgb(var(--color-surface));
+  --color-surface-light: rgb(var(--color-surface-light));
+  --color-surface-dark: rgb(var(--color-surface-dark));
+
+  --color-accent: #e94560;
+  --color-accent-light: #ff6b81;
+  --color-accent-dark: #c23152;
 }
 
-:root[data-app-theme='absolute'] {
-  --app-bg: 0 0 0;
-  --app-bg-secondary: 3 5 7;
-  --app-text: 235 239 246;
-  --color-surface: 9 12 18;
-  --color-surface-light: 18 23 32;
-  --color-surface-dark: 0 0 0;
-  --scrollbar-track: 8 10 14;
-  --scrollbar-thumb: 63 73 92;
-  --scrollbar-thumb-hover: 93 106 132;
-}
+/*
+  The default border color has changed to `currentcolor` in Tailwind CSS v4,
+  so we've added these compatibility styles to make sure everything still
+  looks the same as it did with Tailwind CSS v3.
 
-:root[data-app-theme='midnight'] {
-  --app-bg: 15 15 35;
-  --app-bg-secondary: 10 11 26;
-  --app-text: 224 224 224;
-  --color-surface: 26 26 46;
-  --color-surface-light: 27 38 70;
-  --color-surface-dark: 11 12 28;
-  --scrollbar-track: 26 26 46;
-  --scrollbar-thumb: 59 59 92;
-  --scrollbar-thumb-hover: 74 74 106;
-}
-
-:root[data-app-theme='black'] {
-  --app-bg: 5 7 12;
-  --app-bg-secondary: 11 15 23;
-  --app-text: 231 235 243;
-  --color-surface: 15 20 29;
-  --color-surface-light: 22 29 40;
-  --color-surface-dark: 8 11 18;
-  --scrollbar-track: 15 20 29;
-  --scrollbar-thumb: 67 79 99;
-  --scrollbar-thumb-hover: 98 114 138;
-}
-
-:root[data-app-theme='graphite'] {
-  --app-bg: 17 20 28;
-  --app-bg-secondary: 11 14 20;
-  --app-text: 228 232 242;
-  --color-surface: 29 34 45;
-  --color-surface-light: 39 47 64;
-  --color-surface-dark: 13 16 24;
-  --scrollbar-track: 22 27 37;
-  --scrollbar-thumb: 81 92 115;
-  --scrollbar-thumb-hover: 112 126 153;
-}
-
-:root[data-app-theme='studio'] {
-  --app-bg: 16 19 27;
-  --app-bg-secondary: 19 24 38;
-  --app-text: 229 234 244;
-  --color-surface: 22 29 44;
-  --color-surface-light: 31 41 64;
-  --color-surface-dark: 14 18 28;
-  --scrollbar-track: 22 29 44;
-  --scrollbar-thumb: 90 103 133;
-  --scrollbar-thumb-hover: 122 138 172;
-}
-
-:root[data-app-theme='abyss'] {
-  --app-bg: 8 19 26;
-  --app-bg-secondary: 10 23 32;
-  --app-text: 226 234 240;
-  --color-surface: 13 29 38;
-  --color-surface-light: 20 41 53;
-  --color-surface-dark: 7 16 23;
-  --scrollbar-track: 13 29 38;
-  --scrollbar-thumb: 75 102 117;
-  --scrollbar-thumb-hover: 106 133 149;
-}
-
-:root[data-app-theme='porcelain'] {
-  color-scheme: light;
-  --app-bg: 231 237 244;
-  --app-bg-secondary: 218 226 236;
-  --app-text: 20 27 40;
-  --color-surface: 238 243 248;
-  --color-surface-light: 226 233 242;
-  --color-surface-dark: 208 218 231;
-  --scrollbar-track: 217 225 235;
-  --scrollbar-thumb: 136 151 171;
-  --scrollbar-thumb-hover: 92 108 129;
-}
-
-:root[data-app-theme='pearl'],
-:root[data-app-theme='mist'] {
-  color-scheme: light;
-  --app-bg: 223 232 241;
-  --app-bg-secondary: 210 221 233;
-  --app-text: 18 27 42;
-  --color-surface: 231 238 246;
-  --color-surface-light: 220 229 239;
-  --color-surface-dark: 201 213 227;
-  --scrollbar-track: 209 219 231;
-  --scrollbar-thumb: 133 148 169;
-  --scrollbar-thumb-hover: 89 105 126;
-}
-
-:root[data-app-theme='ivory'] {
-  color-scheme: light;
-  --app-bg: 236 230 220;
-  --app-bg-secondary: 226 218 204;
-  --app-text: 33 35 41;
-  --color-surface: 242 236 226;
-  --color-surface-light: 232 224 211;
-  --color-surface-dark: 216 205 188;
-  --scrollbar-track: 221 212 197;
-  --scrollbar-thumb: 157 144 125;
-  --scrollbar-thumb-hover: 120 108 92;
-}
-
-:root[data-app-theme='sand'],
-:root[data-app-theme='linen'] {
-  color-scheme: light;
-  --app-bg: 223 219 210;
-  --app-bg-secondary: 212 206 193;
-  --app-text: 36 36 40;
-  --color-surface: 232 227 217;
-  --color-surface-light: 220 214 202;
-  --color-surface-dark: 204 196 181;
-  --scrollbar-track: 212 204 191;
-  --scrollbar-thumb: 152 141 125;
-  --scrollbar-thumb-hover: 116 105 91;
-}
-
-:root[data-primary-color='ocean'] {
-  --app-accent-glow: 59 130 246;
-  --color-primary-50: 239 246 255;
-  --color-primary-100: 219 234 254;
-  --color-primary-200: 191 219 254;
-  --color-primary-300: 147 197 253;
-  --color-primary-400: 96 165 250;
-  --color-primary-500: 59 130 246;
-  --color-primary-600: 37 99 235;
-  --color-primary-700: 29 78 216;
-  --color-primary-800: 30 64 175;
-  --color-primary-900: 30 58 138;
-  --color-primary-950: 23 37 84;
-}
-
-:root[data-primary-color='sky'] {
-  --app-accent-glow: 14 165 233;
-  --color-primary-50: 240 249 255;
-  --color-primary-100: 224 242 254;
-  --color-primary-200: 186 230 253;
-  --color-primary-300: 125 211 252;
-  --color-primary-400: 56 189 248;
-  --color-primary-500: 14 165 233;
-  --color-primary-600: 2 132 199;
-  --color-primary-700: 3 105 161;
-  --color-primary-800: 7 89 133;
-  --color-primary-900: 12 74 110;
-  --color-primary-950: 8 47 73;
-}
-
-:root[data-primary-color='turquoise'] {
-  --app-accent-glow: 45 212 191;
-  --color-primary-50: 240 253 250;
-  --color-primary-100: 204 251 241;
-  --color-primary-200: 153 246 228;
-  --color-primary-300: 94 234 212;
-  --color-primary-400: 45 212 191;
-  --color-primary-500: 20 184 166;
-  --color-primary-600: 13 148 136;
-  --color-primary-700: 15 118 110;
-  --color-primary-800: 17 94 89;
-  --color-primary-900: 19 78 74;
-  --color-primary-950: 4 47 46;
-}
-
-:root[data-primary-color='petrol'] {
-  --app-accent-glow: 36 63 99;
-  --color-primary-50: 241 245 251;
-  --color-primary-100: 223 232 243;
-  --color-primary-200: 191 207 227;
-  --color-primary-300: 144 171 204;
-  --color-primary-400: 86 122 168;
-  --color-primary-500: 36 63 99;
-  --color-primary-600: 31 53 84;
-  --color-primary-700: 26 45 71;
-  --color-primary-800: 23 39 61;
-  --color-primary-900: 20 34 52;
-  --color-primary-950: 11 19 31;
-}
-
-@layer components {
-  .app-header-trigger {
-    @apply inline-flex h-[22px] items-center justify-center whitespace-nowrap rounded-md px-1.5 text-[11px] font-medium leading-none transition-colors duration-150;
-    background-color: rgb(var(--color-surface-dark) / 0.92);
-    color: rgb(var(--app-text) / 0.78);
+  If we ever want to remove these styles, we need to add an explicit border
+  color utility to any element that depends on these defaults.
+*/
+@layer base {
+  *,
+  ::after,
+  ::before,
+  ::backdrop,
+  ::file-selector-button {
+    border-color: var(--color-gray-200, currentcolor);
   }
 
-  .app-header-trigger:hover,
-  .app-header-trigger[data-open='true'] {
+  button,
+  [role='button'] {
+    cursor: pointer;
+  }
+
+  :disabled {
+    cursor: default;
+  }
+
+  input::placeholder,
+  textarea::placeholder {
+    color: var(--color-gray-400, #9ca3af);
+    opacity: 1;
+  }
+}
+
+@utility app-header-trigger {
+  @apply inline-flex h-[22px] items-center justify-center whitespace-nowrap rounded-md px-1.5 text-[11px] font-medium leading-none transition-colors duration-150;
+  background-color: rgb(var(--color-surface-dark) / 0.92);
+  color: rgb(var(--app-text) / 0.78);
+
+  &:hover {
     background-color: rgb(var(--color-surface-light) / 0.92);
     color: rgb(var(--app-text));
   }
 
-  .app-header-trigger:focus-visible {
+  &[data-open='true'] {
+    background-color: rgb(var(--color-surface-light) / 0.92);
+    color: rgb(var(--app-text));
+  }
+
+  &:focus-visible {
     outline: none;
     box-shadow: 0 0 0 2px rgb(var(--color-primary-500) / 0.32);
   }
 
-  .app-header-trigger-icon {
-    @apply w-[22px] justify-center px-0;
-  }
-
-  .app-header-trigger-chevron {
-    color: rgb(var(--app-text) / 0.42);
-  }
-
-  .app-header-trigger[data-open='true'] .app-header-trigger-chevron {
+  &[data-open='true'] .app-header-trigger-chevron {
     color: rgb(var(--app-text) / 0.68);
   }
+}
 
-  .app-range-slider {
-    height: 0.25rem;
-    cursor: pointer;
-    appearance: none;
-    border-radius: 9999px;
-    background:
-      linear-gradient(
-        to right,
-        var(--app-range-accent, rgb(var(--color-primary-500) / 0.92)) 0%,
-        var(--app-range-accent, rgb(var(--color-primary-500) / 0.92)) var(--app-range-value),
-        rgb(var(--color-surface-light) / 0.78) var(--app-range-value),
-        rgb(var(--color-surface-light) / 0.78) 100%
-      );
+@utility app-header-trigger-icon {
+  @apply w-[22px] justify-center px-0;
+}
+
+@utility app-header-trigger-chevron {
+  color: rgb(var(--app-text) / 0.42);
+
+  .app-header-trigger[data-open='true'] & {
+    color: rgb(var(--app-text) / 0.68);
   }
+}
 
-  .app-range-slider:focus-visible {
+@utility app-range-slider {
+  height: 0.25rem;
+  cursor: pointer;
+  appearance: none;
+  border-radius: 9999px;
+  background: linear-gradient(
+    to right,
+    var(--app-range-accent, rgb(var(--color-primary-500) / 0.92)) 0%,
+    var(--app-range-accent, rgb(var(--color-primary-500) / 0.92))
+      var(--app-range-value),
+    rgb(var(--color-surface-light) / 0.78) var(--app-range-value),
+    rgb(var(--color-surface-light) / 0.78) 100%
+  );
+
+  &:focus-visible {
     outline: none;
     box-shadow: 0 0 0 2px rgb(var(--color-primary-500) / 0.28);
   }
 
-  .app-range-slider:disabled {
+  &:disabled {
     cursor: not-allowed;
     opacity: 0.5;
   }
 
-  .app-range-slider::-webkit-slider-runnable-track {
+  &::-webkit-slider-runnable-track {
     height: 0.25rem;
     border-radius: 9999px;
     background: transparent;
   }
 
-  .app-range-slider::-webkit-slider-thumb {
+  &::-webkit-slider-thumb {
     width: 0.625rem;
     height: 0.625rem;
     margin-top: -0.1875rem;
@@ -292,25 +133,249 @@
     box-shadow: 0 6px 14px rgb(0 0 0 / 0.28);
   }
 
-  .app-range-slider::-moz-range-track {
+  &::-moz-range-track {
     height: 0.25rem;
     border-radius: 9999px;
     background: rgb(var(--color-surface-light) / 0.78);
   }
 
-  .app-range-slider::-moz-range-progress {
+  &::-moz-range-progress {
     height: 0.25rem;
     border-radius: 9999px;
     background: var(--app-range-accent, rgb(var(--color-primary-500) / 0.92));
   }
 
-  .app-range-slider::-moz-range-thumb {
+  &::-moz-range-thumb {
     width: 0.625rem;
     height: 0.625rem;
     border: 2px solid var(--app-range-accent, rgb(var(--color-primary-500)));
     border-radius: 9999px;
     background: rgb(var(--app-text));
     box-shadow: 0 6px 14px rgb(0 0 0 / 0.28);
+  }
+}
+
+@layer utilities {
+  :root {
+    font-family:
+      'Inter',
+      system-ui,
+      -apple-system,
+      sans-serif;
+    line-height: 1.5;
+    font-weight: 400;
+    font-synthesis: none;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    color-scheme: dark;
+    --app-bg: 15 15 35;
+    --app-bg-secondary: 10 11 26;
+    --app-text: 224 224 224;
+    --app-accent-glow: 59 130 246;
+    --color-surface: 26 26 46;
+    --color-surface-light: 22 33 62;
+    --color-surface-dark: 15 15 35;
+    --scrollbar-track: 26 26 46;
+    --scrollbar-thumb: 59 59 92;
+    --scrollbar-thumb-hover: 74 74 106;
+    --color-primary-50: 239 246 255;
+    --color-primary-100: 219 234 254;
+    --color-primary-200: 191 219 254;
+    --color-primary-300: 147 197 253;
+    --color-primary-400: 96 165 250;
+    --color-primary-500: 59 130 246;
+    --color-primary-600: 37 99 235;
+    --color-primary-700: 29 78 216;
+    --color-primary-800: 30 64 175;
+    --color-primary-900: 30 58 138;
+    --color-primary-950: 23 37 84;
+  }
+
+  :root[data-app-theme='absolute'] {
+    --app-bg: 0 0 0;
+    --app-bg-secondary: 3 5 7;
+    --app-text: 235 239 246;
+    --color-surface: 9 12 18;
+    --color-surface-light: 18 23 32;
+    --color-surface-dark: 0 0 0;
+    --scrollbar-track: 8 10 14;
+    --scrollbar-thumb: 63 73 92;
+    --scrollbar-thumb-hover: 93 106 132;
+  }
+
+  :root[data-app-theme='midnight'] {
+    --app-bg: 15 15 35;
+    --app-bg-secondary: 10 11 26;
+    --app-text: 224 224 224;
+    --color-surface: 26 26 46;
+    --color-surface-light: 27 38 70;
+    --color-surface-dark: 11 12 28;
+    --scrollbar-track: 26 26 46;
+    --scrollbar-thumb: 59 59 92;
+    --scrollbar-thumb-hover: 74 74 106;
+  }
+
+  :root[data-app-theme='black'] {
+    --app-bg: 5 7 12;
+    --app-bg-secondary: 11 15 23;
+    --app-text: 231 235 243;
+    --color-surface: 15 20 29;
+    --color-surface-light: 22 29 40;
+    --color-surface-dark: 8 11 18;
+    --scrollbar-track: 15 20 29;
+    --scrollbar-thumb: 67 79 99;
+    --scrollbar-thumb-hover: 98 114 138;
+  }
+
+  :root[data-app-theme='graphite'] {
+    --app-bg: 17 20 28;
+    --app-bg-secondary: 11 14 20;
+    --app-text: 228 232 242;
+    --color-surface: 29 34 45;
+    --color-surface-light: 39 47 64;
+    --color-surface-dark: 13 16 24;
+    --scrollbar-track: 22 27 37;
+    --scrollbar-thumb: 81 92 115;
+    --scrollbar-thumb-hover: 112 126 153;
+  }
+
+  :root[data-app-theme='studio'] {
+    --app-bg: 16 19 27;
+    --app-bg-secondary: 19 24 38;
+    --app-text: 229 234 244;
+    --color-surface: 22 29 44;
+    --color-surface-light: 31 41 64;
+    --color-surface-dark: 14 18 28;
+    --scrollbar-track: 22 29 44;
+    --scrollbar-thumb: 90 103 133;
+    --scrollbar-thumb-hover: 122 138 172;
+  }
+
+  :root[data-app-theme='abyss'] {
+    --app-bg: 8 19 26;
+    --app-bg-secondary: 10 23 32;
+    --app-text: 226 234 240;
+    --color-surface: 13 29 38;
+    --color-surface-light: 20 41 53;
+    --color-surface-dark: 7 16 23;
+    --scrollbar-track: 13 29 38;
+    --scrollbar-thumb: 75 102 117;
+    --scrollbar-thumb-hover: 106 133 149;
+  }
+
+  :root[data-app-theme='porcelain'] {
+    color-scheme: light;
+    --app-bg: 231 237 244;
+    --app-bg-secondary: 218 226 236;
+    --app-text: 20 27 40;
+    --color-surface: 238 243 248;
+    --color-surface-light: 226 233 242;
+    --color-surface-dark: 208 218 231;
+    --scrollbar-track: 217 225 235;
+    --scrollbar-thumb: 136 151 171;
+    --scrollbar-thumb-hover: 92 108 129;
+  }
+
+  :root[data-app-theme='pearl'],
+  :root[data-app-theme='mist'] {
+    color-scheme: light;
+    --app-bg: 223 232 241;
+    --app-bg-secondary: 210 221 233;
+    --app-text: 18 27 42;
+    --color-surface: 231 238 246;
+    --color-surface-light: 220 229 239;
+    --color-surface-dark: 201 213 227;
+    --scrollbar-track: 209 219 231;
+    --scrollbar-thumb: 133 148 169;
+    --scrollbar-thumb-hover: 89 105 126;
+  }
+
+  :root[data-app-theme='ivory'] {
+    color-scheme: light;
+    --app-bg: 236 230 220;
+    --app-bg-secondary: 226 218 204;
+    --app-text: 33 35 41;
+    --color-surface: 242 236 226;
+    --color-surface-light: 232 224 211;
+    --color-surface-dark: 216 205 188;
+    --scrollbar-track: 221 212 197;
+    --scrollbar-thumb: 157 144 125;
+    --scrollbar-thumb-hover: 120 108 92;
+  }
+
+  :root[data-app-theme='sand'],
+  :root[data-app-theme='linen'] {
+    color-scheme: light;
+    --app-bg: 223 219 210;
+    --app-bg-secondary: 212 206 193;
+    --app-text: 36 36 40;
+    --color-surface: 232 227 217;
+    --color-surface-light: 220 214 202;
+    --color-surface-dark: 204 196 181;
+    --scrollbar-track: 212 204 191;
+    --scrollbar-thumb: 152 141 125;
+    --scrollbar-thumb-hover: 116 105 91;
+  }
+
+  :root[data-primary-color='ocean'] {
+    --app-accent-glow: 59 130 246;
+    --color-primary-50: 239 246 255;
+    --color-primary-100: 219 234 254;
+    --color-primary-200: 191 219 254;
+    --color-primary-300: 147 197 253;
+    --color-primary-400: 96 165 250;
+    --color-primary-500: 59 130 246;
+    --color-primary-600: 37 99 235;
+    --color-primary-700: 29 78 216;
+    --color-primary-800: 30 64 175;
+    --color-primary-900: 30 58 138;
+    --color-primary-950: 23 37 84;
+  }
+
+  :root[data-primary-color='sky'] {
+    --app-accent-glow: 14 165 233;
+    --color-primary-50: 240 249 255;
+    --color-primary-100: 224 242 254;
+    --color-primary-200: 186 230 253;
+    --color-primary-300: 125 211 252;
+    --color-primary-400: 56 189 248;
+    --color-primary-500: 14 165 233;
+    --color-primary-600: 2 132 199;
+    --color-primary-700: 3 105 161;
+    --color-primary-800: 7 89 133;
+    --color-primary-900: 12 74 110;
+    --color-primary-950: 8 47 73;
+  }
+
+  :root[data-primary-color='turquoise'] {
+    --app-accent-glow: 45 212 191;
+    --color-primary-50: 240 253 250;
+    --color-primary-100: 204 251 241;
+    --color-primary-200: 153 246 228;
+    --color-primary-300: 94 234 212;
+    --color-primary-400: 45 212 191;
+    --color-primary-500: 20 184 166;
+    --color-primary-600: 13 148 136;
+    --color-primary-700: 15 118 110;
+    --color-primary-800: 17 94 89;
+    --color-primary-900: 19 78 74;
+    --color-primary-950: 4 47 46;
+  }
+
+  :root[data-primary-color='petrol'] {
+    --app-accent-glow: 36 63 99;
+    --color-primary-50: 241 245 251;
+    --color-primary-100: 223 232 243;
+    --color-primary-200: 191 207 227;
+    --color-primary-300: 144 171 204;
+    --color-primary-400: 86 122 168;
+    --color-primary-500: 36 63 99;
+    --color-primary-600: 31 53 84;
+    --color-primary-700: 26 45 71;
+    --color-primary-800: 23 39 61;
+    --color-primary-900: 20 34 52;
+    --color-primary-950: 11 19 31;
   }
 }
 

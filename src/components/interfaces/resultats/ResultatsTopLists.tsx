@@ -95,8 +95,8 @@ function TopList({
               onDoubleClick={() => onOpenClipInNotation(row.clip.id)}
               className={`w-full px-2.5 py-1.5 text-left text-[11px] transition-colors ${
                 isSelected
-                  ? 'bg-white/[0.06]'
-                  : 'hover:bg-white/[0.05]'
+                  ? 'bg-white/6'
+                  : 'hover:bg-white/5'
               }`}
             >
               <div className="relative flex items-start gap-1.5 pr-11">
@@ -118,9 +118,9 @@ function TopList({
                   ) : null}
                 </div>
                 <div className="min-w-0">
-                  <div className={`${staticExport ? 'whitespace-normal break-words' : 'truncate'} text-[11px] font-semibold text-primary-300`}>{getClipPrimaryLabel(row.clip)}</div>
+                  <div className={`${staticExport ? 'whitespace-normal wrap-break-word' : 'truncate'} text-[11px] font-semibold text-primary-300`}>{getClipPrimaryLabel(row.clip)}</div>
                   {getClipSecondaryLabel(row.clip) && (
-                    <div className={`${staticExport ? 'whitespace-normal break-words' : 'truncate'} text-[10px] text-gray-500`}>{getClipSecondaryLabel(row.clip)}</div>
+                    <div className={`${staticExport ? 'whitespace-normal wrap-break-word' : 'truncate'} text-[10px] text-gray-500`}>{getClipSecondaryLabel(row.clip)}</div>
                   )}
                   {showMiniatures && row.clip.filePath ? (
                     <ClipMiniaturePreview
@@ -133,7 +133,7 @@ function TopList({
                 </div>
                 <div className="absolute right-0 top-0 flex w-10 flex-col items-center">
                   {scoreLabel ? (
-                    <span className="shrink-0 rounded-md border border-white/10 bg-white/[0.045] px-1.5 py-0.5 text-[10px] font-semibold text-gray-200">
+                    <span className="shrink-0 rounded-md border border-white/10 bg-white/4.5 px-1.5 py-0.5 text-[10px] font-semibold text-gray-200">
                       {scoreLabel}
                     </span>
                   ) : (

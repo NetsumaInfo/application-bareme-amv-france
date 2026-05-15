@@ -531,7 +531,7 @@ function useResultatsInterfaceController() {
       }}
     >
       {isJsonDragOver && (
-        <div className="pointer-events-none absolute inset-1.5 z-50 flex items-center justify-center rounded-lg border border-dashed border-primary-400/80 bg-black/45 backdrop-blur-sm">
+        <div className="pointer-events-none absolute inset-1.5 z-50 flex items-center justify-center rounded-lg border border-dashed border-primary-400/80 bg-black/45 backdrop-blur-xs">
           <div className="rounded-md border border-white/10 bg-surface-dark/95 px-4 py-3 text-center shadow-xl">
             <div className="text-sm font-semibold text-white">{t('Déposez vos fichiers JSON de juge')}</div>
             <div className="mt-1 text-[11px] text-gray-400">{t('Importer un juge')}</div>
