@@ -1,6 +1,6 @@
 # AMV Notation
 
-![Version](https://img.shields.io/badge/version-v0.9.0-2563eb)
+![Version](https://img.shields.io/badge/version-v0.9.1-2563eb)
 ![Tauri](https://img.shields.io/badge/Tauri-v2-24c8db)
 ![React](https://img.shields.io/badge/React-19-61dafb)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5-3178c6)
@@ -13,7 +13,7 @@ Application desktop Windows-first pour notation de concours AMV: gestion barème
 ## Project Name and Description
 
 - **Nom**: AMV Notation
-- **Version logicielle**: `0.9.0`
+- **Version logicielle**: `0.9.1`
 - **But principal**: noter clips AMV dans workflow juge, de import vidéos jusqu’à export final (tableaux, affiches, notes juge).
 - **Plateforme cible**: desktop Windows (Tauri v2 + intégration Win32 pour player mpv).
 

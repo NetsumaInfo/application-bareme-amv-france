@@ -1,6 +1,6 @@
 [package]
 name = "amv-notation"
-version = "0.9.0"
+version = "0.9.1"
 description = "AMV Notation - Video judging application"
 authors = ["Netsuma"]
 license = ""
