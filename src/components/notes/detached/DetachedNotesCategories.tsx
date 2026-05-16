@@ -139,7 +139,7 @@ export function DetachedNotesCategories({
                     if (el) categoryTextareaRefs.current.set(category, el)
                     else categoryTextareaRefs.current.delete(category)
                   }}
-                  placeholder={`Notes "${category}"...`}
+                  placeholder={`Commentaires "${category}"...`}
                   value={localNote?.categoryNotes?.[category] ?? ''}
                   onChange={(nextValue) => onCategoryNoteChange(category, nextValue)}
                   onFocus={() => {

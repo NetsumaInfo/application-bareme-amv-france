@@ -124,7 +124,7 @@ export function NotationCategoriesAccordion({
                     if (el) categoryTextareaRefs.current.set(category, el)
                     else categoryTextareaRefs.current.delete(category)
                   }}
-                  placeholder={t('Notes "{name}"...', { name: category })}
+                  placeholder={t('Commentaires "{name}"...', { name: category })}
                   value={note?.categoryNotes?.[category] ?? ''}
                   onChange={(nextValue) => {
                     onSetCategoryNote(currentClipId, category, nextValue)
