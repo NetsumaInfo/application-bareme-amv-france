@@ -7,7 +7,7 @@ import {
   Headphones,
   ImagePlus,
 } from 'lucide-react'
-import { useEffect, useMemo, useRef, useState, type ChangeEvent, type MutableRefObject } from 'react'
+import { useEffect, useRef, useState, type ChangeEvent, type MutableRefObject } from 'react'
 import AudioDbMeter from '@/components/player/AudioDbMeter'
 import type { TrackItem } from '@/services/tauri'
 import type { ClipInfo } from '@/components/player/overlay/types'
@@ -18,11 +18,10 @@ import {
   formatShortcutAnnotationForAction,
   type ShortcutAction,
 } from '@/utils/shortcuts'
+import type { OverlayIconScale } from '@/components/player/overlay/overlayConstants'
 
 interface OverlayUtilityControlsProps {
-  controlsRowWidth: number
-  compactControls: boolean
-  tinyControls: boolean
+  iconScale: OverlayIconScale
   isPlayerFullscreen: boolean
   isMuted: boolean
   volume: number
@@ -48,10 +47,14 @@ interface OverlayUtilityControlsProps {
   onToggleFullscreen: () => void
 }
 
+const ICON_BTN = `rounded-full text-white/85 transition-colors motion-reduce:transition-none
+  hover:bg-primary-500/25 hover:text-white
+  focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-400
+  shrink-0
+  p-1.5 @[700px]/overlay:p-2.5`
+
 export function OverlayUtilityControls({
-  controlsRowWidth,
-  compactControls,
-  tinyControls,
+  iconScale,
   isPlayerFullscreen,
   isMuted,
   volume,
@@ -84,8 +87,7 @@ export function OverlayUtilityControls({
     t,
     isPlayerFullscreen ? t('Quitter le plein écran') : t('Agrandir'),
   )
-  const rootRef = useRef<HTMLDivElement | null>(null)
-  const [utilityWidth, setUtilityWidth] = useState(0)
+
   const subtitleOptions = [
     {
       key: 'none',
@@ -108,48 +110,14 @@ export function OverlayUtilityControls({
     onSelect: () => onSelectAudio(track.id),
   }))
 
-  useEffect(() => {
-    const element = rootRef.current
-    if (!element) return
-
-    const update = () => {
-      const next = Math.round(element.getBoundingClientRect().width)
-      setUtilityWidth((prev) => (prev === next ? prev : next))
-    }
-
-    update()
-    const observer = new ResizeObserver(update)
-    observer.observe(element)
-    window.addEventListener('resize', update)
-    return () => {
-      observer.disconnect()
-      window.removeEventListener('resize', update)
-    }
-  }, [])
-
-  const effectiveWidth = Math.max(controlsRowWidth, utilityWidth)
-  const inlineVolumeBreakpoint = compactControls ? 280 : 320
-  const inlineMeterBreakpoint = compactControls ? 480 : 540
-  const iconOnlyAudio = effectiveWidth < inlineVolumeBreakpoint
-  const showInlineMeter = showAudioDb && !iconOnlyAudio && effectiveWidth >= inlineMeterBreakpoint
-  const volumeSliderWidth = useMemo(() => {
-    if (iconOnlyAudio) return 0
-    const min = compactControls ? 72 : 92
-    const max = compactControls ? 126 : 156
-    const rightIconsReserve = compactControls ? 182 : 224
-    const miniatureReserve = clipInfo.miniaturesEnabled ? (compactControls ? 30 : 44) : 0
-    const meterReserve = showInlineMeter ? (compactControls ? 128 : 148) : 0
-    const target = effectiveWidth - rightIconsReserve - miniatureReserve - meterReserve
-    return Math.max(min, Math.min(max, target))
-  }, [iconOnlyAudio, compactControls, clipInfo.miniaturesEnabled, showInlineMeter, effectiveWidth])
   const displayedVolume = isMuted ? 0 : volume
   const clampedVolume = Math.max(0, Math.min(100, displayedVolume))
-  const volumeGradient = `linear-gradient(to right, rgba(59,130,246,0.95) 0%, rgba(59,130,246,0.95) ${clampedVolume}%, rgba(255,255,255,0.28) ${clampedVolume}%, rgba(255,255,255,0.28) 100%)`
+  const volumeGradient = `linear-gradient(to right, rgb(var(--color-primary-500)) 0%, rgb(var(--color-primary-500)) ${clampedVolume}%, rgba(255,255,255,0.28) ${clampedVolume}%, rgba(255,255,255,0.28) 100%)`
+
   const [volumePanelOpen, setVolumePanelOpen] = useState(false)
   const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const openVolumePanel = () => {
-    if (!iconOnlyAudio) return
     if (closeTimerRef.current) {
       clearTimeout(closeTimerRef.current)
       closeTimerRef.current = null
@@ -158,7 +126,6 @@ export function OverlayUtilityControls({
   }
 
   const closeVolumePanel = () => {
-    if (!iconOnlyAudio) return
     if (closeTimerRef.current) clearTimeout(closeTimerRef.current)
     closeTimerRef.current = setTimeout(() => {
       setVolumePanelOpen(false)
@@ -172,33 +139,39 @@ export function OverlayUtilityControls({
     }
   }, [])
 
+  const muteLabel = isMuted ? t('Activer le son') : t('Couper le son')
+  const VolumeIcon = isMuted || volume === 0 ? VolumeX : Volume2
+
   return (
-    <div ref={rootRef} className={`flex items-center min-w-0 ${compactControls ? 'gap-1' : 'gap-2'}`}>
+    <div className="flex items-center min-w-0 gap-1 @[700px]/overlay:gap-2">
       <div
-        className="relative shrink-0"
+        className="relative shrink-0 @[480px]/overlay:hidden"
         onMouseEnter={openVolumePanel}
         onMouseLeave={closeVolumePanel}
       >
-        <HoverTextTooltip text={isMuted ? t('Activer le son') : t('Couper le son')}>
+        <HoverTextTooltip text={muteLabel}>
           <button
-            onClick={iconOnlyAudio ? () => setVolumePanelOpen((prev) => !prev) : onToggleMute}
-            aria-label={isMuted ? t('Activer le son') : t('Couper le son')}
-            className={`${compactControls ? 'p-1.5' : 'p-2.5'} rounded-full hover:bg-white/20 text-white/80 hover:text-white transition-colors shrink-0`}
+            onClick={() => setVolumePanelOpen((prev) => !prev)}
+            aria-label={muteLabel}
+            className={ICON_BTN}
           >
-            {isMuted || volume === 0 ? <VolumeX size={compactControls ? 16 : 22} /> : <Volume2 size={compactControls ? 16 : 22} />}
+            <VolumeIcon size={iconScale.iconPx} />
           </button>
         </HoverTextTooltip>
 
-        {iconOnlyAudio && volumePanelOpen && (
-          <div className="absolute bottom-full right-0 mb-2 min-w-[170px] bg-black/90 border border-white/20 rounded-lg shadow-xl p-2 z-50 backdrop-blur-xs">
+        {volumePanelOpen && (
+          <div className="absolute bottom-full right-0 mb-2 min-w-[180px] bg-black/85 border border-white/15 rounded-lg shadow-xl p-2 z-50 backdrop-blur-sm">
             <div className="flex items-center gap-2">
-              <HoverTextTooltip text={isMuted ? t('Activer le son') : t('Couper le son')}>
+              <HoverTextTooltip text={muteLabel}>
                 <button
                   onClick={onToggleMute}
-                  aria-label={isMuted ? t('Activer le son') : t('Couper le son')}
-                  className="p-1.5 rounded-full hover:bg-white/20 text-white/80 hover:text-white transition-colors shrink-0"
+                  aria-label={muteLabel}
+                  className="p-1.5 rounded-full text-white/85 transition-colors motion-reduce:transition-none
+                    hover:bg-primary-500/25 hover:text-white
+                    focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-400
+                    shrink-0"
                 >
-                  {isMuted || volume === 0 ? <VolumeX size={14} /> : <Volume2 size={14} />}
+                  <VolumeIcon size={14} />
                 </button>
               </HoverTextTooltip>
               <input
@@ -207,10 +180,12 @@ export function OverlayUtilityControls({
                 max={100}
                 value={displayedVolume}
                 onChange={onSetVolume}
-                className="w-full h-1 bg-white/30 rounded-full appearance-none cursor-pointer accent-primary-500
-                  [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-2.5 [&::-webkit-slider-thumb]:h-2.5
+                aria-label={t('Volume')}
+                className="w-full h-1 rounded-full appearance-none cursor-pointer accent-primary-500
+                  [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3
                   [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white
-                  [&::-webkit-slider-thumb]:shadow-lg [&::-webkit-slider-thumb]:cursor-pointer"
+                  [&::-webkit-slider-thumb]:shadow-lg [&::-webkit-slider-thumb]:cursor-pointer
+                  focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-400"
                 style={{ background: volumeGradient }}
               />
             </div>
@@ -218,36 +193,50 @@ export function OverlayUtilityControls({
         )}
       </div>
 
-      {!iconOnlyAudio && (
-        <>
-          <input
-            type="range"
-            min={0}
-            max={100}
-            value={displayedVolume}
-            onChange={onSetVolume}
-            className={`${compactControls ? 'h-1' : 'h-1.5'} bg-white/30 rounded-full appearance-none cursor-pointer accent-primary-500
-              [&::-webkit-slider-thumb]:appearance-none ${compactControls ? '[&::-webkit-slider-thumb]:w-2.5 [&::-webkit-slider-thumb]:h-2.5' : '[&::-webkit-slider-thumb]:w-3.5 [&::-webkit-slider-thumb]:h-3.5'}
-              [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white
-              [&::-webkit-slider-thumb]:shadow-lg [&::-webkit-slider-thumb]:cursor-pointer"
-            `}
-            style={{ background: volumeGradient, width: `${volumeSliderWidth}px` }}
-          />
+      <div className="hidden @[480px]/overlay:flex items-center gap-1 @[700px]/overlay:gap-2 min-w-0">
+        <HoverTextTooltip text={muteLabel}>
+          <button
+            onClick={onToggleMute}
+            aria-label={muteLabel}
+            className={ICON_BTN}
+          >
+            <VolumeIcon size={iconScale.iconPx} />
+          </button>
+        </HoverTextTooltip>
 
-          {showInlineMeter && (
-            <AudioDbMeter enabled compact={compactControls} tiny={tinyControls} muted={isMuted || volume === 0} />
-          )}
-        </>
-      )}
+        <input
+          type="range"
+          min={0}
+          max={100}
+          value={displayedVolume}
+          onChange={onSetVolume}
+          aria-label={t('Volume')}
+          className="flex-1 min-w-[72px] max-w-[160px] h-1 @[700px]/overlay:h-1.5
+            rounded-full appearance-none cursor-pointer accent-primary-500
+            [&::-webkit-slider-thumb]:appearance-none
+            [&::-webkit-slider-thumb]:w-2.5 [&::-webkit-slider-thumb]:h-2.5
+            @[700px]/overlay:[&::-webkit-slider-thumb]:w-3.5 @[700px]/overlay:[&::-webkit-slider-thumb]:h-3.5
+            [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white
+            [&::-webkit-slider-thumb]:shadow-lg [&::-webkit-slider-thumb]:cursor-pointer
+            focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-400"
+          style={{ background: volumeGradient }}
+        />
+
+        {showAudioDb && (
+          <div className="hidden @[760px]/overlay:block shrink-0">
+            <AudioDbMeter enabled compact={iconScale.iconPx < 18} tiny={false} muted={isMuted || volume === 0} />
+          </div>
+        )}
+      </div>
 
       <div className="shrink-0">
         <OverlayTrackSelector
-          compactControls={compactControls}
+          iconScale={iconScale}
           buttonTitle={t('Sous-titres')}
           disabledTitle={t('Pas de sous-titres')}
           enabled={subtitleTracks.length > 0}
           active={currentSubtitleId !== null}
-          icon={<Subtitles size={compactControls ? 16 : 22} />}
+          icon={<Subtitles size={iconScale.iconPx} />}
           open={subMenuOpen}
           containerRef={subRef}
           onToggle={onToggleSubMenu}
@@ -257,12 +246,12 @@ export function OverlayUtilityControls({
 
       <div className="shrink-0">
         <OverlayTrackSelector
-          compactControls={compactControls}
+          iconScale={iconScale}
           buttonTitle={t('Pistes audio')}
           disabledTitle={t('Audio unique')}
           enabled={audioTracks.length > 1}
           active={currentAudioId !== null && currentAudioId !== audioTracks[0]?.id}
-          icon={<Headphones size={compactControls ? 16 : 22} />}
+          icon={<Headphones size={iconScale.iconPx} />}
           open={audioMenuOpen}
           containerRef={audioRef}
           onToggle={onToggleAudioMenu}
@@ -275,9 +264,9 @@ export function OverlayUtilityControls({
           <button
             onClick={onSetMiniatureFrame}
             aria-label={miniatureLabel}
-            className={`${compactControls ? 'p-1.5' : 'p-2.5'} rounded-full hover:bg-white/20 text-white/80 hover:text-white transition-colors shrink-0`}
+            className={ICON_BTN}
           >
-            <ImagePlus size={compactControls ? 16 : 22} />
+            <ImagePlus size={iconScale.iconPx} />
           </button>
         </HoverTextTooltip>
       )}
@@ -286,14 +275,13 @@ export function OverlayUtilityControls({
         <button
           onClick={isPlayerFullscreen ? onExitFullscreen : onToggleFullscreen}
           aria-label={fullscreenLabel}
-          className={`${compactControls ? 'p-1.5 ml-1' : 'p-2.5 ml-2'} rounded-full hover:bg-white/20 text-white/80 hover:text-white transition-colors shrink-0`}
+          className={`${ICON_BTN} ml-1 @[700px]/overlay:ml-2`}
         >
           {isPlayerFullscreen
-            ? <Minimize2 size={compactControls ? 16 : 22} />
-            : <Maximize2 size={compactControls ? 16 : 22} />}
+            ? <Minimize2 size={iconScale.iconPx} />
+            : <Maximize2 size={iconScale.iconPx} />}
         </button>
       </HoverTextTooltip>
-
     </div>
   )
 }

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { getCurrentWindow } from '@tauri-apps/api/window'
+import { OVERLAY_AUTOHIDE_MS } from '@/components/player/overlay/overlayConstants'
 
 interface UseOverlayControlVisibilityOptions {
   autoHideControls: boolean
@@ -8,23 +9,45 @@ interface UseOverlayControlVisibilityOptions {
 export function useOverlayControlVisibility({ autoHideControls }: UseOverlayControlVisibilityOptions) {
   const [showControls, setShowControls] = useState(true)
   const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const pinnedRef = useRef(false)
+
+  const clearTimer = () => {
+    if (hideTimerRef.current) {
+      clearTimeout(hideTimerRef.current)
+      hideTimerRef.current = null
+    }
+  }
+
+  const scheduleHide = useCallback(() => {
+    clearTimer()
+    if (!autoHideControls || pinnedRef.current) return
+    hideTimerRef.current = setTimeout(() => setShowControls(false), OVERLAY_AUTOHIDE_MS)
+  }, [autoHideControls])
 
   const resetHideTimer = useCallback(() => {
     setShowControls(true)
     if (autoHideControls) {
       getCurrentWindow().setFocus().catch(() => {})
-      if (hideTimerRef.current) clearTimeout(hideTimerRef.current)
-      hideTimerRef.current = setTimeout(() => setShowControls(false), 3000)
     }
-  }, [autoHideControls])
+    scheduleHide()
+  }, [autoHideControls, scheduleHide])
+
+  const pinControls = useCallback(() => {
+    pinnedRef.current = true
+    setShowControls(true)
+    clearTimer()
+  }, [])
+
+  const unpinControls = useCallback(() => {
+    pinnedRef.current = false
+    scheduleHide()
+  }, [scheduleHide])
 
   useEffect(() => {
     if (!autoHideControls) return
-    hideTimerRef.current = setTimeout(() => setShowControls(false), 3000)
-    return () => {
-      if (hideTimerRef.current) clearTimeout(hideTimerRef.current)
-    }
-  }, [autoHideControls])
+    scheduleHide()
+    return clearTimer
+  }, [autoHideControls, scheduleHide])
 
   useEffect(() => {
     const onActivity = () => resetHideTimer()
@@ -42,5 +65,7 @@ export function useOverlayControlVisibility({ autoHideControls }: UseOverlayCont
     showControls,
     controlsVisible: !autoHideControls || showControls,
     resetHideTimer,
+    pinControls,
+    unpinControls,
   }
 }

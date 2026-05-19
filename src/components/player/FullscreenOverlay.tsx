@@ -8,8 +8,9 @@ import { useWindowUiSettingsSync } from '@/hooks/useWindowUiSettingsSync'
 export default function FullscreenOverlay() {
   useWindowUiSettingsSync()
   const {
+    rootRef,
+    iconScale,
     clipInfo,
-    compactControls,
     controlsVisible,
     currentAudioId,
     currentSubtitleId,
@@ -28,7 +29,6 @@ export default function FullscreenOverlay() {
     audioMenuOpen,
     subRef,
     audioRef,
-    tinyControls,
     visibleMarkers,
     volume,
     setSubMenuOpen,
@@ -47,34 +47,42 @@ export default function FullscreenOverlay() {
     handleToggleFullscreen,
     handleClosePlayerWindow,
     resetHideTimer,
+    pinControls,
+    unpinControls,
   } = useFullscreenOverlayState()
+
+  const hasTopBarContent = Boolean(clipInfo.name) || clipInfo.total > 0
+  const hideCursor = isPlayerFullscreen && !controlsVisible
 
   return (
     <div
-      className="fixed inset-0"
+      ref={rootRef}
+      className="fixed inset-0 @container/overlay"
       onMouseMove={resetHideTimer}
       onMouseEnter={resetHideTimer}
       onMouseDown={resetHideTimer}
-      style={{ cursor: isPlayerFullscreen && !controlsVisible ? 'none' : 'default' }}
+      style={{ cursor: hideCursor ? 'none' : 'default' }}
       role="presentation"
     >
-      <OverlayTopBar
-        clipInfo={clipInfo}
-        controlsVisible={controlsVisible}
-        compactControls={compactControls}
-        isPlayerFullscreen={isPlayerFullscreen}
-        onClose={handleClosePlayerWindow}
-      />
+      {hasTopBarContent && (
+        <OverlayTopBar
+          clipInfo={clipInfo}
+          controlsVisible={controlsVisible}
+          iconScale={iconScale}
+          onClose={handleClosePlayerWindow}
+          onPin={pinControls}
+          onUnpin={unpinControls}
+        />
+      )}
 
       {clipInfo.hasVideo === false && (
-        <OverlayNoVideoState compactControls={compactControls} />
+        <OverlayNoVideoState />
       )}
 
       <OverlayBottomControls
         isPlayerFullscreen={isPlayerFullscreen}
         controlsVisible={controlsVisible}
-        compactControls={compactControls}
-        tinyControls={tinyControls}
+        iconScale={iconScale}
         currentTime={currentTime}
         duration={duration}
         clipInfo={clipInfo}
@@ -116,6 +124,8 @@ export default function FullscreenOverlay() {
         }}
         onExitFullscreen={handleExitFullscreen}
         onToggleFullscreen={handleToggleFullscreen}
+        onPin={pinControls}
+        onUnpin={unpinControls}
       />
     </div>
   )

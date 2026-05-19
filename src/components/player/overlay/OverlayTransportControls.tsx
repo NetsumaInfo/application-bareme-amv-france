@@ -13,9 +13,10 @@ import {
   formatShortcutAnnotationForAction,
   type ShortcutAction,
 } from '@/utils/shortcuts'
+import type { OverlayIconScale } from '@/components/player/overlay/overlayConstants'
 
 interface OverlayTransportControlsProps {
-  compactControls: boolean
+  iconScale: OverlayIconScale
   clipInfo: ClipInfo
   isPlaying: boolean
   shortcutBindings: Partial<Record<ShortcutAction, string>>
@@ -25,8 +26,19 @@ interface OverlayTransportControlsProps {
   onTogglePause: () => void
 }
 
+const ICON_BTN = `rounded-full text-white/85 transition-colors motion-reduce:transition-none
+  hover:bg-primary-500/25 hover:text-white
+  focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-400
+  disabled:opacity-30 disabled:cursor-default
+  p-1.5 @[700px]/overlay:p-2.5`
+
+const PLAY_BTN = `rounded-full bg-primary-500/25 text-white transition-colors motion-reduce:transition-none
+  hover:bg-primary-500/45
+  focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-400
+  p-2 mx-0.5 @[700px]/overlay:p-3.5 @[700px]/overlay:mx-1`
+
 export function OverlayTransportControls({
-  compactControls,
+  iconScale,
   clipInfo,
   isPlaying,
   shortcutBindings,
@@ -46,16 +58,17 @@ export function OverlayTransportControls({
   )
   const seekForwardLabel = formatShortcutAnnotationForAction('seekForward', shortcutBindings, t)
   const nextClipLabel = formatShortcutAnnotationForAction('nextClip', shortcutBindings, t)
+
   return (
-    <div className={`flex items-center ${compactControls ? 'gap-1' : 'gap-2'}`}>
+    <div className="flex items-center gap-1 @[700px]/overlay:gap-2">
       <HoverTextTooltip text={prevClipLabel}>
         <button
           onClick={onPrevClip}
           aria-label={prevClipLabel}
-          className={`${compactControls ? 'p-1.5' : 'p-2.5'} rounded-full hover:bg-white/20 text-white/80 hover:text-white transition-colors disabled:opacity-30 disabled:cursor-default`}
+          className={ICON_BTN}
           disabled={clipInfo.index <= 0}
         >
-          <ChevronLeft size={compactControls ? 18 : 24} />
+          <ChevronLeft size={iconScale.chevronPx} />
         </button>
       </HoverTextTooltip>
 
@@ -63,9 +76,9 @@ export function OverlayTransportControls({
         <button
           onClick={() => onSeekRelative(-5)}
           aria-label={seekBackLabel}
-          className={`${compactControls ? 'p-1.5' : 'p-2.5'} rounded-full hover:bg-white/20 text-white/80 hover:text-white transition-colors`}
+          className={ICON_BTN}
         >
-          <SkipBack size={compactControls ? 16 : 22} />
+          <SkipBack size={iconScale.iconPx} />
         </button>
       </HoverTextTooltip>
 
@@ -73,9 +86,9 @@ export function OverlayTransportControls({
         <button
           onClick={onTogglePause}
           aria-label={togglePauseLabel}
-          className={`${compactControls ? 'p-2 mx-0.5' : 'p-3.5 mx-1'} rounded-full bg-white/20 hover:bg-white/30 text-white transition-colors`}
+          className={PLAY_BTN}
         >
-          {isPlaying ? <Pause size={compactControls ? 20 : 28} /> : <Play size={compactControls ? 20 : 28} />}
+          {isPlaying ? <Pause size={iconScale.playPx} /> : <Play size={iconScale.playPx} />}
         </button>
       </HoverTextTooltip>
 
@@ -83,9 +96,9 @@ export function OverlayTransportControls({
         <button
           onClick={() => onSeekRelative(5)}
           aria-label={seekForwardLabel}
-          className={`${compactControls ? 'p-1.5' : 'p-2.5'} rounded-full hover:bg-white/20 text-white/80 hover:text-white transition-colors`}
+          className={ICON_BTN}
         >
-          <SkipForward size={compactControls ? 16 : 22} />
+          <SkipForward size={iconScale.iconPx} />
         </button>
       </HoverTextTooltip>
 
@@ -93,10 +106,10 @@ export function OverlayTransportControls({
         <button
           onClick={onNextClip}
           aria-label={nextClipLabel}
-          className={`${compactControls ? 'p-1.5' : 'p-2.5'} rounded-full hover:bg-white/20 text-white/80 hover:text-white transition-colors disabled:opacity-30 disabled:cursor-default`}
+          className={ICON_BTN}
           disabled={clipInfo.total > 0 && clipInfo.index >= clipInfo.total - 1}
         >
-          <ChevronRight size={compactControls ? 18 : 24} />
+          <ChevronRight size={iconScale.chevronPx} />
         </button>
       </HoverTextTooltip>
     </div>

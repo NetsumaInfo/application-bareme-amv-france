@@ -120,6 +120,7 @@ function useExportInterfaceController() {
   const [resultatsGlobalVariant, setResultatsGlobalVariant] = useState<ResultatsGlobalVariant>('detailed')
   const [pngExportMode, setPngExportMode] = useState<ExportPngMode>('single')
   const [notesPdfMode, setNotesPdfMode] = useState<ExportNotesPdfMode>('both')
+  const [includeTimecodeThumbnails, setIncludeTimecodeThumbnails] = useState<boolean>(true)
   const [jsonExportMode, setJsonExportMode] = useState<ExportJsonMode>('full_project')
   const [jsonJudgeKey, setJsonJudgeKey] = useState<string>('current')
   const [pngScale, setPngScale] = useState(3)
@@ -462,6 +463,7 @@ function useExportInterfaceController() {
 
     return {
       mode: notesPdfMode,
+      includeTimecodeThumbnails,
       title: title.trim() || `${projectName} - Notes`,
       entries: displayRows.map((row) => {
         const generalNote = normalizeOptionalText(currentProject?.resultNotes?.[row.clip.id])
@@ -505,10 +507,12 @@ function useExportInterfaceController() {
           secondary: getClipSecondaryLabel(row.clip) ?? '',
           generalNote,
           judges: judgesEntries,
+          filePath: row.clip.filePath || null,
+          duration: Number.isFinite(row.clip.duration) && row.clip.duration > 0 ? row.clip.duration : null,
         }
       }),
     }
-  }, [currentBareme?.criteria, currentProject?.resultNotes, displayRows, judges, notesPdfMode, projectName, title])
+  }, [currentBareme?.criteria, currentProject?.resultNotes, displayRows, includeTimecodeThumbnails, judges, notesPdfMode, projectName, title])
 
   const jsonJudgeOptions = useMemo(
     () => judges.map((judge) => ({ key: judge.key, judgeName: judge.judgeName })),
@@ -896,6 +900,7 @@ function useExportInterfaceController() {
             judges={judges}
             exporting={exporting}
             notesPdfMode={notesPdfMode}
+            includeTimecodeThumbnails={includeTimecodeThumbnails}
             jsonExportMode={jsonExportMode}
             jsonJudgeKey={jsonJudgeKey}
             jsonJudgeOptions={jsonJudgeOptions}
@@ -917,6 +922,7 @@ function useExportInterfaceController() {
               setPngScale(clamp(safe, MIN_PNG_SCALE, MAX_PNG_SCALE))
             }}
             onSetNotesPdfMode={setNotesPdfMode}
+            onToggleTimecodeThumbnails={() => setIncludeTimecodeThumbnails((prev) => !prev)}
             onSetRowsPerImage={(value) => {
               const safe = Number.isFinite(value) ? value : MIN_ROWS_PER_IMAGE
               setRowsPerImage(clamp(safe, MIN_ROWS_PER_IMAGE, MAX_ROWS_PER_IMAGE))

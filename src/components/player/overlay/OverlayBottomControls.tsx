@@ -1,16 +1,16 @@
-import { useEffect, useRef, useState, type ChangeEvent, type MutableRefObject } from 'react'
+import { type ChangeEvent, type MutableRefObject } from 'react'
 import type { TrackItem } from '@/services/tauri'
 import type { ClipInfo, MarkerTooltip, OverlayTimecodeMarker } from '@/components/player/overlay/types'
 import { OverlayTimeline } from '@/components/player/overlay/OverlayTimeline'
 import { OverlayTransportControls } from '@/components/player/overlay/OverlayTransportControls'
 import { OverlayUtilityControls } from '@/components/player/overlay/OverlayUtilityControls'
 import type { ShortcutAction } from '@/utils/shortcuts'
+import type { OverlayIconScale } from '@/components/player/overlay/overlayConstants'
 
 interface OverlayBottomControlsProps {
   isPlayerFullscreen: boolean
   controlsVisible: boolean
-  compactControls: boolean
-  tinyControls: boolean
+  iconScale: OverlayIconScale
   currentTime: number
   duration: number
   clipInfo: ClipInfo
@@ -45,13 +45,14 @@ interface OverlayBottomControlsProps {
   onSetMiniatureFrame: () => void
   onExitFullscreen: () => void
   onToggleFullscreen: () => void
+  onPin?: () => void
+  onUnpin?: () => void
 }
 
 export function OverlayBottomControls({
   isPlayerFullscreen,
   controlsVisible,
-  compactControls,
-  tinyControls,
+  iconScale,
   currentTime,
   duration,
   clipInfo,
@@ -86,80 +87,24 @@ export function OverlayBottomControls({
   onSetMiniatureFrame,
   onExitFullscreen,
   onToggleFullscreen,
+  onPin,
+  onUnpin,
 }: OverlayBottomControlsProps) {
-  const controlsRowRef = useRef<HTMLDivElement | null>(null)
-  const transportRef = useRef<HTMLDivElement | null>(null)
-  const [controlsRowWidth, setControlsRowWidth] = useState(0)
-  const [transportWidth, setTransportWidth] = useState(0)
-
-  useEffect(() => {
-    const el = controlsRowRef.current
-    if (!el) return
-
-    let frame = 0
-    const update = () => {
-      cancelAnimationFrame(frame)
-      frame = requestAnimationFrame(() => {
-        const next = Math.round(el.getBoundingClientRect().width)
-        setControlsRowWidth((prev) => (prev === next ? prev : next))
-      })
-    }
-
-    update()
-    const observer = new ResizeObserver(update)
-    observer.observe(el)
-    window.addEventListener('resize', update)
-
-    return () => {
-      cancelAnimationFrame(frame)
-      observer.disconnect()
-      window.removeEventListener('resize', update)
-    }
-  }, [])
-
-  useEffect(() => {
-    const el = transportRef.current
-    if (!el) return
-
-    let frame = 0
-    const update = () => {
-      cancelAnimationFrame(frame)
-      frame = requestAnimationFrame(() => {
-        const next = Math.round(el.getBoundingClientRect().width)
-        setTransportWidth((prev) => (prev === next ? prev : next))
-      })
-    }
-
-    update()
-    const observer = new ResizeObserver(update)
-    observer.observe(el)
-    window.addEventListener('resize', update)
-
-    return () => {
-      cancelAnimationFrame(frame)
-      observer.disconnect()
-      window.removeEventListener('resize', update)
-    }
-  }, [])
-
   const hasVideo = clipInfo.hasVideo !== false
-  const utilityAvailableWidth = Math.max(
-    180,
-    controlsRowWidth - transportWidth - (compactControls ? 24 : 32),
-  )
 
   return (
     <div
-      className={`absolute bottom-0 left-0 right-0 ${compactControls ? 'px-3 pb-2 pt-10' : 'px-6 pb-4 pt-14'} ${
-        isPlayerFullscreen
-          ? 'bg-linear-to-t from-slate-950/80 via-slate-950/40 to-transparent'
-          : 'bg-linear-to-t from-black/64 via-slate-950/28 to-transparent'
-      } transition-all duration-300 ${
-        controlsVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'
-      }`}
+      onMouseEnter={onPin}
+      onMouseLeave={onUnpin}
+      className={`absolute bottom-0 left-0 right-0 px-3 pb-2 pt-10 @[700px]/overlay:px-6 @[700px]/overlay:pb-4 @[700px]/overlay:pt-14
+        bg-linear-to-t from-black/75 via-black/35 to-transparent backdrop-blur-[2px]
+        transition-all duration-300 motion-reduce:transition-none ${
+          controlsVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'
+        }`}
+      data-fullscreen={isPlayerFullscreen ? 'true' : 'false'}
     >
       <OverlayTimeline
-        compactControls={compactControls}
+        iconScale={iconScale}
         currentTime={hasVideo ? currentTime : 0}
         duration={hasVideo ? duration : 0}
         visibleMarkers={hasVideo ? visibleMarkers : []}
@@ -169,10 +114,10 @@ export function OverlayBottomControls({
         onMarkerTooltipChange={hasVideo ? onMarkerTooltipChange : () => {}}
       />
 
-      <div ref={controlsRowRef} className={`flex items-center justify-between ${tinyControls ? 'gap-1' : 'gap-2'}`}>
-        <div ref={transportRef} className="shrink-0">
+      <div className="flex items-center justify-between gap-1 @[700px]/overlay:gap-2">
+        <div className="shrink-0">
           <OverlayTransportControls
-            compactControls={compactControls}
+            iconScale={iconScale}
             clipInfo={clipInfo}
             isPlaying={hasVideo ? isPlaying : false}
             shortcutBindings={shortcutBindings}
@@ -183,11 +128,9 @@ export function OverlayBottomControls({
           />
         </div>
 
-        <div className="min-w-0 flex justify-end" style={{ width: utilityAvailableWidth }}>
+        <div className="min-w-0 flex flex-1 justify-end">
           <OverlayUtilityControls
-            controlsRowWidth={utilityAvailableWidth}
-            compactControls={compactControls}
-            tinyControls={tinyControls}
+            iconScale={iconScale}
             isPlayerFullscreen={isPlayerFullscreen}
             isMuted={hasVideo ? isMuted : true}
             volume={hasVideo ? volume : 0}

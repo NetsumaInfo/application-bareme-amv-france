@@ -85,6 +85,7 @@ interface ExportOptionsPanelProps {
   judges: ExportJudge[]
   exporting: boolean
   notesPdfMode: ExportNotesPdfMode
+  includeTimecodeThumbnails: boolean
   jsonExportMode: ExportJsonMode
   jsonJudgeKey: string
   jsonJudgeOptions: ExportJsonJudgeOption[]
@@ -106,6 +107,7 @@ interface ExportOptionsPanelProps {
   onExportSpreadsheet: () => void
   onExportHtml: () => void
   onSetNotesPdfMode: (mode: ExportNotesPdfMode) => void
+  onToggleTimecodeThumbnails: () => void
 }
 
 export function ExportOptionsPanel({
@@ -114,6 +116,7 @@ export function ExportOptionsPanel({
   rowsPerImage,
   exporting,
   notesPdfMode,
+  includeTimecodeThumbnails,
   jsonExportMode,
   jsonJudgeKey,
   jsonJudgeOptions,
@@ -132,6 +135,7 @@ export function ExportOptionsPanel({
   onExportSpreadsheet,
   onExportHtml,
   onSetNotesPdfMode,
+  onToggleTimecodeThumbnails,
 }: ExportOptionsPanelProps) {
   const { t } = useI18n()
 
@@ -232,6 +236,22 @@ export function ExportOptionsPanel({
             ]}
             onChange={onSetNotesPdfMode}
           />
+        </div>
+
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-[10px] text-gray-500 shrink-0">{t('Vignettes timecode')}</span>
+          <button
+            type="button"
+            onClick={onToggleTimecodeThumbnails}
+            aria-pressed={includeTimecodeThumbnails}
+            className={`px-2 py-0.5 rounded-md text-[10px] font-medium transition-colors border ${
+              includeTimecodeThumbnails
+                ? 'bg-primary-600/20 text-primary-300 border-primary-600/40'
+                : 'text-gray-500 border-gray-700/40 hover:text-gray-300'
+            }`}
+          >
+            {includeTimecodeThumbnails ? t('Activé') : t('Désactivé')}
+          </button>
         </div>
 
         {/* JSON */}

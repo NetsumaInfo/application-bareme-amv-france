@@ -15,7 +15,10 @@ pub(super) fn probe_frame_preview_with_ffmpeg(
         0.0
     };
     let safe_width = width.clamp(120, 640);
-    let seek = format!("{:.3}", safe_seconds);
+    let coarse_offset = (safe_seconds - 2.0).max(0.0);
+    let fine_offset = safe_seconds - coarse_offset;
+    let coarse_seek = format!("{:.3}", coarse_offset);
+    let fine_seek = format!("{:.3}", fine_offset);
     let scale = format!("scale={}:-1:flags=lanczos", safe_width);
 
     let ffmpeg_bin = super::tools::resolve_tool("ffmpeg.exe");
@@ -30,9 +33,11 @@ pub(super) fn probe_frame_preview_with_ffmpeg(
             "-threads",
             "1",
             "-ss",
-            &seek,
+            &coarse_seek,
             "-i",
             path,
+            "-ss",
+            &fine_seek,
             "-an",
             "-sn",
             "-dn",

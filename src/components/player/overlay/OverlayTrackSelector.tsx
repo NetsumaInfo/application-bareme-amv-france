@@ -1,5 +1,6 @@
 import type { MutableRefObject, ReactNode } from 'react'
 import { HoverTextTooltip } from '@/components/ui/HoverTextTooltip'
+import type { OverlayIconScale } from '@/components/player/overlay/overlayConstants'
 
 interface OverlayTrackOption {
   key: string | number
@@ -9,7 +10,7 @@ interface OverlayTrackOption {
 }
 
 interface OverlayTrackSelectorProps {
-  compactControls: boolean
+  iconScale: OverlayIconScale
   buttonTitle: string
   disabledTitle: string
   enabled: boolean
@@ -22,7 +23,6 @@ interface OverlayTrackSelectorProps {
 }
 
 export function OverlayTrackSelector({
-  compactControls,
   buttonTitle,
   disabledTitle,
   enabled,
@@ -39,26 +39,37 @@ export function OverlayTrackSelector({
         <button
           onClick={() => enabled && onToggle()}
           aria-label={enabled ? buttonTitle : disabledTitle}
-          className={`${compactControls ? 'p-1.5' : 'p-2.5'} rounded-full hover:bg-white/20 transition-colors ${
-            enabled
-              ? active
-                ? 'text-primary-400'
-                : 'text-white/80 hover:text-white'
-              : 'text-white/30 cursor-default'
-          }`}
+          aria-haspopup="menu"
+          aria-expanded={open}
+          className={`p-1.5 @[700px]/overlay:p-2.5 rounded-full transition-colors motion-reduce:transition-none
+            focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-400 ${
+              enabled
+                ? active
+                  ? 'text-primary-400 hover:bg-primary-500/25 hover:text-primary-300'
+                  : 'text-white/85 hover:bg-primary-500/25 hover:text-white'
+                : 'text-white/30 cursor-default'
+            }`}
         >
           {icon}
         </button>
       </HoverTextTooltip>
       {open && enabled && (
-        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 min-w-[180px] bg-black/90 border border-white/20 rounded-lg shadow-xl py-1 z-50 backdrop-blur-xs">
+        <div
+          role="menu"
+          className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 min-w-[180px]
+            bg-black/85 border border-white/15 rounded-lg shadow-xl py-1 z-50 backdrop-blur-sm"
+        >
           {options.map((option) => (
             <button
               key={option.key}
+              role="menuitemradio"
+              aria-checked={option.active}
               onClick={option.onSelect}
-              className={`w-full text-left px-3 py-2 text-sm hover:bg-white/10 transition-colors ${
-                option.active ? 'text-primary-400 font-medium' : 'text-white/80'
-              }`}
+              className={`w-full text-left px-3 py-2 text-sm transition-colors motion-reduce:transition-none
+                hover:bg-primary-500/20
+                focus-visible:outline-none focus-visible:bg-primary-500/20 ${
+                  option.active ? 'text-primary-400 font-medium' : 'text-white/85'
+                }`}
             >
               {option.label}
             </button>

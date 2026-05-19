@@ -3,7 +3,7 @@ import { emit, listen } from '@tauri-apps/api/event'
 import * as tauri from '@/services/tauri'
 import { useUIStore } from '@/store/useUIStore'
 import { useOverlayShortcutBindings } from '@/components/player/overlay/useOverlayShortcutBindings'
-import { useOverlayViewport } from '@/components/player/overlay/useOverlayViewport'
+import { useControlScale } from '@/components/player/overlay/useOverlayViewport'
 import { useOverlayPlayerStatus } from '@/components/player/overlay/useOverlayPlayerStatus'
 import { useOverlayClipMarkers } from '@/components/player/overlay/useOverlayClipMarkers'
 import { useOverlayControlVisibility } from '@/components/player/overlay/useOverlayControlVisibility'
@@ -15,7 +15,8 @@ const AUDIO_DB_UPDATED_EVENT = 'ui:audio-db-updated'
 
 export function useFullscreenOverlayState() {
   const shortcutBindings = useOverlayShortcutBindings()
-  const { compactControls, tinyControls } = useOverlayViewport()
+  const rootRef = useRef<HTMLDivElement | null>(null)
+  const iconScale = useControlScale(rootRef)
   const {
     isPlayerFullscreen,
     isPlaying,
@@ -28,6 +29,8 @@ export function useFullscreenOverlayState() {
   const {
     controlsVisible,
     resetHideTimer,
+    pinControls,
+    unpinControls,
   } = useOverlayControlVisibility({ autoHideControls: isOverlayActive })
 
   const [markerTooltip, setMarkerTooltip] = useState<{ left: number; text: string } | null>(null)
@@ -181,8 +184,9 @@ export function useFullscreenOverlayState() {
   }, [resetHideTimer])
 
   return {
+    rootRef,
+    iconScale,
     clipInfo,
-    compactControls,
     controlsVisible,
     currentAudioId,
     currentSubtitleId,
@@ -201,7 +205,6 @@ export function useFullscreenOverlayState() {
     audioMenuOpen,
     subRef,
     audioRef,
-    tinyControls,
     visibleMarkers,
     volume,
     setSubMenuOpen,
@@ -220,5 +223,7 @@ export function useFullscreenOverlayState() {
     handleToggleFullscreen,
     handleClosePlayerWindow,
     resetHideTimer,
+    pinControls,
+    unpinControls,
   }
 }

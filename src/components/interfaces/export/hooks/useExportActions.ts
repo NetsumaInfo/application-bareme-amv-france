@@ -6,6 +6,9 @@ import { join } from '@tauri-apps/api/path'
 import * as tauri from '@/services/tauri'
 import { useI18n } from '@/i18n'
 import { createXlsxWorkbook, type XlsxSheet } from '@/components/interfaces/export/xlsxWorkbook'
+import { extractTimecodesFromText } from '@/utils/timecodes'
+import { formatPreciseTimecode } from '@/utils/formatters'
+import { addTimecodeHoverWidgets } from '@/components/interfaces/export/pdfTimecodeHover'
 import type {
   ExportNotesPdfMode,
   ExportPngMode,
@@ -79,12 +82,109 @@ interface ExportNotesPdfClipEntry {
   secondary: string
   generalNote: string
   judges: ExportNotesPdfJudgeEntry[]
+  filePath: string | null
+  duration: number | null
 }
 
 interface ExportNotesPdfPayload {
   mode: ExportNotesPdfMode
   title: string
   entries: ExportNotesPdfClipEntry[]
+  includeTimecodeThumbnails: boolean
+}
+
+interface TimecodeRef {
+  seconds: number
+  label: string
+  source: string
+}
+
+const TIMECODE_THUMB_WIDTH_PX = 240
+const TIMECODE_THUMB_FETCH_CONCURRENCY = 4
+
+function collectEntryTimecodes(
+  entry: ExportNotesPdfClipEntry,
+  mode: ExportNotesPdfMode,
+): TimecodeRef[] {
+  const map = new Map<string, TimecodeRef>()
+  const maxSeconds = entry.duration && entry.duration > 0 ? entry.duration : undefined
+  const add = (text: string | undefined | null, source: string) => {
+    if (!text) return
+    const parsed = extractTimecodesFromText(text, maxSeconds)
+    for (const tc of parsed) {
+      if (!Number.isFinite(tc.seconds) || tc.seconds < 0) continue
+      const key = tc.seconds.toFixed(2)
+      const existing = map.get(key)
+      if (existing) {
+        if (!existing.source.includes(source)) {
+          existing.source = `${existing.source}, ${source}`
+        }
+        continue
+      }
+      map.set(key, {
+        seconds: tc.seconds,
+        label: formatPreciseTimecode(tc.seconds),
+        source,
+      })
+    }
+  }
+  if (mode === 'general' || mode === 'both') {
+    add(entry.generalNote, 'general')
+  }
+  if (mode === 'judges' || mode === 'both') {
+    for (const judge of entry.judges) {
+      add(judge.generalNote, judge.judgeName)
+      for (const cat of judge.categoryNotes) {
+        add(cat.text, `${judge.judgeName} - ${cat.category}`)
+      }
+      for (const cr of judge.criterionNotes) {
+        add(cr.text, `${judge.judgeName} - ${cr.criterion}`)
+      }
+    }
+  }
+  return Array.from(map.values()).sort((a, b) => a.seconds - b.seconds)
+}
+
+function previewCacheKey(filePath: string, seconds: number): string {
+  return `${filePath}|${seconds.toFixed(2)}`
+}
+
+async function fetchTimecodePreviews(
+  payload: ExportNotesPdfPayload,
+): Promise<Map<string, string>> {
+  const previews = new Map<string, string>()
+  if (!payload.includeTimecodeThumbnails) return previews
+
+  const requests: Array<{ filePath: string; seconds: number; key: string }> = []
+  const seen = new Set<string>()
+  for (const entry of payload.entries) {
+    if (!entry.filePath) continue
+    const tcs = collectEntryTimecodes(entry, payload.mode)
+    for (const tc of tcs) {
+      const key = previewCacheKey(entry.filePath, tc.seconds)
+      if (seen.has(key)) continue
+      seen.add(key)
+      requests.push({ filePath: entry.filePath, seconds: tc.seconds, key })
+    }
+  }
+
+  let cursor = 0
+  const worker = async () => {
+    while (cursor < requests.length) {
+      const index = cursor
+      cursor += 1
+      const req = requests[index]
+      try {
+        const dataUrl = await tauri.playerGetFramePreview(req.filePath, req.seconds, TIMECODE_THUMB_WIDTH_PX)
+        if (dataUrl) previews.set(req.key, dataUrl)
+      } catch {
+        // skip — frame extraction can fail for missing files / unsupported codecs
+      }
+    }
+  }
+  const workerCount = Math.min(TIMECODE_THUMB_FETCH_CONCURRENCY, Math.max(1, requests.length))
+  await Promise.all(Array.from({ length: workerCount }, () => worker()))
+  return previews
 }
 
 function sleep(ms: number): Promise<void> {
@@ -684,6 +784,8 @@ export function useExportActions({
       })
       if (!pdfPath) return
 
+      const previews = await fetchTimecodePreviews(notesPdfPayload)
+
       const pdf = new jsPDF({
         orientation: 'portrait',
         unit: 'pt',
@@ -697,6 +799,21 @@ export function useExportActions({
       const lineHeight = 14
       let y = margin
 
+      interface TimecodeMarker {
+        pageNum: number
+        x: number
+        y: number
+        w: number
+        h: number
+        frameKey: string
+        label: string
+        source: string
+      }
+      const markers: TimecodeMarker[] = []
+      let currentEntryFilePath: string | null = null
+      let currentEntryDuration: number | null = null
+      let currentEntrySource = ''
+
       const ensureSpace = (height: number) => {
         if (y + height <= pageHeight - margin) return
         pdf.addPage()
@@ -707,10 +824,39 @@ export function useExportActions({
         const safe = text.trim().length > 0 ? text : t('Aucune note.')
         pdf.setFont('helvetica', fontStyle)
         pdf.setFontSize(fontSize)
-        const lines = pdf.splitTextToSize(safe, Math.max(80, contentWidth - indent))
+        const startX = margin + indent
+        const maxWidth = Math.max(80, contentWidth - indent)
+        const lines = pdf.splitTextToSize(safe, maxWidth)
+        const shouldRecord =
+          notesPdfPayload.includeTimecodeThumbnails
+          && Boolean(currentEntryFilePath)
+          && previews.size > 0
         for (const line of lines) {
           ensureSpace(lineHeight)
-          pdf.text(line, margin + indent, y)
+          pdf.text(line, startX, y)
+          if (shouldRecord && currentEntryFilePath) {
+            const tcs = extractTimecodesFromText(line, currentEntryDuration ?? undefined)
+            for (const tc of tcs) {
+              const frameKey = previewCacheKey(currentEntryFilePath, tc.seconds)
+              if (!previews.has(frameKey)) continue
+              const prefix = line.slice(0, tc.index)
+              const prefixWidth = pdf.getTextWidth(prefix)
+              const tcWidth = pdf.getTextWidth(tc.raw)
+              markers.push({
+                pageNum: pdf.getCurrentPageInfo().pageNumber,
+                x: startX + prefixWidth,
+                y: y - fontSize * 0.85,
+                w: tcWidth,
+                h: fontSize * 1.1,
+                frameKey,
+                label: formatPreciseTimecode(tc.seconds),
+                source: currentEntrySource,
+              })
+              pdf.setDrawColor(59, 130, 246)
+              pdf.setLineWidth(0.6)
+              pdf.line(startX + prefixWidth, y + 1.5, startX + prefixWidth + tcWidth, y + 1.5)
+            }
+          }
           y += lineHeight
         }
       }
@@ -750,6 +896,10 @@ export function useExportActions({
       writeGap(8)
 
       notesPdfPayload.entries.forEach((entry, index) => {
+        currentEntryFilePath = entry.filePath
+        currentEntryDuration = entry.duration
+        currentEntrySource = entry.primary
+
         const titleText = `${index + 1}. ${entry.primary}${entry.secondary ? ` - ${entry.secondary}` : ''}`
         const hasGeneralSection = notesPdfPayload.mode === 'general' || notesPdfPayload.mode === 'both'
         const hasJudgesSection = notesPdfPayload.mode === 'judges' || notesPdfPayload.mode === 'both'
@@ -781,6 +931,7 @@ export function useExportActions({
 
         if (hasGeneralSection) {
           writeGap(2)
+          currentEntrySource = `${entry.primary} - ${t('Commentaire général')}`
           writeLines(t('Commentaire général'), 10, 'bold', 6)
           writeLines(entry.generalNote, 10, 'normal', 12)
         }
@@ -804,6 +955,7 @@ export function useExportActions({
                 + (Math.min(2, getLineCount(judgePreview, 10, 18, 'normal')) * lineHeight)
               ensureSpace(judgeIntroHeight)
               writeGap(2)
+              currentEntrySource = `${entry.primary} - ${judge.judgeName}`
               writeLines(judge.judgeName, 10, 'bold', 12)
 
               if (judge.generalNote.trim().length > 0) {
@@ -818,6 +970,7 @@ export function useExportActions({
                 ensureSpace(categoryHeaderHeight)
                 writeLines(`${t('Commentaires catégorie')}:`, 9, 'bold', 18)
                 judge.categoryNotes.forEach((item) => {
+                  currentEntrySource = `${entry.primary} - ${judge.judgeName} - ${item.category}`
                   writeLines(`- ${item.category}: ${item.text}`, 9, 'normal', 24)
                 })
               }
@@ -828,6 +981,7 @@ export function useExportActions({
                 ensureSpace(criterionHeaderHeight)
                 writeLines(`${t('Commentaires sous-catégorie')}:`, 9, 'bold', 18)
                 judge.criterionNotes.forEach((item) => {
+                  currentEntrySource = `${entry.primary} - ${judge.judgeName} - ${item.criterion}`
                   writeLines(`- ${item.criterion}: ${item.text}`, 9, 'normal', 24)
                 })
               }
@@ -838,7 +992,15 @@ export function useExportActions({
         writeGap(10)
       })
 
-      await writeFile(pdfPath, new Uint8Array(pdf.output('arraybuffer')))
+      currentEntryFilePath = null
+      currentEntryDuration = null
+      currentEntrySource = ''
+
+      const baseBytes = new Uint8Array(pdf.output('arraybuffer'))
+      const finalBytes = notesPdfPayload.includeTimecodeThumbnails && markers.length > 0
+        ? await addTimecodeHoverWidgets(baseBytes, markers, previews)
+        : baseBytes
+      await writeFile(pdfPath, finalBytes)
     } catch (error) {
       console.error('Export PDF notes failed:', error)
       alert(`${t('Erreur export PDF notes')}: ${error}`)
