@@ -1,5 +1,6 @@
 import { useCallback, useEffect, type MouseEvent as ReactMouseEvent } from 'react'
 import { emit, listen } from '@tauri-apps/api/event'
+import { getCurrentWindow } from '@tauri-apps/api/window'
 import { OverlayTopBar } from '@/components/player/overlay/OverlayTopBar'
 import { OverlayBottomControls } from '@/components/player/overlay/OverlayBottomControls'
 import { OverlayNoVideoState } from '@/components/player/overlay/OverlayNoVideoState'
@@ -72,11 +73,19 @@ export default function FullscreenOverlay() {
   const handleContextMenu = useCallback((event: ReactMouseEvent) => {
     event.preventDefault()
     event.stopPropagation()
-    emit('player-menu:open', {
-      x: event.screenX,
-      y: event.screenY,
-      clipName: clipInfo.name || null,
-    }).catch(() => {})
+    // Compute absolute screen position from this overlay window's own position
+    // + the click's client coords. More reliable than event.screenX/Y, which is
+    // unstable across webview windows. The overlay is borderless, so outer ≈ client.
+    const clientX = event.clientX
+    const clientY = event.clientY
+    const win = getCurrentWindow()
+    Promise.all([win.outerPosition(), win.scaleFactor()])
+      .then(([pos, scale]) => {
+        const x = pos.x / scale + clientX
+        const y = pos.y / scale + clientY
+        return emit('player-menu:open', { x, y, clipName: clipInfo.name || null })
+      })
+      .catch(() => {})
     resetHideTimer()
   }, [clipInfo.name, resetHideTimer])
 

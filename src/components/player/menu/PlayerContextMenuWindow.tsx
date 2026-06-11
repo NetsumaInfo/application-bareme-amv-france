@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { emit, listen } from '@tauri-apps/api/event'
-import { currentMonitor, getCurrentWindow } from '@tauri-apps/api/window'
+import { availableMonitors, getCurrentWindow } from '@tauri-apps/api/window'
 import { LogicalPosition, LogicalSize } from '@tauri-apps/api/dpi'
 import * as tauri from '@/services/tauri'
 import { useWindowUiSettingsSync } from '@/hooks/useWindowUiSettingsSync'
@@ -100,17 +100,27 @@ export default function PlayerContextMenuWindow() {
         let x = pos.x
         let y = pos.y
         try {
-          const monitor = await currentMonitor()
-          if (monitor) {
-            const scale = monitor.scaleFactor || 1
-            const left = monitor.position.x / scale
-            const top = monitor.position.y / scale
-            const right = left + monitor.size.width / scale
-            const bottom = top + monitor.size.height / scale
-            if (x + width > right) x = right - width
-            if (y + height > bottom) y = bottom - height
-            if (x < left) x = left
-            if (y < top) y = top
+          // Pick the monitor that CONTAINS the cursor point — not the monitor the
+          // (precreated) menu window currently sits on — so the menu follows the
+          // player to a second screen instead of staying clamped to the primary.
+          const monitors = await availableMonitors()
+          const toBounds = (m: (typeof monitors)[number]) => {
+            const scale = m.scaleFactor || 1
+            const left = m.position.x / scale
+            const top = m.position.y / scale
+            return { left, top, right: left + m.size.width / scale, bottom: top + m.size.height / scale }
+          }
+          const target =
+            monitors.find((m) => {
+              const b = toBounds(m)
+              return x >= b.left && x < b.right && y >= b.top && y < b.bottom
+            }) ?? monitors[0]
+          if (target) {
+            const b = toBounds(target)
+            if (x + width > b.right) x = b.right - width
+            if (y + height > b.bottom) y = b.bottom - height
+            if (x < b.left) x = b.left
+            if (y < b.top) y = b.top
           }
         } catch {
           // monitor lookup failed — use raw cursor coords
