@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react'
+import { useShallow } from 'zustand/react/shallow'
 import { ExternalLink } from 'lucide-react'
 import { useNotationStore } from '@/store/useNotationStore'
 import { useProjectStore } from '@/store/useProjectStore'
@@ -17,9 +18,36 @@ import { shouldHideResultsUntilAllScored } from '@/utils/resultsVisibility'
 
 export default function NotationInterface() {
   const { t } = useI18n()
-  const { currentBareme, updateCriterion, setCategoryNote, setCriterionNote, setTextNotes, getNoteForClip, getScoreForClip } = useNotationStore()
-  const { clips, currentClipIndex, nextClip, previousClip, currentProject, markDirty } = useProjectStore()
-  const { hideFinalScore, hideTextNotes, setShowPipVideo, isNotesDetached, shortcutBindings } = useUIStore()
+  const { currentBareme, updateCriterion, setCategoryNote, setCriterionNote, setTextNotes, getNoteForClip, getScoreForClip } = useNotationStore(
+    useShallow((state) => ({
+      currentBareme: state.currentBareme,
+      updateCriterion: state.updateCriterion,
+      setCategoryNote: state.setCategoryNote,
+      setCriterionNote: state.setCriterionNote,
+      setTextNotes: state.setTextNotes,
+      getNoteForClip: state.getNoteForClip,
+      getScoreForClip: state.getScoreForClip,
+    })),
+  )
+  const { clips, currentClipIndex, nextClip, previousClip, currentProject, markDirty } = useProjectStore(
+    useShallow((state) => ({
+      clips: state.clips,
+      currentClipIndex: state.currentClipIndex,
+      nextClip: state.nextClip,
+      previousClip: state.previousClip,
+      currentProject: state.currentProject,
+      markDirty: state.markDirty,
+    })),
+  )
+  const { hideFinalScore, hideTextNotes, setShowPipVideo, isNotesDetached, shortcutBindings } = useUIStore(
+    useShallow((state) => ({
+      hideFinalScore: state.hideFinalScore,
+      hideTextNotes: state.hideTextNotes,
+      setShowPipVideo: state.setShowPipVideo,
+      isNotesDetached: state.isNotesDetached,
+      shortcutBindings: state.shortcutBindings,
+    })),
+  )
   const { seek, pause } = usePlayer()
 
   const currentClip = clips[currentClipIndex]
@@ -30,9 +58,11 @@ export default function NotationInterface() {
   const clipFps = useDetachedClipFps(currentClip ?? null)
   const { framePreview, hideFramePreview, showFramePreview } = useDetachedFramePreview(currentClip?.filePath)
 
-  const inputRefs = useRef<Map<string, HTMLInputElement>>(new Map())
+  const inputRefs = useRef<Map<string, HTMLInputElement>>(undefined as unknown as Map<string, HTMLInputElement>)
+  if (inputRefs.current === undefined) inputRefs.current = new Map()
   const [expandedCriterionNotes, setExpandedCriterionNotes] = useState<Record<string, boolean>>({})
-  const categoryTextareaRefs = useRef<Map<string, HTMLTextAreaElement>>(new Map())
+  const categoryTextareaRefs = useRef<Map<string, HTMLTextAreaElement>>(undefined as unknown as Map<string, HTMLTextAreaElement>)
+  if (categoryTextareaRefs.current === undefined) categoryTextareaRefs.current = new Map()
   const globalTextareaRef = useRef<HTMLTextAreaElement | null>(null)
   const activeNoteFieldRef = useRef<{ kind: 'category' | 'global'; category?: string } | null>(null)
 

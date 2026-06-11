@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useShallow } from 'zustand/react/shallow'
 import { emit, listen } from '@tauri-apps/api/event'
 import { useNotationStore } from '@/store/useNotationStore'
 import { useProjectStore } from '@/store/useProjectStore'
@@ -16,6 +17,7 @@ import { ResultatsJudgeNotesView } from '@/components/interfaces/resultats/Resul
 import { ResultatsNotesPanel, type FavoriteJudgeEntry } from '@/components/interfaces/resultats/ResultatsNotesPanel'
 import { ResultatsContextMenus } from '@/components/interfaces/resultats/ResultatsContextMenus'
 import { ResultatsRenameJudgeModal } from '@/components/interfaces/resultats/ResultatsRenameJudgeModal'
+import { rememberJudgeName } from '@/services/recentJudgeNames'
 import { useResultatsComputedData } from '@/components/interfaces/resultats/hooks/useResultatsComputedData'
 import { useResultatsInteractions } from '@/components/interfaces/resultats/hooks/useResultatsInteractions'
 import { DetachedFramePreview } from '@/components/notes/DetachedFramePreview'
@@ -60,7 +62,8 @@ function useResultatsInterfaceController() {
   const currentBareme = useNotationStore((state) => state.currentBareme)
   const notes = useNotationStore((state) => state.notes)
   const updateCriterion = useNotationStore((state) => state.updateCriterion)
-  const { setShowPipVideo, shortcutBindings } = useUIStore()
+  const setShowPipVideo = useUIStore((state) => state.setShowPipVideo)
+  const shortcutBindings = useUIStore((state) => state.shortcutBindings)
 
   const {
     currentProject,
@@ -73,7 +76,20 @@ function useResultatsInterfaceController() {
     updateSettings,
     markDirty,
     setCurrentClip,
-  } = useProjectStore()
+  } = useProjectStore(
+    useShallow((state) => ({
+      currentProject: state.currentProject,
+      clips: state.clips,
+      importedJudges: state.importedJudges,
+      setImportedJudges: state.setImportedJudges,
+      setResultNote: state.setResultNote,
+      setClipFavorite: state.setClipFavorite,
+      updateProject: state.updateProject,
+      updateSettings: state.updateSettings,
+      markDirty: state.markDirty,
+      setCurrentClip: state.setCurrentClip,
+    })),
+  )
   const requestClipDeletion = useClipDeletionStore((state) => state.requestClipDeletion)
   const hideTotalsSetting = Boolean(currentProject?.settings.hideTotals)
   const hideTotalsUntilAllScored = shouldHideResultsUntilAllScored(
@@ -129,6 +145,9 @@ function useResultatsInterfaceController() {
     error: renameJudgeError,
   } = renameJudgeState
   const defaultPickerColor = readStoredColor(COLOR_MEMORY_KEYS.defaultColor)
+  // React Compiler memoizes this automatically; manual useMemo here trips
+  // react-hooks/preserve-manual-memoization because defaultPickerColor is
+  // re-read from storage each render.
   const judgeColors = judges.reduce<Record<string, string>>((acc, judge, index) => {
     const configured = currentProject?.settings.judgeColors?.[judge.key]
     acc[judge.key] = sanitizeColor(
@@ -239,12 +258,6 @@ function useResultatsInterfaceController() {
       isJudgeNotesDetached: detached,
     }))
   }, [])
-  const openClipContextMenu = (clipId: string, x: number, y: number) => {
-    setMemberContextMenu(null)
-    setEmptyContextMenu(null)
-    setClipContextMenu({ clipId, x, y })
-  }
-
   const {
     criterionDraftCells,
     selectedClipId,
@@ -282,6 +295,11 @@ function useResultatsInterfaceController() {
     setCurrentClip,
     setShowPipVideo,
   })
+  const openClipContextMenu = useCallback((clipId: string, x: number, y: number) => {
+    setMemberContextMenu(null)
+    setEmptyContextMenu(null)
+    setClipContextMenu({ clipId, x, y })
+  }, [setClipContextMenu, setEmptyContextMenu, setMemberContextMenu])
   const submitRenameJudgeDialog = useCallback(() => {
     if (!renameJudgeDialog) return
 
@@ -293,6 +311,8 @@ function useResultatsInterfaceController() {
       }))
       return
     }
+
+    void rememberJudgeName(nextName).catch(() => {})
 
     if (renameJudgeDialog.judgeKey === 'current') {
       updateProject({ judgeName: nextName })
@@ -557,6 +577,7 @@ function useResultatsInterfaceController() {
         <ResultatsHeader
           judges={judges}
           selectedJudgeKey={effectiveSelectedJudgeKey}
+          allActive={mainView === 'global' || mainView === 'top'}
           judgeColors={judgeColors}
           onSelectJudge={setSelectedJudgeKey}
           onJudgeColorChange={(judgeKey, color) => {

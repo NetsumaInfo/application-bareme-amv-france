@@ -35,7 +35,10 @@ export function parseManualClipLine(
   const raw = line.trim()
   if (!raw) return null
 
-  const tabParts = raw.split('\t').map((part) => part.trim()).filter(Boolean)
+  const tabParts = raw.split('\t').flatMap((part) => {
+    const trimmed = part.trim()
+    return trimmed ? [trimmed] : []
+  })
   if (tabParts.length >= 2) {
     const firstPart = sanitizeManualPart(tabParts[0])
     const secondPart = sanitizeManualPart(tabParts.slice(1).join(' '))

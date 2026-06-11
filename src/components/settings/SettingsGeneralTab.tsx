@@ -3,7 +3,6 @@ import { LanguageSwitcher } from '@/components/layout/LanguageSwitcher'
 import { getInterfaceOptions } from '@/components/settings/settingsPanelConfig'
 import { SettingsToggle } from '@/components/settings/SettingsToggle'
 import { AppRangeSlider } from '@/components/ui/AppRangeSlider'
-import { HoverTextTooltip } from '@/components/ui/HoverTextTooltip'
 import type { InterfaceMode } from '@/types/notation'
 import {
   APP_THEME_OPTIONS,
@@ -29,6 +28,7 @@ interface SettingsGeneralTabProps {
   appTheme: AppThemePreset
   primaryColorPreset: PrimaryColorPreset
   showAudioDb: boolean
+  showTooltips: boolean
   confirmClipDeletion: boolean
   projectsFolderPath: string
   baremesFolderPath: string
@@ -38,6 +38,7 @@ interface SettingsGeneralTabProps {
   onSetAppTheme: (theme: AppThemePreset) => void
   onSetPrimaryColorPreset: (preset: PrimaryColorPreset) => void
   onToggleAudioDb: () => void
+  onToggleShowTooltips: () => void
   onToggleConfirmClipDeletion: () => void
   onChangeProjectsFolder: () => Promise<void>
   onChangeBaremesFolder: () => Promise<void>
@@ -64,6 +65,7 @@ function ThemeCard({
 }) {
   return (
     <button
+      type="button"
       onClick={() => onSetAppTheme(option.value)}
       className={`rounded-xl p-2 text-left transition-all ${SUBTLE_BORDER} ${
         active ? 'bg-primary-600/10' : 'bg-surface-dark/45 hover:bg-surface-light/50'
@@ -111,6 +113,7 @@ function AccentPill({
 }) {
   return (
     <button
+      type="button"
       onClick={() => onSetPrimaryColorPreset(option.value)}
       className={`appearance-accent-pill flex items-center gap-2 rounded-full px-2 py-1.5 text-xs font-medium transition-all ${SUBTLE_BORDER} ${
         active ? 'bg-primary-600/10' : 'bg-black/18 hover:bg-white/4'
@@ -211,6 +214,7 @@ function ZoomModeButton({
 }) {
   return (
     <button
+      type="button"
       onClick={onClick}
       className={`rounded-md px-2.5 py-1.5 text-[10px] font-medium transition-colors ${
         active
@@ -261,6 +265,7 @@ function InterfaceSection({
             {interfaceOptions.map(({ mode, label, icon: Icon, iconSecondary: IconSecondary }) => (
               <button
                 key={mode}
+                type="button"
                 onClick={() => onSwitchInterface(mode)}
                 className={`flex min-h-[44px] items-center gap-2 rounded-lg px-3 py-2 text-left text-xs font-medium transition-all ${SUBTLE_BORDER} ${
                   currentInterface === mode
@@ -317,6 +322,7 @@ function InterfaceSection({
               {[75, 100, 125, 150].map((preset) => (
                 <button
                   key={preset}
+                  type="button"
                   onClick={() => onSetZoomLevel(preset)}
                   className={`rounded-md px-2 py-1.5 text-[10px] font-medium transition-colors ${
                     zoomLevel === preset
@@ -352,7 +358,42 @@ function ProjectSafetySection({
           <span className="min-w-0 pr-2 text-sm text-gray-300">
             {t('Avertissement avant suppression de clip')}
           </span>
-          <SettingsToggle checked={confirmClipDeletion} onChange={onToggleConfirmClipDeletion} />
+          <SettingsToggle
+            checked={confirmClipDeletion}
+            onChange={onToggleConfirmClipDeletion}
+            ariaLabel={t('Avertissement avant suppression de clip')}
+          />
+        </div>
+      </div>
+    </Card>
+  )
+}
+
+// ── Interface ──────────────────────────────────────────────────────────────
+
+function InterfaceBehaviorSection({
+  showTooltips,
+  onToggleShowTooltips,
+  t,
+}: Pick<SettingsGeneralTabProps, 'showTooltips' | 'onToggleShowTooltips'> & {
+  t: TranslateFn
+}) {
+  return (
+    <Card>
+      <p className={SECTION_LABEL}>{t('Interface')}</p>
+      <div className="space-y-2">
+        <div className={ROW}>
+          <div className="min-w-0 pr-2">
+            <span className="block text-sm text-gray-300">{t('Afficher les info-bulles')}</span>
+            <span className="block text-[10px] text-gray-500">
+              {t('Bulles d’aide au survol des boutons et icônes')}
+            </span>
+          </div>
+          <SettingsToggle
+            checked={showTooltips}
+            onChange={onToggleShowTooltips}
+            ariaLabel={t('Afficher les info-bulles')}
+          />
         </div>
       </div>
     </Card>
@@ -377,7 +418,11 @@ function PlayerSection({
           <span className="min-w-0 pr-2 text-sm text-gray-300">
             {t('Afficher VU-mètre audio L/R (dB)')}
           </span>
-          <SettingsToggle checked={showAudioDb} onChange={onToggleAudioDb} />
+          <SettingsToggle
+            checked={showAudioDb}
+            onChange={onToggleAudioDb}
+            ariaLabel={t('Afficher VU-mètre audio L/R (dB)')}
+          />
         </div>
       </div>
     </Card>
@@ -420,13 +465,11 @@ function FolderRow({
           {isChanging ? t('Sélection…') : t('Modifier')}
         </button>
       </div>
-      <HoverTextTooltip text={path || emptyLabel}>
-        <div
-          className={`truncate rounded-lg bg-surface-dark/45 px-3 py-2 text-[11px] ${path ? 'text-gray-400' : 'text-gray-600 italic'} ${SUBTLE_BORDER}`}
-        >
-          {path || emptyLabel}
-        </div>
-      </HoverTextTooltip>
+      <div
+        className={`truncate rounded-lg bg-surface-dark/45 px-3 py-2 text-[11px] ${path ? 'text-gray-400' : 'text-gray-600 italic'} ${SUBTLE_BORDER}`}
+      >
+        {path || emptyLabel}
+      </div>
       <p className="mt-1 text-[10px] text-gray-500">{description}</p>
       {error && <p className="mt-1 text-[10px] text-accent">{error}</p>}
     </div>
@@ -491,6 +534,7 @@ export function SettingsGeneralTab({
   appTheme,
   primaryColorPreset,
   showAudioDb,
+  showTooltips,
   confirmClipDeletion,
   projectsFolderPath,
   baremesFolderPath,
@@ -500,6 +544,7 @@ export function SettingsGeneralTab({
   onSetAppTheme,
   onSetPrimaryColorPreset,
   onToggleAudioDb,
+  onToggleShowTooltips,
   onToggleConfirmClipDeletion,
   onChangeProjectsFolder,
   onChangeBaremesFolder,
@@ -554,6 +599,11 @@ export function SettingsGeneralTab({
         onSwitchInterface={onSwitchInterface}
         onSetZoomMode={onSetZoomMode}
         onSetZoomLevel={onSetZoomLevel}
+        t={t}
+      />
+      <InterfaceBehaviorSection
+        showTooltips={showTooltips}
+        onToggleShowTooltips={onToggleShowTooltips}
         t={t}
       />
       <ProjectSafetySection

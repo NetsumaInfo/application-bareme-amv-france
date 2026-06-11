@@ -20,6 +20,10 @@ interface ToolbarIconButtonProps {
   onContextMenu?: (event: MouseEvent<HTMLButtonElement>) => void
 }
 
+const isFileDragEvent = (event: DragEvent<HTMLButtonElement>) => (
+  Array.from(event.dataTransfer?.types ?? []).includes('Files')
+)
+
 function ToolbarIconButton({
   ariaLabel,
   title,
@@ -98,6 +102,7 @@ interface SpreadsheetToolbarProps {
   showPipVideo: boolean
 }
 
+// react-doctor-disable-next-line react-doctor/no-many-boolean-props -- flags are independent orthogonal toggles, not mutually-exclusive variants; variant/compound pattern does not apply
 export function SpreadsheetToolbar({
   currentClip,
   contestCategoriesEnabled,
@@ -160,9 +165,6 @@ export function SpreadsheetToolbar({
     ? (showPipVideo ? t('Masquer la vidéo PiP') : t('Ouvrir la vidéo'))
     : t('Vidéo PiP indisponible (pas de média)')
   const showContestCategoryBar = contestCategoriesEnabled && contestCategoryViewTabs.length > 1
-  const isFileDragEvent = (event: DragEvent<HTMLButtonElement>) => (
-    Array.from(event.dataTransfer?.types ?? []).includes('Files')
-  )
 
   return (
     <div className="relative flex shrink-0 items-center border-b border-gray-700/50 py-px">

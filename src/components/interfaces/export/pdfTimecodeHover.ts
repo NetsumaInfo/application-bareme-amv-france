@@ -1,4 +1,4 @@
-import { PDFArray, PDFDict, PDFDocument, PDFName, PDFRef } from 'pdf-lib'
+import type { PDFArray, PDFDict, PDFDocument, PDFRef } from 'pdf-lib'
 
 export interface TimecodeHoverMarker {
   pageNum: number
@@ -40,13 +40,22 @@ export async function addTimecodeHoverWidgets(
 ): Promise<Uint8Array> {
   if (markers.length === 0 || previews.size === 0) return pdfBytes
 
+  // pdf-lib is heavy (~200KB minified) and only needed for PDF export with
+  // timecode hover previews — load it on demand instead of bundling eagerly.
+  const {
+    PDFArray: PDFArrayCls,
+    PDFDict: PDFDictCls,
+    PDFDocument: PDFDocumentCls,
+    PDFName,
+  } = await import('pdf-lib')
+
   const TARGET_W = options.targetWidth ?? 130
   const TARGET_H = options.targetHeight ?? Math.round((TARGET_W * 9) / 16)
   const MARGIN = options.pageMargin ?? 20
 
   let pdfDoc: PDFDocument
   try {
-    pdfDoc = await PDFDocument.load(pdfBytes, { ignoreEncryption: true })
+    pdfDoc = await PDFDocumentCls.load(pdfBytes, { ignoreEncryption: true })
   } catch {
     return pdfBytes
   }
@@ -63,15 +72,22 @@ export async function addTimecodeHoverWidgets(
   const emptyFormRef = context.register(emptyForm)
 
   const imageFormRefs = new Map<string, PDFRef>()
-  for (const [key, dataUrl] of previews.entries()) {
-    const bytes = dataUrlToJpegBytes(dataUrl)
-    if (!bytes || bytes.length < 8) continue
-    let pdfImage
-    try {
-      pdfImage = await pdfDoc.embedJpg(bytes)
-    } catch {
-      continue
-    }
+  // Decode/embed every JPEG concurrently (each embedJpg is independent), then
+  // register the resulting form streams sequentially to keep output deterministic.
+  const embeddedImages = await Promise.all(
+    [...previews.entries()].map(async ([key, dataUrl]) => {
+      const bytes = dataUrlToJpegBytes(dataUrl)
+      if (!bytes || bytes.length < 8) return null
+      try {
+        return { key, pdfImage: await pdfDoc.embedJpg(bytes) }
+      } catch {
+        return null
+      }
+    }),
+  )
+  for (const embedded of embeddedImages) {
+    if (!embedded) continue
+    const { key, pdfImage } = embedded
     const imgW = pdfImage.width
     const imgH = pdfImage.height
     const contentStr = `q ${imgW} 0 0 ${imgH} 0 0 cm /Img Do Q`
@@ -91,7 +107,7 @@ export async function addTimecodeHoverWidgets(
 
   const acroFormLookup = pdfDoc.catalog.lookup(PDFName.of('AcroForm'))
   let acroForm: PDFDict
-  if (acroFormLookup instanceof PDFDict) {
+  if (acroFormLookup instanceof PDFDictCls) {
     acroForm = acroFormLookup
     acroForm.set(PDFName.of('NeedAppearances'), context.obj(false))
   } else {
@@ -100,7 +116,7 @@ export async function addTimecodeHoverWidgets(
   }
   const fieldsLookup = acroForm.lookup(PDFName.of('Fields'))
   let fields: PDFArray
-  if (fieldsLookup instanceof PDFArray) {
+  if (fieldsLookup instanceof PDFArrayCls) {
     fields = fieldsLookup
   } else {
     fields = context.obj([]) as PDFArray
@@ -160,7 +176,7 @@ export async function addTimecodeHoverWidgets(
 
     const annotsLookup = page.node.lookup(PDFName.of('Annots'))
     let annotsArr: PDFArray
-    if (annotsLookup instanceof PDFArray) {
+    if (annotsLookup instanceof PDFArrayCls) {
       annotsArr = annotsLookup
     } else {
       annotsArr = context.obj([]) as PDFArray

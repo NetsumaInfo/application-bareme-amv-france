@@ -47,7 +47,10 @@ export function useSpreadsheetFrameTools({
   const [clipFps, setClipFps] = useState<number | null>(null)
   const [framePreview, setFramePreview] = useState<FramePreviewState>(EMPTY_PREVIEW)
 
-  const framePreviewCacheRef = useRef<Map<string, string>>(new Map())
+  const framePreviewCacheRef = useRef<Map<string, string> | null>(null)
+  if (framePreviewCacheRef.current === null) {
+    framePreviewCacheRef.current = new Map<string, string>()
+  }
   const hoverRequestRef = useRef(0)
 
   const insertTextAtCursor = useCallback((textarea: HTMLTextAreaElement, insertion: string) => {
@@ -108,7 +111,9 @@ export function useSpreadsheetFrameTools({
     const cacheKey = `${currentClip.filePath}|${params.seconds.toFixed(3)}|${previewCaptureWidth}`
     const requestId = ++hoverRequestRef.current
 
-    const cached = framePreviewCacheRef.current.get(cacheKey)
+    const previewCache = framePreviewCacheRef.current ?? new Map<string, string>()
+    framePreviewCacheRef.current = previewCache
+    const cached = previewCache.get(cacheKey)
     if (cached) {
       setFramePreview({
         visible: true,
@@ -137,7 +142,7 @@ export function useSpreadsheetFrameTools({
       ).catch(() => null)
     if (hoverRequestRef.current !== requestId) return
     if (image) {
-      framePreviewCacheRef.current.set(cacheKey, image)
+      previewCache.set(cacheKey, image)
     }
     setFramePreview({
       visible: true,

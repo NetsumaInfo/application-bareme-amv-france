@@ -30,9 +30,13 @@ function useDetachedNotesWindowState() {
   const [clipData, setClipData] = useState<ClipPayload | null>(null)
   const [localNote, setLocalNote] = useState<Note | null>(null)
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null)
-  const inputRefs = useRef<Map<string, HTMLInputElement>>(new Map())
+  // Lazy-init the Maps once: useRef has no lazy-initializer form, so creating
+  // them inline (useRef(new Map())) would allocate a throwaway Map every render.
+  const inputRefs = useRef<Map<string, HTMLInputElement>>(null as never)
+  if (inputRefs.current === null) inputRefs.current = new Map()
   const [expandedCriterionNotes, setExpandedCriterionNotes] = useState<Record<string, boolean>>({})
-  const categoryTextareaRefs = useRef<Map<string, HTMLTextAreaElement>>(new Map())
+  const categoryTextareaRefs = useRef<Map<string, HTMLTextAreaElement>>(null as never)
+  if (categoryTextareaRefs.current === null) categoryTextareaRefs.current = new Map()
   const favoriteTextareaRef = useRef<HTMLTextAreaElement | null>(null)
   const globalTextareaRef = useRef<HTMLTextAreaElement | null>(null)
   const activeNoteFieldRef = useRef<ActiveNoteField | null>(null)

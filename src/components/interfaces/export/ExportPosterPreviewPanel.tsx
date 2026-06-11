@@ -178,6 +178,7 @@ function PosterCanvasScene({
   onCommitEditingBlock,
   onCancelEditingBlock,
 }: PosterCanvasSceneProps) {
+  const { t } = useI18n()
   const editingTextareaRef = useRef<HTMLTextAreaElement | null>(null)
 
   useEffect(() => {
@@ -291,7 +292,8 @@ function PosterCanvasScene({
           )
         })}
 
-      {blocks.filter((block) => block.visible).map((block) => {
+      {blocks.flatMap((block) => {
+        if (!block.visible) return []
         const active = activeBlockId === block.id
         const editing = editingBlockId === block.id
         return (
@@ -330,6 +332,7 @@ function PosterCanvasScene({
               <textarea
                 ref={editingTextareaRef}
                 value={editingBlockText}
+                aria-label={t('Modifier le texte du bloc')}
                 onFocus={(event) => event.currentTarget.select()}
                 onMouseDown={(event) => event.stopPropagation()}
                 onChange={(event) => onSetEditingBlockText(event.target.value)}
@@ -392,6 +395,18 @@ function getImageMimeType(pathOrName: string): string {
 
 function getFileNameFromPath(pathValue: string): string {
   return pathValue.split(/[\\/]/).pop() || 'image'
+}
+
+function getDroppedImageFiles(event: ReactDragEvent<HTMLDivElement>): File[] {
+  return Array.from(event.dataTransfer.files).filter((file) => (
+    file.type.startsWith('image/') || isImagePath(file.name)
+  ))
+}
+
+function hasDraggedImagePayload(event: ReactDragEvent<HTMLDivElement>): boolean {
+  const files = getDroppedImageFiles(event)
+  if (files.length > 0) return true
+  return Array.from(event.dataTransfer.items).some((item) => item.kind === 'file' && item.type.startsWith('image/'))
 }
 
 function isImagePath(pathValue: string): boolean {
@@ -605,18 +620,6 @@ function useExportPosterPreviewPanelController({
       xPct: clamp(((event.clientX - rect.left) / rect.width) * 100, 0, 100),
       yPct: clamp(((event.clientY - rect.top) / rect.height) * 100, 0, 100),
     }
-  }
-
-  const getDroppedImageFiles = (event: ReactDragEvent<HTMLDivElement>) => (
-    Array.from(event.dataTransfer.files).filter((file) => (
-      file.type.startsWith('image/') || isImagePath(file.name)
-    ))
-  )
-
-  const hasDraggedImagePayload = (event: ReactDragEvent<HTMLDivElement>) => {
-    const files = getDroppedImageFiles(event)
-    if (files.length > 0) return true
-    return Array.from(event.dataTransfer.items).some((item) => item.kind === 'file' && item.type.startsWith('image/'))
   }
 
   const handleDragOver = (event: ReactDragEvent<HTMLDivElement>) => {

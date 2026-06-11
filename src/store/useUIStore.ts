@@ -26,6 +26,7 @@ function normalizeInterfaceMode(mode: LegacyInterfaceMode): InterfaceMode {
 interface PersistedUiSettings {
   shortcutBindings?: Record<ShortcutAction, string>
   showAudioDb?: boolean
+  showTooltips?: boolean
   confirmClipDeletion?: boolean
   appTheme?: AppThemePreset
   primaryColorPreset?: PrimaryColorPreset
@@ -34,7 +35,19 @@ interface PersistedUiSettings {
   baremesFolderPath?: string | null
 }
 
-async function persistUserSettingsPatch(patch: PersistedUiSettings) {
+const PERSIST_DEBOUNCE_MS = 400
+
+let pendingSettingsPatch: PersistedUiSettings | null = null
+let persistTimer: ReturnType<typeof setTimeout> | null = null
+
+async function flushPendingUserSettings() {
+  if (persistTimer !== null) {
+    clearTimeout(persistTimer)
+    persistTimer = null
+  }
+  const patch = pendingSettingsPatch
+  pendingSettingsPatch = null
+  if (!patch) return
   try {
     const existing = await tauri.loadUserSettings().catch(() => null)
     const base = existing && typeof existing === 'object'
@@ -44,6 +57,24 @@ async function persistUserSettingsPatch(patch: PersistedUiSettings) {
   } catch {
     // Ignore persistence failures to keep UI responsive.
   }
+}
+
+// Coalesces rapid setting changes into a single load+merge+save IPC round-trip.
+// UI state updates and `ui:settings-updated` broadcasts stay immediate; only
+// the disk write is debounced (trailing).
+async function persistUserSettingsPatch(patch: PersistedUiSettings) {
+  pendingSettingsPatch = { ...(pendingSettingsPatch ?? {}), ...patch }
+  if (persistTimer !== null) clearTimeout(persistTimer)
+  persistTimer = setTimeout(() => {
+    persistTimer = null
+    void flushPendingUserSettings()
+  }, PERSIST_DEBOUNCE_MS)
+}
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('beforeunload', () => {
+    void flushPendingUserSettings()
+  })
 }
 
 function broadcastAudioDbSetting(enabled: boolean) {
@@ -57,6 +88,7 @@ interface UIStore {
   hideAverages: boolean
   hideTextNotes: boolean
   showAudioDb: boolean
+  showTooltips: boolean
   confirmClipDeletion: boolean
   showProjectModal: boolean
   showBaremeEditor: boolean
@@ -78,6 +110,7 @@ interface UIStore {
   toggleAverages: () => void
   toggleTextNotes: () => void
   toggleAudioDb: () => void
+  toggleShowTooltips: () => void
   toggleConfirmClipDeletion: () => void
   setShowProjectModal: (show: boolean) => void
   setShowBaremeEditor: (show: boolean) => void
@@ -109,6 +142,7 @@ export const useUIStore = create<UIStore>((set) => ({
   hideAverages: false,
   hideTextNotes: false,
   showAudioDb: readAudioDbPref(),
+  showTooltips: false,
   confirmClipDeletion: true,
   showProjectModal: false,
   showBaremeEditor: false,
@@ -136,6 +170,13 @@ export const useUIStore = create<UIStore>((set) => ({
       broadcastAudioDbSetting(next)
       emitUiSettingsUpdated({ showAudioDb: next })
       return { showAudioDb: next }
+    }),
+  toggleShowTooltips: () =>
+    set((state) => {
+      const next = !state.showTooltips
+      persistUserSettingsPatch({ showTooltips: next }).catch(() => {})
+      emitUiSettingsUpdated({ showTooltips: next })
+      return { showTooltips: next }
     }),
   toggleConfirmClipDeletion: () =>
     set((state) => {

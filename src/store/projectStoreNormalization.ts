@@ -111,8 +111,8 @@ function normalizeImportedJudges(rawImportedJudges: unknown[]): ImportedJudgeDat
             : {}
         const criterionNotes = Object.fromEntries(
           Object.entries(criterionNotesRaw)
-            .filter(([key, value]) => key.trim().length > 0 && typeof value === 'string')
-            .map(([key, value]) => [key, value as string]),
+            .flatMap(([key, value]) =>
+              key.trim().length > 0 && typeof value === 'string' ? [[key, value]] : []),
         )
         const categoryNotesRaw = noteRow.categoryNotes && typeof noteRow.categoryNotes === 'object'
           ? (noteRow.categoryNotes as Record<string, unknown>)
@@ -121,8 +121,8 @@ function normalizeImportedJudges(rawImportedJudges: unknown[]): ImportedJudgeDat
             : {}
         const categoryNotes = Object.fromEntries(
           Object.entries(categoryNotesRaw)
-            .filter(([key, value]) => key.trim().length > 0 && typeof value === 'string')
-            .map(([key, value]) => [key, value as string]),
+            .flatMap(([key, value]) =>
+              key.trim().length > 0 && typeof value === 'string' ? [[key, value]] : []),
         )
         notes[clipId] = Number.isFinite(parsedFinalScore)
           ? {

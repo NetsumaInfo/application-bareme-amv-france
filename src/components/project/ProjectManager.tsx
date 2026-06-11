@@ -27,14 +27,10 @@ export default function ProjectManager() {
     handleRelocateVideos,
     handleRelinkOnly,
     handleExport,
-    handleExportJudgeNotes,
   } = useProjectMenuActions()
 
   const [open, setOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
-  const judgeName = currentProject?.judgeName?.trim() || t('juge')
-  const projectName = currentProject?.name?.trim() || t('Projet')
-  const exportJudgeFilename = `${projectName}_${judgeName}.json`
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -54,6 +50,7 @@ export default function ProjectManager() {
   return (
     <div className="relative inline-flex items-center" ref={menuRef}>
       <button
+        type="button"
         onClick={() => setOpen(!open)}
         aria-label={t('Menu fichier')}
         data-open={open ? 'true' : 'false'}
@@ -126,13 +123,8 @@ export default function ProjectManager() {
               <SectionLabel>{t('Export')}</SectionLabel>
               <MenuItem
                 icon={<Download size={13} />}
-                label={t('Exporter concours (JSON)')}
+                label={t('Exporter (JSON)')}
                 onClick={() => closeAndRun(handleExport)}
-              />
-              <MenuItem
-                icon={<Download size={13} />}
-                label={t('Exporter notation ({filename})', { filename: exportJudgeFilename })}
-                onClick={() => closeAndRun(handleExportJudgeNotes)}
               />
             </>
           )}
@@ -163,6 +155,7 @@ function MenuItem({
 }) {
   return (
     <button
+      type="button"
       onClick={onClick}
       className="w-full text-left px-3 py-1.5 text-xs text-gray-300 hover:text-white hover:bg-surface-light transition-colors flex items-center gap-2"
     >

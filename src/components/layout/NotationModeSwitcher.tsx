@@ -50,6 +50,7 @@ export function NotationModeSwitcher() {
   return (
     <div className="flex items-center overflow-hidden rounded-md bg-surface-dark p-0">
       <button
+        type="button"
         onClick={toggleSpreadsheet}
         className={`h-[22px] rounded-l-[5px] px-1.5 text-[11px] leading-none transition-all ${
           spreadsheetActive
@@ -63,6 +64,7 @@ export function NotationModeSwitcher() {
         </span>
       </button>
       <button
+        type="button"
         onClick={toggleNotation}
         className={`h-[22px] rounded-r-[5px] px-1.5 text-[11px] leading-none transition-all ${
           notationActive

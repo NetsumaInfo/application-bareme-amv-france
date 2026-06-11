@@ -34,13 +34,14 @@ export function BaremeSelector() {
   return (
     <div className="relative inline-flex items-center" ref={dropdownRef}>
       <button
+        type="button"
         onClick={() => setOpen((value) => !value)}
         aria-label={t('Barème')}
         data-open={open ? 'true' : 'false'}
         className="app-header-trigger gap-0.5"
       >
-        <span className="inline-flex items-center gap-0.5 leading-none">
-          <span className="max-w-[150px] truncate font-medium leading-none">{currentBareme?.name || t('Barème')}</span>
+        <span className="inline-flex items-center gap-0.5 leading-[1.35]">
+          <span className="max-w-[150px] truncate font-medium leading-[1.35]">{currentBareme?.name || t('Barème')}</span>
           <ChevronDown
             size={10}
             className={`app-header-trigger-chevron shrink-0 transition-transform ${open ? 'rotate-180' : ''}`}
@@ -57,6 +58,7 @@ export function BaremeSelector() {
               return (
                 <button
                   key={bareme.id}
+                  type="button"
                   onClick={() => handleSelectBareme(bareme)}
                   className={`relative flex w-full items-start justify-between gap-3 px-3 py-2.5 text-left text-xs transition-colors ${
                     isSelected
@@ -86,6 +88,7 @@ export function BaremeSelector() {
 
           <div className="border-t border-gray-700 py-1.5">
             <button
+              type="button"
               onClick={() => {
                 setOpen(false)
                 setShowBaremeEditor(true)
@@ -97,6 +100,7 @@ export function BaremeSelector() {
               {t('Gérer les barèmes')}
             </button>
             <button
+              type="button"
               onClick={() => {
                 setOpen(false)
                 setShowBaremeEditor(true)

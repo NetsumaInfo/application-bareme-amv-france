@@ -34,6 +34,36 @@ export async function playerSetVolume(volume: number): Promise<void> {
   await invoke('player_set_volume', { volume })
 }
 
+export async function playerSetSpeed(speed: number): Promise<void> {
+  await invoke('player_set_speed', { speed })
+}
+
+export async function playerSetLoopFile(enabled: boolean): Promise<void> {
+  await invoke('player_set_loop_file', { enabled })
+}
+
+export async function playerAbLoopMarkA(time: number): Promise<void> {
+  await invoke('player_ab_loop_mark_a', { time })
+}
+
+export async function playerAbLoopMarkB(time: number): Promise<void> {
+  await invoke('player_ab_loop_mark_b', { time })
+}
+
+export async function playerAbLoopClear(): Promise<void> {
+  await invoke('player_ab_loop_clear')
+}
+
+export interface LoopState {
+  loop_file: boolean
+  ab_a: number | null
+  ab_b: number | null
+}
+
+export async function playerGetLoopState(): Promise<LoopState> {
+  return await invoke('player_get_loop_state')
+}
+
 interface PlayerStatus {
   is_playing: boolean
   current_time: number

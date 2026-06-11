@@ -42,7 +42,12 @@ export function useSpreadsheetManualClips({
   const [noVideoTableInput, setNoVideoTableInput] = useState('')
   const [noVideoTableError, setNoVideoTableError] = useState<string | null>(null)
   const [editingManualClipId, setEditingManualClipId] = useState<string | null>(null)
-  const pendingManualCleanupTimeoutsRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map())
+  const pendingManualCleanupTimeoutsRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(
+    null as unknown as Map<string, ReturnType<typeof setTimeout>>,
+  )
+  if (pendingManualCleanupTimeoutsRef.current === null) {
+    pendingManualCleanupTimeoutsRef.current = new Map()
+  }
 
   useEffect(() => {
     const cleanupMap = pendingManualCleanupTimeoutsRef.current
@@ -285,8 +290,10 @@ export function useSpreadsheetManualClips({
   const handleCreateNoVideoTable = useCallback(() => {
     const lines = noVideoTableInput
       .split(/\r?\n/)
-      .map((line) => line.trim())
-      .filter(Boolean)
+      .flatMap((line) => {
+        const trimmed = line.trim()
+        return trimmed ? [trimmed] : []
+      })
 
     const clipNamePattern = getClipNamePattern()
     const defaultContestCategory = getDefaultContestCategory()

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useEffectEvent, useMemo, useRef, useState } from 'react'
 import type { FocusEvent, KeyboardEvent as ReactKeyboardEvent, MutableRefObject } from 'react'
 import type { Bareme } from '@/types/bareme'
 import type { Clip } from '@/types/project'
@@ -53,6 +53,7 @@ interface SpreadsheetTableProps {
   onHideFramePreview: () => void
 }
 
+// react-doctor-disable-next-line react-doctor/no-many-boolean-props -- flags are independent orthogonal toggles, not mutually-exclusive variants; variant/compound pattern does not apply
 export function SpreadsheetTable({
   clips,
   sortedClips,
@@ -105,11 +106,12 @@ export function SpreadsheetTable({
   } | null>(null)
   const hideBubbleTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const bubbleRef = useRef<HTMLDivElement | null>(null)
+  // react-doctor-disable-next-line react-doctor/rerender-state-only-in-handlers -- state legitimately drives effect re-subscription via its dep array; a ref would stop the effect re-running on change
   const [bubbleHovered, setBubbleHovered] = useState(false)
-  const closeSubcategoryBubble = useCallback(() => {
+  const closeSubcategoryBubble = useEffectEvent(() => {
     setSubcategoryBubble(null)
     setBubbleHovered(false)
-  }, [])
+  })
 
   useEffect(() => {
     if (hideBubbleTimeoutRef.current) {
@@ -130,7 +132,7 @@ export function SpreadsheetTable({
         hideBubbleTimeoutRef.current = null
       }
     }
-  }, [bubbleHovered, closeSubcategoryBubble, subcategoryBubble])
+  }, [bubbleHovered, subcategoryBubble])
 
   useEffect(() => {
     if (!subcategoryBubble) return
@@ -153,7 +155,7 @@ export function SpreadsheetTable({
       window.removeEventListener('mousedown', handlePointerDown, true)
       window.removeEventListener('keydown', handleEscape)
     }
-  }, [closeSubcategoryBubble, subcategoryBubble])
+  }, [subcategoryBubble])
 
   const handleShowSubcategoryBubble = useCallback((params: {
     clip: Clip
@@ -173,9 +175,9 @@ export function SpreadsheetTable({
       categories: categoryGroups.flatMap((group) => {
         const categoryComment = normalizeComment(note?.categoryNotes?.[group.category])
         const globalComment = normalizeComment(note?.textNotes)
-        const criteria = group.criteria
-          .filter((criterion) => !criterionId || criterion.id === criterionId)
-          .map((criterion) => ({
+        const criteria = group.criteria.flatMap((criterion) => {
+          if (criterionId && criterion.id !== criterionId) return []
+          return [{
             id: criterion.id,
             label: criterion.name,
             comment:
@@ -183,7 +185,8 @@ export function SpreadsheetTable({
               ?? categoryComment
               ?? globalComment
               ?? t('Aucun commentaire'),
-          }))
+          }]
+        })
 
         if (criteria.length === 0) return []
 

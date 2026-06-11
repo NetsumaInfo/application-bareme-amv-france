@@ -37,7 +37,7 @@ export default function BaremeEditor() {
     setGlobalStep,
     setHideTotalsUntilAllScored,
     moveCategory,
-    moveCriterion,
+    swapCriteria,
     removeCriterion,
     updateCriterion,
     updateCategoryForCriterion,
@@ -53,7 +53,12 @@ export default function BaremeEditor() {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-3" data-context-scope="bareme-editor">
-      <div className="bg-surface rounded-xl shadow-2xl w-full max-w-6xl max-h-[90vh] flex flex-col border border-gray-700" data-context-scope="bareme-editor">
+      <div
+        className={`bg-surface rounded-xl shadow-2xl w-full max-w-6xl flex flex-col border border-gray-700 ${
+          mode === 'edit' ? 'h-[90vh]' : 'max-h-[90vh]'
+        }`}
+        data-context-scope="bareme-editor"
+      >
         <div className="flex items-center justify-between px-5 py-3 border-b border-gray-700">
           <h2 className="text-base font-semibold text-white">
             {mode === 'list'
@@ -64,7 +69,7 @@ export default function BaremeEditor() {
                   ? t('Modifier le barème')
                   : t('Nouveau barème')}
           </h2>
-          <button onClick={onClose} className="p-1 rounded-sm hover:bg-surface-light text-gray-400 hover:text-white">
+          <button type="button" onClick={onClose} className="p-1 rounded-sm hover:bg-surface-light text-gray-400 hover:text-white">
             <X size={18} />
           </button>
         </div>
@@ -100,7 +105,7 @@ export default function BaremeEditor() {
               onGlobalStepChange={setGlobalStep}
               onHideTotalsChange={setHideTotalsUntilAllScored}
               onMoveCategory={moveCategory}
-              onMoveCriterion={moveCriterion}
+              onSwapCriteria={swapCriteria}
               onRemoveCriterion={removeCriterion}
               onUpdateCriterion={updateCriterion}
               onUpdateCriterionCategory={updateCategoryForCriterion}
@@ -116,6 +121,7 @@ export default function BaremeEditor() {
           {mode === 'edit' ? (
             <>
               <button
+                type="button"
                 onClick={() => {
                   setMode('list')
                   resetForm()
@@ -126,6 +132,7 @@ export default function BaremeEditor() {
               </button>
               {!readOnly && (
                 <button
+                  type="button"
                   onClick={handleSave}
                   className="px-4 py-2 text-sm rounded-lg bg-primary-600 hover:bg-primary-500 text-white font-medium transition-colors"
                 >
@@ -135,6 +142,7 @@ export default function BaremeEditor() {
             </>
           ) : (
             <button
+              type="button"
               onClick={onClose}
               className="px-4 py-2 text-sm rounded-lg bg-surface-light text-gray-300 hover:text-white transition-colors"
             >

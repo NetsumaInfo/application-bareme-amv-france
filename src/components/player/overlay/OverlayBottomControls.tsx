@@ -49,6 +49,7 @@ interface OverlayBottomControlsProps {
   onUnpin?: () => void
 }
 
+// react-doctor-disable-next-line react-doctor/no-many-boolean-props -- flags are independent orthogonal toggles, not mutually-exclusive variants; variant/compound pattern does not apply
 export function OverlayBottomControls({
   isPlayerFullscreen,
   controlsVisible,

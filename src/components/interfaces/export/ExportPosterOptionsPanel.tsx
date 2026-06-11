@@ -1,5 +1,5 @@
-import { useRef, type RefObject } from 'react'
-import { AlignCenter, AlignLeft, AlignRight, ArrowDown, ArrowUp, Copy, ImagePlus, RefreshCw, Type } from 'lucide-react'
+import { useRef, useState, type RefObject } from 'react'
+import { AlignCenter, AlignLeft, AlignRight, ArrowDown, ArrowUp, ChevronDown, Copy, ImagePlus, LayoutTemplate, RefreshCw, Type } from 'lucide-react'
 import { ExportActions } from '@/components/interfaces/export/ExportActions'
 import { AppCheckbox } from '@/components/ui/AppCheckbox'
 import { AppRangeSlider } from '@/components/ui/AppRangeSlider'
@@ -129,23 +129,47 @@ function SliderRow({
   )
 }
 
-/** Compact section with a title bar */
+type PanelSectionKey = 'format' | 'background' | 'images' | 'top' | 'text'
+
+/** Collapsible section with a clickable title bar (progressive disclosure) */
 function PanelSection({
   icon,
   title,
+  open,
+  badge,
+  onToggle,
   children,
 }: {
   icon?: React.ReactNode
   title: string
+  open: boolean
+  badge?: string
+  onToggle: () => void
   children: React.ReactNode
 }) {
   return (
     <section className="rounded-sm border border-gray-700/50 bg-surface-dark/24 overflow-hidden">
-      <div className="flex items-center gap-1.5 px-2 py-1.5 border-b border-gray-700/35 bg-surface-dark/35">
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-expanded={open}
+        className={`flex w-full items-center gap-1.5 px-2 py-1.5 bg-surface-dark/35 text-left transition-colors hover:bg-surface-dark/55 ${
+          open ? 'border-b border-gray-700/35' : ''
+        }`}
+      >
         {icon && <span className="text-gray-500 shrink-0">{icon}</span>}
         <span className="text-[10.5px] font-semibold text-gray-300">{title}</span>
-      </div>
-      <div className="px-2 py-2 space-y-2">{children}</div>
+        {badge ? (
+          <span className="rounded-sm bg-primary-600/20 px-1 py-px text-[9px] font-medium text-primary-200 tabular-nums">
+            {badge}
+          </span>
+        ) : null}
+        <ChevronDown
+          size={13}
+          className={`ml-auto shrink-0 text-gray-500 transition-transform duration-150 ${open ? '' : '-rotate-90'}`}
+        />
+      </button>
+      {open ? <div className="px-2 py-2 space-y-2">{children}</div> : null}
     </section>
   )
 }
@@ -154,11 +178,44 @@ function useExportPosterOptionsPanelController(props: ExportPosterOptionsPanelPr
   const { t } = useI18n()
   const bgFileInputRef = useRef<HTMLInputElement | null>(null)
   const overlayFileInputRef = useRef<HTMLInputElement | null>(null)
+  // Only the active text block is open by default: the panel had 5 always-expanded
+  // sections (a wall of controls). Progressive disclosure keeps focus on one thing.
+  const [openSections, setOpenSections] = useState<Record<PanelSectionKey, boolean>>({
+    format: false,
+    background: false,
+    images: false,
+    top: false,
+    text: true,
+  })
+
+  const toggleSection = (key: PanelSectionKey) => {
+    setOpenSections((current) => ({ ...current, [key]: !current[key] }))
+  }
+
+  const setAllSections = (open: boolean) => {
+    setOpenSections({ format: open, background: open, images: open, top: open, text: open })
+  }
+
+  // Smart defaults: picking a layer in this panel reveals its editor section.
+  const handleSelectBlock = (id: ExportPosterBlockId) => {
+    props.onSelectBlock(id)
+    setOpenSections((current) => (current.text ? current : { ...current, text: true }))
+  }
+  const handleSelectOverlayImage = (id: string | null) => {
+    props.onSelectOverlayImage(id)
+    if (id) setOpenSections((current) => (current.images ? current : { ...current, images: true }))
+  }
+
   const renderContent = () => renderExportPosterOptionsPanel({
     ...props,
+    onSelectBlock: handleSelectBlock,
+    onSelectOverlayImage: handleSelectOverlayImage,
     t,
     bgFileInputRef,
     overlayFileInputRef,
+    openSections,
+    onToggleSection: toggleSection,
+    onSetAllSections: setAllSections,
   })
   return { renderContent }
 }
@@ -241,10 +298,16 @@ function renderExportPosterOptionsPanel({
   t,
   bgFileInputRef,
   overlayFileInputRef,
+  openSections,
+  onToggleSection,
+  onSetAllSections,
 }: ExportPosterOptionsPanelProps & {
   t: ReturnType<typeof useI18n>['t']
   bgFileInputRef: RefObject<HTMLInputElement | null>
   overlayFileInputRef: RefObject<HTMLInputElement | null>
+  openSections: Record<PanelSectionKey, boolean>
+  onToggleSection: (key: PanelSectionKey) => void
+  onSetAllSections: (open: boolean) => void
 }) {
   const fallbackBlock = blocks[0]
   const activeBlock = blocks.find((block) => block.id === activeBlockId) ?? fallbackBlock
@@ -271,11 +334,31 @@ function renderExportPosterOptionsPanel({
     },
   ]
 
+  const allSectionsOpen = Object.values(openSections).every(Boolean)
+
   return (
     <div className="w-full space-y-1.5">
 
+      <div className="flex items-center justify-between px-0.5">
+        <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-500">
+          {t('Réglages affiche')}
+        </span>
+        <button
+          type="button"
+          onClick={() => onSetAllSections(!allSectionsOpen)}
+          className="rounded-sm px-1.5 py-0.5 text-[10px] font-medium text-gray-400 transition-colors hover:bg-white/6 hover:text-white"
+        >
+          {allSectionsOpen ? t('Tout replier') : t('Tout déplier')}
+        </button>
+      </div>
+
       {/* ── Format & Zoom ── */}
-      <PanelSection title={t('Format')}>
+      <PanelSection
+        icon={<LayoutTemplate size={11} />}
+        title={t('Format')}
+        open={openSections.format}
+        onToggle={() => onToggleSection('format')}
+      >
         <div>
           <label className="block text-[10.5px] text-gray-400 mb-1">{t('Catégories clip')}</label>
           <AppSelect
@@ -307,6 +390,7 @@ function renderExportPosterOptionsPanel({
             <label className="block text-[10.5px] text-gray-400 mb-1">{t('Largeur (px)')}</label>
             <input
               type="number"
+              aria-label={t('Largeur (px)')}
               min={320}
               max={8000}
               value={posterWidth}
@@ -318,6 +402,7 @@ function renderExportPosterOptionsPanel({
             <label className="block text-[10.5px] text-gray-400 mb-1">{t('Hauteur (px)')}</label>
             <input
               type="number"
+              aria-label={t('Hauteur (px)')}
               min={240}
               max={8000}
               value={posterHeight}
@@ -337,7 +422,13 @@ function renderExportPosterOptionsPanel({
       </PanelSection>
 
       {/* ── Arrière-plan ── */}
-      <PanelSection icon={<ImagePlus size={11} />} title={t('Arrière-plan')}>
+      <PanelSection
+        icon={<ImagePlus size={11} />}
+        title={t('Arrière-plan')}
+        badge={backgroundImage ? t('image') : undefined}
+        open={openSections.background}
+        onToggle={() => onToggleSection('background')}
+      >
         {/* Couleur de fond */}
         <div>
           <div className="mb-1 flex items-center gap-2">
@@ -378,6 +469,7 @@ function renderExportPosterOptionsPanel({
           ref={bgFileInputRef}
           type="file"
           accept="image/*"
+          aria-label={t('Importer une image de fond')}
           className="hidden"
           onChange={(event) => {
             const file = event.target.files?.[0]
@@ -466,11 +558,18 @@ function renderExportPosterOptionsPanel({
       </PanelSection>
 
       {/* ── Images superposées ── */}
-      <PanelSection icon={<ImagePlus size={11} />} title={t('Images superposées')}>
+      <PanelSection
+        icon={<ImagePlus size={11} />}
+        title={t('Images superposées')}
+        badge={images.length > 0 ? String(images.length) : undefined}
+        open={openSections.images}
+        onToggle={() => onToggleSection('images')}
+      >
         <input
           ref={overlayFileInputRef}
           type="file"
           accept="image/*"
+          aria-label={t('Importer une image superposée')}
           className="hidden"
           onChange={(event) => {
             const file = event.target.files?.[0]
@@ -615,12 +714,18 @@ function renderExportPosterOptionsPanel({
       </PanelSection>
 
       {/* ── Générateur Top ── */}
-      <PanelSection icon={<Copy size={11} />} title={t('Générateur Top')}>
+      <PanelSection
+        icon={<Copy size={11} />}
+        title={t('Générateur Top')}
+        open={openSections.top}
+        onToggle={() => onToggleSection('top')}
+      >
         <div className="grid grid-cols-2 gap-1.5 items-end">
           <div>
             <label className="block text-[10.5px] text-gray-400 mb-1">{t('Nb de places')}</label>
             <input
               type="number"
+              aria-label={t('Nb de places')}
               min={1}
               max={20}
               value={topCount}
@@ -656,7 +761,12 @@ function renderExportPosterOptionsPanel({
 
       {/* ── Bloc texte actif ── */}
       {activeBlock && (
-        <PanelSection icon={<Type size={11} />} title={`${t('Texte')} — ${activeBlock.label}`}>
+        <PanelSection
+          icon={<Type size={11} />}
+          title={`${t('Texte')} — ${activeBlock.label}`}
+          open={openSections.text}
+          onToggle={() => onToggleSection('text')}
+        >
           {/* Sélecteur de bloc + visibilité en ligne */}
           <div className="flex items-center gap-1.5">
             <div className="flex-1 min-w-0">
@@ -684,6 +794,7 @@ function renderExportPosterOptionsPanel({
             value={activeBlock.text}
             onChange={(event) => onPatchBlock(activeBlock.id, { text: event.target.value })}
             rows={3}
+            aria-label={t('Texte du bloc')}
             placeholder={t('Texte...')}
             className="w-full px-2 py-1 rounded-sm border border-gray-700 bg-surface-dark text-[11px] text-white focus:border-primary-500 focus:outline-hidden resize-y"
           />
@@ -694,6 +805,7 @@ function renderExportPosterOptionsPanel({
               <input
                 value={fontSearch}
                 onChange={(event) => onSetFontSearch(event.target.value)}
+                aria-label={t('Recherche police...')}
                 className="h-7 w-full px-2 rounded-sm border border-gray-700 bg-surface-dark text-[11px] text-white focus:border-primary-500 focus:outline-hidden"
                 placeholder={t('Recherche police...')}
               />
@@ -728,6 +840,7 @@ function renderExportPosterOptionsPanel({
           <input
             value={activeBlock.fontFamily}
             onChange={(event) => onPatchBlock(activeBlock.id, { fontFamily: event.target.value })}
+            aria-label={t('Police manuelle')}
             className="h-7 w-full px-2 rounded-sm border border-gray-700 bg-surface-dark text-[11px] text-white focus:border-primary-500 focus:outline-hidden"
             placeholder={t('"Nom Police", sans-serif')}
           />

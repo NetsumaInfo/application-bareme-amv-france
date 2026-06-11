@@ -57,9 +57,13 @@ export const useNotationStore = create<NotationStore>((set, get) => ({
   },
 
   addBareme: (bareme: Bareme) => {
-    const { availableBaremes } = get()
+    const { availableBaremes, currentBareme } = get()
     const { nextAvailableBaremes, persistedBareme } = upsertBaremeList(availableBaremes, bareme)
-    set({ availableBaremes: nextAvailableBaremes })
+    set({
+      availableBaremes: nextAvailableBaremes,
+      currentBareme:
+        currentBareme?.id === persistedBareme.id ? persistedBareme : currentBareme,
+    })
     if (!persistedBareme.isOfficial) {
       tauri.saveBareme(persistedBareme, persistedBareme.id).catch((errorValue) => {
         console.error('Failed to persist bareme:', errorValue)
@@ -87,13 +91,25 @@ export const useNotationStore = create<NotationStore>((set, get) => ({
 
   loadCustomBaremes: (items: unknown[]) => {
     const nextAvailable = buildAvailableBaremesFromImportedItems(items, OFFICIAL_BAREME)
-    const currentId = get().currentBareme?.id
-    const nextCurrent = nextAvailable.find((bareme) => bareme.id === currentId) || OFFICIAL_BAREME
+    const current = get().currentBareme
+    const found = current ? nextAvailable.find((bareme) => bareme.id === current.id) : undefined
 
-    set({
-      availableBaremes: nextAvailable,
-      currentBareme: nextCurrent,
-    })
+    // Reloading the baremes folder must not silently downgrade the active
+    // bareme to the official one: if the current bareme isn't in the reloaded
+    // list (e.g. folder changed), keep it and re-inject it into availables so
+    // the project keeps scoring/exporting with the right bareme.
+    let availableBaremes = nextAvailable
+    let currentBareme = current ?? OFFICIAL_BAREME
+    if (current && !found) {
+      currentBareme = current
+      if (current.id !== OFFICIAL_BAREME.id) {
+        availableBaremes = [...nextAvailable, current]
+      }
+    } else if (found) {
+      currentBareme = found
+    }
+
+    set({ availableBaremes, currentBareme })
   },
 
   updateCriterion: (clipId: string, criterionId: string, value: number | string | boolean) => {

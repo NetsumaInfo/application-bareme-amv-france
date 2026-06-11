@@ -1,7 +1,9 @@
+import { memo } from 'react'
 import type { KeyboardEvent as ReactKeyboardEvent, MutableRefObject } from 'react'
 import type { Bareme, Criterion } from '@/types/bareme'
 import type { Clip } from '@/types/project'
 import type { SpreadsheetNoteLike } from '@/components/interfaces/spreadsheet/types'
+import { useI18n } from '@/i18n'
 
 interface SpreadsheetCriterionCellsProps {
   clip: Clip
@@ -23,7 +25,7 @@ interface SpreadsheetCriterionCellsProps {
   }) => void
 }
 
-export function SpreadsheetCriterionCells({
+export const SpreadsheetCriterionCells = memo(function SpreadsheetCriterionCells({
   clip,
   clipIdx,
   clips,
@@ -36,20 +38,30 @@ export function SpreadsheetCriterionCells({
   onSetCurrentClip,
   onShowCriterionBubble,
 }: SpreadsheetCriterionCellsProps) {
+  const { t } = useI18n()
   return (
     <>
       {currentBareme.criteria.map((criterion: Criterion) => {
         const critIdx = critIdxMap.get(criterion.id) ?? 0
         const score = note?.scores[criterion.id]
         const value = score?.value ?? ''
+        const cellLabel = t('Note « {criterion} » pour {clip}', {
+          criterion: criterion.name,
+          clip: clip.displayName,
+        })
 
         return (
-          <td key={criterion.id} className="px-0.5 py-0.5 border-r border-gray-800 text-center">
+          <td
+            key={criterion.id}
+            aria-label={cellLabel}
+            className="px-0.5 py-0.5 border-r border-gray-800 text-center"
+          >
             <input
               ref={(element) => {
                 if (element) cellRefs.current.set(`${clipIdx}-${critIdx}`, element)
               }}
               type="number"
+              aria-label={cellLabel}
               min={criterion.min}
               max={criterion.max}
               step={criterion.step || 0.5}
@@ -87,4 +99,4 @@ export function SpreadsheetCriterionCells({
       })}
     </>
   )
-}
+})

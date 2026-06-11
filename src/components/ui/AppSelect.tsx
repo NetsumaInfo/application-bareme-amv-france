@@ -1,6 +1,7 @@
 import {
   useCallback,
   useEffect,
+  useEffectEvent,
   useId,
   useLayoutEffect,
   useMemo,
@@ -145,18 +146,20 @@ export function AppSelect<T extends AppSelectValue>({
     setOpen(true)
   }, [getInitialActiveIndex, updateMenuPosition])
 
+  const handleReposition = useEffectEvent(() => updateMenuPosition())
+
   useLayoutEffect(() => {
     if (!open) return
 
-    const animationFrame = window.requestAnimationFrame(updateMenuPosition)
-    window.addEventListener('resize', updateMenuPosition)
-    window.addEventListener('scroll', updateMenuPosition, true)
+    const animationFrame = window.requestAnimationFrame(handleReposition)
+    window.addEventListener('resize', handleReposition)
+    window.addEventListener('scroll', handleReposition, true)
     return () => {
       window.cancelAnimationFrame(animationFrame)
-      window.removeEventListener('resize', updateMenuPosition)
-      window.removeEventListener('scroll', updateMenuPosition, true)
+      window.removeEventListener('resize', handleReposition)
+      window.removeEventListener('scroll', handleReposition, true)
     }
-  }, [open, updateMenuPosition])
+  }, [open])
 
   useEffect(() => {
     if (!open) return
@@ -223,6 +226,7 @@ export function AppSelect<T extends AppSelectValue>({
         <div
           id={listboxId}
           className="overflow-y-auto"
+          // react-doctor-disable-next-line react-doctor/prefer-tag-over-role -- custom ARIA listbox/combobox hosts interactive button children; native datalist/option cannot replace it without breaking the widget
           role="listbox"
           style={{ maxHeight: `${menuPosition.maxHeight}px` }}
           aria-label={ariaLabel}
@@ -277,6 +281,7 @@ export function AppSelect<T extends AppSelectValue>({
           size === 'md' ? 'h-8 px-2.5 text-xs' : 'h-7 px-2 text-xs'
         } ${triggerClassName}`.trim()}
         aria-label={ariaLabel ?? textLabel}
+        role="combobox"
         aria-haspopup="listbox"
         aria-controls={open ? listboxId : undefined}
         aria-expanded={open}

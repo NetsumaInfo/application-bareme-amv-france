@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useShallow } from 'zustand/react/shallow'
 import { useNotationStore } from '@/store/useNotationStore'
 import { useProjectStore } from '@/store/useProjectStore'
 import { useUIStore } from '@/store/useUIStore'
@@ -9,6 +10,11 @@ import { ExportOptionsPanel } from '@/components/interfaces/export/ExportOptions
 import { ExportPosterOptionsPanel } from '@/components/interfaces/export/ExportPosterOptionsPanel'
 import { ExportPreviewPanel } from '@/components/interfaces/export/ExportPreviewPanel'
 import { ExportPosterPreviewPanel } from '@/components/interfaces/export/ExportPosterPreviewPanel'
+import {
+  ExportJsonPreview,
+  ExportNotesPreview,
+  ExportSpreadsheetPreview,
+} from '@/components/interfaces/export/ExportTypePreviews'
 import { ExportDiscordOptionsPanel } from '@/components/interfaces/export/ExportDiscordOptionsPanel'
 import { ExportDiscordPreviewPanel } from '@/components/interfaces/export/ExportDiscordPreviewPanel'
 import { ResultatsHeader } from '@/components/interfaces/resultats/ResultatsHeader'
@@ -16,11 +22,15 @@ import { ResultatsViewModeControls } from '@/components/interfaces/resultats/Res
 import { useResultatsComputedData } from '@/components/interfaces/resultats/hooks/useResultatsComputedData'
 import type {
   ExportDensity,
+  ExportExcelLayout,
+  ExportExcelOrientation,
+  ExportExcelSort,
   ExportJsonMode,
   ExportLayout,
   ExportMode,
   ExportNotesPdfMode,
   ExportPngMode,
+  ExportTableType,
   ExportTableView,
   ExportTheme,
 } from '@/components/interfaces/export/types'
@@ -107,15 +117,31 @@ function useExportInterfaceController() {
   const currentBareme = useNotationStore((state) => state.currentBareme)
   const notes = useNotationStore((state) => state.notes)
   const getNotesData = useNotationStore((state) => state.getNotesData)
-  const { currentProject, clips, importedJudges, updateSettings } = useProjectStore()
+  const { currentProject, clips, importedJudges, updateSettings } = useProjectStore(
+    useShallow((state) => ({
+      currentProject: state.currentProject,
+      clips: state.clips,
+      importedJudges: state.importedJudges,
+      updateSettings: state.updateSettings,
+    })),
+  )
   const getProjectData = useProjectStore((state) => state.getProjectData)
   const appTheme = useUIStore((state) => state.appTheme)
 
   const [layoutMode, setLayoutMode] = useState<ExportLayout>('discord')
-  const [theme] = useState<ExportTheme>('dark')
+  const [theme, setTheme] = useState<ExportTheme>('dark')
+  const [exportFileName, setExportFileName] = useState<string>('')
+  const [pngTransparent, setPngTransparent] = useState<boolean>(false)
   const [density] = useState<ExportDensity>('comfortable')
   const [exportMode, setExportMode] = useState<ExportMode>('grouped')
   const [tableView, setTableView] = useState<ExportTableView>('detailed')
+  const [selectedExportType, setSelectedExportType] = useState<ExportTableType>('png')
+  const [excelLayout, setExcelLayout] = useState<ExportExcelLayout>('full')
+  const [excelOrientation, setExcelOrientation] = useState<ExportExcelOrientation>('rows')
+  const [excelSort, setExcelSort] = useState<ExportExcelSort>('score')
+  const [excelShowJudges, setExcelShowJudges] = useState(true)
+  const [excelShowCategories, setExcelShowCategories] = useState(true)
+  const [excelShowRank, setExcelShowRank] = useState(true)
   const [resultatsMainView, setResultatsMainView] = useState<ResultatsMainView>('global')
   const [resultatsGlobalVariant, setResultatsGlobalVariant] = useState<ResultatsGlobalVariant>('detailed')
   const [pngExportMode, setPngExportMode] = useState<ExportPngMode>('single')
@@ -137,6 +163,7 @@ function useExportInterfaceController() {
   )
   const [discordRowOverrides, setDiscordRowOverrides] = useState<Record<string, string>>({})
   const [discordSelectedChunkIndex, setDiscordSelectedChunkIndex] = useState(0)
+  const [discordCopied, setDiscordCopied] = useState<{ sig: string; indices: number[] }>({ sig: '', indices: [] })
   const [discordCopyState, setDiscordCopyState] = useState<'all' | 'chunk' | 'download' | 'error' | null>(null)
   const title = `${currentProject?.name || t('Projet')} - ${t('Résultats')}`
 
@@ -179,6 +206,7 @@ function useExportInterfaceController() {
     judges,
     selectedJudge,
     selectedJudgeIndex,
+    effectiveSelectedJudgeKey,
     displayRows,
     rankByClipId,
   } = useExportData({
@@ -189,7 +217,6 @@ function useExportInterfaceController() {
     importedJudges,
     exportMode,
     selectedJudgeKey,
-    onSelectedJudgeKeyChange: setSelectedJudgeKey,
   })
 
   const hideTotalsSetting = Boolean(currentProject?.settings.hideTotals)
@@ -237,10 +264,22 @@ function useExportInterfaceController() {
       judges: resultatsJudges,
       rows: resultatsRows,
       selectedJudgeIndex: resultatsSelectedJudgeIndex,
+      excelLayout,
+      excelOrientation,
+      excelSort,
+      excelShowJudges,
+      excelShowCategories,
+      excelShowRank,
       translate: t,
     })
   ), [
     currentBareme?.totalPoints,
+    excelLayout,
+    excelOrientation,
+    excelSort,
+    excelShowJudges,
+    excelShowCategories,
+    excelShowRank,
     resultatsCategoryGroups,
     resultatsGlobalVariant,
     resultatsJudges,
@@ -359,17 +398,36 @@ function useExportInterfaceController() {
     return () => window.clearTimeout(timeoutId)
   }, [discordCopyState])
 
+  // Copied-block markers are derived against the current text signature, so they
+  // clear automatically when chunk boundaries shift (no reset effect needed).
+  const discordCopiedChunks = discordCopied.sig === discordText ? discordCopied.indices : []
+
   const copyDiscordText = useCallback((value: string, state: 'all' | 'chunk') => {
     writeClipboardText(value)
       .then(() => setDiscordCopyState(state))
       .catch(() => setDiscordCopyState('error'))
   }, [])
 
+  const copyDiscordChunk = useCallback((index: number) => {
+    const value = discordChunks[index] ?? discordText
+    writeClipboardText(value)
+      .then(() => {
+        setDiscordCopyState('chunk')
+        setDiscordCopied((current) => {
+          const base = current.sig === discordText ? current.indices : []
+          return { sig: discordText, indices: base.includes(index) ? base : [...base, index] }
+        })
+        if (index < discordChunks.length - 1) setDiscordSelectedChunkIndex(index + 1)
+      })
+      .catch(() => setDiscordCopyState('error'))
+  }, [discordChunks, discordText])
+
   const resetDiscordAnnouncement = useCallback(() => {
     setDiscordContent(buildDiscordAnnouncementContent(t, currentProject?.name))
     setDiscordSettings(buildDefaultDiscordAnnouncementSettings(discordResultRows.length))
     setDiscordRowOverrides({})
     setDiscordSelectedChunkIndex(0)
+    setDiscordCopied({ sig: '', indices: [] })
   }, [currentProject?.name, discordResultRows.length, t])
 
   const downloadDiscordAnnouncement = useCallback(() => {
@@ -477,14 +535,17 @@ function useExportInterfaceController() {
 
           const judgeGeneral = normalizeOptionalText(note?.textNotes)
           const categoryNotes = Object.entries(note?.categoryNotes ?? {})
-            .map(([category, text]) => ({ category, text: normalizeOptionalText(text) }))
-            .filter((item) => item.text.length > 0)
+            .flatMap(([category, text]) => {
+              const normalized = normalizeOptionalText(text)
+              return normalized.length > 0 ? [{ category, text: normalized }] : []
+            })
           const criterionNotes = Object.entries(note?.criterionNotes ?? {})
-            .map(([criterionId, text]) => ({
-              criterion: criterionNameById.get(criterionId) ?? criterionId,
-              text: normalizeOptionalText(text),
-            }))
-            .filter((item) => item.text.length > 0)
+            .flatMap(([criterionId, text]) => {
+              const normalized = normalizeOptionalText(text)
+              return normalized.length > 0
+                ? [{ criterion: criterionNameById.get(criterionId) ?? criterionId, text: normalized }]
+                : []
+            })
 
           const hasAnyText = judgeGeneral.length > 0 || categoryNotes.length > 0 || criterionNotes.length > 0
           if (!hasAnyText) return null
@@ -519,22 +580,24 @@ function useExportInterfaceController() {
     [judges],
   )
 
+  const effectiveFileBase = exportFileName.trim() || projectName
+
   const exportCaptureOptions = useMemo(() => {
     if (layoutMode === 'poster') {
       return {
         scale: 1,
         backgroundColor: effectivePosterBackgroundColor,
         pngMode: 'single' as ExportPngMode,
-        fileNameStem: `${sanitizeExportFilePart(projectName)}_affiche`,
+        fileNameStem: `${sanitizeExportFilePart(effectiveFileBase)}_affiche`,
       }
     }
     return {
       scale: clamp(pngScale, MIN_PNG_SCALE, MAX_PNG_SCALE),
-      backgroundColor: theme === 'light' ? '#ffffff' : '#0f172a',
+      backgroundColor: pngTransparent ? null : theme === 'light' ? '#ffffff' : '#0f172a',
       pngMode: pngExportMode,
-      fileNameStem: `${sanitizeExportFilePart(projectName)}_resultats`,
+      fileNameStem: `${sanitizeExportFilePart(effectiveFileBase)}_resultats`,
     }
-  }, [effectivePosterBackgroundColor, layoutMode, pngExportMode, pngScale, projectName, theme])
+  }, [effectivePosterBackgroundColor, effectiveFileBase, layoutMode, pngExportMode, pngScale, pngTransparent, theme])
 
   const exportSnapshot = useMemo(() => ({
     exportedAt: new Date().toISOString(),
@@ -735,13 +798,13 @@ function useExportInterfaceController() {
   ])
 
   const jsonDefaultFileName = useMemo(() => {
-    const safeProjectName = sanitizeExportFilePart(projectName)
-    if (jsonExportMode === 'full_project') return `${safeProjectName}_projet_complet.json`
-    if (jsonExportMode === 'notes_only') return `${safeProjectName}_notes.json`
+    const safeBase = sanitizeExportFilePart(effectiveFileBase)
+    if (jsonExportMode === 'full_project') return `${safeBase}_projet_complet.json`
+    if (jsonExportMode === 'notes_only') return `${safeBase}_notes.json`
     const judgeName = judges.find((judge) => judge.key === jsonJudgeKey)?.judgeName ?? 'juge'
     const safeJudge = sanitizeExportFilePart(judgeName)
-    return `${safeProjectName}_${safeJudge}.json`
-  }, [jsonExportMode, jsonJudgeKey, judges, projectName])
+    return `${safeBase}_${safeJudge}.json`
+  }, [effectiveFileBase, jsonExportMode, jsonJudgeKey, judges])
 
   const {
     exporting,
@@ -755,11 +818,44 @@ function useExportInterfaceController() {
     exportPageRefs,
     theme,
     projectName,
+    fileNameBase: effectiveFileBase,
     jsonPayload,
     jsonDefaultFileName,
     notesPdfPayload,
     spreadsheetSheets: resultatsSpreadsheetSheets,
   })
+
+  // Single export action driven by the selected export type in table mode.
+  const runSelectedExport = useCallback(() => {
+    switch (selectedExportType) {
+      case 'png':
+        exportContainer('png', exportCaptureOptions).catch(() => {})
+        break
+      case 'pdf':
+        exportContainer('pdf', exportCaptureOptions).catch(() => {})
+        break
+      case 'excel':
+        exportSpreadsheet().catch(() => {})
+        break
+      case 'html':
+        exportHtml().catch(() => {})
+        break
+      case 'notes':
+        exportNotesPdf().catch(() => {})
+        break
+      case 'json':
+        exportJson().catch(() => {})
+        break
+    }
+  }, [
+    selectedExportType,
+    exportContainer,
+    exportCaptureOptions,
+    exportSpreadsheet,
+    exportHtml,
+    exportNotesPdf,
+    exportJson,
+  ])
 
   // Listen for the screenshot shortcut event (Ctrl+Shift+G) so the keyboard
   // shortcut handler can trigger the real PNG export pipeline without needing
@@ -796,6 +892,12 @@ function useExportInterfaceController() {
     }
   }, [exportContextMenu])
 
+  const showTableViewControls =
+    layoutMode === 'table'
+    && (selectedExportType === 'png'
+      || selectedExportType === 'pdf'
+      || selectedExportType === 'html')
+
   const renderContent = () => (
     <div
       className="relative flex h-full w-full min-w-0 flex-1 flex-col overflow-hidden"
@@ -812,11 +914,11 @@ function useExportInterfaceController() {
         setExportContextMenu({ x: event.clientX, y: event.clientY })
       }}
     >
-      <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-x-3 gap-y-0 border-b border-gray-700/50 py-0">
+      <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-x-3 gap-y-0 border-b border-gray-700/50 px-2 py-0">
         <div className="min-w-0 justify-self-start">
           <ExportLayoutSwitcher layoutMode={layoutMode} onSetLayoutMode={setLayoutMode} />
         </div>
-        {layoutMode === 'table' ? (
+        {showTableViewControls ? (
           <div className="min-w-0 justify-self-center">
             <ResultatsViewModeControls
               mainView={resultatsMainView}
@@ -841,11 +943,12 @@ function useExportInterfaceController() {
         ) : (
           <div aria-hidden="true" />
         )}
-        {layoutMode === 'table' ? (
+        {showTableViewControls ? (
           <div className="min-w-0 justify-self-end">
             <ResultatsHeader
               judges={resultatsJudges}
-              selectedJudgeKey={selectedJudgeKey}
+              selectedJudgeKey={effectiveSelectedJudgeKey}
+              allActive={resultatsMainView !== 'judge'}
               judgeColors={judgeColors}
               onSelectJudge={setSelectedJudgeKey}
               onJudgeColorChange={(judgeKey, color) => {
@@ -878,12 +981,13 @@ function useExportInterfaceController() {
             settings={discordSettings}
             contestCategoryKey={effectiveContestCategoryKey}
             contestCategoryOptions={contestCategoryOptions}
+            copiedChunks={discordCopiedChunks}
             onSetMention={(mention) => patchDiscordContent({ mention })}
             onSelectChunk={setDiscordSelectedChunkIndex}
             onPatchSettings={patchDiscordSettings}
             onSetContestCategoryKey={setContestCategoryKey}
             onCopyAll={() => copyDiscordText(discordText, 'all')}
-            onCopySelectedChunk={() => copyDiscordText(discordChunks[safeDiscordSelectedChunkIndex] ?? discordText, 'chunk')}
+            onCopySelectedChunk={() => copyDiscordChunk(safeDiscordSelectedChunkIndex)}
             onDownloadText={downloadDiscordAnnouncement}
             onResetAnnouncement={resetDiscordAnnouncement}
           />
@@ -893,7 +997,7 @@ function useExportInterfaceController() {
           <ExportOptionsPanel
             exportMode={exportMode}
             tableView={tableView}
-            selectedJudgeKey={selectedJudgeKey}
+            selectedJudgeKey={effectiveSelectedJudgeKey}
             pngExportMode={pngExportMode}
             pngScale={pngScale}
             rowsPerImage={rowsPerImage}
@@ -906,6 +1010,28 @@ function useExportInterfaceController() {
             jsonJudgeOptions={jsonJudgeOptions}
             contestCategoryKey={effectiveContestCategoryKey}
             contestCategoryOptions={contestCategoryOptions}
+            selectedType={selectedExportType}
+            onSelectType={setSelectedExportType}
+            onExportSelected={runSelectedExport}
+            fileNameBase={exportFileName}
+            onSetFileNameBase={setExportFileName}
+            fileNamePlaceholder={projectName}
+            excelLayout={excelLayout}
+            onSetExcelLayout={setExcelLayout}
+            excelOrientation={excelOrientation}
+            onSetExcelOrientation={setExcelOrientation}
+            excelSort={excelSort}
+            onSetExcelSort={setExcelSort}
+            excelShowJudges={excelShowJudges}
+            excelShowCategories={excelShowCategories}
+            excelShowRank={excelShowRank}
+            onToggleExcelJudges={() => setExcelShowJudges((prev) => !prev)}
+            onToggleExcelCategories={() => setExcelShowCategories((prev) => !prev)}
+            onToggleExcelRank={() => setExcelShowRank((prev) => !prev)}
+            exportTheme={theme}
+            onSetExportTheme={setTheme}
+            pngTransparent={pngTransparent}
+            onTogglePngTransparent={() => setPngTransparent((prev) => !prev)}
             onSetExportMode={(mode) => {
               setExportMode(mode)
               setResultatsMainView(mode === 'individual' ? 'judge' : 'global')
@@ -930,12 +1056,6 @@ function useExportInterfaceController() {
             onSetJsonExportMode={setJsonExportMode}
             onSetJsonJudgeKey={setJsonJudgeKey}
             onSetContestCategoryKey={setContestCategoryKey}
-            onExportPng={() => { exportContainer('png', exportCaptureOptions).catch(() => {}) }}
-            onExportPdf={() => { exportContainer('pdf', exportCaptureOptions).catch(() => {}) }}
-            onExportNotesPdf={() => { exportNotesPdf().catch(() => {}) }}
-            onExportJson={() => { exportJson().catch(() => {}) }}
-            onExportSpreadsheet={() => { exportSpreadsheet().catch(() => {}) }}
-            onExportHtml={() => { exportHtml().catch(() => {}) }}
           />
           </div>
           ) : (
@@ -1045,23 +1165,31 @@ function useExportInterfaceController() {
         />
       ) : layoutMode === 'table' ? (
         currentBareme ? (
-          <ExportPreviewPanel
-            previewRef={previewRef}
-            exportPageRefs={exportPageRefs}
-            mainView={resultatsMainView}
-            globalVariant={resultatsGlobalVariant}
-            canSortByScore={canSortByScore}
-            currentBaremeTotalPoints={currentBareme.totalPoints}
-            categoryGroups={resultatsCategoryGroups}
-            judges={resultatsJudges}
-            rows={resultatsRows}
-            favoriteClips={favoriteClips}
-            judgeColors={judgeColors}
-            selectedJudgeIndex={resultatsSelectedJudgeIndex}
-            rowsPerImage={rowsPerImage}
-            showMiniatures={Boolean(currentProject?.settings.showMiniatures)}
-            thumbnailDefaultSeconds={currentProject?.settings.thumbnailDefaultTimeSec ?? 10}
-          />
+          selectedExportType === 'json' ? (
+            <ExportJsonPreview payload={jsonPayload} />
+          ) : selectedExportType === 'excel' ? (
+            <ExportSpreadsheetPreview sheets={resultatsSpreadsheetSheets} />
+          ) : selectedExportType === 'notes' ? (
+            <ExportNotesPreview title={notesPdfPayload.title} entries={notesPdfPayload.entries} />
+          ) : (
+            <ExportPreviewPanel
+              previewRef={previewRef}
+              exportPageRefs={exportPageRefs}
+              mainView={resultatsMainView}
+              globalVariant={resultatsGlobalVariant}
+              canSortByScore={canSortByScore}
+              currentBaremeTotalPoints={currentBareme.totalPoints}
+              categoryGroups={resultatsCategoryGroups}
+              judges={resultatsJudges}
+              rows={resultatsRows}
+              favoriteClips={favoriteClips}
+              judgeColors={judgeColors}
+              selectedJudgeIndex={resultatsSelectedJudgeIndex}
+              rowsPerImage={rowsPerImage}
+              showMiniatures={Boolean(currentProject?.settings.showMiniatures)}
+              thumbnailDefaultSeconds={currentProject?.settings.thumbnailDefaultTimeSec ?? 10}
+            />
+          )
         ) : <MissingBaremeMessage />
       ) : currentBareme ? (
         <ExportPosterPreviewPanel

@@ -1,5 +1,10 @@
 import type { Criterion } from '@/types/bareme'
 import type {
+  ExportExcelLayout,
+  ExportExcelOrientation,
+  ExportExcelSort,
+} from '@/components/interfaces/export/types'
+import type {
   ResultatsGlobalVariant,
   ResultatsMainView,
   ResultatsRow,
@@ -22,7 +27,34 @@ interface ResultatsSpreadsheetExportOptions {
   judges: JudgeSource[]
   rows: ResultatsRow[]
   selectedJudgeIndex: number
+  /** Which sheets to emit. Defaults to 'full' (summary + one sheet per judge). */
+  excelLayout?: ExportExcelLayout
+  /** Summary orientation: participants as rows (default) or transposed to columns. */
+  excelOrientation?: ExportExcelOrientation
+  /** Row ordering for summary / ranking sheets. */
+  excelSort?: ExportExcelSort
+  excelShowJudges?: boolean
+  excelShowCategories?: boolean
+  excelShowRank?: boolean
   translate: (key: string, params?: Record<string, string | number | null | undefined>) => string
+}
+
+function makeRowComparator(
+  options: ResultatsSpreadsheetExportOptions,
+): (a: ResultatsRow, b: ResultatsRow) => number {
+  const sort = options.excelSort ?? 'score'
+  if (sort === 'alpha') {
+    return (a, b) => clipLabel(a).localeCompare(clipLabel(b)) || a.clip.order - b.clip.order
+  }
+  if (sort === 'original') {
+    return (a, b) => a.clip.order - b.clip.order
+  }
+  return (a, b) => {
+    const scoreA = numericScoreForSort(getGlobalTotalAverage(a, options.judges, options.categoryGroups))
+    const scoreB = numericScoreForSort(getGlobalTotalAverage(b, options.judges, options.categoryGroups))
+    if (scoreB !== scoreA) return scoreB - scoreA
+    return a.clip.order - b.clip.order
+  }
 }
 
 const CATEGORY_HEADER_STYLES = [
@@ -112,7 +144,7 @@ function numericScoreForSort(value: XlsxCellValue): number {
 }
 
 function sortRowsByScore(rows: ResultatsRow[], scoreAccessor: (row: ResultatsRow) => XlsxCellValue): ResultatsRow[] {
-  return [...rows].sort((a, b) => {
+  return rows.toSorted((a, b) => {
     const scoreA = numericScoreForSort(scoreAccessor(a))
     const scoreB = numericScoreForSort(scoreAccessor(b))
     if (scoreB !== scoreA) return scoreB - scoreA
@@ -300,77 +332,178 @@ function getGlobalTotalAverage(
   return formatAverage(values)
 }
 
-function createFinalSummarySheet({
-  currentBaremeTotalPoints,
-  categoryGroups,
-  judges,
-  rows,
-  translate,
-}: ResultatsSpreadsheetExportOptions): XlsxSheet {
-  const columnCount = 4 + judges.length + categoryGroups.length
-  const merges = [`A1:${getColumnNameForExport(columnCount - 1)}1`]
-  const columnWidths: Array<number | undefined> = Array.from({ length: columnCount }, () => 15)
-  columnWidths[0] = 7
-  columnWidths[1] = 28
-  judges.forEach((judge, index) => {
-    columnWidths[index + 2] = Math.max(12, Math.min(24, judge.judgeName.length + 4))
-  })
-  columnWidths[2 + judges.length] = 13
-  columnWidths[3 + judges.length] = 12
-  categoryGroups.forEach((group, index) => {
-    columnWidths[4 + judges.length + index] = Math.max(14, Math.min(26, group.category.length + 4))
-  })
+interface SummaryFieldDef {
+  label: string
+  headerStyle: XlsxCellStyle
+  value: (row: ResultatsRow, index: number) => XlsxCellValue
+}
 
-  const sortedRows = sortRowsByScore(rows, (row) => getGlobalTotalAverage(row, judges, categoryGroups))
-  const titleRow = createStyledRow(columnCount)
-  titleRow[0] = cell(translate('Synthèse finale'), 'finalHeader')
-  for (let columnIndex = 1; columnIndex < columnCount; columnIndex += 1) {
-    titleRow[columnIndex] = cell('', 'finalHeader')
+function buildSummaryFields(options: ResultatsSpreadsheetExportOptions): SummaryFieldDef[] {
+  const { currentBaremeTotalPoints, categoryGroups, judges, translate } = options
+  const showJudges = options.excelShowJudges ?? true
+  const showCategories = options.excelShowCategories ?? true
+  const showRank = options.excelShowRank ?? true
+
+  const fields: SummaryFieldDef[] = []
+  if (showRank) {
+    fields.push({ label: translate('Rang'), headerStyle: 'summaryHeader', value: (_row, index) => index + 1 })
+  }
+  if (showJudges) {
+    judges.forEach((judge, judgeIndex) => {
+      fields.push({
+        label: judge.judgeName,
+        headerStyle: 'summaryHeader',
+        value: (row) =>
+          getJudgeTotalValue(judge.notes[row.clip.id] as NoteLike | undefined, row, judgeIndex, categoryGroups),
+      })
+    })
+  }
+  fields.push({
+    label: `${translate('Moy.')} /${currentBaremeTotalPoints}`,
+    headerStyle: 'summaryHeader',
+    value: (row) => getGlobalTotalAverage(row, judges, categoryGroups),
+  })
+  if (showCategories) {
+    categoryGroups.forEach((group, groupIndex) => {
+      fields.push({
+        label: `${group.category} /${group.totalMax}`,
+        headerStyle: categoryHeaderStyle(groupIndex),
+        value: (row) => getGlobalCategoryAverage(row, group, judges),
+      })
+    })
+  }
+  return fields
+}
+
+function createConfigurableSummarySheet(options: ResultatsSpreadsheetExportOptions): XlsxSheet {
+  const { rows, translate } = options
+  const orientation = options.excelOrientation ?? 'rows'
+  const sortedRows = rows.toSorted(makeRowComparator(options))
+  const fields = buildSummaryFields(options)
+  const participantLabel = translate('Participant')
+  const sheetTitle = translate('Synthèse finale')
+  const outputRows: XlsxCell[][] = []
+
+  if (orientation === 'columns') {
+    // Transposed: each participant becomes a column, each metric a row.
+    const columnCount = 1 + sortedRows.length
+    const titleRow = createStyledRow(columnCount, 'finalHeader')
+    titleRow[0] = cell(sheetTitle, 'finalHeader')
+    outputRows.push(titleRow)
+
+    const headerRow = createStyledRow(columnCount)
+    headerRow[0] = cell(participantLabel, 'summaryHeader')
+    sortedRows.forEach((row, index) => {
+      headerRow[index + 1] = cell(clipLabel(row), 'summaryHeader')
+    })
+    outputRows.push(headerRow)
+
+    fields.forEach((field) => {
+      const outputRow = createStyledRow(columnCount)
+      outputRow[0] = cell(field.label, field.headerStyle)
+      sortedRows.forEach((row, index) => {
+        outputRow[index + 1] = scoreCell(field.value(row, index), index)
+      })
+      outputRows.push(outputRow)
+    })
+
+    const columnWidths: Array<number | undefined> = Array.from({ length: columnCount }, () => 13)
+    columnWidths[0] = 20
+    sortedRows.forEach((row, index) => {
+      columnWidths[index + 1] = Math.max(12, Math.min(24, clipLabel(row).length + 2))
+    })
+
+    return {
+      name: sheetTitle,
+      rows: outputRows,
+      columnWidths,
+      rowHeights: { 1: 24, 2: 24 },
+      merges: [`A1:${getColumnNameForExport(columnCount - 1)}1`],
+      freezePane: { xSplit: 1, ySplit: 2, topLeftCell: 'B3' },
+    }
   }
 
+  // Default: participants as rows.
+  const columnCount = 1 + fields.length
+  const titleRow = createStyledRow(columnCount, 'finalHeader')
+  titleRow[0] = cell(sheetTitle, 'finalHeader')
+  outputRows.push(titleRow)
+
   const headerRow = createStyledRow(columnCount)
-  headerRow[0] = cell('#', 'summaryHeader')
-  headerRow[1] = cell(translate('Participant'), 'summaryHeader')
-  judges.forEach((judge, index) => {
-    headerRow[index + 2] = cell(judge.judgeName, 'summaryHeader')
+  headerRow[0] = cell(participantLabel, 'summaryHeader')
+  fields.forEach((field, fieldIndex) => {
+    headerRow[fieldIndex + 1] = cell(field.label, field.headerStyle)
   })
-  headerRow[2 + judges.length] = cell(`${translate('Moy.')} /${currentBaremeTotalPoints}`, 'summaryHeader')
-  headerRow[3 + judges.length] = cell(translate('Rang'), 'summaryHeader')
-  categoryGroups.forEach((group, index) => {
-    headerRow[4 + judges.length + index] = cell(`${group.category} /${group.totalMax}`, categoryHeaderStyle(index))
+  outputRows.push(headerRow)
+
+  sortedRows.forEach((row, rowIndex) => {
+    const outputRow = createStyledRow(columnCount, rowIndex % 2 === 0 ? 'scoreEven' : 'scoreOdd')
+    outputRow[0] = cell(clipLabel(row), 'nameCell')
+    fields.forEach((field, fieldIndex) => {
+      outputRow[fieldIndex + 1] = scoreCell(field.value(row, rowIndex), rowIndex)
+    })
+    outputRows.push(outputRow)
   })
+
+  const columnWidths: Array<number | undefined> = Array.from({ length: columnCount }, () => 14)
+  columnWidths[0] = 28
+
+  return {
+    name: sheetTitle,
+    rows: outputRows,
+    columnWidths,
+    rowHeights: { 1: 24, 2: 28 },
+    merges: [`A1:${getColumnNameForExport(columnCount - 1)}1`],
+    freezePane: { xSplit: 1, ySplit: 2, topLeftCell: 'B3' },
+  }
+}
+
+function createSimpleRankingSheet(options: ResultatsSpreadsheetExportOptions): XlsxSheet {
+  const { currentBaremeTotalPoints, categoryGroups, judges, rows, translate } = options
+  const columnCount = 3
+  const sortedRows = rows.toSorted(makeRowComparator(options))
+
+  const titleRow = createStyledRow(columnCount, 'finalHeader')
+  titleRow[0] = cell(translate('Classement'), 'finalHeader')
+
+  const headerRow: XlsxCell[] = [
+    cell('#', 'summaryHeader'),
+    cell(translate('Participant'), 'summaryHeader'),
+    cell(`${translate('Total')} /${currentBaremeTotalPoints}`, 'summaryHeader'),
+  ]
 
   const outputRows: XlsxCell[][] = [
     titleRow,
     headerRow,
-    ...sortedRows.map((row, rowIndex) => {
-      const outputRow = createStyledRow(columnCount, rowIndex % 2 === 0 ? 'scoreEven' : 'scoreOdd')
-      outputRow[0] = scoreCell(rowIndex + 1, rowIndex)
-      outputRow[1] = cell(clipLabel(row), 'nameCell')
-      judges.forEach((judge, judgeIndex) => {
-        const note = judge.notes[row.clip.id] as NoteLike | undefined
-        outputRow[judgeIndex + 2] = scoreCell(getJudgeTotalValue(note, row, judgeIndex, categoryGroups), rowIndex)
-      })
-      outputRow[2 + judges.length] = scoreCell(getGlobalTotalAverage(row, judges, categoryGroups), rowIndex)
-      outputRow[3 + judges.length] = scoreCell(rowIndex + 1, rowIndex)
-      categoryGroups.forEach((group, groupIndex) => {
-        outputRow[4 + judges.length + groupIndex] = scoreCell(getGlobalCategoryAverage(row, group, judges), rowIndex)
-      })
-      return outputRow
-    }),
+    ...sortedRows.map((row, rowIndex) => [
+      scoreCell(rowIndex + 1, rowIndex),
+      cell(clipLabel(row), 'nameCell'),
+      scoreCell(getGlobalTotalAverage(row, judges, categoryGroups), rowIndex),
+    ]),
   ]
 
   return {
-    name: translate('Synthèse finale'),
+    name: translate('Classement'),
     rows: outputRows,
-    columnWidths,
-    rowHeights: { 1: 24, 2: 28 },
-    merges,
-    freezePane: { xSplit: 2, ySplit: 2, topLeftCell: 'C3' },
+    columnWidths: [7, 34, 14],
+    rowHeights: { 1: 24, 2: 24 },
+    merges: ['A1:C1'],
+    freezePane: { xSplit: 0, ySplit: 2, topLeftCell: 'A3' },
   }
 }
 
 export function buildResultatsSpreadsheetSheets(options: ResultatsSpreadsheetExportOptions): XlsxSheet[] {
+  const layout = options.excelLayout ?? 'full'
+
+  if (layout === 'ranking') {
+    return [createSimpleRankingSheet(options)]
+  }
+
+  const summarySheet = createConfigurableSummarySheet(options)
+  if (layout === 'summary') {
+    return [summarySheet]
+  }
+
   const selectedJudge = options.judges[options.selectedJudgeIndex] ?? options.judges[0]
   const orderedJudgeEntries = options.judges
     .map((judge, judgeIndex) => ({ judge, judgeIndex }))
@@ -380,14 +513,18 @@ export function buildResultatsSpreadsheetSheets(options: ResultatsSpreadsheetExp
       return a.judgeIndex - b.judgeIndex
     })
 
-  return [
-    createFinalSummarySheet(options),
-    ...orderedJudgeEntries.map(({ judge, judgeIndex }) =>
-      createJudgeSheet({
-        ...options,
-        judge,
-        judgeIndex,
-      }),
-    ),
-  ]
+  const judgeSheets = orderedJudgeEntries.map(({ judge, judgeIndex }) =>
+    createJudgeSheet({
+      ...options,
+      judge,
+      judgeIndex,
+    }),
+  )
+
+  if (layout === 'judges') {
+    // Always keep at least one sheet so the workbook is valid.
+    return judgeSheets.length > 0 ? judgeSheets : [summarySheet]
+  }
+
+  return [summarySheet, ...judgeSheets]
 }

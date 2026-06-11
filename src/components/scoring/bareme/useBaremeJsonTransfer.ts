@@ -56,20 +56,29 @@ export function useBaremeJsonTransfer({
           let importedCount = 0
           let workingBaremes = [...availableBaremes]
 
-          for (const filePath of jsonPaths) {
-            try {
-              const data = await tauri.loadProjectFile(filePath)
-              const importedBaremes = importFromJsonData(data, workingBaremes)
-              importedCount += importedBaremes.length
-              if (importedBaremes.length > 0) {
-                const importedIds = new Set(importedBaremes.map((bareme) => bareme.id))
-                workingBaremes = [
-                  ...workingBaremes.filter((bareme) => !importedIds.has(bareme.id)),
-                  ...importedBaremes,
-                ]
+          const loadedFiles = await Promise.all(
+            jsonPaths.map(async (filePath) => {
+              try {
+                return { data: await tauri.loadProjectFile(filePath), error: null }
+              } catch (errorValue) {
+                return { data: null, error: errorValue }
               }
-            } catch (errorValue) {
-              console.error('Bareme JSON dropped import failed:', errorValue)
+            }),
+          )
+
+          for (const loaded of loadedFiles) {
+            if (loaded.error !== null) {
+              console.error('Bareme JSON dropped import failed:', loaded.error)
+              continue
+            }
+            const importedBaremes = importFromJsonData(loaded.data, workingBaremes)
+            importedCount += importedBaremes.length
+            if (importedBaremes.length > 0) {
+              const importedIds = new Set(importedBaremes.map((bareme) => bareme.id))
+              workingBaremes = [
+                ...workingBaremes.filter((bareme) => !importedIds.has(bareme.id)),
+                ...importedBaremes,
+              ]
             }
           }
 

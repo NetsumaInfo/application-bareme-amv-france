@@ -10,6 +10,7 @@ interface SettingsTabErrorBoundaryProps {
 interface SettingsTabErrorBoundaryState {
   hasError: boolean
   errorText: string
+  resetKey: string
 }
 
 export class SettingsTabErrorBoundary extends Component<
@@ -18,11 +19,21 @@ export class SettingsTabErrorBoundary extends Component<
 > {
   constructor(props: SettingsTabErrorBoundaryProps) {
     super(props)
-    this.state = { hasError: false, errorText: '' }
+    this.state = { hasError: false, errorText: '', resetKey: props.resetKey }
   }
 
-  static getDerivedStateFromError(): SettingsTabErrorBoundaryState {
+  static getDerivedStateFromError(): Partial<SettingsTabErrorBoundaryState> {
     return { hasError: true, errorText: '' }
+  }
+
+  static getDerivedStateFromProps(
+    props: SettingsTabErrorBoundaryProps,
+    state: SettingsTabErrorBoundaryState,
+  ): Partial<SettingsTabErrorBoundaryState> | null {
+    if (props.resetKey !== state.resetKey) {
+      return { hasError: false, errorText: '', resetKey: props.resetKey }
+    }
+    return null
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
@@ -30,12 +41,6 @@ export class SettingsTabErrorBoundary extends Component<
     this.setState({
       errorText: error?.message ? String(error.message) : String(error),
     })
-  }
-
-  componentDidUpdate(prevProps: SettingsTabErrorBoundaryProps) {
-    if (prevProps.resetKey !== this.props.resetKey && this.state.hasError) {
-      this.setState({ hasError: false, errorText: '' })
-    }
   }
 
   render() {

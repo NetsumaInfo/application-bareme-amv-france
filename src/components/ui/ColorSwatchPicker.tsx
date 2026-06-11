@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type Ref } from 'react'
+import { useCallback, useEffect, useEffectEvent, useMemo, useRef, useState, type Ref } from 'react'
 import { createPortal } from 'react-dom'
 import { ChevronDown } from 'lucide-react'
 import { HoverTextTooltip } from '@/components/ui/HoverTextTooltip'
@@ -186,8 +186,10 @@ function useColorSwatchPickerController({
 
   const setFavorites = useCallback((colors: string[]) => {
     const cleaned = colors
-      .map((entry) => sanitizeColor(entry, ''))
-      .filter((entry) => entry.length > 0)
+      .flatMap((entry) => {
+        const sanitized = sanitizeColor(entry, '')
+        return sanitized.length > 0 ? [sanitized] : []
+      })
       .slice(0, Math.max(1, maxRemembered))
     setFavoriteColors(cleaned)
     writeStoredColorList(FAVORITES_MEMORY_KEY, cleaned)
@@ -306,6 +308,8 @@ function useColorSwatchPickerController({
     setPickerStyle({ top, left, width })
   }, [zoomScale])
 
+  const runUpdate = useEffectEvent(() => updatePickerPosition())
+
   useEffect(() => {
     if (!open) return
     const onOutside = (event: MouseEvent) => {
@@ -322,20 +326,18 @@ function useColorSwatchPickerController({
 
   useEffect(() => {
     if (!open) return
-    updatePickerPosition()
+    runUpdate()
 
-    const animationFrame = window.requestAnimationFrame(() => {
-      updatePickerPosition()
-    })
-    window.addEventListener('resize', updatePickerPosition)
-    window.addEventListener('scroll', updatePickerPosition, true)
+    const animationFrame = window.requestAnimationFrame(runUpdate)
+    window.addEventListener('resize', runUpdate)
+    window.addEventListener('scroll', runUpdate, true)
 
     return () => {
       window.cancelAnimationFrame(animationFrame)
-      window.removeEventListener('resize', updatePickerPosition)
-      window.removeEventListener('scroll', updatePickerPosition, true)
+      window.removeEventListener('resize', runUpdate)
+      window.removeEventListener('scroll', runUpdate, true)
     }
-  }, [open, updatePickerPosition])
+  }, [open])
 
   useEffect(() => {
     if (!open) return
@@ -610,6 +612,7 @@ function useColorSwatchPickerController({
               <input
                 value={draftHex}
                 onChange={(event) => setDraftHex(event.target.value)}
+                aria-label={t('HEX')}
                 onBlur={() => commitHex(draftHex, true)}
                 onKeyDown={(event) => {
                   if (event.key === 'Enter') {

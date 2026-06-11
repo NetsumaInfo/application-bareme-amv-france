@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from 'react'
+import { useState, useRef, useEffect, useEffectEvent, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { Headphones } from 'lucide-react'
 import { usePlayerStore } from '@/store/usePlayerStore'
@@ -60,9 +60,11 @@ export default function AudioTrackSelector() {
     setMenuStyle({ top, left, width })
   }, [audioTracks.length, zoomScale])
 
+  const reposition = useEffectEvent(() => updateMenuPosition())
+
   useEffect(() => {
     if (!open) return
-    updateMenuPosition()
+    reposition()
 
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as Node
@@ -78,15 +80,15 @@ export default function AudioTrackSelector() {
     }
     document.addEventListener('mousedown', handleClickOutside)
     document.addEventListener('keydown', handleEscape)
-    window.addEventListener('resize', updateMenuPosition)
-    window.addEventListener('scroll', updateMenuPosition, true)
+    window.addEventListener('resize', reposition)
+    window.addEventListener('scroll', reposition, true)
     return () => {
       document.removeEventListener('mousedown', handleClickOutside)
       document.removeEventListener('keydown', handleEscape)
-      window.removeEventListener('resize', updateMenuPosition)
-      window.removeEventListener('scroll', updateMenuPosition, true)
+      window.removeEventListener('resize', reposition)
+      window.removeEventListener('scroll', reposition, true)
     }
-  }, [open, updateMenuPosition])
+  }, [open])
 
   const hasTracks = audioTracks.length > 1
   const isActive = hasTracks && currentAudioId !== null && currentAudioId !== audioTracks[0]?.id
@@ -111,6 +113,7 @@ export default function AudioTrackSelector() {
         {audioTracks.map((track) => (
           <button
             key={track.id}
+            type="button"
             onClick={() => handleSelect(track.id)}
             className={`w-full text-left px-3 py-1.5 text-[11px] hover:bg-gray-800 transition-colors ${
               currentAudioId === track.id ? 'text-primary-400 font-medium' : 'text-gray-300'
@@ -129,6 +132,7 @@ export default function AudioTrackSelector() {
       <HoverTextTooltip text={hasTracks ? t('Pistes audio') : t('Audio unique')}>
         <button
           ref={buttonRef}
+          type="button"
           onClick={() => {
             if (!hasTracks) return
             if (!open) updateMenuPosition()

@@ -1,8 +1,8 @@
-import { useContext } from 'react'
+import { use } from 'react'
 import { I18nContext } from '@/i18n/context'
 
 export function useI18n() {
-  const context = useContext(I18nContext)
+  const context = use(I18nContext)
   if (!context) {
     throw new Error('useI18n must be used within I18nProvider')
   }

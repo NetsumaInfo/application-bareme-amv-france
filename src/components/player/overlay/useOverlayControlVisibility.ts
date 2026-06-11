@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { getCurrentWindow } from '@tauri-apps/api/window'
 import { OVERLAY_AUTOHIDE_MS } from '@/components/player/overlay/overlayConstants'
+import { isPlayerMenuOpen } from '@/components/player/overlay/overlayMenuFocus'
 
 interface UseOverlayControlVisibilityOptions {
   autoHideControls: boolean
@@ -26,7 +27,7 @@ export function useOverlayControlVisibility({ autoHideControls }: UseOverlayCont
 
   const resetHideTimer = useCallback(() => {
     setShowControls(true)
-    if (autoHideControls) {
+    if (autoHideControls && !isPlayerMenuOpen()) {
       getCurrentWindow().setFocus().catch(() => {})
     }
     scheduleHide()

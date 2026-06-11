@@ -1,4 +1,4 @@
-import { useCallback, useEffect } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
 import { emit, listen } from '@tauri-apps/api/event'
 import * as tauri from '@/services/tauri'
 import { useNotationStore } from '@/store/useNotationStore'
@@ -37,8 +37,10 @@ export function useNotesBridge({
   onToggleMiniatures,
 }: UseNotesBridgeOptions) {
   const selectedClip = clips[currentClipIndex]
+  const lastEmittedClipDataSigRef = useRef<string | null>(null)
+  const lastEmittedNoteSigRef = useRef<string | null>(null)
 
-  const emitNotesClipData = useCallback(() => {
+  const emitNotesClipData = useCallback((options?: { force?: boolean }) => {
     const projectStore = useProjectStore.getState()
     const { clips: allClips, currentClipIndex: idx, currentProject: project } = projectStore
     const clip = allClips[idx] ?? null
@@ -53,14 +55,29 @@ export function useNotesBridge({
       (clipId) => useNotationStore.getState().getNoteForClip(clipId),
     )
     const hideTotals = Boolean(useUIStore.getState().hideFinalScore) || hideTotalsSetting || hideTotalsUntilAllScored
-    emit('main:clip-data', {
+    const payload = {
       clip,
       bareme,
       note,
       clipIndex: sortedPosition >= 0 ? sortedPosition : idx,
       totalClips: allClips.length,
       hideTotals,
-    }).catch(() => {})
+    }
+
+    // Skip IPC when the payload is byte-identical to the last emit
+    // (e.g. unrelated store changes retriggering the sync effect).
+    let signature: string | null = null
+    try {
+      signature = JSON.stringify(payload)
+    } catch {
+      signature = null
+    }
+    if (!options?.force && signature !== null && signature === lastEmittedClipDataSigRef.current) {
+      return
+    }
+    lastEmittedClipDataSigRef.current = signature
+
+    emit('main:clip-data', payload).catch(() => {})
   }, [])
 
   useEffect(() => {
@@ -75,7 +92,8 @@ export function useNotesBridge({
     }
 
     listen('notes:request-data', () => {
-      emitNotesClipData()
+      // Detached window asked explicitly (e.g. fresh open) — always answer.
+      emitNotesClipData({ force: true })
     }).then(pushUnlisten)
 
     listen<{ clipId: string; criterionId: string; value: number | string }>('notes:criterion-updated', (event) => {
@@ -112,7 +130,7 @@ export function useNotesBridge({
 
       const text = typeof event.payload?.text === 'string' ? event.payload.text : ''
       store.setClipFavorite(clipId, true, text)
-      emitNotesClipData()
+      emitNotesClipData({ force: true })
     }).then(pushUnlisten)
 
     listen<{ direction?: 'next' | 'prev'; fromClipId?: string }>('notes:navigate-clip', (event) => {
@@ -227,6 +245,18 @@ export function useNotesBridge({
     const clip = clips[currentClipIndex]
     if (!clip) return
     const note = useNotationStore.getState().getNoteForClip(clip.id) ?? null
+
+    // Dedupe: this effect retriggers on any clips-array identity change,
+    // but only the current clip's note matters to the detached window.
+    let signature: string | null = null
+    try {
+      signature = JSON.stringify({ clipId: clip.id, note })
+    } catch {
+      signature = null
+    }
+    if (signature !== null && signature === lastEmittedNoteSigRef.current) return
+    lastEmittedNoteSigRef.current = signature
+
     emit('main:note-updated', { note }).catch(() => {})
   }, [isNotesDetached, clips, currentClipIndex, notes])
 }

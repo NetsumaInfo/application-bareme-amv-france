@@ -1,6 +1,7 @@
 mod ffprobe;
 mod media_info;
 mod parsing;
+pub(crate) mod process_wait;
 
 use crate::player::mpv_wrapper::MediaInfo;
 use ffprobe::run_ffprobe;

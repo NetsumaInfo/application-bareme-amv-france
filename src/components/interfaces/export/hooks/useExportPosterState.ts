@@ -219,9 +219,10 @@ export function useExportPosterState({
       const entries = await fontsApi()
       const families = Array.from(
         new Set(
-          entries
-            .map((entry) => (typeof entry.family === 'string' ? entry.family.trim() : ''))
-            .filter((family) => family.length > 0),
+          entries.flatMap((entry) => {
+            const family = typeof entry.family === 'string' ? entry.family.trim() : ''
+            return family.length > 0 ? [family] : []
+          }),
         ),
       ).sort((a, b) => a.localeCompare(b, 'fr'))
 
@@ -272,7 +273,7 @@ export function useExportPosterState({
 
   const reorderPosterImage = useCallback((imageId: string, direction: 'front' | 'back' | 'forward' | 'backward') => {
     setPosterImages((prev) => {
-      const ordered = [...prev].sort((a, b) => a.zIndex - b.zIndex)
+      const ordered = prev.toSorted((a, b) => a.zIndex - b.zIndex)
       const currentIndex = ordered.findIndex((image) => image.id === imageId)
       if (currentIndex < 0) return prev
 

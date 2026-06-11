@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, type MutableRefObject } from 'react'
+import { useCallback, useEffect, useEffectEvent, useMemo, type MutableRefObject } from 'react'
 import { emit } from '@tauri-apps/api/event'
 import { usePlayerStore } from '@/store/usePlayerStore'
 import { buildNoteTimecodeMarkers, type NoteTimecodeMarker } from '@/utils/timecodes'
@@ -114,26 +114,25 @@ export function useFloatingPlayerBridge({
     }
   }, [videoAreaRef])
 
+  const runUpdate = useEffectEvent(() => updateGeometry())
+
   useEffect(() => {
     const element = videoAreaRef.current
     if (!element) return
 
-    const observer = new ResizeObserver(() => updateGeometry())
+    const observer = new ResizeObserver(runUpdate)
     observer.observe(element)
-    window.addEventListener('resize', updateGeometry)
-    updateGeometry()
+    window.addEventListener('resize', runUpdate)
+    runUpdate()
 
     return () => {
       observer.disconnect()
-      window.removeEventListener('resize', updateGeometry)
+      window.removeEventListener('resize', runUpdate)
     }
-  }, [updateGeometry, videoAreaRef])
+  }, [videoAreaRef])
 
-  useEffect(() => {
-    if (!currentClip) return
-    const timer = setInterval(updateGeometry, 200)
-    return () => clearInterval(timer)
-  }, [currentClip, updateGeometry])
+  // Geometry is fully covered by ResizeObserver + window resize + position effect;
+  // no periodic fallback timer needed.
 
   useEffect(() => {
     if (!currentClip?.filePath) {
@@ -144,6 +143,7 @@ export function useFloatingPlayerBridge({
     }
 
     const store = usePlayerStore.getState()
+    let geometryTimer: ReturnType<typeof setTimeout> | null = null
     if (store.isLoaded && store.currentFilePath === currentClip.filePath) {
       tauri.playerShow().catch(() => {})
       updateGeometry()
@@ -157,9 +157,12 @@ export function useFloatingPlayerBridge({
           tauri.playerShow().catch(() => {})
           tauri.playerPlay().catch(() => {})
           loadTracks().catch(() => {})
-          setTimeout(updateGeometry, 50)
+          geometryTimer = setTimeout(updateGeometry, 50)
         })
         .catch(console.error)
+    }
+    return () => {
+      if (geometryTimer) clearTimeout(geometryTimer)
     }
   }, [currentClip?.filePath, loadTracks, updateGeometry])
 

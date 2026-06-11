@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 import { AppSelect } from '@/components/ui/AppSelect'
+import { JudgeNameInput } from '@/components/ui/JudgeNameInput'
 import { SettingsToggle } from '@/components/settings/SettingsToggle'
 import { ContestCategoriesEditor } from '@/components/project/ContestCategoriesEditor'
 import type { ClipNamePattern, MultiPseudoDisplayMode, Project, ProjectSettings } from '@/types/project'
@@ -60,11 +61,11 @@ export function SettingsProjectTab({
         <div className="space-y-3">
           <div>
             <label className="text-xs font-medium text-gray-400 mb-1.5 block">{t('Nom du juge')}</label>
-            <input
+            <JudgeNameInput
               value={currentProject?.judgeName ?? ''}
-              onChange={(e) => onUpdateProject({ judgeName: e.target.value })}
+              onChange={(judgeName) => onUpdateProject({ judgeName })}
               placeholder={t('ex: Netsuma')}
-              className={`w-full px-3 py-2 bg-surface-dark/45 rounded-lg text-sm text-white placeholder-gray-500 ${SUBTLE_BORDER} focus:outline-hidden`}
+              inputClassName={`w-full px-3 py-2 bg-surface-dark/45 rounded-lg text-sm text-white placeholder-gray-500 ${SUBTLE_BORDER} focus:outline-hidden`}
             />
           </div>
           <div>
@@ -72,6 +73,7 @@ export function SettingsProjectTab({
             <input
               value={currentProject?.name ?? ''}
               onChange={(e) => onUpdateProject({ name: e.target.value })}
+              aria-label={t('Nom du concours')}
               placeholder={t('ex: Concours Japan Expo')}
               className={`w-full px-3 py-2 bg-surface-dark/45 rounded-lg text-sm text-white placeholder-gray-500 ${SUBTLE_BORDER} focus:outline-hidden`}
             />
@@ -234,6 +236,7 @@ export function SettingsProjectTab({
                 min={0}
                 max={600}
                 step={0.1}
+                aria-label={t('Frame miniature par défaut')}
                 value={settings?.thumbnailDefaultTimeSec ?? 10}
                 onChange={(e) => {
                   const raw = Number(e.target.value)

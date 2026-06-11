@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { X } from 'lucide-react'
 import { HoverTextTooltip } from '@/components/ui/HoverTextTooltip'
+import { JudgeNameInput } from '@/components/ui/JudgeNameInput'
 import { useI18n } from '@/i18n'
 
 interface ResultatsRenameJudgeModalProps {
@@ -21,46 +22,36 @@ export function ResultatsRenameJudgeModal({
   onConfirm,
 }: ResultatsRenameJudgeModalProps) {
   const { t } = useI18n()
-  const inputRef = useRef<HTMLInputElement | null>(null)
+  const dialogRef = useRef<HTMLDialogElement | null>(null)
 
   useEffect(() => {
-    inputRef.current?.focus()
-    inputRef.current?.select()
+    const dialog = dialogRef.current
+    if (dialog && !dialog.open) dialog.showModal()
   }, [])
 
   useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        event.preventDefault()
-        onCancel()
-      }
+    const dialog = dialogRef.current
+    if (!dialog) return
+    const handleBackdropClick = (event: MouseEvent) => {
+      if (event.target === dialog) onCancel()
     }
-
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
+    dialog.addEventListener('click', handleBackdropClick)
+    return () => dialog.removeEventListener('click', handleBackdropClick)
   }, [onCancel])
 
   return (
-    <div
-      className="fixed inset-0 z-120 flex items-center justify-center bg-black/60 p-4"
-      onClick={onCancel}
-      onKeyDown={(event) => {
-        if (event.key === 'Enter' || event.key === ' ') {
-          event.preventDefault()
-          onCancel()
-        }
+    <dialog
+      ref={dialogRef}
+      aria-label={title}
+      onCancel={(event) => {
+        event.preventDefault()
+        onCancel()
       }}
-      role="button"
-      tabIndex={0}
-      aria-label={t('Fermer')}
+      className="z-120 m-auto w-full max-w-md rounded-xl border border-gray-700 bg-surface p-0 text-left shadow-2xl backdrop:bg-black/60"
     >
       <div
-        className="w-full max-w-md rounded-xl border border-gray-700 bg-surface shadow-2xl"
+        className="w-full"
         onClick={(event) => event.stopPropagation()}
-        onKeyDown={(event) => event.stopPropagation()}
-        role="dialog"
-        aria-modal="true"
-        aria-label={title}
       >
         <div className="flex items-center justify-between border-b border-gray-700 px-4 py-3">
           <h2 className="text-sm font-semibold text-white">{title}</h2>
@@ -80,19 +71,13 @@ export function ResultatsRenameJudgeModal({
           className="p-4"
         >
           <label className="mb-1.5 block text-xs text-gray-400">{t('Nom du juge')}</label>
-          <input
-            ref={inputRef}
-            type="text"
+          <JudgeNameInput
             value={value}
-            onChange={(event) => onChangeValue(event.target.value)}
-            onKeyDown={(event) => {
-              if (event.key === 'Enter') {
-                event.preventDefault()
-                onConfirm()
-              }
-            }}
-            className="w-full rounded-lg border border-gray-700 bg-surface-dark px-3 py-2 text-sm text-white outline-hidden focus:border-primary-500"
+            onChange={onChangeValue}
+            onEnter={onConfirm}
+            autoFocus
             placeholder={t('Nom du juge')}
+            inputClassName="w-full rounded-lg border border-gray-700 bg-surface-dark px-3 py-2 text-sm text-white outline-hidden focus:border-primary-500"
           />
           {errorMessage && (
             <p className="mt-1.5 text-xs text-accent">{errorMessage}</p>
@@ -116,6 +101,6 @@ export function ResultatsRenameJudgeModal({
           </div>
         </div>
       </div>
-    </div>
+    </dialog>
   )
 }

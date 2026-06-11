@@ -1,0 +1,18 @@
+{
+  "$schema": "https://react.doctor/schema/config.json",
+  "ignore": {
+    "rules": [
+      "socket/low-supply-chain-score"
+    ],
+    "files": [
+      "**/.claude/**",
+      "**/.agents/**"
+    ],
+    "overrides": [
+      {
+        "files": ["src/i18n/seed.ts"],
+        "rules": ["deslop/unused-file"]
+      }
+    ]
+  }
+}

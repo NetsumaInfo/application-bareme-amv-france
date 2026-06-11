@@ -66,7 +66,8 @@ export function calculateScore(note: Note, bareme: Bareme): number {
         break
       case 'select':
         if (criterion.options) {
-          const index = criterion.options.indexOf(String(score.value))
+          const optionIndexMap = new Map(criterion.options.map((option, idx) => [option, idx]))
+          const index = optionIndexMap.get(String(score.value)) ?? -1
           if (index >= 0 && criterion.max !== undefined) {
             numericValue = (index / (criterion.options.length - 1)) * criterion.max
           }

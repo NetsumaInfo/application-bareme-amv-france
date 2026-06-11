@@ -1,4 +1,4 @@
-import { Check, Copy, Download, RefreshCw, Scissors } from 'lucide-react'
+import { Check, ChevronLeft, ChevronRight, Copy, Download, RefreshCw } from 'lucide-react'
 import type { ElementType } from 'react'
 import { AppCheckbox } from '@/components/ui/AppCheckbox'
 import { AppSelect } from '@/components/ui/AppSelect'
@@ -22,6 +22,7 @@ interface ExportDiscordOptionsPanelProps {
   settings: DiscordAnnouncementSettings
   contestCategoryKey: string
   contestCategoryOptions: ExportContestCategoryOption[]
+  copiedChunks: number[]
   onSetMention: (mention: string) => void
   onSelectChunk: (index: number) => void
   onPatchSettings: (patch: Partial<DiscordAnnouncementSettings>) => void
@@ -77,6 +78,181 @@ function Metric({ label, value, tone = 'neutral' }: { label: string; value: stri
   )
 }
 
+function DiscordChunkPager({
+  chunks,
+  selectedChunkIndex,
+  copyState,
+  copiedChunkSet,
+  allChunksCopied,
+  selectedChunk,
+  onSelectChunk,
+  onCopySelectedChunk,
+}: {
+  chunks: string[]
+  selectedChunkIndex: number
+  copyState: DiscordCopyState
+  copiedChunkSet: Set<number>
+  allChunksCopied: boolean
+  selectedChunk: string
+  onSelectChunk: (index: number) => void
+  onCopySelectedChunk: () => void
+}) {
+  const { t } = useI18n()
+
+  return (
+    <div className="space-y-2 rounded-md border border-amber-400/25 bg-amber-500/[0.06] px-2 py-2">
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-[10px] font-medium uppercase tracking-wide text-amber-200/90">
+          {t('Blocs Discord')}
+        </span>
+        <span className="text-[10px] font-semibold text-amber-100">
+          {t('{copied}/{total} copiés', { copied: copiedChunkSet.size, total: chunks.length })}
+        </span>
+      </div>
+
+      <div className="flex items-center gap-1.5">
+        <button
+          type="button"
+          aria-label={t('Bloc précédent')}
+          disabled={selectedChunkIndex <= 0}
+          onClick={() => onSelectChunk(selectedChunkIndex - 1)}
+          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-gray-700/60 text-slate-200 transition-colors hover:bg-white/6 disabled:opacity-35 disabled:hover:bg-transparent"
+        >
+          <ChevronLeft size={14} />
+        </button>
+        <div className="flex-1 rounded-md border border-gray-700/55 bg-black/25 px-2 py-1 text-center text-[11px] font-semibold text-white">
+          {t('Bloc {index} / {total}', { index: selectedChunkIndex + 1, total: chunks.length })}
+          <span className="ml-1 text-[10px] font-normal text-gray-400">· {selectedChunk.length}</span>
+        </div>
+        <button
+          type="button"
+          aria-label={t('Bloc suivant')}
+          disabled={selectedChunkIndex >= chunks.length - 1}
+          onClick={() => onSelectChunk(selectedChunkIndex + 1)}
+          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-gray-700/60 text-slate-200 transition-colors hover:bg-white/6 disabled:opacity-35 disabled:hover:bg-transparent"
+        >
+          <ChevronRight size={14} />
+        </button>
+      </div>
+
+      <div className="flex flex-wrap gap-1">
+        {chunks.map((chunk, index) => {
+          const isSelected = index === selectedChunkIndex
+          const isCopied = copiedChunkSet.has(index)
+          return (
+            <button
+              key={`discord-chunk-${index}-${chunk.length}-${chunk.slice(0, 24)}`}
+              type="button"
+              onClick={() => onSelectChunk(index)}
+              aria-label={t('Bloc {index}', { index: index + 1 })}
+              className={`flex h-6 items-center gap-1 rounded-md border px-1.5 text-[10px] font-medium transition-colors ${
+                isSelected
+                  ? 'border-[#5865f2]/60 bg-[#5865f2]/20 text-white'
+                  : isCopied
+                    ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-200'
+                    : 'border-gray-700/55 text-gray-300 hover:bg-white/6'
+              }`}
+            >
+              {isCopied ? <Check size={10} /> : null}
+              {index + 1}
+            </button>
+          )
+        })}
+      </div>
+
+      <ActionButton
+        icon={copyState === 'chunk' ? Check : Copy}
+        label={allChunksCopied
+          ? t('Tous les blocs copiés ✓')
+          : t('Copier le bloc {index}', { index: selectedChunkIndex + 1 })}
+        active={copyState === 'chunk'}
+        onClick={onCopySelectedChunk}
+      />
+    </div>
+  )
+}
+
+function DiscordFormattingOptions({
+  settings,
+  onPatchSettings,
+}: {
+  settings: DiscordAnnouncementSettings
+  onPatchSettings: (patch: Partial<DiscordAnnouncementSettings>) => void
+}) {
+  const { t } = useI18n()
+
+  return (
+    <div className="space-y-2 pb-2">
+      <div className="text-[10px] font-medium uppercase tracking-wide text-gray-500">
+        {t('Formatage')}
+      </div>
+      <div className="space-y-1">
+        <span className="text-[10px] text-gray-500">{t('Titre')}</span>
+        <AppSelect
+          value={settings.titleStyle}
+          onChange={(titleStyle) => onPatchSettings({ titleStyle })}
+          ariaLabel={t('Style du titre')}
+          className="w-full"
+          options={[
+            { value: 'h1', label: t('Grand titre') },
+            { value: 'h2', label: t('Titre moyen') },
+            { value: 'h3', label: t('Petit titre') },
+            { value: 'bold', label: t('Gras simple') },
+          ]}
+        />
+      </div>
+      <div className="space-y-1">
+        <span className="text-[10px] text-gray-500">{t('Classement')}</span>
+        <AppSelect
+          value={settings.rankingStyle}
+          onChange={(rankingStyle) => onPatchSettings({ rankingStyle })}
+          ariaLabel={t('Style du classement')}
+          className="w-full"
+          options={[
+            { value: 'numbered', label: t('Liste numérotée') },
+            { value: 'medal', label: t('Médailles podium 🥇') },
+            { value: 'bullet', label: t('Puces + rang') },
+            { value: 'compact', label: t('Compact') },
+            { value: 'quote', label: t('Citation') },
+          ]}
+        />
+      </div>
+      <div className="space-y-1">
+        <span className="text-[10px] text-gray-500">{t('Texte des lignes')}</span>
+        <AppSelect
+          value={settings.rowTextStyle}
+          onChange={(rowTextStyle) => onPatchSettings({ rowTextStyle })}
+          ariaLabel={t('Style du texte des lignes')}
+          className="w-full"
+          options={[
+            { value: 'plain', label: t('Normal') },
+            { value: 'bold', label: t('Gras') },
+            { value: 'italic', label: t('Italique') },
+            { value: 'underline', label: t('Souligné') },
+            { value: 'strike', label: t('Barré') },
+            { value: 'spoiler', label: t('Spoiler') },
+            { value: 'code', label: t('Code en ligne') },
+          ]}
+        />
+      </div>
+      <div className="space-y-1">
+        <span className="text-[10px] text-gray-500">{t('Décimales')}</span>
+        <AppSelect
+          value={String(settings.scoreDecimals)}
+          onChange={(value) => onPatchSettings({ scoreDecimals: Number(value) })}
+          ariaLabel={t('Décimales')}
+          className="w-full"
+          options={[
+            { value: '0', label: '0' },
+            { value: '1', label: '1' },
+            { value: '2', label: '2' },
+          ]}
+        />
+      </div>
+    </div>
+  )
+}
+
 export function ExportDiscordOptionsPanel({
   mention,
   textLength,
@@ -88,6 +264,7 @@ export function ExportDiscordOptionsPanel({
   settings,
   contestCategoryKey,
   contestCategoryOptions,
+  copiedChunks,
   onSetMention,
   onSelectChunk,
   onPatchSettings,
@@ -100,6 +277,8 @@ export function ExportDiscordOptionsPanel({
   const { t } = useI18n()
   const overLimit = textLength > DISCORD_MESSAGE_LIMIT
   const selectedChunk = chunks[selectedChunkIndex] ?? chunks[0] ?? ''
+  const copiedChunkSet = new Set(copiedChunks)
+  const allChunksCopied = chunks.length > 1 && chunks.every((_, index) => copiedChunkSet.has(index))
 
   const copyMessage = copyState === 'all'
     ? t('Annonce copiée')
@@ -187,12 +366,6 @@ export function ExportDiscordOptionsPanel({
           onClick={onCopyAll}
         />
         <ActionButton
-          icon={copyState === 'chunk' ? Check : Scissors}
-          label={t('Copier le bloc sélectionné')}
-          active={copyState === 'chunk'}
-          onClick={onCopySelectedChunk}
-        />
-        <ActionButton
           icon={copyState === 'download' ? Check : Download}
           label={t('Télécharger en TXT')}
           active={copyState === 'download'}
@@ -211,25 +384,18 @@ export function ExportDiscordOptionsPanel({
         ) : null}
       </div>
 
-      <div className="space-y-1.5">
-        <div className="flex items-center justify-between gap-2">
-          <span className="text-[10px] font-medium uppercase tracking-wide text-gray-500">{t('Bloc Discord')}</span>
-          <AppSelect
-            value={String(selectedChunkIndex)}
-            onChange={(value) => onSelectChunk(Number(value))}
-            ariaLabel={t('Bloc Discord')}
-            className="w-32"
-            options={chunks.map((chunk, index) => ({
-              value: String(index),
-              label: t('Bloc {index}', { index: index + 1 }),
-              menuLabel: `${t('Bloc {index}', { index: index + 1 })} · ${chunk.length}`,
-            }))}
-          />
-        </div>
-        <div className="rounded-md border border-gray-700/40 bg-black/20 px-2 py-1.5 text-[10px] leading-4 text-gray-400">
-          {t('{count} caractères dans ce bloc', { count: selectedChunk.length })}
-        </div>
-      </div>
+      {chunks.length > 1 ? (
+        <DiscordChunkPager
+          chunks={chunks}
+          selectedChunkIndex={selectedChunkIndex}
+          copyState={copyState}
+          copiedChunkSet={copiedChunkSet}
+          allChunksCopied={allChunksCopied}
+          selectedChunk={selectedChunk}
+          onSelectChunk={onSelectChunk}
+          onCopySelectedChunk={onCopySelectedChunk}
+        />
+      ) : null}
 
       <div className="space-y-2">
         <div className="text-[10px] font-medium uppercase tracking-wide text-gray-500">
@@ -259,6 +425,11 @@ export function ExportDiscordOptionsPanel({
           label={t('Afficher les favoris')}
           onChange={(checked) => onPatchSettings({ includeFavorites: checked })}
         />
+        <AppCheckbox
+          checked={settings.useDividers}
+          label={t('Séparateurs entre sections')}
+          onChange={(checked) => onPatchSettings({ useDividers: checked })}
+        />
         <div className="space-y-1">
           <span className="text-[10px] text-gray-500">{t('Scores')}</span>
           <AppSelect
@@ -275,73 +446,7 @@ export function ExportDiscordOptionsPanel({
         </div>
       </div>
 
-      <div className="space-y-2 pb-2">
-        <div className="text-[10px] font-medium uppercase tracking-wide text-gray-500">
-          {t('Formatage')}
-        </div>
-        <div className="space-y-1">
-          <span className="text-[10px] text-gray-500">{t('Titre')}</span>
-          <AppSelect
-            value={settings.titleStyle}
-            onChange={(titleStyle) => onPatchSettings({ titleStyle })}
-            ariaLabel={t('Style du titre')}
-            className="w-full"
-            options={[
-              { value: 'h1', label: t('Grand titre') },
-              { value: 'h2', label: t('Titre moyen') },
-              { value: 'h3', label: t('Petit titre') },
-              { value: 'bold', label: t('Gras simple') },
-            ]}
-          />
-        </div>
-        <div className="space-y-1">
-          <span className="text-[10px] text-gray-500">{t('Classement')}</span>
-          <AppSelect
-            value={settings.rankingStyle}
-            onChange={(rankingStyle) => onPatchSettings({ rankingStyle })}
-            ariaLabel={t('Style du classement')}
-            className="w-full"
-            options={[
-              { value: 'numbered', label: t('Liste numérotée') },
-              { value: 'bullet', label: t('Puces + rang') },
-              { value: 'compact', label: t('Compact') },
-              { value: 'quote', label: t('Citation') },
-            ]}
-          />
-        </div>
-        <div className="space-y-1">
-          <span className="text-[10px] text-gray-500">{t('Texte des lignes')}</span>
-          <AppSelect
-            value={settings.rowTextStyle}
-            onChange={(rowTextStyle) => onPatchSettings({ rowTextStyle })}
-            ariaLabel={t('Style du texte des lignes')}
-            className="w-full"
-            options={[
-              { value: 'plain', label: t('Normal') },
-              { value: 'bold', label: t('Gras') },
-              { value: 'italic', label: t('Italique') },
-              { value: 'underline', label: t('Souligné') },
-              { value: 'strike', label: t('Barré') },
-              { value: 'spoiler', label: t('Spoiler') },
-              { value: 'code', label: t('Code en ligne') },
-            ]}
-          />
-        </div>
-        <div className="space-y-1">
-          <span className="text-[10px] text-gray-500">{t('Décimales')}</span>
-          <AppSelect
-            value={String(settings.scoreDecimals)}
-            onChange={(value) => onPatchSettings({ scoreDecimals: Number(value) })}
-            ariaLabel={t('Décimales')}
-            className="w-full"
-            options={[
-              { value: '0', label: '0' },
-              { value: '1', label: '1' },
-              { value: '2', label: '2' },
-            ]}
-          />
-        </div>
-      </div>
+      <DiscordFormattingOptions settings={settings} onPatchSettings={onPatchSettings} />
 
       <div className="space-y-1.5 rounded-md border border-gray-700/40 bg-black/15 px-2 py-2">
         <div className="text-[10px] font-medium uppercase tracking-wide text-gray-500">

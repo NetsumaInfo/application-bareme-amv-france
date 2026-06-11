@@ -57,7 +57,7 @@ export function DetachedCriterionItem({
         }}
       >
         <div className="flex-1 min-w-0">
-          <span className="block truncate text-[11px] text-gray-200" title={criterion.name}>
+          <span className="block truncate text-[11px] text-gray-200">
             {criterion.name}
           </span>
           {criterion.description ? (
@@ -69,6 +69,7 @@ export function DetachedCriterionItem({
             if (element) inputRefs.current.set(criterion.id, element)
           }}
           type="number"
+          aria-label={t('Note "{name}"', { name: criterion.name })}
           min={criterion.min}
           max={criterion.max}
           step={criterion.step || 0.5}

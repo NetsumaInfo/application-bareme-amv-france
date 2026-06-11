@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from 'react'
+import { useState, useRef, useEffect, useEffectEvent, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { Subtitles } from 'lucide-react'
 import { usePlayerStore } from '@/store/usePlayerStore'
@@ -60,9 +60,11 @@ export default function SubtitleSelector() {
     setMenuStyle({ top, left, width })
   }, [subtitleTracks.length, zoomScale])
 
+  const handleReposition = useEffectEvent(() => updateMenuPosition())
+
   useEffect(() => {
     if (!open) return
-    updateMenuPosition()
+    handleReposition()
 
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as Node
@@ -78,15 +80,15 @@ export default function SubtitleSelector() {
     }
     document.addEventListener('mousedown', handleClickOutside)
     document.addEventListener('keydown', handleEscape)
-    window.addEventListener('resize', updateMenuPosition)
-    window.addEventListener('scroll', updateMenuPosition, true)
+    window.addEventListener('resize', handleReposition)
+    window.addEventListener('scroll', handleReposition, true)
     return () => {
       document.removeEventListener('mousedown', handleClickOutside)
       document.removeEventListener('keydown', handleEscape)
-      window.removeEventListener('resize', updateMenuPosition)
-      window.removeEventListener('scroll', updateMenuPosition, true)
+      window.removeEventListener('resize', handleReposition)
+      window.removeEventListener('scroll', handleReposition, true)
     }
-  }, [open, updateMenuPosition])
+  }, [open])
 
   const hasTracks = subtitleTracks.length > 0
   const isActive = currentSubtitleId !== null
@@ -109,6 +111,7 @@ export default function SubtitleSelector() {
         style={{ top: menuStyle.top, left: menuStyle.left, width: menuStyle.width }}
       >
         <button
+          type="button"
           onClick={() => handleSelect(null)}
           className={`w-full text-left px-3 py-1.5 text-[11px] hover:bg-gray-800 transition-colors ${
             currentSubtitleId === null ? 'text-primary-400 font-medium' : 'text-gray-300'
@@ -119,6 +122,7 @@ export default function SubtitleSelector() {
         {subtitleTracks.map((track) => (
           <button
             key={track.id}
+            type="button"
             onClick={() => handleSelect(track.id)}
             className={`w-full text-left px-3 py-1.5 text-[11px] hover:bg-gray-800 transition-colors ${
               currentSubtitleId === track.id ? 'text-primary-400 font-medium' : 'text-gray-300'
@@ -138,6 +142,7 @@ export default function SubtitleSelector() {
       <HoverTextTooltip text={hasTracks ? t('Sous-titres') : t('Pas de sous-titres')}>
         <button
           ref={buttonRef}
+          type="button"
           onClick={() => {
             if (!hasTracks) return
             if (!open) updateMenuPosition()

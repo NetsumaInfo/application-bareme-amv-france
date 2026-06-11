@@ -175,6 +175,10 @@ export function ResultatsJudgeTable({
                         ) : (
                           <input
                             type="number"
+                            aria-label={t('Note {criterion} — {participant}', {
+                              criterion: criterion.name,
+                              participant: getClipPrimaryLabel(row.clip),
+                            })}
                             min={Number.isFinite(criterion.min) ? Number(criterion.min) : 0}
                             max={Number.isFinite(criterion.max) ? Number(criterion.max) : undefined}
                             step={Number.isFinite(criterion.step) ? Number(criterion.step) : 0.5}

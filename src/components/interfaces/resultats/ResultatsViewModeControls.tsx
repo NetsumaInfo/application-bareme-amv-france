@@ -39,9 +39,9 @@ function SegmentedButton({
       type="button"
       onClick={onClick}
       aria-label={ariaLabel}
-      className={`inline-flex h-6 items-center rounded-md px-2 text-[11px] transition-colors ${
+      className={`inline-flex h-[22px] items-center rounded-[5px] px-2 text-[11px] leading-none transition-all ${
         active
-          ? 'bg-surface-dark/90 text-white'
+          ? 'bg-primary-600/80 text-white shadow-xs'
           : 'text-gray-400 hover:bg-white/5 hover:text-white'
       }`}
     >
@@ -50,6 +50,7 @@ function SegmentedButton({
   )
 }
 
+// react-doctor-disable-next-line react-doctor/no-many-boolean-props -- flags are independent orthogonal toggles, not mutually-exclusive variants; variant/compound pattern does not apply
 export function ResultatsViewModeControls({
   mainView,
   onMainViewChange,
@@ -69,42 +70,41 @@ export function ResultatsViewModeControls({
   return (
     <div className="flex min-w-0 flex-wrap items-center gap-0.5">
       <div className="flex min-w-0 flex-wrap items-center gap-0.5">
-        <SegmentedButton
-          active={mainView === 'judge'}
-          onClick={() => onMainViewChange('judge')}
-          ariaLabel={t('Tableau par juge')}
-        >
-          {t('Tableau par juge')}
-        </SegmentedButton>
-        <SegmentedButton
-          active={mainView === 'global'}
-          onClick={() => onMainViewChange('global')}
-          ariaLabel={t('Tableau global')}
-        >
-          {t('Tableau global')}
-        </SegmentedButton>
-        <SegmentedButton
-          active={mainView === 'top'}
-          onClick={() => onMainViewChange('top')}
-          ariaLabel={t('Liste Top')}
-        >
-          {t('Liste Top')}
-        </SegmentedButton>
-        {showJudgeNotesView && (
+        <div className="inline-flex items-center rounded-md bg-surface-dark p-0.5">
           <SegmentedButton
-            active={mainView === 'judgeNotes'}
-            onClick={() => onMainViewChange('judgeNotes')}
-            ariaLabel={t('Commentaires des juges')}
+            active={mainView === 'judge'}
+            onClick={() => onMainViewChange('judge')}
+            ariaLabel={t('Tableau par juge')}
           >
-            {t('Commentaires des juges')}
+            {t('Tableau par juge')}
           </SegmentedButton>
-        )}
+          <SegmentedButton
+            active={mainView === 'global'}
+            onClick={() => onMainViewChange('global')}
+            ariaLabel={t('Tableau global')}
+          >
+            {t('Tableau global')}
+          </SegmentedButton>
+          <SegmentedButton
+            active={mainView === 'top'}
+            onClick={() => onMainViewChange('top')}
+            ariaLabel={t('Liste Top')}
+          >
+            {t('Liste Top')}
+          </SegmentedButton>
+          {showJudgeNotesView && (
+            <SegmentedButton
+              active={mainView === 'judgeNotes'}
+              onClick={() => onMainViewChange('judgeNotes')}
+              ariaLabel={t('Commentaires des juges')}
+            >
+              {t('Commentaires des juges')}
+            </SegmentedButton>
+          )}
+        </div>
 
         {mainView === 'global' && (
-          <div
-            className="ml-1 flex items-center gap-0.5 rounded-md border-l-2 pl-2"
-            style={{ borderColor: 'rgb(var(--color-primary-500) / 0.7)' }}
-          >
+          <div className="ml-1 inline-flex items-center rounded-md bg-surface-dark p-0.5">
             <SegmentedButton
               active={globalVariant === 'detailed'}
               onClick={() => onGlobalVariantChange('detailed')}
@@ -132,7 +132,7 @@ export function ResultatsViewModeControls({
                 className={`ml-1 inline-flex h-6 w-6 items-center justify-center rounded-md transition-colors ${
                   notesPanelHidden
                     ? 'text-gray-500 hover:bg-white/5 hover:text-white'
-                    : 'bg-surface-dark/90 text-gray-200 hover:bg-white/5 hover:text-white'
+                    : 'bg-surface-dark text-gray-200 hover:bg-white/5 hover:text-white'
                 }`}
               >
                 <FileText size={14} />
@@ -162,7 +162,7 @@ export function ResultatsViewModeControls({
                 disabled={!hasAnyLinkedVideo}
                 className={`inline-flex h-6 w-6 items-center justify-center rounded-md transition-colors ${
                   showMiniatures
-                    ? 'bg-surface-dark/90 text-gray-200 hover:bg-white/5 hover:text-white'
+                    ? 'bg-surface-dark text-gray-200 hover:bg-white/5 hover:text-white'
                     : 'text-gray-500 hover:bg-white/5 hover:text-white'
                 } disabled:cursor-not-allowed disabled:opacity-35`}
               >

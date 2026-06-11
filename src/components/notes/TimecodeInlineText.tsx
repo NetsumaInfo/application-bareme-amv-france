@@ -31,6 +31,7 @@ export function TimecodeInlineText({
 
   useEffect(() => {
     if (!value || items.length > 0) return
+    // react-doctor-disable-next-line react-doctor/no-prop-callback-in-effect -- callback dismisses a hover preview owned by many parent consumers; lifting to Context is a cross-cutting refactor that risks regression
     onTimecodeLeave?.()
   }, [items.length, onTimecodeLeave, value])
 

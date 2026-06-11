@@ -1,15 +1,20 @@
 import { useEffect, useRef, type ClipboardEvent, type KeyboardEvent } from 'react'
-import { Hash, MessageSquareText, Star } from 'lucide-react'
+import { Hash, MessageSquareText } from 'lucide-react'
 import { useI18n } from '@/i18n'
 import {
   DISCORD_MESSAGE_LIMIT,
   buildDiscordResultDefaultText,
+  getDiscordMedal,
   normalizeDiscordMentionText,
   type DiscordAnnouncementFavoriteRow,
   type DiscordAnnouncementContent,
   type DiscordAnnouncementResultRow,
   type DiscordAnnouncementSettings,
 } from '@/components/interfaces/export/discordAnnouncementTemplate'
+
+function DiscordDivider() {
+  return <div className="h-px bg-white/8" aria-hidden="true" />
+}
 
 interface ExportDiscordPreviewPanelProps {
   content: DiscordAnnouncementContent
@@ -51,6 +56,7 @@ function EditableText({
   useEffect(() => {
     const node = ref.current
     if (!node || document.activeElement === node) return
+    // react-doctor-disable-next-line react-doctor/no-event-handler -- effect synchronizes external Tauri/window/store state, not a React-handler-derivable value
     if (normalizeEditableText(node.innerText) !== value) {
       node.innerText = value
     }
@@ -73,7 +79,9 @@ function EditableText({
       ref={ref}
       contentEditable
       suppressContentEditableWarning
+      // react-doctor-disable-next-line react-doctor/prefer-tag-over-role -- custom ARIA listbox/combobox hosts interactive button children; native datalist/option cannot replace it without breaking the widget
       role="textbox"
+      tabIndex={0}
       aria-label={ariaLabel}
       aria-multiline={multiline}
       spellCheck={spellCheck}
@@ -102,6 +110,7 @@ function getScoreLabel(row: DiscordAnnouncementResultRow, settings: DiscordAnnou
 }
 
 function getRankMarker(rank: number, settings: DiscordAnnouncementSettings): string {
+  if (settings.rankingStyle === 'medal') return getDiscordMedal(rank) || `${rank}.`
   if (settings.rankingStyle === 'bullet') return '•'
   if (settings.rankingStyle === 'compact') return `${rank}:`
   if (settings.rankingStyle === 'quote') return `> ${rank}.`
@@ -163,7 +172,7 @@ export function ExportDiscordPreviewPanel({
             <article className="min-w-0 flex-1">
               <div className="mb-1 flex flex-wrap items-baseline gap-2">
                 <span className="text-[14px] font-semibold text-white">{t('Annonce')}</span>
-                <span className="text-[11px] text-slate-400">
+                <span className="text-[11px] text-slate-400" suppressHydrationWarning>
                   {t('Aujourd’hui à {time}', {
                     time: formatDate(new Date(), { hour: '2-digit', minute: '2-digit' }),
                   })}
@@ -202,6 +211,8 @@ export function ExportDiscordPreviewPanel({
                   className="min-h-[28px] whitespace-pre-wrap text-[15px] leading-7 text-slate-200"
                 />
 
+                {settings.useDividers ? <DiscordDivider /> : null}
+
                 <div className="space-y-2">
                   <EditableText
                     value={content.rankingTitle}
@@ -215,16 +226,16 @@ export function ExportDiscordPreviewPanel({
                     {visibleRows.length > 0 ? visibleRows.map((row) => {
                       const scoreLabel = getScoreLabel(row, settings)
                       const value = rowOverrides[row.clipId] ?? buildDiscordResultDefaultText(row, settings)
-                      const isTopThree = row.rank <= 3
+                      const isMedal = settings.rankingStyle === 'medal' && row.rank <= 3
 
                       return (
                         <div
                           key={row.clipId}
-                          className={`group grid grid-cols-[42px_minmax(0,1fr)_auto] items-start gap-2 rounded-md border px-2 py-1.5 transition-colors hover:bg-white/[0.035] ${
-                            isTopThree ? 'border-[#5865f2]/25 bg-[#363940]' : 'border-transparent'
-                          }`}
+                          className="group grid grid-cols-[42px_minmax(0,1fr)_auto] items-center gap-2 rounded-[3px] px-2 py-0.5 transition-colors hover:bg-white/[0.025]"
                         >
-                          <span className="rounded-md bg-black/16 px-1.5 py-0.5 text-center text-[13px] font-semibold leading-5 text-slate-300">
+                          <span
+                            className={`text-left font-normal leading-6 text-slate-100 ${isMedal ? 'text-[17px]' : 'text-[15px]'}`}
+                          >
                             {getRankMarker(row.rank, settings)}
                           </span>
                           <EditableText
@@ -235,8 +246,8 @@ export function ExportDiscordPreviewPanel({
                             className={`min-h-[24px] text-[15px] leading-6 text-slate-100 ${settings.rowTextStyle === 'bold' ? 'font-semibold' : ''} ${rowTextClassName}`}
                           />
                           {scoreLabel ? (
-                            <span className="rounded-md bg-white/5.5 px-2 py-1 text-[12px] font-semibold leading-4 text-slate-200">
-                              {scoreLabel}
+                            <span className="text-[15px] font-normal leading-6 text-slate-400">
+                              — {scoreLabel}
                             </span>
                           ) : null}
                         </div>
@@ -250,18 +261,16 @@ export function ExportDiscordPreviewPanel({
                 </div>
 
                 {visibleFavoriteRows.length > 0 ? (
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2">
-                      <Star size={15} fill="currentColor" className="text-amber-200" />
-                      <EditableText
-                        value={content.favoritesTitle}
-                        placeholder={t('Titre des favoris')}
-                        ariaLabel={t('Titre des favoris')}
-                        onChange={(favoritesTitle) => onPatchContent({ favoritesTitle })}
-                        className="min-h-[24px] text-[18px] font-bold leading-6 text-amber-100"
-                      />
-                    </div>
-                    <div className="grid gap-1.5">
+                  <div className="space-y-1">
+                    {settings.useDividers ? <DiscordDivider /> : null}
+                    <EditableText
+                      value={content.favoritesTitle}
+                      placeholder={t('Titre des favoris')}
+                      ariaLabel={t('Titre des favoris')}
+                      onChange={(favoritesTitle) => onPatchContent({ favoritesTitle })}
+                      className="min-h-[24px] text-[15px] font-bold leading-7 text-slate-50"
+                    />
+                    <div className="space-y-0.5">
                       {visibleFavoriteRows.map((row) => {
                         const clipName = row.clipName.trim()
                         const title = clipName ? `${row.participant} - ${clipName}` : row.participant
@@ -270,15 +279,12 @@ export function ExportDiscordPreviewPanel({
                         return (
                           <div
                             key={`favorite-${row.clipId}`}
-                            className="rounded-md border border-amber-300/16 bg-amber-300/8 px-3 py-2"
+                            className="text-[15px] leading-6 text-slate-100"
                           >
-                            <div className="text-[13px] font-semibold leading-5 text-amber-100">
-                              {title}
-                            </div>
+                            <span className="text-slate-400">- </span>
+                            <span className="font-semibold">{title}</span>
                             {comment ? (
-                              <div className="mt-1 whitespace-pre-wrap text-[12px] leading-5 text-slate-300">
-                                {comment}
-                              </div>
+                              <span className="font-normal text-slate-200">: {comment}</span>
                             ) : null}
                           </div>
                         )
@@ -286,6 +292,8 @@ export function ExportDiscordPreviewPanel({
                     </div>
                   </div>
                 ) : null}
+
+                {settings.useDividers ? <DiscordDivider /> : null}
 
                 <EditableText
                   value={content.footer}

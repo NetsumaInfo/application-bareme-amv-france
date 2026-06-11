@@ -40,6 +40,7 @@ export function ContestCategoriesEditor({ items, onChange }: ContestCategoriesEd
               type="text"
               defaultValue={item.name}
               placeholder={t('Nom catégorie')}
+              aria-label={t('Nom catégorie')}
               onBlur={(event) => {
                 const nextItems = [...items]
                 nextItems[index] = { ...item, name: event.target.value }

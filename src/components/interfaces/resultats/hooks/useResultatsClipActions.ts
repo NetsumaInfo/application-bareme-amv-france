@@ -61,6 +61,7 @@ export function useResultatsClipActions({
         await tauri.playerLoad(clip.filePath)
         playerState.setLoaded(true, clip.filePath)
       }
+      // react-doctor-disable-next-line react-doctor/async-parallel -- ordered mpv side-effects: show before seek before pause
       await tauri.playerShow().catch(() => {})
       await tauri.playerSeek(seconds)
       await tauri.playerPause().catch(() => {})

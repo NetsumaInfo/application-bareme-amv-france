@@ -1,12 +1,30 @@
-import { emit } from '@tauri-apps/api/event'
+import { useCallback, useEffect, type MouseEvent as ReactMouseEvent } from 'react'
+import { emit, listen } from '@tauri-apps/api/event'
 import { OverlayTopBar } from '@/components/player/overlay/OverlayTopBar'
 import { OverlayBottomControls } from '@/components/player/overlay/OverlayBottomControls'
 import { OverlayNoVideoState } from '@/components/player/overlay/OverlayNoVideoState'
 import { useFullscreenOverlayState } from '@/components/player/overlay/useFullscreenOverlayState'
+import { setPlayerMenuOpen } from '@/components/player/overlay/overlayMenuFocus'
 import { useWindowUiSettingsSync } from '@/hooks/useWindowUiSettingsSync'
 
 export default function FullscreenOverlay() {
   useWindowUiSettingsSync()
+
+  useEffect(() => {
+    let unlisten: (() => void) | null = null
+    listen<boolean>('player-menu:visibility', (event) => {
+      setPlayerMenuOpen(Boolean(event.payload))
+    })
+      .then((off) => {
+        unlisten = off
+      })
+      .catch(() => {})
+    return () => {
+      if (unlisten) unlisten()
+      setPlayerMenuOpen(false)
+    }
+  }, [])
+
   const {
     rootRef,
     iconScale,
@@ -51,6 +69,17 @@ export default function FullscreenOverlay() {
     unpinControls,
   } = useFullscreenOverlayState()
 
+  const handleContextMenu = useCallback((event: ReactMouseEvent) => {
+    event.preventDefault()
+    event.stopPropagation()
+    emit('player-menu:open', {
+      x: event.screenX,
+      y: event.screenY,
+      clipName: clipInfo.name || null,
+    }).catch(() => {})
+    resetHideTimer()
+  }, [clipInfo.name, resetHideTimer])
+
   const hasTopBarContent = Boolean(clipInfo.name) || clipInfo.total > 0
   const hideCursor = isPlayerFullscreen && !controlsVisible
 
@@ -61,6 +90,7 @@ export default function FullscreenOverlay() {
       onMouseMove={resetHideTimer}
       onMouseEnter={resetHideTimer}
       onMouseDown={resetHideTimer}
+      onContextMenu={handleContextMenu}
       style={{ cursor: hideCursor ? 'none' : 'default' }}
       role="presentation"
     >

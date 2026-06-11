@@ -2,34 +2,43 @@ import { useEffect, useRef } from 'react'
 import { useProjectStore } from '@/store/useProjectStore'
 import { useNotationStore } from '@/store/useNotationStore'
 import * as tauri from '@/services/tauri'
+import { resolveProjectBareme } from '@/store/projectStoreProjectActions'
+
+async function doAutoSave() {
+  // Read the latest state at save time instead of capturing it in a closure —
+  // keeps the save callback stable across renders.
+  const projectStore = useProjectStore.getState()
+  const notationStore = useNotationStore.getState()
+  const { currentProject, isDirty } = projectStore
+  if (!currentProject?.filePath || !isDirty) return
+
+  try {
+    const notesData = notationStore.getNotesData()
+    const activeBareme = resolveProjectBareme(
+      currentProject.baremeId,
+      notationStore.currentBareme,
+      notationStore.availableBaremes,
+    )
+    const projectData = projectStore.getProjectData(notesData, activeBareme)
+    if (!projectData) return
+
+    await tauri.saveProjectFile(projectData, currentProject.filePath)
+    projectStore.markClean()
+  } catch (e) {
+    console.error('Auto-save failed:', e)
+  }
+}
 
 export function useAutoSave() {
-  const { currentProject, isDirty, markClean, getProjectData } = useProjectStore()
-  const { getNotesData, currentBareme } = useNotationStore()
+  const isDirty = useProjectStore((s) => s.isDirty)
+  const autoSave = useProjectStore((s) => s.currentProject?.settings.autoSave)
+  const autoSaveInterval = useProjectStore((s) => s.currentProject?.settings.autoSaveInterval)
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const doSaveRef = useRef<() => Promise<void>>(async () => {})
 
   useEffect(() => {
-    doSaveRef.current = async () => {
-      if (!currentProject?.filePath || !isDirty) return
+    if (!autoSave || !isDirty) return
 
-      try {
-        const notesData = getNotesData()
-        const projectData = getProjectData(notesData, currentBareme)
-        if (!projectData) return
-
-        await tauri.saveProjectFile(projectData, currentProject.filePath)
-        markClean()
-      } catch (e) {
-        console.error('Auto-save failed:', e)
-      }
-    }
-  }, [currentBareme, currentProject?.filePath, isDirty, getNotesData, getProjectData, markClean])
-
-  useEffect(() => {
-    if (!currentProject?.settings.autoSave || !isDirty) return
-
-    const interval = (currentProject.settings.autoSaveInterval || 30) * 1000
+    const interval = (autoSaveInterval || 30) * 1000
     const saveDelay = Math.min(interval, 2500)
 
     if (saveTimeoutRef.current) {
@@ -37,7 +46,7 @@ export function useAutoSave() {
     }
 
     saveTimeoutRef.current = setTimeout(() => {
-      void doSaveRef.current()
+      void doAutoSave()
     }, saveDelay)
 
     return () => {
@@ -45,9 +54,9 @@ export function useAutoSave() {
         clearTimeout(saveTimeoutRef.current)
       }
     }
-  }, [isDirty, currentProject?.settings.autoSave, currentProject?.settings.autoSaveInterval])
+  }, [isDirty, autoSave, autoSaveInterval])
 
   return {
-    doSave: () => doSaveRef.current(),
+    doSave: doAutoSave,
   }
 }

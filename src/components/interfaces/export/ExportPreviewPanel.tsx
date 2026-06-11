@@ -205,21 +205,23 @@ export function ExportPreviewPanel({
   )
 
   return (
-    <div data-screenshot-zone="export-table" className="flex flex-1 min-h-0 flex-col overflow-hidden">
+    <div data-screenshot-zone="export-table" className="flex flex-1 min-h-0 flex-col gap-2 overflow-hidden px-3 pb-3 pt-2">
       <ClipFavoritesPanel clips={favoriteClips} compact />
-      <ResultatsExportSurface
-        mainView={mainView}
-        globalVariant={globalVariant}
-        canSortByScore={canSortByScore}
-        currentBaremeTotalPoints={currentBaremeTotalPoints}
-        categoryGroups={categoryGroups}
-        judges={judges}
-        rows={rows}
-        judgeColors={judgeColors}
-        selectedJudgeIndex={selectedJudgeIndex}
-        showMiniatures={showMiniatures}
-        thumbnailDefaultSeconds={thumbnailDefaultSeconds}
-      />
+      <div className="flex flex-1 min-h-0 overflow-hidden rounded-lg border border-gray-700/40 bg-surface-dark/15 shadow-[0_1px_0_rgb(255_255_255/0.03)_inset]">
+        <ResultatsExportSurface
+          mainView={mainView}
+          globalVariant={globalVariant}
+          canSortByScore={canSortByScore}
+          currentBaremeTotalPoints={currentBaremeTotalPoints}
+          categoryGroups={categoryGroups}
+          judges={judges}
+          rows={rows}
+          judgeColors={judgeColors}
+          selectedJudgeIndex={selectedJudgeIndex}
+          showMiniatures={showMiniatures}
+          thumbnailDefaultSeconds={thumbnailDefaultSeconds}
+        />
+      </div>
 
       <div className="fixed left-[-20000px] top-0 z-[-1] min-w-[1400px] pointer-events-none" style={{ zoom: 1 }} aria-hidden="true">
         <div ref={previewRef} data-export-preview="true" className="amv-export-static-target min-h-0 bg-surface p-1">

@@ -1,21 +1,51 @@
 import type { AppLanguage } from '@/i18n/config'
 import fr from '@/i18n/locales/fr.json'
-import en from '@/i18n/locales/en.json'
-import ja from '@/i18n/locales/ja.json'
-import ru from '@/i18n/locales/ru.json'
-import zh from '@/i18n/locales/zh.json'
-import es from '@/i18n/locales/es.json'
 
 export type TranslationParams = Record<string, string | number | null | undefined>
 type TranslationDictionary = Record<string, string>
 
-const dictionaries: Record<AppLanguage, TranslationDictionary> = {
+// French is the source/fallback language and stays eagerly bundled.
+// Other locales are loaded on demand to keep entry bundles small.
+const dictionaries: Partial<Record<AppLanguage, TranslationDictionary>> = {
   fr,
-  en,
-  ja,
-  ru,
-  zh,
-  es,
+}
+
+const localeModules = import.meta.glob<{ default: TranslationDictionary }>([
+  './locales/*.json',
+  '!./locales/fr.json',
+])
+
+const pendingLoads = new Map<AppLanguage, Promise<void>>()
+
+export function isLocaleLoaded(language: AppLanguage): boolean {
+  return dictionaries[language] !== undefined
+}
+
+export function loadLocale(language: AppLanguage): Promise<void> {
+  if (isLocaleLoaded(language)) return Promise.resolve()
+
+  const pending = pendingLoads.get(language)
+  if (pending) return pending
+
+  const importer = localeModules[`./locales/${language}.json`]
+  if (!importer) {
+    // Unknown locale file: fall back to French silently.
+    return Promise.resolve()
+  }
+
+  const load = importer()
+    .then((module) => {
+      dictionaries[language] = module.default
+    })
+    .catch(() => {
+      // Keep French fallback on load failure; retry is possible on next call.
+    })
+    .finally(() => {
+      pendingLoads.delete(language)
+    })
+
+  pendingLoads.set(language, load)
+  return load
 }
 
 function interpolate(template: string, params?: TranslationParams): string {
@@ -27,7 +57,7 @@ function interpolate(template: string, params?: TranslationParams): string {
 }
 
 export function translateKey(language: AppLanguage, key: string, params?: TranslationParams): string {
-  const dictionary = dictionaries[language]
+  const dictionary = dictionaries[language] ?? dictionaries.fr ?? {}
   const template = dictionary[key] || key
   return interpolate(template, params)
 }

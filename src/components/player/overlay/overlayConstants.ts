@@ -1,5 +1,7 @@
 export const OVERLAY_AUTOHIDE_MS = 3000
-export const OVERLAY_SCALE_BREAK_PX = 700
+const OVERLAY_SCALE_BREAK_PX = 700
+
+export const PLAYBACK_SPEEDS = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 2] as const
 
 export interface OverlayIconScale {
   iconPx: number

@@ -8,6 +8,7 @@ import { useI18n } from '@/i18n'
 export function ResultatsHeader({
   judges,
   selectedJudgeKey,
+  allActive = false,
   judgeColors,
   onSelectJudge,
   onJudgeColorChange,
@@ -35,7 +36,7 @@ export function ResultatsHeader({
 
         {judges.map((judge) => {
           const color = judgeColors[judge.key] ?? '#60a5fa'
-          const active = selectedJudgeKey === judge.key
+          const active = allActive || selectedJudgeKey === judge.key
           const displayName = getDisplayName(judge.judgeName, judge.isCurrentJudge)
 
           return (

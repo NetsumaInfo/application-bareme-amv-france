@@ -157,8 +157,10 @@ function createZip(files: ZipFileEntry[]): Uint8Array {
   let offset = 0
 
   for (const file of files) {
+    const fileData = file.data
+    const fileDataLength = fileData.length
     const nameBytes = textEncoder.encode(file.path)
-    const checksum = crc32(file.data)
+    const checksum = crc32(fileData)
 
     const localHeader = new Uint8Array(30 + nameBytes.length)
     writeUInt32(localHeader, 0, 0x04034b50)
@@ -168,13 +170,13 @@ function createZip(files: ZipFileEntry[]): Uint8Array {
     writeUInt16(localHeader, 10, 0)
     writeUInt16(localHeader, 12, 0)
     writeUInt32(localHeader, 14, checksum)
-    writeUInt32(localHeader, 18, file.data.length)
-    writeUInt32(localHeader, 22, file.data.length)
+    writeUInt32(localHeader, 18, fileDataLength)
+    writeUInt32(localHeader, 22, fileDataLength)
     writeUInt16(localHeader, 26, nameBytes.length)
     writeUInt16(localHeader, 28, 0)
     localHeader.set(nameBytes, 30)
 
-    localParts.push(localHeader, file.data)
+    localParts.push(localHeader, fileData)
 
     const centralHeader = new Uint8Array(46 + nameBytes.length)
     writeUInt32(centralHeader, 0, 0x02014b50)
@@ -185,8 +187,8 @@ function createZip(files: ZipFileEntry[]): Uint8Array {
     writeUInt16(centralHeader, 12, 0)
     writeUInt16(centralHeader, 14, 0)
     writeUInt32(centralHeader, 16, checksum)
-    writeUInt32(centralHeader, 20, file.data.length)
-    writeUInt32(centralHeader, 24, file.data.length)
+    writeUInt32(centralHeader, 20, fileDataLength)
+    writeUInt32(centralHeader, 24, fileDataLength)
     writeUInt16(centralHeader, 28, nameBytes.length)
     writeUInt16(centralHeader, 30, 0)
     writeUInt16(centralHeader, 32, 0)
@@ -197,7 +199,7 @@ function createZip(files: ZipFileEntry[]): Uint8Array {
     centralHeader.set(nameBytes, 46)
     centralParts.push(centralHeader)
 
-    offset += localHeader.length + file.data.length
+    offset += localHeader.length + fileDataLength
   }
 
   const localData = concatBytes(localParts)

@@ -4,7 +4,6 @@ import { useUIStore } from '@/store/useUIStore'
 import * as tauri from '@/services/tauri'
 import { forgetRecentProjectPath, listRecentProjectPaths, rememberRecentProjectPath, setRecentProjectPaths } from '@/services/recentProjects'
 import { loadAndApplyProjectFile } from '@/services/projectSession'
-import { HoverTextTooltip } from '@/components/ui/HoverTextTooltip'
 import { ProjectDeletionConfirmDialog } from '@/components/project/ProjectDeletionConfirmDialog'
 import { useI18n } from '@/i18n'
 
@@ -189,6 +188,7 @@ export function WelcomeScreen() {
 
         <div className="flex gap-3 mb-8">
           <button
+            type="button"
             onClick={() => setShowProjectModal(true)}
             className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg bg-primary-600 hover:bg-primary-500 text-white text-sm font-medium transition-colors"
           >
@@ -196,6 +196,7 @@ export function WelcomeScreen() {
             {t('Nouveau projet')}
           </button>
           <button
+            type="button"
             onClick={handleOpenProject}
             className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg bg-surface hover:bg-surface-light text-gray-300 hover:text-white text-sm font-medium transition-colors border border-gray-700"
           >
@@ -260,11 +261,9 @@ export function WelcomeScreen() {
 
         {folderPath && (
           <div className="mt-6 text-center">
-            <HoverTextTooltip text={folderPath}>
-              <p className="text-[9px] text-gray-600 truncate">
-                {t('Dossier : {path}', { path: folderPath })}
-              </p>
-            </HoverTextTooltip>
+            <p className="text-[9px] text-gray-600 truncate">
+              {t('Dossier : {path}', { path: folderPath })}
+            </p>
           </div>
         )}
       </div>

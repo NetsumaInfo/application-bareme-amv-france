@@ -1,3 +1,5 @@
+import { memo, useMemo } from 'react'
+import type { CSSProperties } from 'react'
 import { getClipPrimaryLabel, getClipSecondaryLabel } from '@/utils/formatters'
 import { withAlpha } from '@/utils/colors'
 import {
@@ -40,6 +42,174 @@ function formatCriterionValue(value: number): string {
   return value.toFixed(2).replace(/\.?0+$/, '')
 }
 
+interface DetailedTableRowProps {
+  row: ResultatsRow
+  index: number
+  isSelected: boolean
+  canSortByScore: boolean
+  categoryGroups: CategoryGroup[]
+  judges: JudgeSource[]
+  criterionDraftCells: Record<string, string>
+  judgeCellStyles: Record<string, CSSProperties>
+  judgeTotalStyles: Record<string, CSSProperties>
+  onSelectClip: (clipId: string) => void
+  onOpenClipInNotation: (clipId: string) => void
+  onOpenClipContextMenu: (clipId: string, x: number, y: number) => void
+  getCriterionCellKey: (clipId: string, criterionId: string, judgeKey: string) => string
+  onSetCriterionDraftCell: (key: string, value: string) => void
+  onCommitCriterionDraftCell: (clipId: string, criterionId: string, judgeKey: string) => void
+  onClearCriterionDraftCell: (key: string) => void
+  showMiniatures: boolean
+  thumbnailDefaultSeconds: number
+  readOnly: boolean
+  forceMiniatureLoad: boolean
+  staticExport: boolean
+}
+
+const DetailedTableRow = memo(function DetailedTableRow({
+  row,
+  index,
+  isSelected,
+  canSortByScore,
+  categoryGroups,
+  judges,
+  criterionDraftCells,
+  judgeCellStyles,
+  judgeTotalStyles,
+  onSelectClip,
+  onOpenClipInNotation,
+  onOpenClipContextMenu,
+  getCriterionCellKey,
+  onSetCriterionDraftCell,
+  onCommitCriterionDraftCell,
+  onClearCriterionDraftCell,
+  showMiniatures,
+  thumbnailDefaultSeconds,
+  readOnly,
+  forceMiniatureLoad,
+  staticExport,
+}: DetailedTableRowProps) {
+  const { t } = useI18n()
+  return (
+    <tr
+      onClick={() => onSelectClip(row.clip.id)}
+      className={`cursor-pointer transition-colors ${
+        isSelected
+          ? 'bg-white/[0.07]'
+          : index % 2 === 0
+            ? 'bg-white/4'
+            : 'bg-transparent'
+      } hover:bg-white/6`}
+    >
+      <td className={` border-r border-gray-800/60 bg-surface px-2 py-1 text-center text-[10px] text-gray-500`}>
+        {index + 1}
+      </td>
+      <td
+        className={` border-r border-gray-800/60 bg-surface px-2 py-1 ${RESULTATS_PARTICIPANT_COLUMN_WIDTH_CLASS}`}
+        onDoubleClick={(event) => {
+          event.stopPropagation()
+          onOpenClipInNotation(row.clip.id)
+        }}
+        onContextMenu={(event) => {
+          event.preventDefault()
+          event.stopPropagation()
+          onOpenClipContextMenu(row.clip.id, event.clientX, event.clientY)
+        }}
+      >
+        <div className={`flex flex-col min-w-0 ${staticExport ? 'leading-snug' : 'leading-tight'}`}>
+          <span className={`${staticExport ? 'whitespace-normal wrap-break-word' : 'truncate'} text-[11px] font-semibold text-primary-300`}>{getClipPrimaryLabel(row.clip)}</span>
+          {getClipSecondaryLabel(row.clip) && (
+            <span className={`${staticExport ? 'whitespace-normal wrap-break-word' : 'truncate'} text-[9px] text-gray-500`}>{getClipSecondaryLabel(row.clip)}</span>
+          )}
+          {showMiniatures && row.clip.filePath ? (
+            <ClipMiniaturePreview
+              clip={row.clip}
+              enabled={showMiniatures}
+              defaultSeconds={thumbnailDefaultSeconds}
+              forceLoad={forceMiniatureLoad}
+            />
+          ) : null}
+        </div>
+      </td>
+
+      {categoryGroups.map((group) =>
+        group.criteria.map((criterion) =>
+          judges.map((judge) => {
+            const key = getCriterionCellKey(row.clip.id, criterion.id, judge.key)
+            const note = judge.notes[row.clip.id] as NoteLike | undefined
+            const score = getCriterionNumericScore(note, criterion)
+            const displayed = criterionDraftCells[key] ?? formatCriterionValue(score)
+
+            return (
+              <td
+                key={`${row.clip.id}-${criterion.id}-${judge.key}`}
+                className="amv-number-ui border-r border-gray-800/60 px-1 py-1 text-center"
+                style={judgeCellStyles[judge.key]}
+              >
+                {readOnly ? (
+                  <span className="block w-full rounded-xs border border-transparent bg-transparent px-1 py-0.5 text-center">
+                    {displayed}
+                  </span>
+                ) : (
+                  <input
+                    type="number"
+                    aria-label={t('Note pour {criterion} — juge {judge}', {
+                      criterion: criterion.name,
+                      judge: judge.judgeName,
+                    })}
+                    min={Number.isFinite(criterion.min) ? Number(criterion.min) : 0}
+                    max={Number.isFinite(criterion.max) ? Number(criterion.max) : undefined}
+                    step={Number.isFinite(criterion.step) ? Number(criterion.step) : 0.5}
+                    value={displayed}
+                    onContextMenu={(event) => {
+                      event.preventDefault()
+                      event.stopPropagation()
+                      onOpenClipContextMenu(row.clip.id, event.clientX, event.clientY)
+                    }}
+                    onChange={(event) => {
+                      onSetCriterionDraftCell(key, event.target.value)
+                    }}
+                    onBlur={() => onCommitCriterionDraftCell(row.clip.id, criterion.id, judge.key)}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter') {
+                        event.preventDefault()
+                        onCommitCriterionDraftCell(row.clip.id, criterion.id, judge.key)
+                      } else if (event.key === 'Escape') {
+                        onClearCriterionDraftCell(key)
+                      }
+                    }}
+                    className="amv-soft-number w-full rounded-xs border border-transparent bg-transparent px-1 py-0.5 text-center hover:bg-white/5 focus:bg-surface-dark focus:border-gray-600 focus-visible:outline-hidden outline-hidden"
+                  />
+                )}
+              </td>
+            )
+          }),
+        ),
+      )}
+
+      {canSortByScore &&
+        row.judgeTotals.map((score, judgeIdx) => {
+          const judge = judges[judgeIdx]
+          return (
+            <td
+              key={`${row.clip.id}-total-${judge.key}`}
+              className="amv-number-ui border-r border-gray-800/60 px-2 py-1 text-center"
+              style={judgeTotalStyles[judge.key]}
+            >
+              {score.toFixed(1)}
+            </td>
+          )
+        })}
+
+      {canSortByScore && (
+        <td className="amv-number-ui border-r border-gray-700/60 px-2 py-1 text-center font-bold text-white">
+          {row.averageTotal.toFixed(1)}
+        </td>
+      )}
+    </tr>
+  )
+})
+
 export function ResultatsGlobalDetailedTable({
   canSortByScore,
   currentBaremeTotalPoints,
@@ -63,6 +233,20 @@ export function ResultatsGlobalDetailedTable({
   staticExport = false,
 }: ResultatsGlobalDetailedTableProps) {
   const { t } = useI18n()
+  const judgeCellStyles = useMemo(() => (
+    judges.reduce<Record<string, CSSProperties>>((acc, judge) => {
+      const color = judgeColors[judge.key] ?? '#60a5fa'
+      acc[judge.key] = { color, backgroundColor: withAlpha(color, 0.05) }
+      return acc
+    }, {})
+  ), [judgeColors, judges])
+  const judgeTotalStyles = useMemo(() => (
+    judges.reduce<Record<string, CSSProperties>>((acc, judge) => {
+      const color = judgeColors[judge.key] ?? '#60a5fa'
+      acc[judge.key] = { color, backgroundColor: withAlpha(color, 0.06) }
+      return acc
+    }, {})
+  ), [judgeColors, judges])
   return (
     <div className={`relative isolate min-h-0 flex-1 ${staticExport ? 'overflow-visible' : 'amv-results-scroll'}`}>
       <table className="w-full border-separate border-spacing-0 text-[11px]">
@@ -174,126 +358,32 @@ export function ResultatsGlobalDetailedTable({
         </thead>
 
         <tbody>
-          {rows.map((row, index) => {
-            const isSelected = selectedClipId === row.clip.id
-            return (
-              <tr
-                key={row.clip.id}
-                onClick={() => onSelectClip(row.clip.id)}
-                className={`cursor-pointer transition-colors ${
-                  isSelected
-                    ? 'bg-white/[0.07]'
-                    : index % 2 === 0
-                      ? 'bg-white/4'
-                      : 'bg-transparent'
-                } hover:bg-white/6`}
-              >
-                <td className={` border-r border-gray-800/60 bg-surface px-2 py-1 text-center text-[10px] text-gray-500`}>
-                  {index + 1}
-                </td>
-                <td
-                  className={` border-r border-gray-800/60 bg-surface px-2 py-1 ${RESULTATS_PARTICIPANT_COLUMN_WIDTH_CLASS}`}
-                  onDoubleClick={(event) => {
-                    event.stopPropagation()
-                    onOpenClipInNotation(row.clip.id)
-                  }}
-                  onContextMenu={(event) => {
-                    event.preventDefault()
-                    event.stopPropagation()
-                    onOpenClipContextMenu(row.clip.id, event.clientX, event.clientY)
-                  }}
-                >
-                  <div className={`flex flex-col min-w-0 ${staticExport ? 'leading-snug' : 'leading-tight'}`}>
-                    <span className={`${staticExport ? 'whitespace-normal wrap-break-word' : 'truncate'} text-[11px] font-semibold text-primary-300`}>{getClipPrimaryLabel(row.clip)}</span>
-                    {getClipSecondaryLabel(row.clip) && (
-                      <span className={`${staticExport ? 'whitespace-normal wrap-break-word' : 'truncate'} text-[9px] text-gray-500`}>{getClipSecondaryLabel(row.clip)}</span>
-                    )}
-                    {showMiniatures && row.clip.filePath ? (
-                      <ClipMiniaturePreview
-                        clip={row.clip}
-                        enabled={showMiniatures}
-                        defaultSeconds={thumbnailDefaultSeconds}
-                        forceLoad={forceMiniatureLoad}
-                      />
-                    ) : null}
-                  </div>
-                </td>
-
-                {categoryGroups.map((group) =>
-                  group.criteria.map((criterion) =>
-                    judges.map((judge) => {
-                      const key = getCriterionCellKey(row.clip.id, criterion.id, judge.key)
-                      const note = judge.notes[row.clip.id] as NoteLike | undefined
-                      const score = getCriterionNumericScore(note, criterion)
-                      const displayed = criterionDraftCells[key] ?? formatCriterionValue(score)
-                      const judgeColor = judgeColors[judge.key] ?? '#60a5fa'
-
-                      return (
-                        <td
-                          key={`${row.clip.id}-${criterion.id}-${judge.key}`}
-                          className="amv-number-ui border-r border-gray-800/60 px-1 py-1 text-center"
-                          style={{ color: judgeColor, backgroundColor: withAlpha(judgeColor, 0.05) }}
-                        >
-                          {readOnly ? (
-                            <span className="block w-full rounded-xs border border-transparent bg-transparent px-1 py-0.5 text-center">
-                              {displayed}
-                            </span>
-                          ) : (
-                            <input
-                              type="number"
-                              min={Number.isFinite(criterion.min) ? Number(criterion.min) : 0}
-                              max={Number.isFinite(criterion.max) ? Number(criterion.max) : undefined}
-                              step={Number.isFinite(criterion.step) ? Number(criterion.step) : 0.5}
-                              value={displayed}
-                              onContextMenu={(event) => {
-                                event.preventDefault()
-                                event.stopPropagation()
-                                onOpenClipContextMenu(row.clip.id, event.clientX, event.clientY)
-                              }}
-                              onChange={(event) => {
-                                onSetCriterionDraftCell(key, event.target.value)
-                              }}
-                              onBlur={() => onCommitCriterionDraftCell(row.clip.id, criterion.id, judge.key)}
-                              onKeyDown={(event) => {
-                                if (event.key === 'Enter') {
-                                  event.preventDefault()
-                                  onCommitCriterionDraftCell(row.clip.id, criterion.id, judge.key)
-                                } else if (event.key === 'Escape') {
-                                  onClearCriterionDraftCell(key)
-                                }
-                              }}
-                              className="amv-soft-number w-full rounded-xs border border-transparent bg-transparent px-1 py-0.5 text-center hover:bg-white/5 focus:bg-surface-dark focus:border-gray-600 focus-visible:outline-hidden outline-hidden"
-                            />
-                          )}
-                        </td>
-                      )
-                    }),
-                  ),
-                )}
-
-                {canSortByScore &&
-                  row.judgeTotals.map((score, judgeIdx) => {
-                    const judge = judges[judgeIdx]
-                    const color = judgeColors[judge.key] ?? '#60a5fa'
-                    return (
-                      <td
-                        key={`${row.clip.id}-total-${judge.key}`}
-                        className="amv-number-ui border-r border-gray-800/60 px-2 py-1 text-center"
-                        style={{ color, backgroundColor: withAlpha(color, 0.06) }}
-                      >
-                        {score.toFixed(1)}
-                      </td>
-                    )
-                  })}
-
-                {canSortByScore && (
-                  <td className="amv-number-ui border-r border-gray-700/60 px-2 py-1 text-center font-bold text-white">
-                    {row.averageTotal.toFixed(1)}
-                  </td>
-                )}
-              </tr>
-            )
-          })}
+          {rows.map((row, index) => (
+            <DetailedTableRow
+              key={row.clip.id}
+              row={row}
+              index={index}
+              isSelected={selectedClipId === row.clip.id}
+              canSortByScore={canSortByScore}
+              categoryGroups={categoryGroups}
+              judges={judges}
+              criterionDraftCells={criterionDraftCells}
+              judgeCellStyles={judgeCellStyles}
+              judgeTotalStyles={judgeTotalStyles}
+              onSelectClip={onSelectClip}
+              onOpenClipInNotation={onOpenClipInNotation}
+              onOpenClipContextMenu={onOpenClipContextMenu}
+              getCriterionCellKey={getCriterionCellKey}
+              onSetCriterionDraftCell={onSetCriterionDraftCell}
+              onCommitCriterionDraftCell={onCommitCriterionDraftCell}
+              onClearCriterionDraftCell={onClearCriterionDraftCell}
+              showMiniatures={showMiniatures}
+              thumbnailDefaultSeconds={thumbnailDefaultSeconds}
+              readOnly={readOnly}
+              forceMiniatureLoad={forceMiniatureLoad}
+              staticExport={staticExport}
+            />
+          ))}
         </tbody>
       </table>
     </div>

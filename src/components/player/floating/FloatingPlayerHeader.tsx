@@ -30,6 +30,7 @@ export function FloatingPlayerHeader({
       {isHovering && (
         <HoverTextTooltip text={t('Fermer')}>
           <button
+            type="button"
             onClick={onClose}
             aria-label={t('Fermer')}
             className="flex items-center justify-center w-4 h-4 rounded-sm hover:bg-gray-700 transition-colors"

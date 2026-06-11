@@ -7,6 +7,7 @@ const UNCATEGORIZED_SECTION_KEY = '__uncategorized__'
 interface BaremeCriterionSection {
   key: string
   label: string
+  categoryToken: string
   color: string
   total: number
   items: Array<{ criterion: Criterion; index: number }>
@@ -180,6 +181,7 @@ export function useBaremeEditSections({
     sections.push({
       key,
       label,
+      categoryToken: key === UNCATEGORIZED_SECTION_KEY ? 'Général' : key,
       color: key === UNCATEGORIZED_SECTION_KEY ? '#64748b' : getCategoryColor(key),
       total: criterion.max ?? 10,
       items: [{ criterion, index }],

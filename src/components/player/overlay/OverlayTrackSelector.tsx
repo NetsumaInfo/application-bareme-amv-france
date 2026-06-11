@@ -37,6 +37,7 @@ export function OverlayTrackSelector({
     <div ref={containerRef} className="relative">
       <HoverTextTooltip text={enabled ? buttonTitle : disabledTitle}>
         <button
+          type="button"
           onClick={() => enabled && onToggle()}
           aria-label={enabled ? buttonTitle : disabledTitle}
           aria-haspopup="menu"
@@ -62,6 +63,7 @@ export function OverlayTrackSelector({
           {options.map((option) => (
             <button
               key={option.key}
+              type="button"
               role="menuitemradio"
               aria-checked={option.active}
               onClick={option.onSelect}

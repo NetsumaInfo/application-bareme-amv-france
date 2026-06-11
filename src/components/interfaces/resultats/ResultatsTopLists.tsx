@@ -23,15 +23,15 @@ interface ResultatsTopListsProps {
 }
 
 function sortRowsByScore(rows: ResultatsRow[], scoreAccessor: (row: ResultatsRow) => number) {
-  return [...rows].sort((a, b) => {
+  return rows.toSorted((a, b) => {
     const scoreA = scoreAccessor(a)
     const scoreB = scoreAccessor(b)
     if (scoreB !== scoreA) return scoreB - scoreA
     // Tie-breaker 1: compare final average to keep global consistency between views.
     if (b.averageTotal !== a.averageTotal) return b.averageTotal - a.averageTotal
     // Tie-breaker 2: compare per-judge totals lexicographically (desc) for stable ranking with many judges.
-    const sortedA = [...a.judgeTotals].sort((x, y) => y - x)
-    const sortedB = [...b.judgeTotals].sort((x, y) => y - x)
+    const sortedA = a.judgeTotals.toSorted((x, y) => y - x)
+    const sortedB = b.judgeTotals.toSorted((x, y) => y - x)
     const maxLen = Math.max(sortedA.length, sortedB.length)
     for (let i = 0; i < maxLen; i += 1) {
       const va = sortedA[i] ?? 0

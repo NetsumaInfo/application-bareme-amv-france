@@ -3,6 +3,7 @@ import { listen } from '@tauri-apps/api/event'
 import { getCurrentWindow } from '@tauri-apps/api/window'
 import * as tauri from '@/services/tauri'
 import { usePlayerStatusPolling } from '@/hooks/usePlayerStatusPolling'
+import { isPlayerMenuOpen } from '@/components/player/overlay/overlayMenuFocus'
 
 const SNAP_SYNC_MS = 16
 const IDLE_SYNC_MS = 70
@@ -32,7 +33,11 @@ export function useOverlayPlayerStatus() {
       setIsOverlayActive(Boolean(event.payload))
     })
       .then((off) => {
-        unlisten = off
+        if (active) {
+          unlisten = off
+        } else {
+          off()
+        }
       })
       .catch(() => {})
 
@@ -96,9 +101,13 @@ export function useOverlayPlayerStatus() {
   useEffect(() => {
     if (!isOverlayActive || !isPlayerFullscreen) return
     const currentWindow = getCurrentWindow()
-    currentWindow.setFocus().catch(() => {})
-    const refocusTimer = setInterval(() => {
+    if (!isPlayerMenuOpen()) {
       currentWindow.setFocus().catch(() => {})
+    }
+    const refocusTimer = setInterval(() => {
+      if (!isPlayerMenuOpen()) {
+        currentWindow.setFocus().catch(() => {})
+      }
     }, 1500)
     return () => clearInterval(refocusTimer)
   }, [isOverlayActive, isPlayerFullscreen])

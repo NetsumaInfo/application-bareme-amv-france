@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Star, X } from 'lucide-react'
 import type { Clip } from '@/types/project'
 import { getClipPrimaryLabel, getClipSecondaryLabel } from '@/utils/formatters'
@@ -18,20 +18,39 @@ export function ClipFavoriteDialog({
   onRemove,
 }: ClipFavoriteDialogProps) {
   const { t } = useI18n()
+  const dialogRef = useRef<HTMLDialogElement | null>(null)
   const [comment, setComment] = useState(clip.favoriteComment ?? '')
   const title = clip.favorite ? t('Modifier le favori') : t('Mettre en favori')
   const secondaryLabel = getClipSecondaryLabel(clip)
   const canRemove = Boolean(clip.favorite)
   const normalizedComment = useMemo(() => comment.trim(), [comment])
 
+  useEffect(() => {
+    const dialog = dialogRef.current
+    if (dialog && !dialog.open) dialog.showModal()
+  }, [])
+
+  useEffect(() => {
+    const dialog = dialogRef.current
+    if (!dialog) return
+    const handleBackdropClick = (event: MouseEvent) => {
+      if (event.target === dialog) onClose()
+    }
+    dialog.addEventListener('click', handleBackdropClick)
+    return () => dialog.removeEventListener('click', handleBackdropClick)
+  }, [onClose])
+
   return (
-    <div className="fixed inset-0 z-90 flex items-center justify-center bg-black/65 px-4">
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-label={title}
-        className="w-full max-w-md overflow-hidden rounded-lg border border-gray-700 bg-surface shadow-2xl"
-      >
+    <dialog
+      ref={dialogRef}
+      aria-label={title}
+      onCancel={(event) => {
+        event.preventDefault()
+        onClose()
+      }}
+      className="z-90 m-auto w-full max-w-md overflow-hidden rounded-lg border border-gray-700 bg-surface p-0 text-left shadow-2xl backdrop:bg-black/65"
+    >
+      <div onClick={(event) => event.stopPropagation()}>
         <div className="flex items-center justify-between border-b border-gray-700/60 px-4 py-3">
           <div className="flex min-w-0 items-center gap-2">
             <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-amber-400/12 text-amber-200">
@@ -99,6 +118,6 @@ export function ClipFavoriteDialog({
           </div>
         </div>
       </div>
-    </div>
+    </dialog>
   )
 }

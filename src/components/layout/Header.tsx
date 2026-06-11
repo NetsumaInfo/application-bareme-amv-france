@@ -22,7 +22,7 @@ export default function Header({
   const clips = useProjectStore((state) => state.clips)
   const { reset: resetNotation, currentBareme } = useNotationStore()
   const currentTab = useUIStore((state) => state.currentTab)
-  const { handleExportJudgeNotes } = useProjectMenuActions()
+  const { handleExport } = useProjectMenuActions()
   const { importing, handleImportJudgeJson } = useJudgeImport()
   const updateStatus = useAppUpdateStore((state) => state.status)
   const { t } = useI18n()
@@ -35,7 +35,7 @@ export default function Header({
   const judgeExportTooltip = clips.length === 0
     ? t('Aucun clip dans le projet')
     : currentBareme
-      ? t('Exporter notation (<concours>_<pseudo>.json)')
+      ? t('Exporter tout (concours + notes + barème)')
       : t('Aucun barème sélectionné')
   const hasUpdateAvailable = updateStatus === 'update_available'
   const settingsTooltip = hasUpdateAvailable
@@ -71,6 +71,7 @@ export default function Header({
         {currentProject && (
           <HoverTextTooltip text={t('Fermer le projet')}>
             <button
+              type="button"
               onClick={handleCloseProject}
               aria-label={t('Fermer le projet')}
               className="inline-flex h-[22px] w-[22px] items-center justify-center rounded-md text-gray-500 transition-colors hover:bg-surface-light hover:text-white"
@@ -114,7 +115,7 @@ export default function Header({
               className="app-header-trigger gap-0.5 disabled:cursor-not-allowed disabled:opacity-50"
             >
               <Upload size={11} className="shrink-0" />
-              <span className="leading-none">{importing ? t('Import...') : t('Importer un juge')}</span>
+              <span className="leading-[1.35]">{importing ? t('Import...') : t('Importer un juge')}</span>
             </button>
           </HoverTextTooltip>
         )}
@@ -124,13 +125,13 @@ export default function Header({
               type="button"
               onClick={() => {
                 if (!canExportJudge) return
-                handleExportJudgeNotes().catch(() => {})
+                handleExport().catch(() => {})
               }}
               disabled={!canExportJudge}
               className="app-header-trigger gap-0.5 disabled:cursor-not-allowed disabled:opacity-50"
             >
               <Download size={11} className="shrink-0" />
-              <span className="leading-none">{t('Exporter notation')}</span>
+              <span className="leading-[1.35]">{t('Exporter')}</span>
             </button>
           </HoverTextTooltip>
         )}
@@ -139,6 +140,7 @@ export default function Header({
         {currentProject && <ProjectManager />}
         <HoverTextTooltip text={settingsTooltip}>
           <button
+            type="button"
             onClick={onOpenSettings}
             aria-label={hasUpdateAvailable ? t('Paramètres (mise à jour disponible)') : t('Paramètres')}
             className={`app-header-trigger app-header-trigger-icon relative ${hasUpdateAvailable ? 'ring-1 ring-inset ring-emerald-400/40' : ''}`}

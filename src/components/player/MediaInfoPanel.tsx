@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import { Copy, X } from 'lucide-react'
 import { useMediaInfoData } from '@/components/player/mediaInfo/useMediaInfoData'
 import { buildMediaInfoSections } from '@/components/player/mediaInfo/mediaInfoSections'
@@ -15,13 +15,29 @@ interface MediaInfoPanelProps {
 export default function MediaInfoPanel({ clipName, filePath, onClose }: MediaInfoPanelProps) {
   const { t } = useI18n()
   const { info, error } = useMediaInfoData({ filePath })
+  const dialogRef = useRef<HTMLDialogElement | null>(null)
 
   useEffect(() => {
-    const handleKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
+    const dialog = dialogRef.current
+    if (dialog && !dialog.open) dialog.showModal()
+  }, [])
+
+  useEffect(() => {
+    const dialog = dialogRef.current
+    if (!dialog) return
+    const handleCancel = (event: Event) => {
+      event.preventDefault()
+      onClose()
     }
-    window.addEventListener('keydown', handleKey)
-    return () => window.removeEventListener('keydown', handleKey)
+    const handleBackdropClick = (event: MouseEvent) => {
+      if (event.target === dialog) onClose()
+    }
+    dialog.addEventListener('cancel', handleCancel)
+    dialog.addEventListener('click', handleBackdropClick)
+    return () => {
+      dialog.removeEventListener('cancel', handleCancel)
+      dialog.removeEventListener('click', handleBackdropClick)
+    }
   }, [onClose])
 
   const sections = useMemo(() => (info ? buildMediaInfoSections(info, t) : []), [info, t])
@@ -41,26 +57,13 @@ export default function MediaInfoPanel({ clipName, filePath, onClose }: MediaInf
   }
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60"
-      onClick={onClose}
-      onKeyDown={(event) => {
-        if (event.key === 'Enter' || event.key === ' ') {
-          event.preventDefault()
-          onClose()
-        }
-      }}
-      role="button"
-      tabIndex={0}
-      aria-label={t('Fermer')}
+    <dialog
+      ref={dialogRef}
+      aria-label={`${t('MediaInfo')} - ${clipName}`}
+      className="m-0 fixed inset-0 z-50 h-full w-full max-h-none max-w-none items-center justify-center bg-black/60 open:flex backdrop:bg-transparent"
     >
       <div
         className="bg-surface border border-gray-700 rounded-xl shadow-2xl w-[520px] max-w-[94vw] max-h-[86vh] overflow-hidden"
-        onClick={(e) => e.stopPropagation()}
-        onKeyDown={(event) => event.stopPropagation()}
-        role="dialog"
-        aria-modal="true"
-        aria-label={`${t('MediaInfo')} - ${clipName}`}
       >
         <div className="flex items-center justify-between px-4 py-3 border-b border-gray-700">
           <h3 className="text-sm font-semibold text-white truncate pr-2">
@@ -69,6 +72,7 @@ export default function MediaInfoPanel({ clipName, filePath, onClose }: MediaInf
           <div className="flex items-center gap-1">
             <HoverTextTooltip text={t('Copier les infos')}>
               <button
+                type="button"
                 onClick={copyToClipboard}
                 aria-label={t('Copier les infos')}
                 className="p-1 rounded-sm hover:bg-surface-light text-gray-400 hover:text-white transition-colors shrink-0"
@@ -77,7 +81,9 @@ export default function MediaInfoPanel({ clipName, filePath, onClose }: MediaInf
               </button>
             </HoverTextTooltip>
             <button
+              type="button"
               onClick={onClose}
+              aria-label={t('Fermer')}
               className="p-1 rounded-sm hover:bg-surface-light text-gray-400 hover:text-white transition-colors shrink-0"
             >
               <X size={16} />
@@ -100,11 +106,9 @@ export default function MediaInfoPanel({ clipName, filePath, onClose }: MediaInf
         </div>
 
         <div className="px-4 py-2 border-t border-gray-700">
-          <HoverTextTooltip text={filePath}>
-            <p className="text-[10px] text-gray-600 truncate">{filePath}</p>
-          </HoverTextTooltip>
+          <p className="text-[10px] text-gray-600 truncate">{filePath}</p>
         </div>
       </div>
-    </div>
+    </dialog>
   )
 }

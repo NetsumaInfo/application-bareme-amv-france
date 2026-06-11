@@ -28,8 +28,11 @@ export function SpreadsheetTableFooter({
   const { t } = useI18n()
   return (
     <tfoot>
+      {/* react-doctor-disable-next-line react-doctor/control-has-associated-label -- decorative 2px divider row, not a control */}
       <tr>
         <td
+          // react-doctor-disable-next-line react-doctor/no-aria-hidden-on-focusable -- decorative non-focusable spacer cell
+          aria-hidden="true"
           colSpan={2 + currentBareme.criteria.length + (hideTotalsSetting ? 0 : 1)}
           className="h-[2px] bg-gray-500"
         />
@@ -44,9 +47,10 @@ export function SpreadsheetTableFooter({
         {categoryGroups.map((group) =>
           group.criteria.map((criterion, index) => {
             if (index !== 0) return null
-            const values = clips
-              .filter((clip) => hasAnyScoreInGroup(clip.id, group))
-              .map((clip) => getCategoryScore(clip.id, group))
+            const values = clips.reduce<number[]>((acc, clip) => {
+              if (hasAnyScoreInGroup(clip.id, group)) acc.push(getCategoryScore(clip.id, group))
+              return acc
+            }, [])
             const avg = values.length > 0
               ? values.reduce((sum, value) => sum + value, 0) / values.length
               : 0
@@ -68,9 +72,10 @@ export function SpreadsheetTableFooter({
         {!hideTotalsSetting && (
           <td className="amv-number-ui px-2 py-2 text-center font-bold text-[12px] text-white bg-surface-dark">
             {(() => {
-              const values = clips
-                .filter((clip) => hasAnyScoreInBareme(clip.id))
-                .map((clip) => getScoreForClip(clip.id))
+              const values = clips.reduce<number[]>((acc, clip) => {
+                if (hasAnyScoreInBareme(clip.id)) acc.push(getScoreForClip(clip.id))
+                return acc
+              }, [])
               return (
                 values.length > 0
                   ? values.reduce((sum, value) => sum + value, 0) / values.length

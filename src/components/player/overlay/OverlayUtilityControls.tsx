@@ -134,8 +134,9 @@ export function OverlayUtilityControls({
   }
 
   useEffect(() => {
+    const timerRef = closeTimerRef
     return () => {
-      if (closeTimerRef.current) clearTimeout(closeTimerRef.current)
+      if (timerRef.current) clearTimeout(timerRef.current)
     }
   }, [])
 
@@ -151,6 +152,7 @@ export function OverlayUtilityControls({
       >
         <HoverTextTooltip text={muteLabel}>
           <button
+            type="button"
             onClick={() => setVolumePanelOpen((prev) => !prev)}
             aria-label={muteLabel}
             className={ICON_BTN}
@@ -164,6 +166,7 @@ export function OverlayUtilityControls({
             <div className="flex items-center gap-2">
               <HoverTextTooltip text={muteLabel}>
                 <button
+                  type="button"
                   onClick={onToggleMute}
                   aria-label={muteLabel}
                   className="p-1.5 rounded-full text-white/85 transition-colors motion-reduce:transition-none
@@ -196,6 +199,7 @@ export function OverlayUtilityControls({
       <div className="hidden @[480px]/overlay:flex items-center gap-1 @[700px]/overlay:gap-2 min-w-0">
         <HoverTextTooltip text={muteLabel}>
           <button
+            type="button"
             onClick={onToggleMute}
             aria-label={muteLabel}
             className={ICON_BTN}
@@ -262,6 +266,7 @@ export function OverlayUtilityControls({
       {clipInfo.miniaturesEnabled && (
         <HoverTextTooltip text={miniatureLabel}>
           <button
+            type="button"
             onClick={onSetMiniatureFrame}
             aria-label={miniatureLabel}
             className={ICON_BTN}
@@ -273,6 +278,7 @@ export function OverlayUtilityControls({
 
       <HoverTextTooltip text={fullscreenLabel}>
         <button
+          type="button"
           onClick={isPlayerFullscreen ? onExitFullscreen : onToggleFullscreen}
           aria-label={fullscreenLabel}
           className={`${ICON_BTN} ml-1 @[700px]/overlay:ml-2`}

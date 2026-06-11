@@ -78,6 +78,7 @@ export function ClipMiniaturePreview({ clip, enabled, defaultSeconds, forceLoad 
     failed: false,
   })
   const containerRef = useRef<HTMLDivElement | null>(null)
+  // react-doctor-disable-next-line react-doctor/rerender-state-only-in-handlers -- state legitimately drives effect re-subscription via its dep array; a ref would stop the effect re-running on change
   const [isVisible, setIsVisible] = useState(false)
 
   const seconds = resolveMiniatureSeconds(clip, defaultSeconds)
@@ -120,6 +121,7 @@ export function ClipMiniaturePreview({ clip, enabled, defaultSeconds, forceLoad 
       },
       { root: null, threshold: 0.01 },
     )
+    // react-doctor-disable-next-line react-doctor/no-adjust-state-on-prop-change -- effect synchronizes with an external system (DOM measurement / IntersectionObserver / module audio store), not duplicated prop state
     observer.observe(node)
     return () => observer.disconnect()
   }, [enabled, cacheKey, forceLoad])

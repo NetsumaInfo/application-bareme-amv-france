@@ -18,7 +18,7 @@ impl MpvPlayer {
         let count_str = self.get_property_string_safe("track-list/count");
         let count: i64 = count_str.parse().unwrap_or(0);
 
-        let mut tracks = Vec::new();
+        let mut tracks = Vec::with_capacity(count.max(0) as usize);
 
         for i in 0..count {
             let prefix = format!("track-list/{}", i);
@@ -167,13 +167,36 @@ impl MpvPlayer {
             first_token.parse::<f64>().ok()
         }
 
-        fn first_available_db(player: &MpvPlayer, keys: &[&str]) -> Option<f64> {
-            keys.iter()
-                .find_map(|key| parse_db(&player.get_property_string_safe(key)))
+        use std::sync::atomic::{AtomicUsize, Ordering};
+
+        // Try the cached winning key first; fall back to a full scan and
+        // remember the new winner. Keeps the 16ms real-time meter cheap.
+        fn first_available_db(
+            player: &MpvPlayer,
+            cache: &AtomicUsize,
+            keys: &[&str],
+        ) -> Option<f64> {
+            let cached = cache.load(Ordering::Relaxed);
+            if cached < keys.len() {
+                if let Some(v) = parse_db(&player.get_property_string_safe(keys[cached])) {
+                    return Some(v);
+                }
+            }
+            for (i, key) in keys.iter().enumerate() {
+                if i == cached {
+                    continue;
+                }
+                if let Some(v) = parse_db(&player.get_property_string_safe(key)) {
+                    cache.store(i, Ordering::Relaxed);
+                    return Some(v);
+                }
+            }
+            None
         }
 
         let left = first_available_db(
             self,
+            &self.audio_key_left,
             &[
                 "af-metadata/dbmeter/by-key/lavfi.astats.1.RMS_level",
                 "af-metadata/dbmeter/by-key/lavfi.astats.1.Peak_level",
@@ -186,6 +209,7 @@ impl MpvPlayer {
 
         let right = first_available_db(
             self,
+            &self.audio_key_right,
             &[
                 "af-metadata/dbmeter/by-key/lavfi.astats.2.RMS_level",
                 "af-metadata/dbmeter/by-key/lavfi.astats.2.Peak_level",
@@ -198,6 +222,7 @@ impl MpvPlayer {
 
         let overall = first_available_db(
             self,
+            &self.audio_key_overall,
             &[
                 "af-metadata/dbmeter/by-key/lavfi.astats.Overall.RMS_level",
                 "af-metadata/dbmeter/by-key/lavfi.astats.Overall.Peak_level",

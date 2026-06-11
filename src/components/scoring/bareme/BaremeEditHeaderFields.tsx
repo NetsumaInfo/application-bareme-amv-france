@@ -28,42 +28,53 @@ export function BaremeEditHeaderFields({
 
   return (
     <>
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
-        <div className="lg:col-span-2">
-          <label className="block text-xs font-medium text-gray-400 mb-1">{t('Nom du barème')}</label>
-          <input
-            value={name}
-            onChange={(event) => onNameChange(event.target.value)}
-            placeholder={t('Japan Expo 2025')}
-            className="w-full px-3 py-2 bg-surface-dark border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:border-primary-500 focus:outline-hidden text-sm"
-            disabled={readOnly}
-          />
-        </div>
-        <div>
-          <label className="block text-xs font-medium text-gray-400 mb-1">{t('Total calculé')}</label>
-          <div className="px-3 py-2 rounded-lg border border-gray-700 bg-surface-dark text-sm font-semibold text-white">
-            {t('{count} points', { count: getTotalPoints(criteria) })}
-          </div>
-        </div>
-      </div>
-
       <div>
-        <label className="block text-xs font-medium text-gray-400 mb-1">{t('Description (optionnel)')}</label>
+        <label htmlFor="bareme-name" className="mb-1 block text-xs font-medium text-gray-400">
+          {t('Nom du barème')}
+        </label>
         <input
-          value={description}
-          onChange={(event) => onDescriptionChange(event.target.value)}
-          className="w-full px-3 py-2 bg-surface-dark border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:border-primary-500 focus:outline-hidden text-sm"
+          id="bareme-name"
+          value={name}
+          onChange={(event) => onNameChange(event.target.value)}
+          placeholder={t('Japan Expo 2025')}
+          className="w-full rounded-lg border border-gray-700 bg-surface-dark px-3 py-2 text-sm text-white placeholder-gray-500 focus:border-primary-500 focus:outline-hidden"
           disabled={readOnly}
         />
       </div>
 
-      <div className="flex flex-wrap items-center gap-4 rounded-lg border border-gray-700 bg-surface-dark/50 px-3 py-2">
+      <div>
+        <label htmlFor="bareme-description" className="mb-1 block text-xs font-medium text-gray-400">
+          {t('Description (optionnel)')}
+        </label>
+        <textarea
+          id="bareme-description"
+          value={description}
+          onChange={(event) => onDescriptionChange(event.target.value)}
+          rows={2}
+          className="w-full resize-none rounded-lg border border-gray-700 bg-surface-dark px-3 py-2 text-sm text-white placeholder-gray-500 focus:border-primary-500 focus:outline-hidden"
+          disabled={readOnly}
+        />
+      </div>
+
+      <div className="rounded-xl border border-gray-700/70 bg-surface-dark/28 px-3 py-2.5">
+        <span className="block text-[11px] font-medium text-gray-400">{t('Total calculé')}</span>
+        <div className="mt-0.5 flex items-baseline gap-2">
+          <span className="amv-number-ui text-lg font-semibold text-white">
+            {t('{count} points', { count: getTotalPoints(criteria) })}
+          </span>
+          <span className="amv-number-ui text-[11px] text-gray-500">
+            {t('{count} critères', { count: criteria.length })}
+          </span>
+        </div>
+      </div>
+
+      <div className="rounded-xl border border-gray-700/70 bg-surface-dark/28 px-3 py-2.5">
         <AppCheckbox
           checked={hideTotalsUntilAllScored}
           onChange={onHideTotalsChange}
           disabled={readOnly}
           label={t('Cacher totaux et résultats tant que tous les clips ne sont pas notés')}
-          className="text-xs"
+          className="items-start gap-2 text-xs leading-snug"
         />
       </div>
     </>

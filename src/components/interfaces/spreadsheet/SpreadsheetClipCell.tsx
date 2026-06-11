@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { memo, useEffect, useRef } from 'react'
 import type { FocusEvent, MutableRefObject } from 'react'
 import { CheckCircle2, Star } from 'lucide-react'
 import type { Clip } from '@/types/project'
@@ -38,7 +38,7 @@ interface SpreadsheetClipCellProps {
   ) => void
 }
 
-export function SpreadsheetClipCell({
+export const SpreadsheetClipCell = memo(function SpreadsheetClipCell({
   clip,
   clips,
   isScored,
@@ -187,6 +187,7 @@ export function SpreadsheetClipCell({
             ref={authorInputRef}
             type="text"
             value={clip.author ?? ''}
+            aria-label={t('Participant')}
             placeholder={t('Participant')}
             onClick={(event) => event.stopPropagation()}
             onFocus={handleManualFieldFocus}
@@ -196,6 +197,7 @@ export function SpreadsheetClipCell({
           <input
             type="text"
             value={clip.displayName ?? ''}
+            aria-label={t('Nom du clip')}
             placeholder={t('Nom du clip')}
             onClick={(event) => event.stopPropagation()}
             onFocus={handleManualFieldFocus}
@@ -206,6 +208,7 @@ export function SpreadsheetClipCell({
             <input
               type="text"
               value={clip.contestCategory ?? ''}
+              aria-label={t('Catégorie clip')}
               placeholder={t('Catégorie clip')}
               onClick={(event) => event.stopPropagation()}
               onFocus={handleManualFieldFocus}
@@ -264,4 +267,4 @@ export function SpreadsheetClipCell({
       </div>
     </td>
   )
-}
+})

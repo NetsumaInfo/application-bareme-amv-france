@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useEffectEvent, useRef, useState } from 'react'
 import type { MouseEvent as ReactMouseEvent } from 'react'
 
 type Position = {
@@ -71,17 +71,20 @@ export function useFloatingPlayerDrag() {
     setIsDragging(false)
   }, [])
 
+  const onMouseMove = useEffectEvent((e: MouseEvent) => handleMouseMove(e))
+  const onMouseUp = useEffectEvent(() => handleMouseUp())
+
   useEffect(() => {
     if (!isDragging) return
 
-    window.addEventListener('mousemove', handleMouseMove)
-    window.addEventListener('mouseup', handleMouseUp)
+    window.addEventListener('mousemove', onMouseMove)
+    window.addEventListener('mouseup', onMouseUp)
 
     return () => {
-      window.removeEventListener('mousemove', handleMouseMove)
-      window.removeEventListener('mouseup', handleMouseUp)
+      window.removeEventListener('mousemove', onMouseMove)
+      window.removeEventListener('mouseup', onMouseUp)
     }
-  }, [isDragging, handleMouseMove, handleMouseUp])
+  }, [isDragging])
 
   useEffect(() => {
     const handleResize = () => {

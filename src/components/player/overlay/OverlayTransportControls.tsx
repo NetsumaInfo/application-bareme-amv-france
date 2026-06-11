@@ -63,6 +63,7 @@ export function OverlayTransportControls({
     <div className="flex items-center gap-1 @[700px]/overlay:gap-2">
       <HoverTextTooltip text={prevClipLabel}>
         <button
+          type="button"
           onClick={onPrevClip}
           aria-label={prevClipLabel}
           className={ICON_BTN}
@@ -74,6 +75,7 @@ export function OverlayTransportControls({
 
       <HoverTextTooltip text={seekBackLabel}>
         <button
+          type="button"
           onClick={() => onSeekRelative(-5)}
           aria-label={seekBackLabel}
           className={ICON_BTN}
@@ -84,6 +86,7 @@ export function OverlayTransportControls({
 
       <HoverTextTooltip text={togglePauseLabel}>
         <button
+          type="button"
           onClick={onTogglePause}
           aria-label={togglePauseLabel}
           className={PLAY_BTN}
@@ -94,6 +97,7 @@ export function OverlayTransportControls({
 
       <HoverTextTooltip text={seekForwardLabel}>
         <button
+          type="button"
           onClick={() => onSeekRelative(5)}
           aria-label={seekForwardLabel}
           className={ICON_BTN}
@@ -104,6 +108,7 @@ export function OverlayTransportControls({
 
       <HoverTextTooltip text={nextClipLabel}>
         <button
+          type="button"
           onClick={onNextClip}
           aria-label={nextClipLabel}
           className={ICON_BTN}

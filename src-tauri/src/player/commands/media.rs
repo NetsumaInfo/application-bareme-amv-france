@@ -4,7 +4,7 @@ use std::time::Duration;
 use tauri::State;
 
 #[tauri::command]
-pub fn player_get_media_info(
+pub async fn player_get_media_info(
     state: State<'_, AppState>,
     path: Option<String>,
 ) -> Result<crate::player::mpv_wrapper::MediaInfo, String> {
@@ -18,15 +18,19 @@ pub fn player_get_media_info(
                 return Ok(cached);
             }
 
-            let (tx, rx) = mpsc::channel();
-            std::thread::spawn({
-                let probe_path = normalized_target.clone();
-                move || {
+            // Run probe + bounded wait on blocking pool: same 2500ms cap as before,
+            // but no Tauri command thread blocked anymore.
+            let probe_path = normalized_target.clone();
+            let probed = tauri::async_runtime::spawn_blocking(move || {
+                let (tx, rx) = mpsc::channel();
+                std::thread::spawn(move || {
                     let _ = tx.send(super::probe::probe_media_info_open_source(&probe_path));
-                }
-            });
+                });
+                rx.recv_timeout(Duration::from_millis(2500))
+            })
+            .await;
 
-            if let Ok(Ok(info)) = rx.recv_timeout(Duration::from_millis(2500)) {
+            if let Ok(Ok(Ok(info))) = probed {
                 super::cache::put_media_info_cache(&normalized_target, info.clone());
                 return Ok(info);
             }

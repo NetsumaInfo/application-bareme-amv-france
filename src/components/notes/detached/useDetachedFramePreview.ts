@@ -29,7 +29,10 @@ const INITIAL_PREVIEW_STATE: FramePreviewState = {
 }
 
 export function useDetachedFramePreview(clipFilePath?: string) {
-  const framePreviewCacheRef = useRef<Map<string, string>>(new Map())
+  const framePreviewCacheRef = useRef<Map<string, string> | null>(null)
+  if (framePreviewCacheRef.current === null) {
+    framePreviewCacheRef.current = new Map<string, string>()
+  }
   const hoverRequestRef = useRef(0)
   const [framePreview, setFramePreview] = useState<FramePreviewState>(INITIAL_PREVIEW_STATE)
 
@@ -49,7 +52,7 @@ export function useDetachedFramePreview(clipFilePath?: string) {
     const cacheKey = `${targetPath ?? '__current__'}|${seconds.toFixed(3)}|${previewCaptureWidth}`
     const requestId = ++hoverRequestRef.current
 
-    const cached = framePreviewCacheRef.current.get(cacheKey)
+    const cached = framePreviewCacheRef.current?.get(cacheKey)
     if (cached) {
       setFramePreview({
         visible: true,
@@ -78,7 +81,7 @@ export function useDetachedFramePreview(clipFilePath?: string) {
       ).catch(() => null)
     if (hoverRequestRef.current !== requestId) return
     if (image) {
-      framePreviewCacheRef.current.set(cacheKey, image)
+      framePreviewCacheRef.current?.set(cacheKey, image)
     }
     setFramePreview({
       visible: true,

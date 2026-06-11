@@ -48,6 +48,7 @@ export function FloatingPlayerTimeline({
                 <HoverTextTooltip key={marker.key} text={markerTooltipText}>
                   <button
                     type="button"
+                    aria-label={t('Aller au repère {time}', { time: marker.raw })}
                     onClick={(event) => {
                       event.stopPropagation()
                       onMarkerJump(marker)

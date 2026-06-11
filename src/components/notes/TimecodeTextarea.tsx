@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useEffectEvent, useMemo, useRef, useState } from 'react'
 import { extractTimecodesFromText, type ParsedTimecode } from '@/utils/timecodes'
 import { HoverTextTooltip } from '@/components/ui/HoverTextTooltip'
 import { useI18n } from '@/i18n'
@@ -70,13 +70,19 @@ export default function TimecodeTextarea({
   }, [])
 
   useEffect(() => {
+    // react-doctor-disable-next-line react-doctor/no-adjust-state-on-prop-change -- effect synchronizes with an external system (DOM measurement / IntersectionObserver / module audio store), not duplicated prop state
     syncTextareaLayout()
   }, [value, rows, textareaClassName, syncTextareaLayout])
 
+  const onResize = useEffectEvent(() => {
+    syncTextareaLayout()
+  })
+
   useEffect(() => {
-    window.addEventListener('resize', syncTextareaLayout)
-    return () => window.removeEventListener('resize', syncTextareaLayout)
-  }, [syncTextareaLayout])
+    const handleResize = () => onResize()
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
 
   useEffect(() => {
     if (timecodes.length > 0) return
@@ -111,6 +117,7 @@ export default function TimecodeTextarea({
     <div className={`relative isolate overflow-hidden rounded-sm ${className}`}>
       <textarea
         ref={setTextareaRef}
+        aria-label={placeholder ?? t('Notes')}
         placeholder={placeholder}
         value={value}
         onChange={(e) => onChange(e.target.value)}

@@ -32,6 +32,7 @@ export function useDetachedNotesDataBridge({
 }: UseDetachedNotesDataBridgeOptions) {
   const expandedCategoryRef = useRef<string | null>(expandedCategory)
   const lastClipIdRef = useRef<string | null>(clipData?.clip?.id ?? null)
+  const hasReceivedDataRef = useRef<boolean>(clipData !== null)
 
   useEffect(() => {
     expandedCategoryRef.current = expandedCategory
@@ -45,8 +46,14 @@ export function useDetachedNotesDataBridge({
     emit('notes:request-data').catch(() => {})
   }, [])
 
+  // Retry until first payload arrives, then stop permanently —
+  // the main window pushes all subsequent updates.
   useEffect(() => {
-    if (clipData) return
+    if (clipData) {
+      hasReceivedDataRef.current = true
+      return
+    }
+    if (hasReceivedDataRef.current) return
     const timer = setInterval(() => {
       emit('notes:request-data').catch(() => {})
     }, 500)
@@ -106,6 +113,9 @@ export function useDetachedNotesDataBridge({
     }).then((fn) => unlisteners.push(fn))
 
     return () => unlisteners.forEach((fn) => fn())
+    // Mount-only: registers Tauri event listeners once. All captured values are
+    // refs or stable setters; the main window pushes subsequent updates.
+    // oxlint-disable-next-line react-doctor/exhaustive-deps
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 }

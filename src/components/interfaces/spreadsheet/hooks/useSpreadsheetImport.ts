@@ -67,9 +67,11 @@ export function useSpreadsheetImport({
   const handleFileDrop = useCallback(async (paths: string[]) => {
     const latestClips = useProjectStore.getState().clips
     const existingPaths = new Set(
-      latestClips
-        .map((clip) => normalizeFilePath(clip.filePath))
-        .filter((path) => Boolean(path)),
+      latestClips.reduce<string[]>((acc, clip) => {
+        const path = normalizeFilePath(clip.filePath)
+        if (path) acc.push(path)
+        return acc
+      }, []),
     )
     const queuedPaths = new Set<string>()
     const videoPaths = paths.filter((pathValue) => {
@@ -81,20 +83,23 @@ export function useSpreadsheetImport({
     })
     const folderPaths = paths.filter((p) => !p.includes('.') || (!isVideoFile(p) && !p.endsWith('.json')))
 
+    // Scan independent folders concurrently; dedup sequentially afterwards
+    // to preserve the original cross-folder ordering and "first wins" behavior.
+    const scannedFolders = await Promise.all(
+      folderPaths.map((folder) =>
+        tauri.scanVideoFolder(folder).catch(() => null),
+      ),
+    )
     let folderVideos: tauri.VideoMetadata[] = []
-    for (const folder of folderPaths) {
-      try {
-        const videos = await tauri.scanVideoFolder(folder)
-        const uniqueVideos = videos.filter((video) => {
-          const normalized = normalizeFilePath(video.file_path)
-          if (!normalized || existingPaths.has(normalized) || queuedPaths.has(normalized)) return false
-          queuedPaths.add(normalized)
-          return true
-        })
-        folderVideos = [...folderVideos, ...uniqueVideos]
-      } catch {
-        // ignore invalid folders
-      }
+    for (const videos of scannedFolders) {
+      if (!videos) continue
+      const uniqueVideos = videos.filter((video) => {
+        const normalized = normalizeFilePath(video.file_path)
+        if (!normalized || existingPaths.has(normalized) || queuedPaths.has(normalized)) return false
+        queuedPaths.add(normalized)
+        return true
+      })
+      folderVideos = [...folderVideos, ...uniqueVideos]
     }
 
     const clipNamePattern = getClipNamePattern()

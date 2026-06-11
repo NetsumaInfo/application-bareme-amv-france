@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useEffectEvent, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Check, ChevronDown, ChevronLeft, ChevronRight, ExternalLink, Play, Star } from 'lucide-react'
 import { getClipPrimaryLabel, getClipSecondaryLabel } from '@/utils/formatters'
@@ -112,9 +112,11 @@ function ClipMenu({
       style={{ top: `${menuStyle.top}px`, left: `${menuStyle.left}px`, width: `${menuStyle.width}px` }}
     >
       <div
-        className="overflow-y-auto p-1"
+        className="overflow-y-auto p-1 focus:outline-hidden"
         style={{ maxHeight: `${menuStyle.maxHeight}px` }}
+        // react-doctor-disable-next-line react-doctor/prefer-tag-over-role -- custom ARIA listbox/combobox hosts interactive button children; native datalist/option cannot replace it without breaking the widget
         role="listbox"
+        tabIndex={0}
         aria-activedescendant={`judge-notes-clip-option-${selectedClip.id}`}
       >
         {clipOptions.map(({ clip, label }) => {
@@ -329,7 +331,9 @@ function ResultatsJudgeCategorySection({
                         className="border-b border-r border-gray-800/60 px-2 py-1.5"
                         style={{ backgroundColor: withAlpha(color, 0.04) }}
                       >
-                      <InlineNote clipId={selectedClip.id} text={criterionNote} color={color} handlers={handlers} />
+                      <div className="max-h-[200px] overflow-y-auto overflow-x-hidden pr-1">
+                        <InlineNote clipId={selectedClip.id} text={criterionNote} color={color} handlers={handlers} />
+                      </div>
                     </td>
                   )
                 })}
@@ -349,7 +353,9 @@ function ResultatsJudgeCategorySection({
                     className="border-b border-r border-gray-800/60 px-2 py-1.5"
                     style={{ backgroundColor: withAlpha(color, 0.04) }}
                   >
-                    <InlineNote clipId={selectedClip.id} text={categoryNote} color={color} handlers={handlers} />
+                    <div className="max-h-[200px] overflow-y-auto overflow-x-hidden pr-1">
+                      <InlineNote clipId={selectedClip.id} text={categoryNote} color={color} handlers={handlers} />
+                    </div>
                   </td>
                 )
               })}
@@ -391,7 +397,9 @@ function GlobalNotesSection({
               style={{ boxShadow: `inset 2px 0 0 0 ${withAlpha(color, 0.9)}` }}
             >
               <div className="mb-1 text-[10px] font-medium" style={{ color }}>{judge.judgeName}</div>
-              <InlineNote clipId={selectedClip.id} text={text} color={color} handlers={handlers} />
+              <div className="max-h-[280px] overflow-y-auto overflow-x-hidden pr-1">
+                <InlineNote clipId={selectedClip.id} text={text} color={color} handlers={handlers} />
+              </div>
             </div>
           )
         })}
@@ -452,7 +460,7 @@ function FavoritesSection({
               <div className="mb-1 text-[10px] font-medium" style={{ color }}>
                 {favorite.judgeName}
               </div>
-              <div className="text-[11px] text-gray-200">
+              <div className="max-h-[200px] overflow-y-auto overflow-x-hidden pr-1 text-[11px] text-gray-200">
                 {favorite.comment || t('Favori')}
               </div>
             </div>
@@ -525,9 +533,11 @@ export function ResultatsJudgeNotesView({
     setClipMenuStyle({ top, left, width, maxHeight })
   }, [clipOptions.length, zoomScale])
 
+  const handleReposition = useEffectEvent(() => updateClipMenuPosition())
+
   useEffect(() => {
     if (!clipMenuOpen) return
-    updateClipMenuPosition()
+    handleReposition()
 
     const handlePointerDown = (event: MouseEvent) => {
       const target = event.target as Node
@@ -540,15 +550,15 @@ export function ResultatsJudgeNotesView({
 
     document.addEventListener('mousedown', handlePointerDown)
     document.addEventListener('keydown', handleEscape)
-    window.addEventListener('resize', updateClipMenuPosition)
-    window.addEventListener('scroll', updateClipMenuPosition, true)
+    window.addEventListener('resize', handleReposition)
+    window.addEventListener('scroll', handleReposition, true)
     return () => {
       document.removeEventListener('mousedown', handlePointerDown)
       document.removeEventListener('keydown', handleEscape)
-      window.removeEventListener('resize', updateClipMenuPosition)
-      window.removeEventListener('scroll', updateClipMenuPosition, true)
+      window.removeEventListener('resize', handleReposition)
+      window.removeEventListener('scroll', handleReposition, true)
     }
-  }, [clipMenuOpen, updateClipMenuPosition])
+  }, [clipMenuOpen])
 
   if (!selectedClip) {
     return (

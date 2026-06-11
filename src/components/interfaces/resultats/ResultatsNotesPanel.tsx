@@ -151,6 +151,7 @@ export function ResultatsNotesPanel({
                     onChange={(event) => {
                       onUpdateFavoriteComment(selectedClip.id, entry.judgeKey, event.target.value)
                     }}
+                    aria-label={t('Commentaire favori de {judge}', { judge: entry.judgeName })}
                     placeholder={t('Pourquoi ce clip est un favori ?')}
                     className="mt-0.5 w-full min-h-[48px] resize-y rounded-sm border border-gray-700/70 bg-surface px-1.5 py-1 text-[10px] leading-4 text-gray-200 placeholder:text-gray-500 focus:border-amber-300/45 focus:outline-hidden"
                   />

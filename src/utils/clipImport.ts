@@ -101,9 +101,11 @@ export function mergeImportedVideosWithClips(
   const matchedPlaceholderIds = new Set<string>()
   const matchedLinkedClipIds = new Set<string>()
   const seenPaths = new Set(
-    current
-      .map((clip) => normalizeFilePath(clip.filePath))
-      .filter((path) => Boolean(path)),
+    current.reduce<string[]>((acc, clip) => {
+      const path = normalizeFilePath(clip.filePath)
+      if (path) acc.push(path)
+      return acc
+    }, []),
   )
   const queuedImports: Clip[] = []
   let linkedCount = 0

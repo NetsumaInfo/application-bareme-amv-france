@@ -56,7 +56,7 @@
 }
 
 @utility app-header-trigger {
-  @apply inline-flex h-[22px] items-center justify-center whitespace-nowrap rounded-md px-1.5 text-[11px] font-medium leading-none transition-colors duration-150;
+  @apply inline-flex h-[22px] items-center justify-center whitespace-nowrap rounded-md px-1.5 text-[11px] font-medium leading-[1.35] transition-colors duration-150;
   background-color: rgb(var(--color-surface-dark) / 0.92);
   color: rgb(var(--app-text) / 0.78);
 
@@ -570,32 +570,8 @@ body {
   color: rgb(var(--app-text));
 }
 
-.bareme-quick-actions-bar {
-  background: rgb(var(--color-surface) / 0.94);
-  border-color: rgb(148 163 184 / 0.14);
-  box-shadow:
-    0 -10px 20px rgb(0 0 0 / 0.1),
-    0 1px 0 rgb(255 255 255 / 0.035) inset;
-  backdrop-filter: blur(14px);
-}
-
-.bareme-quick-actions-bar::before {
-  content: '';
-  position: absolute;
-  inset: 0 1rem auto;
-  height: 1px;
-  background: linear-gradient(
-    90deg,
-    transparent 0%,
-    rgb(255 255 255 / 0.08) 50%,
-    transparent 100%
-  );
-  opacity: 1;
-  pointer-events: none;
-}
-
 .bareme-criterion-card {
-  scroll-margin-block: 8.5rem;
+  scroll-margin-block: 2.5rem;
   transition:
     border-color 180ms ease,
     box-shadow 220ms ease,
@@ -797,10 +773,57 @@ body {
   background: rgb(var(--scrollbar-thumb-hover));
 }
 
+/* Text selection: harmonized with the brand accent instead of the harsh
+   white/light default the WebView draws. Applies app-wide (all windows). */
+::selection {
+  background: rgb(var(--color-primary-500) / 0.32);
+  color: inherit;
+}
+::-moz-selection {
+  background: rgb(var(--color-primary-500) / 0.32);
+  color: inherit;
+}
+
 /* Focus styles for keyboard navigation (softened) */
 *:focus-visible {
   outline: 1px solid rgb(var(--color-primary-400) / 0.55);
   outline-offset: 1px;
+}
+
+/* Mouse/touch focus should not flash the bright native outline ring.
+   Keyboard focus keeps the themed ring above for accessibility. */
+*:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* The white flash on click was stray text-selection of UI chrome (labels,
+   headers, buttons). This is a desktop tool: the chrome is not meant to be
+   selected. Make the whole UI non-selectable, then re-enable real text fields
+   and anything explicitly opted in with `.select-text`. */
+html,
+body {
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* Strip the native button chrome (ButtonFace background + the bright pressed /
+   :active flash the WebView paints under translucent backgrounds). This is the
+   white flash seen when opening accordion headers and pressing buttons. */
+button {
+  -webkit-appearance: none;
+  appearance: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+input,
+textarea,
+[contenteditable='true'],
+[contenteditable=''],
+.select-text,
+.select-text * {
+  user-select: text;
+  -webkit-user-select: text;
 }
 
 /* Softer number inputs used in notation/results tables */

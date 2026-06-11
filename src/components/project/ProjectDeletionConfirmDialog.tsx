@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useEffectEvent, useRef } from 'react'
 import { AlertTriangle, Trash2 } from 'lucide-react'
 import { useI18n } from '@/i18n'
 
@@ -18,103 +18,50 @@ export function ProjectDeletionConfirmDialog({
   onConfirm,
 }: ProjectDeletionConfirmDialogProps) {
   const { t } = useI18n()
-  const dialogRef = useRef<HTMLDivElement | null>(null)
+  const dialogRef = useRef<HTMLDialogElement | null>(null)
   const cancelButtonRef = useRef<HTMLButtonElement | null>(null)
 
   useEffect(() => {
     const dialog = dialogRef.current
     if (!dialog) return
-
-    const previousFocusedElement = document.activeElement instanceof HTMLElement
-      ? document.activeElement
-      : null
-
-    const getFocusableElements = () => Array.from(
-      dialog.querySelectorAll<HTMLElement>(
-        'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
-      ),
-    ).filter((element) => !element.hidden && element.getAttribute('aria-hidden') !== 'true')
-
-    const initialFocus = cancelButtonRef.current ?? getFocusableElements()[0] ?? dialog
-    initialFocus.focus()
-
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        if (isDeleting) return
-        event.preventDefault()
-        onCancel()
-        return
-      }
-
-      if (event.key !== 'Tab') return
-
-      const focusableElements = getFocusableElements()
-      if (focusableElements.length === 0) {
-        event.preventDefault()
-        dialog.focus()
-        return
-      }
-
-      const firstElement = focusableElements[0]
-      const lastElement = focusableElements[focusableElements.length - 1]
-      const activeElement = document.activeElement instanceof HTMLElement
-        ? document.activeElement
-        : null
-
-      if (event.shiftKey) {
-        if (activeElement === firstElement || !dialog.contains(activeElement)) {
-          event.preventDefault()
-          lastElement.focus()
-        }
-        return
-      }
-
-      if (activeElement === lastElement || !dialog.contains(activeElement)) {
-        event.preventDefault()
-        firstElement.focus()
-      }
-    }
-
-    window.addEventListener('keydown', handleKeyDown)
+    if (!dialog.open) dialog.showModal()
+    cancelButtonRef.current?.focus()
     return () => {
-      window.removeEventListener('keydown', handleKeyDown)
-      if (previousFocusedElement?.isConnected) {
-        previousFocusedElement.focus()
-      }
+      if (dialog.open) dialog.close()
     }
-  }, [isDeleting, onCancel])
+  }, [])
+
+  const requestCancel = useEffectEvent(() => {
+    if (isDeleting) return
+    onCancel()
+  })
+
+  useEffect(() => {
+    const dialog = dialogRef.current
+    if (!dialog) return
+    const handleCancel = (event: Event) => {
+      event.preventDefault()
+      requestCancel()
+    }
+    const handleBackdropClick = (event: MouseEvent) => {
+      if (event.target === dialog) requestCancel()
+    }
+    dialog.addEventListener('cancel', handleCancel)
+    dialog.addEventListener('click', handleBackdropClick)
+    return () => {
+      dialog.removeEventListener('cancel', handleCancel)
+      dialog.removeEventListener('click', handleBackdropClick)
+    }
+  }, [])
 
   return (
-    <div
-      className="fixed inset-0 z-80 flex items-center justify-center bg-black/65 px-4"
-      onClick={() => {
-        if (!isDeleting) {
-          onCancel()
-        }
-      }}
-      onKeyDown={(event) => {
-        if (event.key === 'Enter' || event.key === ' ') {
-          event.preventDefault()
-          if (!isDeleting) {
-            onCancel()
-          }
-        }
-      }}
-      role="button"
-      tabIndex={0}
-      aria-label={t('Fermer')}
+    <dialog
+      ref={dialogRef}
+      aria-labelledby="project-deletion-dialog-title"
+      aria-describedby="project-deletion-dialog-description"
+      className="m-0 fixed inset-0 z-80 h-full w-full max-h-none max-w-none items-center justify-center bg-black/65 px-4 open:flex backdrop:bg-transparent"
     >
-      <div
-        ref={dialogRef}
-        className="w-full max-w-md rounded-lg border border-gray-700 bg-surface p-4 shadow-2xl"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="project-deletion-dialog-title"
-        aria-describedby="project-deletion-dialog-description"
-        tabIndex={-1}
-        onClick={(event) => event.stopPropagation()}
-        onKeyDown={(event) => event.stopPropagation()}
-      >
+      <div className="w-full max-w-md rounded-lg border border-gray-700 bg-surface p-4 shadow-2xl">
         <div className="flex items-start gap-3">
           <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-red-500/10 text-red-300">
             <AlertTriangle size={16} strokeWidth={2.25} />
@@ -158,6 +105,6 @@ export function ProjectDeletionConfirmDialog({
           </button>
         </div>
       </div>
-    </div>
+    </dialog>
   )
 }

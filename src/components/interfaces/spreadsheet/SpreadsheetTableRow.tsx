@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import type { FocusEvent, KeyboardEvent as ReactKeyboardEvent, MutableRefObject } from 'react'
 import type { Bareme } from '@/types/bareme'
 import type { Clip } from '@/types/project'
@@ -43,7 +44,7 @@ interface SpreadsheetTableRowProps {
   }) => void
 }
 
-export function SpreadsheetTableRow({
+export const SpreadsheetTableRow = memo(function SpreadsheetTableRow({
   clip,
   clipIdx,
   clips,
@@ -133,7 +134,7 @@ export function SpreadsheetTableRow({
         onCellChange={onCellChange}
         onCellKeyDown={onCellKeyDown}
         onSetCurrentClip={onSetCurrentClip}
-        onShowCriterionBubble={(params) => onShowSubcategoryBubble(params)}
+        onShowCriterionBubble={onShowSubcategoryBubble}
       />
 
       {!hideTotalsSetting && (
@@ -145,4 +146,4 @@ export function SpreadsheetTableRow({
       )}
     </tr>
   )
-}
+})

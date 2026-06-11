@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type RefObject } from 'react'
 import { join } from '@tauri-apps/api/path'
-import { useForm, useWatch } from 'react-hook-form'
+import { Controller, useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Check, ChevronDown, Plus, Settings2, X } from 'lucide-react'
 import { createCreateProjectSchema, type CreateProjectFormData } from '@/schemas/projectSchema'
@@ -10,9 +10,11 @@ import { useProjectStore } from '@/store/useProjectStore'
 import { useNotationStore } from '@/store/useNotationStore'
 import { useUIStore } from '@/store/useUIStore'
 import { HoverTextTooltip } from '@/components/ui/HoverTextTooltip'
+import { JudgeNameInput } from '@/components/ui/JudgeNameInput'
 import * as tauri from '@/services/tauri'
 import { useI18n } from '@/i18n'
 import { rememberRecentProjectPath } from '@/services/recentProjects'
+import { rememberJudgeName } from '@/services/recentJudgeNames'
 import type { Bareme } from '@/types/bareme'
 import type { ClipNamePattern } from '@/types/project'
 import { normalizeContestCategoryEditorItems, type ContestCategoryEditorItem } from '@/utils/contestCategory'
@@ -262,6 +264,7 @@ function CreateProjectModalContent() {
     if (!selected) return
 
     createProject(data.name, data.judgeName, data.baremeId)
+    void rememberJudgeName(data.judgeName).catch(() => {})
     setClips([])
     setBareme(selected)
     const normalizedContestCategories = normalizeContestCategoryEditorItems(contestCategoryItems)
@@ -315,6 +318,7 @@ function CreateProjectModalContent() {
           <h2 className="text-lg font-semibold text-white">{t('Nouveau concours')}</h2>
           <HoverTextTooltip text={t('Fermer')}>
             <button
+              type="button"
               onClick={onClose}
               aria-label={t('Fermer')}
               className="rounded-sm p-1 text-gray-400 transition-colors hover:bg-surface-light hover:text-white"
@@ -324,7 +328,7 @@ function CreateProjectModalContent() {
           </HoverTextTooltip>
         </div>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
+        <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4" autoComplete="off">
           <input type="hidden" {...register('baremeId')} />
           <input type="hidden" {...register('clipNamePattern')} />
 
@@ -347,11 +351,16 @@ function CreateProjectModalContent() {
             <label className="mb-1.5 block text-sm font-medium text-gray-300">
               {t('Nom du juge')}
             </label>
-            <input
-              {...register('judgeName')}
-              type="text"
-              placeholder={t('ex: Netsuma')}
-              className="w-full rounded-lg border border-gray-700 bg-surface-dark px-3 py-2 text-sm text-white placeholder-gray-500 focus:border-primary-500 focus:outline-hidden"
+            <Controller
+              control={control}
+              name="judgeName"
+              render={({ field }) => (
+                <JudgeNameInput
+                  value={field.value ?? ''}
+                  onChange={field.onChange}
+                  placeholder={t('ex: Netsuma')}
+                />
+              )}
             />
             {errors.judgeName ? (
               <p className="mt-1 text-xs text-accent">{errors.judgeName.message}</p>

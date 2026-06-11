@@ -106,10 +106,13 @@ export function buildAvailableBaremesFromImportedItems(
   items: unknown[],
   officialBareme: Bareme,
 ): Bareme[] {
-  const customBaremes = items
-    .map((item) => parseBareme(item))
-    .filter((bareme): bareme is Bareme => Boolean(bareme))
-    .filter((bareme) => bareme.id !== officialBareme.id)
+  const customBaremes = items.reduce<Bareme[]>((acc, item) => {
+    const bareme = parseBareme(item)
+    if (bareme && bareme.id !== officialBareme.id) {
+      acc.push(bareme)
+    }
+    return acc
+  }, [])
 
   const unique = new Map<string, Bareme>()
   for (const bareme of customBaremes) {

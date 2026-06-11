@@ -41,6 +41,7 @@ export function SettingsShortcutsTab({
                   : formatShortcutDisplay(shortcutBindings[shortcut.action], t)}
               </kbd>
               <button
+                type="button"
                 onClick={() =>
                   onSetEditingShortcut(
                     editingShortcut === shortcut.action ? null : shortcut.action,
@@ -72,6 +73,7 @@ export function SettingsShortcutsTab({
       </div>
 
       <button
+        type="button"
         onClick={() => {
           onSetEditingShortcut(null)
           onResetShortcuts()

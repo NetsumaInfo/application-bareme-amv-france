@@ -23,11 +23,18 @@ export function useDetachedNoteDebounce({
   const pendingFavoriteCommentRef = useRef<string | null>(null)
 
   useEffect(() => {
+    // Snapshot the ref objects into local consts at the top of the effect so the
+    // cleanup clears the timers tracked by these exact refs, satisfying the
+    // exhaustive-deps "ref value will likely have changed" warning.
+    const textTimer = textDebounceRef
+    const categoryTimer = categoryDebounceRef
+    const criterionTimer = criterionDebounceRef
+    const favoriteTimer = favoriteDebounceRef
     return () => {
-      if (textDebounceRef.current) clearTimeout(textDebounceRef.current)
-      if (categoryDebounceRef.current) clearTimeout(categoryDebounceRef.current)
-      if (criterionDebounceRef.current) clearTimeout(criterionDebounceRef.current)
-      if (favoriteDebounceRef.current) clearTimeout(favoriteDebounceRef.current)
+      if (textTimer.current) clearTimeout(textTimer.current)
+      if (categoryTimer.current) clearTimeout(categoryTimer.current)
+      if (criterionTimer.current) clearTimeout(criterionTimer.current)
+      if (favoriteTimer.current) clearTimeout(favoriteTimer.current)
     }
   }, [])
 

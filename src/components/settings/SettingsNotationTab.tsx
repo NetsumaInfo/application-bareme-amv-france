@@ -43,6 +43,7 @@ export function SettingsNotationTab({
         <div className="flex items-start justify-between gap-3 mb-3">
           <p className={SECTION_LABEL + ' mb-0'}>{t('Barème')}</p>
           <button
+            type="button"
             onClick={onOpenBaremeEditor}
             className="text-[10px] text-primary-400 hover:text-primary-300 transition-colors shrink-0"
           >

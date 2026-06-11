@@ -66,8 +66,10 @@ export function useSpreadsheetInterfaceController(): SpreadsheetInterfaceControl
     shortcutBindings,
   } = useUIStore()
 
-  const cellRefs = useRef<Map<string, HTMLInputElement>>(new Map())
-  const rowRefs = useRef<Map<number, HTMLTableRowElement>>(new Map())
+  const cellRefs = useRef<Map<string, HTMLInputElement>>(undefined as unknown as Map<string, HTMLInputElement>)
+  if (cellRefs.current === undefined) cellRefs.current = new Map()
+  const rowRefs = useRef<Map<number, HTMLTableRowElement>>(undefined as unknown as Map<number, HTMLTableRowElement>)
+  if (rowRefs.current === undefined) rowRefs.current = new Map()
   const notesTextareaRef = useRef<HTMLTextAreaElement | null>(null)
   const [activeContestCategoryView, setActiveContestCategoryView] = useState<string>(ALL_CONTEST_CATEGORY_KEY)
   const contestCategoriesEnabledSetting = Boolean(currentProject?.settings.contestCategoriesEnabled)

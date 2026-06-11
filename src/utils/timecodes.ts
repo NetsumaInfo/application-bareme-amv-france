@@ -79,9 +79,13 @@ function categoryColorMap(bareme: Bareme | null | undefined): Map<string, string
   const map = new Map<string, string>()
   if (!bareme) return map
   const orderedCategories: string[] = []
+  const seenCategories = new Set<string>()
   for (const criterion of bareme.criteria) {
     const category = criterion.category || 'General'
-    if (!orderedCategories.includes(category)) orderedCategories.push(category)
+    if (!seenCategories.has(category)) {
+      seenCategories.add(category)
+      orderedCategories.push(category)
+    }
   }
   orderedCategories.forEach((category, index) => {
     const fallback = CATEGORY_COLOR_PRESETS[index % CATEGORY_COLOR_PRESETS.length]

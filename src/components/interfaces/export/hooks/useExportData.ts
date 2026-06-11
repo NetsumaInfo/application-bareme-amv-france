@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react'
+import { useMemo } from 'react'
 import type { Bareme } from '@/types/bareme'
 import type { Clip, ImportedJudgeData, Project } from '@/types/project'
 import type { Note } from '@/types/notation'
@@ -20,7 +20,6 @@ interface UseExportDataOptions {
   importedJudges: ImportedJudgeData[]
   exportMode: ExportMode
   selectedJudgeKey: string
-  onSelectedJudgeKeyChange: (key: string) => void
 }
 
 export function useExportData({
@@ -31,7 +30,6 @@ export function useExportData({
   importedJudges,
   exportMode,
   selectedJudgeKey,
-  onSelectedJudgeKeyChange,
 }: UseExportDataOptions) {
   const categoryGroups = useMemo(
     () => (currentBareme ? buildCategoryGroups(currentBareme) : []),
@@ -104,18 +102,17 @@ export function useExportData({
     })
   }, [orderedClips, categoryGroups, currentBareme, judges])
 
-  useEffect(() => {
-    if (judges.length === 0) return
-    if (!judges.some((judge) => judge.key === selectedJudgeKey)) {
-      const current = judges.find((judge) => judge.isCurrentJudge)
-      onSelectedJudgeKeyChange((current ?? judges[0]).key)
-    }
-  }, [judges, selectedJudgeKey, onSelectedJudgeKeyChange])
+  const effectiveSelectedJudgeKey = useMemo(() => {
+    if (judges.length === 0) return selectedJudgeKey
+    if (judges.some((judge) => judge.key === selectedJudgeKey)) return selectedJudgeKey
+    const current = judges.find((judge) => judge.isCurrentJudge)
+    return (current ?? judges[0]).key
+  }, [judges, selectedJudgeKey])
 
   const selectedJudgeIndex = useMemo(() => {
-    const index = judges.findIndex((judge) => judge.key === selectedJudgeKey)
+    const index = judges.findIndex((judge) => judge.key === effectiveSelectedJudgeKey)
     return index >= 0 ? index : 0
-  }, [judges, selectedJudgeKey])
+  }, [judges, effectiveSelectedJudgeKey])
 
   const selectedJudge = judges[selectedJudgeIndex]
 
@@ -148,6 +145,7 @@ export function useExportData({
     judges,
     selectedJudge,
     selectedJudgeIndex,
+    effectiveSelectedJudgeKey,
     displayRows,
     rankByClipId,
   }

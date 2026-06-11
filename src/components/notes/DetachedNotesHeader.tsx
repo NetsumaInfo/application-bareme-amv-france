@@ -43,6 +43,7 @@ export function DetachedNotesHeader({
       <div className="flex items-center justify-between px-3 py-2 border-b border-gray-700 shrink-0 bg-surface">
         <HoverTextTooltip text={prevClipLabel}>
           <button
+            type="button"
             onClick={() => onNavigate('prev')}
             disabled={clipIndex === 0}
             aria-label={prevClipLabel}
@@ -58,6 +59,7 @@ export function DetachedNotesHeader({
           <div className="flex items-center justify-center gap-2 min-w-0 text-[11px] leading-none">
             <HoverTextTooltip text={hasVideo ? t('Ouvrir la vidéo') : t('Vidéo indisponible')}>
               <button
+                type="button"
                 onClick={(event) => {
                   event.stopPropagation()
                   if (!hasVideo) return
@@ -91,6 +93,7 @@ export function DetachedNotesHeader({
         </div>
         <HoverTextTooltip text={nextClipLabel}>
           <button
+            type="button"
             onClick={() => onNavigate('next')}
             disabled={clipIndex >= totalClips - 1}
             aria-label={nextClipLabel}

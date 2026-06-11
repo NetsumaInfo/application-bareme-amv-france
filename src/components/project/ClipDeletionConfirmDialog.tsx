@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { AlertTriangle } from 'lucide-react'
 import { useProjectStore } from '@/store/useProjectStore'
 import { useClipDeletionStore } from '@/store/useClipDeletionStore'
@@ -13,13 +13,35 @@ export function ClipDeletionConfirmDialog() {
   const confirmClipDeletion = useClipDeletionStore((state) => state.confirmClipDeletion)
   const clips = useProjectStore((state) => state.clips)
   const [disableFutureWarnings, setDisableFutureWarnings] = useState(false)
+  const dialogRef = useRef<HTMLDialogElement | null>(null)
 
   const clip = useMemo(
     () => clips.find((item) => item.id === pendingClipId) ?? null,
     [clips, pendingClipId],
   )
 
-  if (!pendingClipId || !clip) {
+  const isOpen = Boolean(pendingClipId && clip)
+
+  useEffect(() => {
+    const dialog = dialogRef.current
+    if (!dialog) return
+    if (isOpen && !dialog.open) dialog.showModal()
+    if (!isOpen && dialog.open) dialog.close()
+  }, [isOpen])
+
+  useEffect(() => {
+    const dialog = dialogRef.current
+    if (!dialog) return
+    const handleCancel = (event: Event) => {
+      event.preventDefault()
+      setDisableFutureWarnings(false)
+      cancelClipDeletion()
+    }
+    dialog.addEventListener('cancel', handleCancel)
+    return () => dialog.removeEventListener('cancel', handleCancel)
+  }, [cancelClipDeletion])
+
+  if (!isOpen || !clip) {
     return null
   }
 
@@ -27,12 +49,13 @@ export function ClipDeletionConfirmDialog() {
   const clipSecondaryLabel = getClipSecondaryLabel(clip)
 
   return (
-    <div className="fixed inset-0 z-80 flex items-center justify-center bg-black/60 px-4">
+    <dialog
+      ref={dialogRef}
+      aria-labelledby="clip-deletion-dialog-title"
+      className="m-0 fixed inset-0 z-80 h-full w-full max-h-none max-w-none items-center justify-center bg-black/60 px-4 open:flex backdrop:bg-transparent"
+    >
       <div
         className="relative w-full max-w-md rounded-[12px] bg-surface px-2.5 py-2 shadow-2xl"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="clip-deletion-dialog-title"
       >
         <div className="min-w-0">
           <div className="relative pl-9">
@@ -84,6 +107,6 @@ export function ClipDeletionConfirmDialog() {
           </div>
         </div>
       </div>
-    </div>
+    </dialog>
   )
 }

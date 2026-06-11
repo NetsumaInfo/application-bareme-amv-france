@@ -1,4 +1,5 @@
 import type { LucideIcon } from 'lucide-react'
+import { useShallow } from 'zustand/react/shallow'
 import { HoverTextTooltip } from '@/components/ui/HoverTextTooltip'
 import { useUIStore } from '@/store/useUIStore'
 import type { AppTab } from '@/types/notation'
@@ -7,7 +8,13 @@ import { formatShortcutAnnotationForAction } from '@/utils/shortcuts'
 import { UI_ICONS } from '@/components/ui/actionIcons'
 
 export default function InterfaceSwitcher() {
-  const { currentTab, switchTab, shortcutBindings } = useUIStore()
+  const { currentTab, switchTab, shortcutBindings } = useUIStore(
+    useShallow((state) => ({
+      currentTab: state.currentTab,
+      switchTab: state.switchTab,
+      shortcutBindings: state.shortcutBindings,
+    })),
+  )
   const { t } = useI18n()
   const tabs: { tab: AppTab; label: string; icon: LucideIcon; action: 'tabNotation' | 'tabResultats' | 'tabExport' }[] = [
     { tab: 'notation', label: t('Notation'), icon: UI_ICONS.notation, action: 'tabNotation' },
@@ -26,6 +33,7 @@ export default function InterfaceSwitcher() {
             text={annotation}
           >
             <button
+              type="button"
               onClick={() => switchTab(tab)}
               aria-label={annotation}
               className={`flex h-[22px] items-center gap-0.5 px-1.5 text-[11px] leading-none transition-all first:rounded-l-[5px] last:rounded-r-[5px] ${

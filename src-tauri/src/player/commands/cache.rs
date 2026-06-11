@@ -1,5 +1,5 @@
 use lazy_static::lazy_static;
-use std::collections::{HashMap, VecDeque};
+use std::collections::HashMap;
 use std::sync::Mutex;
 
 const FRAME_PREVIEW_CACHE_MAX_ENTRIES: usize = 240;
@@ -7,8 +7,8 @@ const MEDIA_INFO_CACHE_MAX_ENTRIES: usize = 96;
 
 struct LruCache<V: Clone> {
     max_entries: usize,
-    map: HashMap<String, V>,
-    order: VecDeque<String>,
+    map: HashMap<String, (V, u64)>,
+    tick: u64,
 }
 
 impl<V: Clone> LruCache<V> {
@@ -16,39 +16,38 @@ impl<V: Clone> LruCache<V> {
         Self {
             max_entries,
             map: HashMap::new(),
-            order: VecDeque::new(),
+            tick: 0,
         }
+    }
+
+    fn next_tick(&mut self) -> u64 {
+        self.tick = self.tick.wrapping_add(1);
+        self.tick
     }
 
     fn get(&mut self, key: &str) -> Option<V> {
-        let value = self.map.get(key).cloned()?;
-        self.touch(key);
-        Some(value)
+        let tick = self.next_tick();
+        let entry = self.map.get_mut(key)?;
+        entry.1 = tick;
+        Some(entry.0.clone())
     }
 
     fn put(&mut self, key: String, value: V) {
-        if self.map.contains_key(&key) {
-            self.map.insert(key.clone(), value);
-            self.touch(&key);
-            return;
-        }
-
-        self.map.insert(key.clone(), value);
-        self.order.push_back(key.clone());
+        let tick = self.next_tick();
+        self.map.insert(key, (value, tick));
 
         while self.map.len() > self.max_entries {
-            if let Some(oldest) = self.order.pop_front() {
-                self.map.remove(&oldest);
-            } else {
-                break;
+            let oldest = self
+                .map
+                .iter()
+                .min_by_key(|(_, (_, last_used))| *last_used)
+                .map(|(key, _)| key.clone());
+            match oldest {
+                Some(key) => {
+                    self.map.remove(&key);
+                }
+                None => break,
             }
-        }
-    }
-
-    fn touch(&mut self, key: &str) {
-        if let Some(index) = self.order.iter().position(|entry| entry == key) {
-            self.order.remove(index);
-            self.order.push_back(key.to_string());
         }
     }
 }

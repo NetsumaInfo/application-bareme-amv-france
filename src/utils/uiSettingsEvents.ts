@@ -10,6 +10,7 @@ export interface UiSettingsUpdatePayload {
   primaryColorPreset?: PrimaryColorPreset
   language?: AppLanguage
   showAudioDb?: boolean
+  showTooltips?: boolean
   confirmClipDeletion?: boolean
   projectsFolderPath?: string
   baremesFolderPath?: string

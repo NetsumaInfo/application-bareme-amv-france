@@ -20,7 +20,7 @@ function SegmentedButton({
       aria-label={ariaLabel}
       className={`inline-flex h-6 items-center rounded-md px-2 text-[11px] transition-colors ${
         active
-          ? 'bg-surface-dark/80 text-white'
+          ? 'bg-primary-600 text-white'
           : 'text-gray-400 hover:bg-white/5 hover:text-white'
       }`}
     >
