@@ -43,7 +43,7 @@ export function BaremeSelector() {
         className="app-header-trigger gap-0.5"
       >
         <span className="inline-flex items-center gap-0.5 leading-none">
-          <span className="max-w-[150px] truncate font-medium leading-none">{currentBareme?.name || t('Barème')}</span>
+          <span className="max-w-[150px] truncate py-px font-medium leading-tight">{currentBareme?.name || t('Barème')}</span>
           <ChevronDown
             size={10}
             className={`app-header-trigger-chevron shrink-0 transition-transform ${open ? 'rotate-180' : ''}`}
