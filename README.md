@@ -69,7 +69,8 @@ Invariants importants :
 - `usePlayerStore` — état de lecture, fichier chargé, pistes, fullscreen/détaché ;
 - `useNotationStore` — notes, historique, barème courant, barèmes disponibles ;
 - `useUIStore` — onglet actif, layout de notation, thème, accent, langue, zoom, raccourcis, modales ;
-- `useClipDeletionStore` — flux de confirmation de suppression de clip.
+- `useClipDeletionStore` — flux de confirmation de suppression de clip ;
+- `useAppUpdateStore` — vérification des mises à jour via les releases GitHub (statut, version courante/dernière, URL de release).
 
 ## Démarrage
 
@@ -119,6 +120,7 @@ src/
   overlay-entry.tsx           # Overlay fullscreen / détaché
   notes-entry.tsx             # Fenêtre notes détachée
   resultats-notes-entry.tsx   # Fenêtre notes juges détachée
+  player-menu-entry.tsx       # Menu contextuel player (fenêtre détachée)
   components/                 # UI, interfaces, player, layout, settings
   hooks/                      # Player, polling, autosave, raccourcis
   services/tauri.ts           # Façade unique de l'API Tauri
@@ -149,7 +151,9 @@ src-tauri/
 - notes détachées et notes de juges détachées via bridges d'events dédiés ;
 - import/export des notations de juges et agrégation multi-juges ;
 - exports riches : PNG, PDF, JSON, HTML/CSS, aperçus Discord ;
-- préférences persistées et diffusées entre fenêtres : thème, accent, langue, raccourcis, miniatures, confirmations.
+- préférences persistées et diffusées entre fenêtres : thème, accent, langue, raccourcis, miniatures, confirmations ;
+- menu contextuel player détaché (fenêtre `player-menu`) ;
+- vérification de mise à jour via les releases GitHub.
 
 ## Workflow de développement
 
