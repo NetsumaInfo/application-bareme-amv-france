@@ -1,9 +1,9 @@
 [package]
 name = "amv-notation"
-version = "0.9.1"
+version = "1.0.0"
 description = "AMV Notation - Video judging application"
 authors = ["Netsuma"]
-license = ""
+license = "GPL-3.0-or-later"
 repository = ""
 default-run = "amv-notation"
 edition = "2021"

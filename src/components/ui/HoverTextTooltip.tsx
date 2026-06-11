@@ -12,6 +12,14 @@ interface HoverTextTooltipProps {
   placement?: 'auto' | 'above' | 'below'
   /** Affiche l'info-bulle même quand l'utilisateur les a désactivées dans les paramètres. */
   force?: boolean
+  /**
+   * Ancre l'info-bulle au centre de l'élément déclencheur (position calculée une fois)
+   * au lieu de suivre le curseur — comportement par défaut, évite que la bulle saute
+   * sur les petits boutons/icônes. Si le déclencheur n'enveloppe que du texte (aucun
+   * élément enfant mesurable), on retombe automatiquement sur la position du pointeur.
+   * Passer `anchor={false}` pour forcer le suivi du curseur.
+   */
+  anchor?: boolean
 }
 
 function getTooltipPosition(
@@ -76,9 +84,11 @@ export function HoverTextTooltip({
   maxWidthPx = 320,
   placement = 'auto',
   force = false,
+  anchor = true,
 }: HoverTextTooltipProps) {
   const tooltipsEnabled = useUIStore((s) => s.showTooltips)
   const safeText = text.trim()
+  const wrapperRef = useRef<HTMLSpanElement | null>(null)
   const tooltipRef = useRef<HTMLDivElement | null>(null)
   const arrowRef = useRef<HTMLSpanElement | null>(null)
   const suppressedTitlesRef = useRef<Array<{ element: HTMLElement; title: string }>>([])
@@ -110,14 +120,28 @@ export function HoverTextTooltip({
     suppressedTitlesRef.current = []
   }, [])
 
+  const anchorPointFromElement = useCallback((): { x: number; y: number } | null => {
+    const node = wrapperRef.current
+    if (!node) return null
+    // Le wrapper est `display: contents` (sans boîte propre), on mesure donc
+    // le vrai élément déclencheur (premier enfant) pour ne pas casser les grilles.
+    const target = (node.firstElementChild as HTMLElement | null) ?? node
+    const rect = target.getBoundingClientRect()
+    if (rect.width === 0 && rect.height === 0) return null
+    const x = rect.left + rect.width / 2
+    const y = placement === 'below' ? rect.bottom : rect.top
+    return { x, y }
+  }, [placement])
+
   const showTooltip = (event: MouseEvent<HTMLElement>) => {
     suppressNativeTitles(event.currentTarget)
-    pointerRef.current = { x: event.clientX, y: event.clientY }
+    const anchorPoint = anchor ? anchorPointFromElement() : null
+    pointerRef.current = anchorPoint ?? { x: event.clientX, y: event.clientY }
     setVisible(true)
   }
 
   const moveTooltip = (event: MouseEvent<HTMLElement>) => {
-    if (!visible) return
+    if (!visible || anchor) return
     pointerRef.current = { x: event.clientX, y: event.clientY }
     applyTooltipPosition(event.clientX, event.clientY)
   }
@@ -164,6 +188,14 @@ export function HoverTextTooltip({
   }, [applyTooltipPosition, safeText, visible])
 
   const onViewportChange = useEffectEvent(() => {
+    if (anchor) {
+      const point = anchorPointFromElement()
+      if (point) {
+        pointerRef.current = point
+        applyTooltipPosition(point.x, point.y)
+        return
+      }
+    }
     applyTooltipPosition(pointerRef.current.x, pointerRef.current.y)
   })
 
@@ -212,6 +244,7 @@ export function HoverTextTooltip({
   return (
     <>
       <span
+        ref={wrapperRef}
         className={className ?? 'contents'}
         {...triggerProps}
       >

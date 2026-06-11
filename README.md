@@ -1,34 +1,49 @@
+<!-- LANG-SELECTOR:START -->
+**Français** ·
+[English](README.en.md) ·
+[Español](README.es.md) ·
+[日本語](README.ja.md) ·
+[Русский](README.ru.md) ·
+[中文](README.zh.md)
+<!-- LANG-SELECTOR:END -->
+
 # AMV Notation
 
-![Version](https://img.shields.io/badge/version-v0.9.1-2563eb)
-![Tauri](https://img.shields.io/badge/Tauri-v2-24c8db)
+![Version](https://img.shields.io/badge/version-V1-2563eb)
+![Tauri](https://img.shields.io/badge/Tauri-2-24c8db)
 ![React](https://img.shields.io/badge/React-19-61dafb)
-![TypeScript](https://img.shields.io/badge/TypeScript-5-3178c6)
+![TypeScript](https://img.shields.io/badge/TypeScript-5.9-3178c6)
 ![Rust](https://img.shields.io/badge/Rust-2021-b7410e)
+![Platform](https://img.shields.io/badge/platform-Windows-0078d6)
+![License](https://img.shields.io/badge/license-GPL--3.0-blue)
 
-Application desktop Windows-first pour notation de concours AMV: gestion barèmes, lecture vidéo mpv, agrégation multi-juges, exports résultats publiables.
+Application desktop **Windows-first** pour la notation de concours **AMV** (Anime Music Video) : gestion de barèmes, lecture vidéo via mpv, agrégation multi-juges et exports de résultats publiables.
 
-> Note documentation: dossier `.github/copilot` et fichier `.github/copilot-instructions.md` absents dans dépôt. README construit depuis `AGENTS.md`, `CLAUDE.md`, `package.json`, `src-tauri/Cargo.toml`, `src-tauri/tauri.conf.json`.
+> **Note documentation** — le dossier `.github/copilot` et le fichier `.github/copilot-instructions.md` n'existent pas dans le dépôt. Ce README est construit à partir de `AGENTS.md`, `CLAUDE.md`, `package.json`, `src-tauri/Cargo.toml` et `src-tauri/tauri.conf.json`.
 
-## Project Name and Description
+## Description du projet
 
-- **Nom**: AMV Notation
-- **Version logicielle**: `0.9.1`
-- **But principal**: noter clips AMV dans workflow juge, de import vidéos jusqu’à export final (tableaux, affiches, notes juge).
-- **Plateforme cible**: desktop Windows (Tauri v2 + intégration Win32 pour player mpv).
+- **Nom** : AMV Notation
+- **Version** : `V1`
+- **Identifiant** : `com.amvnotation.desktop`
+- **But** : noter des clips AMV dans un workflow de juge, de l'import des vidéos jusqu'à l'export final (tableaux, affiches, notes de juge).
+- **Plateforme cible** : desktop Windows (Tauri v2 + intégration Win32 pour le player mpv).
 
-## Technology Stack
+## Stack technique
 
-- **Desktop shell**: Tauri `2.10.3`, `tauri-build 2.5.6`, `@tauri-apps/cli 2.10.1`
-- **Frontend**: React `19.2.0`, TypeScript `~5.9.3`, Vite `^7.2.4`, Zustand `^5.0.11`, Zod `^4.3.6`, Tailwind CSS `^3.4.19`
-- **Backend**: Rust edition `2021`, rust-version `1.77.2`
-- **Tauri plugins**: `tauri-plugin-dialog 2.7.0`, `tauri-plugin-fs 2.5.0`, `@tauri-apps/plugin-dialog ^2.7.0`, `@tauri-apps/plugin-fs ^2.5.0`
-- **Vidéo**: mpv via `libmpv-2.dll` (chargement dynamique) + FFmpeg/ffprobe helpers
-- **i18n runtime**: français, anglais, japonais, russe, chinois, espagnol
+| Domaine | Technologies |
+|---------|--------------|
+| **Desktop shell** | Tauri `2.10.3`, `tauri-build 2.5.6`, `@tauri-apps/cli 2.10.1` |
+| **Frontend** | React `19.2.0`, TypeScript `~5.9.3`, Vite `^7.2.4`, Zustand `^5.0.11`, Zod `^4.3.6`, Tailwind CSS `^4.3.0`, React Hook Form `^7.71.1`, Motion `^12.33.0` |
+| **Backend** | Rust edition `2021`, rust-version `1.77.2` |
+| **Plugins Tauri** | `tauri-plugin-dialog 2.7.0`, `tauri-plugin-fs 2.5.0`, `tauri-plugin-opener 2.4.0` (+ packages JS `^2.x` correspondants) |
+| **Vidéo** | mpv via `libmpv-2.dll` (chargement dynamique par `libloading`) + helpers FFmpeg/ffprobe |
+| **Export** | `jspdf`, `pdf-lib`, `html2canvas` |
+| **i18n runtime** | français, anglais, japonais, russe, chinois, espagnol |
 
-## Project Architecture
+## Architecture
 
-Architecture hybride: React multi-fenêtres côté UI, Rust/Tauri côté runtime natif.
+Architecture hybride : React multi-fenêtres côté UI, Rust/Tauri côté runtime natif.
 
 ```mermaid
 flowchart LR
@@ -37,22 +52,33 @@ flowchart LR
   IPC --> Core["Rust Core (src-tauri/src/lib.rs)"]
   Core --> MPV["mpv Win32 Child Window"]
   Core --> Proj["Project Manager + JSON IO"]
-  Core --> Aux["Aux Windows: overlay, notes, resultats-notes"]
+  Core --> Aux["Fenêtres aux : overlay, notes, resultats-notes"]
 ```
 
-Invariants importants:
-- composants React ne doivent pas appeler `invoke()` direct; passer par `src/services/tauri.ts`
-- permissions IPC/plugins gérées dans `src-tauri/capabilities/default.json`
-- overlay et fenêtres détachées pilotés via events Tauri dédiés
+Invariants importants :
 
-## Getting Started
+- les composants React n'appellent **jamais** `invoke()` directement ; ils passent par `src/services/tauri.ts` ;
+- les permissions IPC/plugins sont gérées dans `src-tauri/capabilities/default.json` ;
+- toute commande Tauri doit être enregistrée dans `tauri::generate_handler![]` (`src-tauri/src/lib.rs`) ;
+- l'overlay et les fenêtres détachées sont pilotés via des events Tauri dédiés ;
+- mpv s'affiche dans une fenêtre enfant Win32 superposée à la webview (pas dans le DOM) ; la géométrie est calculée côté frontend puis envoyée au backend.
+
+### Stores Zustand
+
+- `useProjectStore` — projet, clips, index courant, juges importés, flag dirty, historique de suppression ;
+- `usePlayerStore` — état de lecture, fichier chargé, pistes, fullscreen/détaché ;
+- `useNotationStore` — notes, historique, barème courant, barèmes disponibles ;
+- `useUIStore` — onglet actif, layout de notation, thème, accent, langue, zoom, raccourcis, modales ;
+- `useClipDeletionStore` — flux de confirmation de suppression de clip.
+
+## Démarrage
 
 ### Prérequis
 
 - Node.js `>=18`
 - Rust `>=1.77.2`
-- Windows + WebView2 + toolchain MSVC (chemin build principal)
-- `libmpv-2.dll` dans racine projet pour lecture vidéo en dev
+- Windows + WebView2 + toolchain MSVC (chemin de build principal)
+- `libmpv-2.dll` à la racine du projet pour la lecture vidéo en dev
 
 ### Installation
 
@@ -63,10 +89,10 @@ npm install
 ### Lancement
 
 ```bash
-# Frontend seul
+# Frontend seul (Vite)
 npm run dev
 
-# App desktop Tauri
+# App desktop complète (Vite + Tauri)
 npm run tauri dev
 ```
 
@@ -76,16 +102,16 @@ npm run tauri dev
 # Build frontend TS + Vite
 npm run build
 
-# Validation desktop debug sans bundle
+# Validation desktop debug sans bundle (chemin recommandé Windows/MSVC)
 npm run tauri -- build --debug --no-bundle
 
 # Build desktop complet
 npm run tauri build
 ```
 
-Note WSL/Linux: `cargo check` dans `src-tauri` peut échouer sans dépendances GTK/WebKit/Pango. Validation recommandée pour cible Windows: `npm run tauri -- build --debug --no-bundle`.
+> **Note WSL/Linux** : `cargo check` dans `src-tauri` peut échouer sans les dépendances système GTK/WebKit/Pango. La cible principale est Windows/MSVC — préférer `npm run tauri -- build --debug --no-bundle` pour valider le desktop.
 
-## Project Structure
+## Structure du projet
 
 ```text
 src/
@@ -94,9 +120,9 @@ src/
   notes-entry.tsx             # Fenêtre notes détachée
   resultats-notes-entry.tsx   # Fenêtre notes juges détachée
   components/                 # UI, interfaces, player, layout, settings
-  hooks/                      # Player, polling, autosave, shortcuts
-  services/tauri.ts           # Façade unique Tauri API
-  services/tauri_api/         # Modules typed par domaine
+  hooks/                      # Player, polling, autosave, raccourcis
+  services/tauri.ts           # Façade unique de l'API Tauri
+  services/tauri_api/         # Modules typés par domaine
   store/                      # Stores Zustand
   i18n/                       # Seed + locales
   utils/                      # Scoring, résultats, thème, raccourcis
@@ -105,53 +131,51 @@ src-tauri/
   tauri.conf.json
   capabilities/default.json
   src/
-    lib.rs                    # Builder Tauri + command registration
+    lib.rs                    # Builder Tauri + enregistrement des commandes
     main.rs                   # Entrée fine vers run()
-    app_windows.rs            # Lifecycle fenêtres auxiliaires
+    app_windows.rs            # Lifecycle des fenêtres auxiliaires
     state.rs                  # AppState mpv/window
-    player/                   # FFI mpv, wrapper, window Win32, commands
+    player/                   # FFI mpv, wrapper, fenêtre Win32, commands
     project/                  # Manager projet/settings/barèmes
-    video/import.rs           # Scan vidéos
+    video/import.rs           # Scan des vidéos
 ```
 
-## Key Features
+## Fonctionnalités clés
 
-- workflow de notation AMV de bout en bout (création projet -> notation -> résultats -> export)
-- modes notation `spreadsheet`, `notation`, `dual`
-- support workflow sans vidéo (participants manuels puis rattachement plus tard)
-- player mpv embarqué: play/pause, seek, tracks audio/sous-titres, fullscreen, fenêtre détachée
-- notes détachées et notes juges détachées via bridges events dédiés
-- import/export notations juges et agrégation multi-juges
-- exports riches: PNG, PDF, JSON, HTML/CSS, Excel, aperçus Discord
-- préférences persistées: thème, accent, langue, raccourcis, miniatures, confirmations
+- workflow de notation AMV de bout en bout (création projet → notation → résultats → export) ;
+- modes de notation `spreadsheet`, `notation` (commentaires) et `dual` (tableur + notes détachées) ;
+- workflow sans vidéo (participants saisis manuellement, rattachement des fichiers plus tard) ;
+- player mpv embarqué : play/pause, seek, pistes audio/sous-titres, fullscreen, fenêtre détachée, AB-loop, screenshot, frame-step ;
+- notes détachées et notes de juges détachées via bridges d'events dédiés ;
+- import/export des notations de juges et agrégation multi-juges ;
+- exports riches : PNG, PDF, JSON, HTML/CSS, aperçus Discord ;
+- préférences persistées et diffusées entre fenêtres : thème, accent, langue, raccourcis, miniatures, confirmations.
 
-## Development Workflow
+## Workflow de développement
 
-- dev loop standard:
-  - `npm run dev` pour UI
-  - `npm run tauri dev` pour app desktop complète
-- checks avant merge/release:
+- Boucle de dev :
+  - `npm run dev` pour l'UI seule ;
+  - `npm run tauri dev` pour l'app desktop complète.
+- Checks avant merge/release :
   - `npm run lint`
-  - `npm run i18n:sync` après ajout texte UI
+  - `npm run i18n:sync` (après ajout de texte UI)
   - `npm run build`
   - `npm run tauri -- info`
   - `npm run tauri -- build --debug --no-bundle`
-- stratégie branches non documentée explicitement dans dépôt
+- La stratégie de branches n'est pas documentée explicitement dans le dépôt (branche par défaut : `master`).
 
-## Coding Standards
+## Conventions de code
 
-- code modulaire, lisible, testable; éviter fichiers monolithiques
-- TypeScript strict, noms explicites, composants/hooks responsabilité unique
-- pour Tauri v2:
-  - utiliser `@tauri-apps/api/core|event|window` + plugins officiels v2
-  - ne pas réintroduire APIs v1 (`@tauri-apps/api/tauri|dialog|fs`)
-- toute IPC frontend via `src/services/tauri.ts`, pas d’`invoke()` direct dans composants
-- toute nouvelle API/plugin Tauri doit être accompagnée mise à jour `src-tauri/capabilities/default.json`
-- toute nouvelle string UI doit passer via `useI18n().t(...)`
+- code modulaire, lisible, testable ; éviter les fichiers monolithiques ;
+- TypeScript strict, noms explicites, composants/hooks à responsabilité unique ;
+- Tauri v2 : utiliser `@tauri-apps/api/core|event|window` + plugins officiels v2. **Ne pas** réintroduire les API v1 (`@tauri-apps/api/tauri|dialog|fs`) ;
+- toute IPC frontend passe par `src/services/tauri.ts` — pas d'`invoke()` direct dans les composants ;
+- toute nouvelle API/plugin Tauri s'accompagne d'une mise à jour de `src-tauri/capabilities/default.json` dans le même changement ;
+- toute nouvelle string UI visible passe par `useI18n().t(...)` ; les labels config-driven vont dans `src/i18n/seed.ts`. La langue source de l'UI est le **français**.
 
-## Testing
+## Tests & validation
 
-Approche validation repo:
+Le dépôt s'appuie sur une validation par build/lint plutôt que sur une suite de tests automatisés :
 
 ```bash
 npm run lint
@@ -161,11 +185,19 @@ npm run tauri -- info
 npm run tauri -- build --debug --no-bundle
 ```
 
-Notes:
-- cible desktop principale = Windows/MSVC
-- `cargo check` direct sous WSL/Linux non représentatif si dépendances système Tauri manquantes
+Notes :
 
-## License
+- cible desktop principale = Windows/MSVC ;
+- `cargo check` direct sous WSL/Linux n'est pas représentatif si les dépendances système Tauri manquent.
 
-Ce projet est placé sous licence **CC0 1.0 Universal** (dédicace au domaine public).
-Texte officiel: https://creativecommons.org/publicdomain/zero/1.0/
+## Contribution
+
+- Respecter les conventions de code ci-dessus et les invariants d'architecture (façade Tauri, capabilities, enregistrement des commandes, i18n).
+- Après toute modification de texte UI français, lancer `npm run i18n:sync` puis relire les traductions sensibles (vocabulaire barème/jugement, préservation des placeholders `{path}`, `{error}`, ajustement de mise en page JA/ZH).
+- Laisser zéro erreur/warning évitable dans la zone touchée avant de finir.
+- Les fenêtres auxiliaires (overlay, notes, resultats-notes) sont des points d'entrée HTML séparés — ne pas supposer un frontend mono-fenêtre.
+
+## Licence
+
+Projet placé sous licence **GNU General Public License v3.0** (voir [`LICENSE`](LICENSE)).
+Texte officiel : <https://www.gnu.org/licenses/gpl-3.0.html>

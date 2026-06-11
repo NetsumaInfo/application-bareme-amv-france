@@ -412,7 +412,7 @@ function useColorSwatchPickerController({
 
   const renderContent = () => (
     <div className="relative" ref={containerRef}>
-      <HoverTextTooltip text={title ?? ''}>
+      <HoverTextTooltip text={title ?? ''} anchor>
         <button
           ref={setTriggerButtonNode}
           type="button"
@@ -473,7 +473,7 @@ function useColorSwatchPickerController({
           </div>
 
           <div className="mt-2 flex items-center gap-2">
-            <HoverTextTooltip text={displayColor}>
+            <HoverTextTooltip text={displayColor} anchor>
               <div
                 className="h-4 w-14 rounded-full border border-white/20 shrink-0"
                 style={{ backgroundColor: displayColor }}
@@ -510,7 +510,7 @@ function useColorSwatchPickerController({
           {defaultColor && (
             <div className="mt-2 pt-2 border-t border-gray-700">
               <div className="text-[10px] uppercase tracking-wide text-gray-500 mb-1">{t('Par défaut')}</div>
-              <HoverTextTooltip text={t('{color} (couleur par défaut)', { color: defaultColor })}>
+              <HoverTextTooltip text={t('{color} (couleur par défaut)', { color: defaultColor })} anchor>
                 <button
                   type="button"
                   onClick={() => commitHex(defaultColor, true)}
@@ -535,6 +535,7 @@ function useColorSwatchPickerController({
                     <HoverTextTooltip
                       key={`favorite-${color}`}
                       text={isDefault ? t('{color} (défaut)', { color }) : color}
+                      anchor
                     >
                       <button
                         type="button"
@@ -565,7 +566,7 @@ function useColorSwatchPickerController({
                   const color = sanitizeColor(preset)
                   const active = color === normalizedValue
                   return (
-                    <HoverTextTooltip key={`recent-${color}`} text={color}>
+                    <HoverTextTooltip key={`recent-${color}`} text={color} anchor>
                       <button
                         type="button"
                         onClick={() => commitHex(color, true)}
@@ -589,7 +590,7 @@ function useColorSwatchPickerController({
                 const color = sanitizeColor(preset)
                 const active = color === normalizedValue
                 return (
-                <HoverTextTooltip key={color} text={color}>
+                <HoverTextTooltip key={color} text={color} anchor>
                   <button
                     type="button"
                     onClick={() => commitHex(color, true)}
