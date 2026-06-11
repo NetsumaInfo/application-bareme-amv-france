@@ -78,7 +78,7 @@ flowchart LR
 - Node.js `>=18`
 - Rust `>=1.77.2`
 - Windows + WebView2 + тулчейн MSVC (основной путь сборки)
-- `libmpv-2.dll` в корне проекта для воспроизведения видео в dev-режиме
+- `libmpv-2.dll` в корне проекта для воспроизведения видео в dev-режиме — скачать с [mpv.io](https://mpv.io/) (сборки Windows: `mpv-dev-x86_64`, архив `libmpv`)
 
 ### Установка
 
