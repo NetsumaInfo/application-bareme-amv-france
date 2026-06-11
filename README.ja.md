@@ -78,7 +78,7 @@ flowchart LR
 - Node.js `>=18`
 - Rust `>=1.77.2`
 - Windows + WebView2 + MSVC ツールチェーン（主要なビルド経路）
-- 開発時の動画再生には、プロジェクトルートに `libmpv-2.dll`
+- 開発時の動画再生には、プロジェクトルートに `libmpv-2.dll`（[mpv.io](https://mpv.io/) からダウンロード：Windows ビルド `mpv-dev-x86_64`、`libmpv` アーカイブ）
 
 ### インストール
 

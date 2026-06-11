@@ -78,7 +78,7 @@ flowchart LR
 - Node.js `>=18`
 - Rust `>=1.77.2`
 - Windows + WebView2 + MSVC 工具链（主要构建路径）
-- 开发环境下视频播放需在项目根目录放置 `libmpv-2.dll`
+- 开发环境下视频播放需在项目根目录放置 `libmpv-2.dll`（从 [mpv.io](https://mpv.io/) 下载：Windows 构建 `mpv-dev-x86_64`，`libmpv` 压缩包）
 
 ### 安装
 

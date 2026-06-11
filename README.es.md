@@ -78,7 +78,7 @@ Invariantes importantes:
 - Node.js `>=18`
 - Rust `>=1.77.2`
 - Windows + WebView2 + toolchain MSVC (vía de build principal)
-- `libmpv-2.dll` en la raíz del proyecto para la reproducción de vídeo en dev
+- `libmpv-2.dll` en la raíz del proyecto para la reproducción de vídeo en dev — descargar desde [mpv.io](https://mpv.io/) (builds Windows: `mpv-dev-x86_64`, archivo `libmpv`)
 
 ### Instalación
 

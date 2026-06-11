@@ -19,8 +19,6 @@
 
 Application desktop **Windows-first** pour la notation de concours **AMV** (Anime Music Video) : gestion de barèmes, lecture vidéo via mpv, agrégation multi-juges et exports de résultats publiables.
 
-> **Note documentation** — le dossier `.github/copilot` et le fichier `.github/copilot-instructions.md` n'existent pas dans le dépôt. Ce README est construit à partir de `AGENTS.md`, `CLAUDE.md`, `package.json`, `src-tauri/Cargo.toml` et `src-tauri/tauri.conf.json`.
-
 ## Description du projet
 
 - **Nom** : AMV Notation
@@ -52,8 +50,10 @@ flowchart LR
   IPC --> Core["Rust Core (src-tauri/src/lib.rs)"]
   Core --> MPV["mpv Win32 Child Window"]
   Core --> Proj["Project Manager + JSON IO"]
-  Core --> Aux["Fenêtres aux : overlay, notes, resultats-notes"]
+  Core --> Aux["Fenêtres aux : overlay, notes, resultats-notes, player-menu"]
 ```
+
+Le frontend est multi-fenêtres : 5 points d'entrée HTML (`index.html`, `overlay.html`, `notes.html`, `resultats-notes.html`, `player-menu.html`) déclarés dans `vite.config.ts` (`rollupOptions.input`).
 
 Invariants importants :
 
@@ -78,7 +78,7 @@ Invariants importants :
 - Node.js `>=18`
 - Rust `>=1.77.2`
 - Windows + WebView2 + toolchain MSVC (chemin de build principal)
-- `libmpv-2.dll` à la racine du projet pour la lecture vidéo en dev
+- `libmpv-2.dll` à la racine du projet pour la lecture vidéo en dev — à télécharger depuis [mpv.io](https://mpv.io/) (builds Windows : `mpv-dev-x86_64`, archive `libmpv`)
 
 ### Installation
 
