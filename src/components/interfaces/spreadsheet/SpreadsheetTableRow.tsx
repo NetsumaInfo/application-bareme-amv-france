@@ -76,11 +76,9 @@ function SpreadsheetTableRowComponent({
     if (!score || !score.isValid) return false
     return score.value !== undefined && score.value !== null && score.value !== ''
   }))
-  const rowClassName = isActive
-    ? 'bg-white/[0.07]'
-    : clipIdx % 2 === 0
-      ? 'bg-white/4'
-      : 'bg-transparent'
+  const rowClassName = clipIdx % 2 === 0
+    ? 'bg-white/4'
+    : 'bg-transparent'
   const stickyCellClassName = 'bg-inherit'
 
   return (
@@ -103,7 +101,15 @@ function SpreadsheetTableRowComponent({
       <td
         className={`amv-number-ui w-8 px-2 py-1 text-center text-[10px] text-gray-500 border-r border-gray-800/60 bg-inherit ${stickyCellClassName}`}
       >
-        {clipIdx + 1}
+        <span
+          className={
+            isActive
+              ? 'inline-flex min-w-[18px] items-center justify-center rounded border border-primary-500 px-1 text-primary-400'
+              : ''
+          }
+        >
+          {clipIdx + 1}
+        </span>
       </td>
 
       <SpreadsheetClipCell

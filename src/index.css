@@ -838,6 +838,31 @@ textarea,
   font-variant-numeric: tabular-nums;
   appearance: textfield;
   -moz-appearance: textfield;
+  position: relative;
+  z-index: 1;
+}
+
+/* Full-row highlight on cell hover (pure CSS, no re-render).
+   A single wide pseudo-element on the hovered cell paints the whole row. */
+.amv-col-hover {
+  position: relative;
+}
+
+.amv-col-hover::before {
+  content: "";
+  position: absolute;
+  left: -9999px;
+  right: -9999px;
+  top: 3px;
+  bottom: 3px;
+  background: rgb(59 130 246 / 0.05);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.12s ease;
+}
+
+.amv-col-hover:hover::before {
+  opacity: 1;
 }
 
 .amv-soft-number::-webkit-outer-spin-button,
