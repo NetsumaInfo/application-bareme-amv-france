@@ -19,8 +19,6 @@
 
 **Windows-first** desktop application for judging **AMV** (Anime Music Video) contests: barème (scoring-grid) management, mpv video playback, multi-judge aggregation, and publishable result exports.
 
-> **Documentation note** — the `.github/copilot` folder and `.github/copilot-instructions.md` file do not exist in the repository. This README is built from `AGENTS.md`, `CLAUDE.md`, `package.json`, `src-tauri/Cargo.toml`, and `src-tauri/tauri.conf.json`.
-
 ## Project description
 
 - **Name**: AMV Notation
@@ -52,8 +50,10 @@ flowchart LR
   IPC --> Core["Rust Core (src-tauri/src/lib.rs)"]
   Core --> MPV["mpv Win32 Child Window"]
   Core --> Proj["Project Manager + JSON IO"]
-  Core --> Aux["Aux windows: overlay, notes, resultats-notes"]
+  Core --> Aux["Aux windows: overlay, notes, resultats-notes, player-menu"]
 ```
+
+The frontend is multi-window: 5 HTML entry points (`index.html`, `overlay.html`, `notes.html`, `resultats-notes.html`, `player-menu.html`) declared in `vite.config.ts` (`rollupOptions.input`).
 
 Key invariants:
 
@@ -69,7 +69,8 @@ Key invariants:
 - `usePlayerStore` — playback state, loaded file, tracks, fullscreen/detached;
 - `useNotationStore` — notes, history, current barème, available barèmes;
 - `useUIStore` — active tab, notation layout, theme, accent, language, zoom, shortcuts, modals;
-- `useClipDeletionStore` — clip deletion confirmation flow.
+- `useClipDeletionStore` — clip deletion confirmation flow;
+- `useAppUpdateStore` — update checks via GitHub releases (status, current/latest version, release URL).
 
 ## Getting started
 
@@ -119,6 +120,7 @@ src/
   overlay-entry.tsx           # Fullscreen / detached overlay
   notes-entry.tsx             # Detached notes window
   resultats-notes-entry.tsx   # Detached judge-notes window
+  player-menu-entry.tsx       # Player context menu (detached window)
   components/                 # UI, interfaces, player, layout, settings
   hooks/                      # Player, polling, autosave, shortcuts
   services/tauri.ts           # Single Tauri API façade
@@ -149,7 +151,9 @@ src-tauri/
 - detached notes and detached judge-notes via dedicated event bridges;
 - judge notation import/export and multi-judge aggregation;
 - rich exports: PNG, PDF, JSON, HTML/CSS, Discord previews;
-- preferences persisted and broadcast across windows: theme, accent, language, shortcuts, thumbnails, confirmations.
+- preferences persisted and broadcast across windows: theme, accent, language, shortcuts, thumbnails, confirmations;
+- detached player context menu (`player-menu` window);
+- update check via GitHub releases.
 
 ## Development workflow
 

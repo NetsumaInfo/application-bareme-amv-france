@@ -19,8 +19,6 @@
 
 **AMV**（アニメミュージックビデオ）コンテストの審査向け **Windows-first** デスクトップアプリ。評価基準（barème）の管理、mpv による動画再生、複数審査員の集計、公開可能な結果のエクスポートに対応します。
 
-> **ドキュメントに関する注記** — リポジトリに `.github/copilot` フォルダと `.github/copilot-instructions.md` ファイルは存在しません。この README は `AGENTS.md`、`CLAUDE.md`、`package.json`、`src-tauri/Cargo.toml`、`src-tauri/tauri.conf.json` から作成されています。
-
 ## プロジェクト概要
 
 - **名称**: AMV Notation
@@ -52,8 +50,10 @@ flowchart LR
   IPC --> Core["Rust Core (src-tauri/src/lib.rs)"]
   Core --> MPV["mpv Win32 Child Window"]
   Core --> Proj["Project Manager + JSON IO"]
-  Core --> Aux["補助ウィンドウ: overlay, notes, resultats-notes"]
+  Core --> Aux["補助ウィンドウ: overlay, notes, resultats-notes, player-menu"]
 ```
+
+フロントエンドはマルチウィンドウ構成: 5 つの HTML エントリポイント（`index.html`、`overlay.html`、`notes.html`、`resultats-notes.html`、`player-menu.html`）を `vite.config.ts`（`rollupOptions.input`）で宣言。
 
 重要な不変条件:
 
@@ -70,6 +70,7 @@ flowchart LR
 - `useNotationStore` — ノート、履歴、現在の barème、利用可能な barème。
 - `useUIStore` — アクティブタブ、採点レイアウト、テーマ、アクセント、言語、ズーム、ショートカット、モーダル。
 - `useClipDeletionStore` — クリップ削除の確認フロー。
+- `useAppUpdateStore` — GitHub リリースによる更新チェック（ステータス、現在/最新バージョン、リリース URL）。
 
 ## はじめに
 
@@ -119,6 +120,7 @@ src/
   overlay-entry.tsx           # フルスクリーン / 分離オーバーレイ
   notes-entry.tsx             # 分離ノートウィンドウ
   resultats-notes-entry.tsx   # 分離審査員ノートウィンドウ
+  player-menu-entry.tsx       # プレーヤーのコンテキストメニュー（分離ウィンドウ）
   components/                 # UI、インターフェース、player、layout、settings
   hooks/                      # Player、polling、autosave、ショートカット
   services/tauri.ts           # Tauri API の単一ファサード
@@ -150,6 +152,8 @@ src-tauri/
 - 審査員採点のインポート/エクスポートと複数審査員の集計。
 - 充実したエクスポート: PNG、PDF、JSON、HTML/CSS、Discord プレビュー。
 - ウィンドウ間で永続化・共有される設定: テーマ、アクセント、言語、ショートカット、サムネイル、確認ダイアログ。
+- 分離されたプレーヤーのコンテキストメニュー（`player-menu` ウィンドウ）。
+- GitHub リリースによる更新チェック。
 
 ## 開発ワークフロー
 

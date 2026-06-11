@@ -19,8 +19,6 @@
 
 面向 **AMV**（Anime Music Video，动画音乐视频）比赛评审的 **Windows 优先** 桌面应用：评分标准（barème）管理、通过 mpv 播放视频、多评委聚合，以及可发布的结果导出。
 
-> **文档说明** — 仓库中不存在 `.github/copilot` 文件夹和 `.github/copilot-instructions.md` 文件。本 README 基于 `AGENTS.md`、`CLAUDE.md`、`package.json`、`src-tauri/Cargo.toml` 和 `src-tauri/tauri.conf.json` 构建。
-
 ## 项目说明
 
 - **名称**：AMV Notation
@@ -52,8 +50,10 @@ flowchart LR
   IPC --> Core["Rust Core (src-tauri/src/lib.rs)"]
   Core --> MPV["mpv Win32 Child Window"]
   Core --> Proj["Project Manager + JSON IO"]
-  Core --> Aux["辅助窗口：overlay, notes, resultats-notes"]
+  Core --> Aux["辅助窗口：overlay, notes, resultats-notes, player-menu"]
 ```
+
+前端为多窗口：5 个 HTML 入口（`index.html`、`overlay.html`、`notes.html`、`resultats-notes.html`、`player-menu.html`），在 `vite.config.ts`（`rollupOptions.input`）中声明。
 
 重要不变量：
 
@@ -69,7 +69,8 @@ flowchart LR
 - `usePlayerStore` — 播放状态、已加载文件、轨道、全屏/分离状态；
 - `useNotationStore` — 备注、历史、当前 barème、可用 barème；
 - `useUIStore` — 活动标签页、评分布局、主题、强调色、语言、缩放、快捷键、模态框；
-- `useClipDeletionStore` — 片段删除确认流程。
+- `useClipDeletionStore` — 片段删除确认流程；
+- `useAppUpdateStore` — 通过 GitHub releases 检查更新（状态、当前/最新版本、release URL）。
 
 ## 快速开始
 
@@ -119,6 +120,7 @@ src/
   overlay-entry.tsx           # 全屏 / 分离浮层
   notes-entry.tsx             # 分离备注窗口
   resultats-notes-entry.tsx   # 分离评委备注窗口
+  player-menu-entry.tsx       # 播放器上下文菜单（分离窗口）
   components/                 # UI、界面、player、layout、settings
   hooks/                      # Player、polling、autosave、快捷键
   services/tauri.ts           # Tauri API 的唯一门面
@@ -149,7 +151,9 @@ src-tauri/
 - 通过专用事件桥的分离备注和分离评委备注；
 - 评委评分的导入/导出与多评委聚合；
 - 丰富的导出：PNG、PDF、JSON、HTML/CSS、Discord 预览；
-- 在窗口间持久化并广播的偏好：主题、强调色、语言、快捷键、缩略图、确认项。
+- 在窗口间持久化并广播的偏好：主题、强调色、语言、快捷键、缩略图、确认项；
+- 分离的播放器上下文菜单（`player-menu` 窗口）；
+- 通过 GitHub releases 检查更新。
 
 ## 开发工作流
 

@@ -19,8 +19,6 @@
 
 Aplicación de escritorio **Windows-first** para la calificación de concursos **AMV** (Anime Music Video): gestión de baremos, reproducción de vídeo con mpv, agregación multi-juez y exportaciones de resultados publicables.
 
-> **Nota de documentación** — la carpeta `.github/copilot` y el archivo `.github/copilot-instructions.md` no existen en el repositorio. Este README se construye a partir de `AGENTS.md`, `CLAUDE.md`, `package.json`, `src-tauri/Cargo.toml` y `src-tauri/tauri.conf.json`.
-
 ## Descripción del proyecto
 
 - **Nombre**: AMV Notation
@@ -52,8 +50,10 @@ flowchart LR
   IPC --> Core["Rust Core (src-tauri/src/lib.rs)"]
   Core --> MPV["mpv Win32 Child Window"]
   Core --> Proj["Project Manager + JSON IO"]
-  Core --> Aux["Ventanas aux: overlay, notes, resultats-notes"]
+  Core --> Aux["Ventanas aux: overlay, notes, resultats-notes, player-menu"]
 ```
+
+El frontend es multiventana: 5 puntos de entrada HTML (`index.html`, `overlay.html`, `notes.html`, `resultats-notes.html`, `player-menu.html`) declarados en `vite.config.ts` (`rollupOptions.input`).
 
 Invariantes importantes:
 
@@ -69,7 +69,8 @@ Invariantes importantes:
 - `usePlayerStore` — estado de reproducción, archivo cargado, pistas, fullscreen/separado;
 - `useNotationStore` — notas, historial, baremo actual, baremos disponibles;
 - `useUIStore` — pestaña activa, layout de notación, tema, acento, idioma, zoom, atajos, modales;
-- `useClipDeletionStore` — flujo de confirmación de eliminación de clip.
+- `useClipDeletionStore` — flujo de confirmación de eliminación de clip;
+- `useAppUpdateStore` — comprobación de actualizaciones vía releases de GitHub (estado, versión actual/última, URL de release).
 
 ## Primeros pasos
 
@@ -119,6 +120,7 @@ src/
   overlay-entry.tsx           # Overlay fullscreen / separado
   notes-entry.tsx             # Ventana de notas separada
   resultats-notes-entry.tsx   # Ventana de notas de jueces separada
+  player-menu-entry.tsx       # Menú contextual del player (ventana separada)
   components/                 # UI, interfaces, player, layout, settings
   hooks/                      # Player, polling, autosave, atajos
   services/tauri.ts           # Fachada única de la API Tauri
@@ -149,7 +151,9 @@ src-tauri/
 - notas separadas y notas de jueces separadas mediante puentes de eventos dedicados;
 - importación/exportación de notaciones de jueces y agregación multi-juez;
 - exportaciones ricas: PNG, PDF, JSON, HTML/CSS, previsualizaciones de Discord;
-- preferencias persistidas y difundidas entre ventanas: tema, acento, idioma, atajos, miniaturas, confirmaciones.
+- preferencias persistidas y difundidas entre ventanas: tema, acento, idioma, atajos, miniaturas, confirmaciones;
+- menú contextual del player separado (ventana `player-menu`);
+- comprobación de actualizaciones vía releases de GitHub.
 
 ## Flujo de desarrollo
 

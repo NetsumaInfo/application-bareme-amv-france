@@ -19,8 +19,6 @@
 
 Десктопное приложение **Windows-first** для судейства конкурсов **AMV** (Anime Music Video): управление баремами (системами оценивания), воспроизведение видео через mpv, агрегация оценок нескольких судей и экспорт публикуемых результатов.
 
-> **Примечание о документации** — папка `.github/copilot` и файл `.github/copilot-instructions.md` в репозитории отсутствуют. Этот README построен на основе `AGENTS.md`, `CLAUDE.md`, `package.json`, `src-tauri/Cargo.toml` и `src-tauri/tauri.conf.json`.
-
 ## Описание проекта
 
 - **Название**: AMV Notation
@@ -52,8 +50,10 @@ flowchart LR
   IPC --> Core["Rust Core (src-tauri/src/lib.rs)"]
   Core --> MPV["mpv Win32 Child Window"]
   Core --> Proj["Project Manager + JSON IO"]
-  Core --> Aux["Вспом. окна: overlay, notes, resultats-notes"]
+  Core --> Aux["Вспом. окна: overlay, notes, resultats-notes, player-menu"]
 ```
+
+Фронтенд многооконный: 5 HTML-точек входа (`index.html`, `overlay.html`, `notes.html`, `resultats-notes.html`, `player-menu.html`), объявленных в `vite.config.ts` (`rollupOptions.input`).
 
 Важные инварианты:
 
@@ -69,7 +69,8 @@ flowchart LR
 - `usePlayerStore` — состояние воспроизведения, загруженный файл, дорожки, полноэкранный/отсоединённый режим;
 - `useNotationStore` — заметки, история, текущий barème, доступные barème;
 - `useUIStore` — активная вкладка, раскладка оценивания, тема, акцент, язык, масштаб, горячие клавиши, модальные окна;
-- `useClipDeletionStore` — поток подтверждения удаления клипа.
+- `useClipDeletionStore` — поток подтверждения удаления клипа;
+- `useAppUpdateStore` — проверка обновлений через релизы GitHub (статус, текущая/последняя версия, URL релиза).
 
 ## Начало работы
 
@@ -119,6 +120,7 @@ src/
   overlay-entry.tsx           # Полноэкранный / отсоединённый оверлей
   notes-entry.tsx             # Отсоединённое окно заметок
   resultats-notes-entry.tsx   # Отсоединённое окно заметок судей
+  player-menu-entry.tsx       # Контекстное меню плеера (отсоединённое окно)
   components/                 # UI, интерфейсы, player, layout, settings
   hooks/                      # Player, polling, autosave, горячие клавиши
   services/tauri.ts           # Единый фасад API Tauri
@@ -149,7 +151,9 @@ src-tauri/
 - отсоединённые заметки и отсоединённые заметки судей через выделенные мосты событий;
 - импорт/экспорт оценок судей и агрегация по нескольким судьям;
 - богатый экспорт: PNG, PDF, JSON, HTML/CSS, превью для Discord;
-- настройки сохраняются и транслируются между окнами: тема, акцент, язык, горячие клавиши, миниатюры, подтверждения.
+- настройки сохраняются и транслируются между окнами: тема, акцент, язык, горячие клавиши, миниатюры, подтверждения;
+- отсоединённое контекстное меню плеера (окно `player-menu`);
+- проверка обновлений через релизы GitHub.
 
 ## Процесс разработки
 
