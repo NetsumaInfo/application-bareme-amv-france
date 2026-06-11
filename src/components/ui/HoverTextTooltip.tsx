@@ -2,7 +2,6 @@ import { useCallback, useEffect, useEffectEvent, useLayoutEffect, useRef, useSta
 import type { HTMLAttributes, MouseEvent, ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { useZoomScale } from '@/hooks/useZoomScale'
-import { useUIStore } from '@/store/useUIStore'
 
 interface HoverTextTooltipProps {
   text: string
