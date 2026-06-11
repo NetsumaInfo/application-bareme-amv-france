@@ -1,4 +1,4 @@
-import { PDFArray, PDFDict, PDFDocument, PDFName, PDFRef } from 'pdf-lib'
+import type { PDFArray, PDFDict, PDFDocument, PDFRef } from 'pdf-lib'
 
 export interface TimecodeHoverMarker {
   pageNum: number
@@ -39,6 +39,9 @@ export async function addTimecodeHoverWidgets(
   options: PopupSizingOptions = {},
 ): Promise<Uint8Array> {
   if (markers.length === 0 || previews.size === 0) return pdfBytes
+
+  // Loaded on demand so pdf-lib lands in its own lazy chunk.
+  const { PDFArray, PDFDict, PDFDocument, PDFName } = await import('pdf-lib')
 
   const TARGET_W = options.targetWidth ?? 130
   const TARGET_H = options.targetHeight ?? Math.round((TARGET_W * 9) / 16)

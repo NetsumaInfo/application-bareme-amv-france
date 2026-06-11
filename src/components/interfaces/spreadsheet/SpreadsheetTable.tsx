@@ -173,17 +173,19 @@ export function SpreadsheetTable({
       categories: categoryGroups.flatMap((group) => {
         const categoryComment = normalizeComment(note?.categoryNotes?.[group.category])
         const globalComment = normalizeComment(note?.textNotes)
-        const criteria = group.criteria
-          .filter((criterion) => !criterionId || criterion.id === criterionId)
-          .map((criterion) => ({
-            id: criterion.id,
-            label: criterion.name,
-            comment:
-              normalizeComment(note?.criterionNotes?.[criterion.id])
-              ?? categoryComment
-              ?? globalComment
-              ?? t('Aucun commentaire'),
-          }))
+        const criteria = group.criteria.flatMap((criterion) =>
+          !criterionId || criterion.id === criterionId
+            ? [{
+                id: criterion.id,
+                label: criterion.name,
+                comment:
+                  normalizeComment(note?.criterionNotes?.[criterion.id])
+                  ?? categoryComment
+                  ?? globalComment
+                  ?? t('Aucun commentaire'),
+              }]
+            : [],
+        )
 
         if (criteria.length === 0) return []
 

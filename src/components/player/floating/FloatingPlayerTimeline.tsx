@@ -52,6 +52,7 @@ export function FloatingPlayerTimeline({
                       event.stopPropagation()
                       onMarkerJump(marker)
                     }}
+                    aria-label={markerTooltipText}
                     className="pointer-events-auto absolute top-0 -translate-x-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full border shadow-md hover:scale-110 transition-transform"
                     style={{
                       left: `${left}%`,

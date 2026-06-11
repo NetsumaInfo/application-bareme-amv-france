@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import type { KeyboardEvent as ReactKeyboardEvent, MutableRefObject } from 'react'
 import type { Bareme, Criterion } from '@/types/bareme'
 import type { Clip } from '@/types/project'
@@ -23,7 +24,7 @@ interface SpreadsheetCriterionCellsProps {
   }) => void
 }
 
-export function SpreadsheetCriterionCells({
+function SpreadsheetCriterionCellsComponent({
   clip,
   clipIdx,
   clips,
@@ -54,6 +55,7 @@ export function SpreadsheetCriterionCells({
               max={criterion.max}
               step={criterion.step || 0.5}
               value={value === '' ? '' : String(value)}
+              aria-label={criterion.name}
               onChange={(event) => onCellChange(clip.id, criterion.id, event.target.value)}
               onKeyDown={(event) => onCellKeyDown(event, clipIdx, critIdx)}
               onFocus={() => {
@@ -88,3 +90,5 @@ export function SpreadsheetCriterionCells({
     </>
   )
 }
+
+export const SpreadsheetCriterionCells = memo(SpreadsheetCriterionCellsComponent)

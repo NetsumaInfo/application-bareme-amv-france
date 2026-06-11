@@ -42,7 +42,7 @@ export function useSpreadsheetManualClips({
   const [noVideoTableInput, setNoVideoTableInput] = useState('')
   const [noVideoTableError, setNoVideoTableError] = useState<string | null>(null)
   const [editingManualClipId, setEditingManualClipId] = useState<string | null>(null)
-  const pendingManualCleanupTimeoutsRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map())
+  const pendingManualCleanupTimeoutsRef = useRef(new Map<string, ReturnType<typeof setTimeout>>())
 
   useEffect(() => {
     const cleanupMap = pendingManualCleanupTimeoutsRef.current
@@ -285,14 +285,17 @@ export function useSpreadsheetManualClips({
   const handleCreateNoVideoTable = useCallback(() => {
     const lines = noVideoTableInput
       .split(/\r?\n/)
-      .map((line) => line.trim())
-      .filter(Boolean)
+      .flatMap((line) => {
+        const trimmed = line.trim()
+        return trimmed ? [trimmed] : []
+      })
 
     const clipNamePattern = getClipNamePattern()
     const defaultContestCategory = getDefaultContestCategory()
-    const entries = lines
-      .map((line) => parseManualClipLine(line, clipNamePattern))
-      .filter((entry): entry is NonNullable<typeof entry> => Boolean(entry))
+    const entries = lines.flatMap((line) => {
+      const entry = parseManualClipLine(line, clipNamePattern)
+      return entry ? [entry] : []
+    })
 
     const manualClips = (entries.length > 0 ? entries : [{ displayName: '' }]).map((entry, index) =>
       createManualClip(entry, index, clipNamePattern, defaultContestCategory))

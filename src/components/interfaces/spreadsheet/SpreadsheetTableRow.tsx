@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import type { FocusEvent, KeyboardEvent as ReactKeyboardEvent, MutableRefObject } from 'react'
 import type { Bareme } from '@/types/bareme'
 import type { Clip } from '@/types/project'
@@ -43,7 +44,7 @@ interface SpreadsheetTableRowProps {
   }) => void
 }
 
-export function SpreadsheetTableRow({
+function SpreadsheetTableRowComponent({
   clip,
   clipIdx,
   clips,
@@ -146,3 +147,5 @@ export function SpreadsheetTableRow({
     </tr>
   )
 }
+
+export const SpreadsheetTableRow = memo(SpreadsheetTableRowComponent)

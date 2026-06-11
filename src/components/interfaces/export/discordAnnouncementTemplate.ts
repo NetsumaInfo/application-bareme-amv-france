@@ -1,11 +1,17 @@
 import type { TranslateFn } from '@/i18n/context'
 
 export const DISCORD_MESSAGE_LIMIT = 2000
+const DISCORD_DIVIDER = '─────────────'
+const DISCORD_MEDALS = ['🥇', '🥈', '🥉'] as const
 
 type DiscordTitleStyle = 'h1' | 'h2' | 'h3' | 'bold'
-type DiscordRankingStyle = 'numbered' | 'bullet' | 'compact' | 'quote'
+type DiscordRankingStyle = 'numbered' | 'medal' | 'bullet' | 'compact' | 'quote'
 type DiscordScoreMode = 'hidden' | 'score' | 'score_total'
 type DiscordRowTextStyle = 'plain' | 'bold' | 'italic' | 'underline' | 'strike' | 'spoiler' | 'code'
+
+export function getDiscordMedal(rank: number): string {
+  return rank >= 1 && rank <= 3 ? DISCORD_MEDALS[rank - 1] : ''
+}
 
 export interface DiscordAnnouncementContent {
   mention: string
@@ -24,6 +30,7 @@ export interface DiscordAnnouncementSettings {
   scoreDecimals: number
   includeClipName: boolean
   includeFavorites: boolean
+  useDividers: boolean
   rowTextStyle: DiscordRowTextStyle
 }
 
@@ -65,6 +72,7 @@ export function buildDefaultDiscordAnnouncementSettings(rowCount: number): Disco
     scoreDecimals: 1,
     includeClipName: true,
     includeFavorites: true,
+    useDividers: false,
     rowTextStyle: 'bold',
   }
 }
@@ -153,6 +161,12 @@ function formatRankingLine(
   const score = formatScore(row, settings)
   const styledLineText = applyDiscordInlineStyle(lineText, settings.rowTextStyle)
 
+  if (settings.rankingStyle === 'medal') {
+    const medal = getDiscordMedal(row.rank)
+    const marker = medal ? `${medal} ` : `**${row.rank}.** `
+    return `${marker}${styledLineText}${score}`
+  }
+
   if (settings.rankingStyle === 'bullet') {
     return `- ${row.rank}. ${styledLineText}${score}`
   }
@@ -192,10 +206,14 @@ export function serializeDiscordResultAnnouncement({
   const visibleRows = rows.slice(0, Math.max(1, settings.topCount))
   const lines: string[] = []
   const mentionLine = normalizeDiscordMentionText(content.mention)
+  const divider = () => {
+    if (settings.useDividers) lines.push('', DISCORD_DIVIDER, '')
+  }
 
   if (mentionLine) lines.push(mentionLine, '')
   if (content.title.trim()) lines.push(formatHeading(content.title, settings.titleStyle), '')
   if (content.intro.trim()) lines.push(content.intro.trim(), '')
+  divider()
   if (content.rankingTitle.trim()) lines.push(`**${content.rankingTitle.trim()}**`, '')
 
   if (visibleRows.length > 0) {
@@ -211,13 +229,17 @@ export function serializeDiscordResultAnnouncement({
   }
 
   if (settings.includeFavorites && favoriteRows.length > 0) {
-    lines.push('', `**${content.favoritesTitle.trim() || 'Coups de cœur :'}**`, '')
+    divider()
+    lines.push(`**${content.favoritesTitle.trim() || 'Coups de cœur :'}**`, '')
     for (const row of favoriteRows) {
       lines.push(formatFavoriteLine(row))
     }
   }
 
-  if (content.footer.trim()) lines.push('', content.footer.trim())
+  if (content.footer.trim()) {
+    divider()
+    lines.push(content.footer.trim())
+  }
 
   return lines.join('\n').replace(/\n{3,}/g, '\n\n').trim()
 }

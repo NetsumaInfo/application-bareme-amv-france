@@ -32,6 +32,7 @@ export function useDetachedNotesDataBridge({
 }: UseDetachedNotesDataBridgeOptions) {
   const expandedCategoryRef = useRef<string | null>(expandedCategory)
   const lastClipIdRef = useRef<string | null>(clipData?.clip?.id ?? null)
+  const receivedClipDataRef = useRef<boolean>(clipData != null)
 
   useEffect(() => {
     expandedCategoryRef.current = expandedCategory
@@ -46,8 +47,14 @@ export function useDetachedNotesDataBridge({
   }, [])
 
   useEffect(() => {
-    if (clipData) return
+    // Re-request only until the first payload arrives; the main window
+    // pushes updates afterward, so the interval stops permanently.
+    if (receivedClipDataRef.current || clipData) return
     const timer = setInterval(() => {
+      if (receivedClipDataRef.current) {
+        clearInterval(timer)
+        return
+      }
       emit('notes:request-data').catch(() => {})
     }, 500)
     return () => clearInterval(timer)
@@ -57,6 +64,7 @@ export function useDetachedNotesDataBridge({
     const unlisteners: (() => void)[] = []
 
     listen<ClipPayload>('main:clip-data', (event) => {
+      receivedClipDataRef.current = true
       setClipData(event.payload)
       setLocalNote(event.payload.note)
 

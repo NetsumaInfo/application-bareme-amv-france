@@ -2,6 +2,7 @@ import { useCallback, useEffect, useEffectEvent, useLayoutEffect, useRef, useSta
 import type { HTMLAttributes, MouseEvent, ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { useZoomScale } from '@/hooks/useZoomScale'
+import { useUIStore } from '@/store/useUIStore'
 
 interface HoverTextTooltipProps {
   text: string
@@ -85,8 +86,7 @@ export function HoverTextTooltip({
   force = false,
   anchor = true,
 }: HoverTextTooltipProps) {
-  // Le réglage global d'affichage des infobulles a été retiré : elles sont toujours actives.
-  const tooltipsEnabled = true
+  const tooltipsEnabled = useUIStore((s) => s.showTooltips)
   const safeText = text.trim()
   const wrapperRef = useRef<HTMLSpanElement | null>(null)
   const tooltipRef = useRef<HTMLDivElement | null>(null)

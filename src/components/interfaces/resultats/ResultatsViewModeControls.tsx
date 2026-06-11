@@ -41,7 +41,7 @@ function SegmentedButton({
       aria-label={ariaLabel}
       className={`inline-flex h-6 items-center rounded-md px-2 text-[11px] transition-colors ${
         active
-          ? 'bg-surface-dark/90 text-white'
+          ? 'bg-[rgb(var(--app-accent-glow))] text-white shadow-sm'
           : 'text-gray-400 hover:bg-white/5 hover:text-white'
       }`}
     >
@@ -101,10 +101,8 @@ export function ResultatsViewModeControls({
         )}
 
         {mainView === 'global' && (
-          <div
-            className="ml-1 flex items-center gap-0.5 rounded-md border-l-2 pl-2"
-            style={{ borderColor: 'rgb(var(--color-primary-500) / 0.7)' }}
-          >
+          <div className="ml-1 flex items-center gap-0.5 border-l border-gray-700/50 pl-2">
+
             <SegmentedButton
               active={globalVariant === 'detailed'}
               onClick={() => onGlobalVariantChange('detailed')}

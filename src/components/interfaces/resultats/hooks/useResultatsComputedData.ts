@@ -14,6 +14,19 @@ import type { ResultatsRow } from '@/components/interfaces/resultats/types'
 
 type SortMode = 'folder' | 'score'
 
+function normalizeFavoriteFlag(value: unknown): boolean {
+  return (
+    value === true
+    || value === 1
+    || value === '1'
+    || value === 'true'
+  )
+}
+
+function normalizeFavoriteComment(value: unknown): string {
+  return typeof value === 'string' ? value.trim() : ''
+}
+
 type UseResultatsComputedDataParams = {
   currentBareme: Bareme | null
   currentJudgeName?: string
@@ -33,17 +46,6 @@ export function useResultatsComputedData({
   sortMode,
   canSortByScore,
 }: UseResultatsComputedDataParams) {
-  const normalizeFavoriteFlag = (value: unknown): boolean => (
-    value === true
-    || value === 1
-    || value === '1'
-    || value === 'true'
-  )
-
-  const normalizeFavoriteComment = (value: unknown): string => (
-    typeof value === 'string' ? value.trim() : ''
-  )
-
   const effectiveSortMode: SortMode =
     sortMode === 'score' && !canSortByScore ? 'folder' : sortMode
 

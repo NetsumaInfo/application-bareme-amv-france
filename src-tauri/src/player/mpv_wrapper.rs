@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 use super::mpv_ffi::*;
 pub use super::mpv_types::{AudioLevels, MediaInfo, TrackInfo};
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::Arc;
 
 #[path = "mpv_wrapper_media.rs"]
@@ -13,6 +13,13 @@ pub struct MpvPlayer {
     lib: Arc<MpvLib>,
     handle: MpvHandle,
     initialized: AtomicBool,
+    // Cached winning property-key indices for the audio level meter.
+    // get_audio_levels() probes a list of fallback keys; the working one is
+    // stable per session, so remembering it cuts each 16ms poll from up to
+    // 21 FFI reads down to 3.
+    pub(super) audio_key_left: AtomicUsize,
+    pub(super) audio_key_right: AtomicUsize,
+    pub(super) audio_key_overall: AtomicUsize,
 }
 
 unsafe impl Send for MpvPlayer {}
@@ -89,6 +96,9 @@ impl MpvPlayer {
             lib,
             handle,
             initialized: AtomicBool::new(true),
+            audio_key_left: AtomicUsize::new(usize::MAX),
+            audio_key_right: AtomicUsize::new(usize::MAX),
+            audio_key_overall: AtomicUsize::new(usize::MAX),
         })
     }
 
@@ -134,6 +144,42 @@ impl MpvPlayer {
 
     pub fn set_speed(&self, speed: f64) -> Result<(), String> {
         self.set_property_double("speed", speed)
+    }
+
+    pub fn set_loop_file(&self, enabled: bool) -> Result<(), String> {
+        self.set_property_string("loop-file", if enabled { "inf" } else { "no" })
+    }
+
+    pub fn get_loop_file(&self) -> bool {
+        let value = self.get_property_string_safe("loop-file");
+        value == "inf" || value == "yes" || value.parse::<i64>().map(|n| n != 0).unwrap_or(false)
+    }
+
+    pub fn ab_loop_set_a(&self, time: f64) -> Result<(), String> {
+        self.set_property_double("ab-loop-a", time)
+    }
+
+    pub fn ab_loop_set_b(&self, time: f64) -> Result<(), String> {
+        self.set_property_double("ab-loop-b", time)
+    }
+
+    pub fn ab_loop_clear(&self) -> Result<(), String> {
+        self.set_property_string("ab-loop-a", "no")?;
+        self.set_property_string("ab-loop-b", "no")
+    }
+
+    pub fn get_ab_loop(&self) -> (Option<f64>, Option<f64>) {
+        let parse = |raw: String| -> Option<f64> {
+            if raw.is_empty() || raw == "no" {
+                None
+            } else {
+                raw.parse::<f64>().ok()
+            }
+        };
+        (
+            parse(self.get_property_string_safe("ab-loop-a")),
+            parse(self.get_property_string_safe("ab-loop-b")),
+        )
     }
 
     pub fn get_time_pos(&self) -> f64 {

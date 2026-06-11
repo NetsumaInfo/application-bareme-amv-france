@@ -96,6 +96,7 @@ export function NoVideoState({
             ) : null}
             <div className="flex gap-2">
               <button
+                type="button"
                 onClick={onImportFolder}
                 className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary-600 hover:bg-primary-500 text-white text-sm font-medium transition-colors"
               >
@@ -103,6 +104,7 @@ export function NoVideoState({
                 {t('Importer un dossier')}
               </button>
               <button
+                type="button"
                 onClick={onImportFiles}
                 className="flex items-center gap-2 px-4 py-2 rounded-lg border border-primary-300 text-primary-300 hover:bg-primary-300/8 text-sm font-medium transition-colors"
               >
@@ -111,6 +113,7 @@ export function NoVideoState({
               </button>
             </div>
             <button
+              type="button"
               onClick={onOpenNoVideoModal}
               className="mt-2 flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-600 text-gray-200 hover:bg-surface-light text-sm font-medium transition-colors"
             >
@@ -150,20 +153,24 @@ export function NoVideoState({
               value={noVideoTableInput}
               onChange={(event) => onNoVideoTableInputChange(event.target.value)}
               placeholder={tableInputPlaceholder}
+              aria-label={tableInputLabel}
               className="w-full min-h-[220px] resize-y rounded-lg border border-gray-700 bg-surface-dark px-3 py-2 text-sm text-gray-100 placeholder:text-gray-500 focus:outline-hidden focus:border-primary-500"
             />
             {noVideoTableError && <p className="mt-2 text-xs text-red-400">{noVideoTableError}</p>}
 
             <div className="mt-4 flex items-center justify-end gap-2">
               <button
+                type="button"
                 onClick={onCloseNoVideoModal}
                 className="px-4 py-2 rounded-lg bg-surface-light text-gray-300 hover:text-white text-sm"
               >
                 {t('Annuler')}
               </button>
               <button
+                type="button"
                 onClick={onCreateNoVideoTable}
                 disabled={!noVideoTableAccepted}
+                aria-label={t('Créer le tableau')}
                 className="px-4 py-2 rounded-lg bg-primary-600 hover:bg-primary-500 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-medium"
               >
                 {t('Créer le tableau')}

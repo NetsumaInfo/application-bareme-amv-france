@@ -26,8 +26,11 @@ const TAB_ICONS: Record<SettingsTab, React.FC<{ size?: number; className?: strin
 }
 
 export default function SettingsPanel({ onClose }: { onClose: () => void }) {
-  const { currentProject, updateSettings, updateProject } = useProjectStore()
-  const { currentBareme, loadCustomBaremes } = useNotationStore()
+  const currentProject = useProjectStore((s) => s.currentProject)
+  const updateSettings = useProjectStore((s) => s.updateSettings)
+  const updateProject = useProjectStore((s) => s.updateProject)
+  const currentBareme = useNotationStore((s) => s.currentBareme)
+  const loadCustomBaremes = useNotationStore((s) => s.loadCustomBaremes)
   const {
     hideFinalScore,
     toggleFinalScore,
@@ -37,6 +40,8 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
     toggleTextNotes,
     showAudioDb,
     toggleAudioDb,
+    showTooltips,
+    toggleShowTooltips,
     confirmClipDeletion,
     toggleConfirmClipDeletion,
     setShowBaremeEditor,
@@ -119,6 +124,7 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
           <h2 className="text-sm font-semibold text-white">{t('Paramètres')}</h2>
           <HoverTextTooltip text={t('Fermer')}>
             <button
+              type="button"
               onClick={onClose}
               aria-label={t('Fermer')}
               className="p-1 rounded-sm hover:bg-surface-light text-gray-400 hover:text-white"
@@ -131,7 +137,7 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
         {/* Body: top bar + content */}
         <div className="flex flex-1 min-h-0 flex-col overflow-hidden">
           {/* Tabs bar */}
-          <nav
+          <div
             className="grid gap-1 overflow-x-auto border-b border-primary-400/10 px-0 pt-0"
             role="tablist"
             aria-orientation="horizontal"
@@ -161,7 +167,7 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                 </button>
               )
             })}
-          </nav>
+          </div>
 
           {/* Tab content */}
           <div
@@ -192,6 +198,7 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                   appTheme={appTheme}
                   primaryColorPreset={primaryColorPreset}
                   showAudioDb={showAudioDb}
+                  showTooltips={showTooltips}
                   confirmClipDeletion={confirmClipDeletion}
                   projectsFolderPath={projectsFolderPath ?? ''}
                   baremesFolderPath={baremesFolderPath ?? ''}
@@ -201,6 +208,7 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                   onSetAppTheme={setAppTheme}
                   onSetPrimaryColorPreset={setPrimaryColorPreset}
                   onToggleAudioDb={toggleAudioDb}
+                  onToggleShowTooltips={toggleShowTooltips}
                   onToggleConfirmClipDeletion={toggleConfirmClipDeletion}
                   onChangeProjectsFolder={handleChangeProjectsFolder}
                   onChangeBaremesFolder={handleChangeBaremesFolder}
@@ -242,6 +250,7 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
         {/* Footer */}
         <div className="flex justify-end px-5 py-3 border-t border-primary-400/10 shrink-0">
           <button
+            type="button"
             onClick={onClose}
             className="px-4 py-1.5 text-xs rounded-lg bg-surface-light/70 text-gray-300 hover:bg-surface-light hover:text-white transition-colors"
           >

@@ -16,6 +16,7 @@ import {
   moveCategoryGroup,
   moveCriterionItem,
   removeCriterionItem,
+  swapCriterionItems,
   setCategoryColorValue,
   updateCriterionCategoryItem,
   updateCriterionItem,
@@ -31,7 +32,7 @@ export function useBaremeEditorForm({ addBareme }: UseBaremeEditorFormParams) {
   const [editingBareme, setEditingBareme] = useState<Bareme | null>(null)
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
-  const [criteria, setCriteria] = useState<Criterion[]>(createInitialCriteria())
+  const [criteria, setCriteria] = useState<Criterion[]>(() => createInitialCriteria())
   const [categoryColors, setCategoryColors] = useState<Record<string, string>>({})
   const [globalStep, setGlobalStep] = useState(0.5)
   const [hideTotalsUntilAllScored, setHideTotalsUntilAllScored] = useState(false)
@@ -114,6 +115,10 @@ export function useBaremeEditorForm({ addBareme }: UseBaremeEditorFormParams) {
 
   const moveCriterion = useCallback((index: number, direction: 'up' | 'down') => {
     setCriteria((prev) => moveCriterionItem(prev, index, direction))
+  }, [])
+
+  const swapCriteria = useCallback((indexA: number, indexB: number) => {
+    setCriteria((prev) => swapCriterionItems(prev, indexA, indexB))
   }, [])
 
   const moveCategory = useCallback((category: string, direction: 'up' | 'down') => {
@@ -209,6 +214,7 @@ export function useBaremeEditorForm({ addBareme }: UseBaremeEditorFormParams) {
     setHideTotalsUntilAllScored,
     moveCategory,
     moveCriterion,
+    swapCriteria,
     removeCriterion,
     updateCriterion,
     updateCategoryForCriterion,

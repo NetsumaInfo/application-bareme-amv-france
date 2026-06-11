@@ -32,6 +32,7 @@ export function SpreadsheetTableFooter({
         <td
           colSpan={2 + currentBareme.criteria.length + (hideTotalsSetting ? 0 : 1)}
           className="h-[2px] bg-gray-500"
+          aria-hidden="true"
         />
       </tr>
       <tr className="bg-surface-dark">
@@ -44,12 +45,16 @@ export function SpreadsheetTableFooter({
         {categoryGroups.map((group) =>
           group.criteria.map((criterion, index) => {
             if (index !== 0) return null
-            const values = clips
-              .filter((clip) => hasAnyScoreInGroup(clip.id, group))
-              .map((clip) => getCategoryScore(clip.id, group))
-            const avg = values.length > 0
-              ? values.reduce((sum, value) => sum + value, 0) / values.length
-              : 0
+            const acc = clips.reduce(
+              (state, clip) => {
+                if (!hasAnyScoreInGroup(clip.id, group)) return state
+                state.sum += getCategoryScore(clip.id, group)
+                state.count += 1
+                return state
+              },
+              { sum: 0, count: 0 },
+            )
+            const avg = acc.count > 0 ? acc.sum / acc.count : 0
             return (
               <td
                 key={`avg-${criterion.id}`}
@@ -68,14 +73,16 @@ export function SpreadsheetTableFooter({
         {!hideTotalsSetting && (
           <td className="amv-number-ui px-2 py-2 text-center font-bold text-[12px] text-white bg-surface-dark">
             {(() => {
-              const values = clips
-                .filter((clip) => hasAnyScoreInBareme(clip.id))
-                .map((clip) => getScoreForClip(clip.id))
-              return (
-                values.length > 0
-                  ? values.reduce((sum, value) => sum + value, 0) / values.length
-                  : 0
-              ).toFixed(1)
+              const acc = clips.reduce(
+                (state, clip) => {
+                  if (!hasAnyScoreInBareme(clip.id)) return state
+                  state.sum += getScoreForClip(clip.id)
+                  state.count += 1
+                  return state
+                },
+                { sum: 0, count: 0 },
+              )
+              return (acc.count > 0 ? acc.sum / acc.count : 0).toFixed(1)
             })()}
           </td>
         )}

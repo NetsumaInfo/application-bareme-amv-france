@@ -6,7 +6,9 @@ import { useUIStore } from '@/store/useUIStore'
 import { useI18n } from '@/i18n'
 
 export function BaremeSelector() {
-  const { currentBareme, availableBaremes, setBareme } = useNotationStore()
+  const currentBareme = useNotationStore((s) => s.currentBareme)
+  const availableBaremes = useNotationStore((s) => s.availableBaremes)
+  const setBareme = useNotationStore((s) => s.setBareme)
   const { updateProject, updateSettings } = useProjectStore()
   const { setShowBaremeEditor } = useUIStore()
   const { t } = useI18n()
@@ -34,6 +36,7 @@ export function BaremeSelector() {
   return (
     <div className="relative inline-flex items-center" ref={dropdownRef}>
       <button
+        type="button"
         onClick={() => setOpen((value) => !value)}
         aria-label={t('Barème')}
         data-open={open ? 'true' : 'false'}
@@ -56,6 +59,7 @@ export function BaremeSelector() {
 
               return (
                 <button
+                  type="button"
                   key={bareme.id}
                   onClick={() => handleSelectBareme(bareme)}
                   className={`relative flex w-full items-start justify-between gap-3 px-3 py-2.5 text-left text-xs transition-colors ${
@@ -86,6 +90,7 @@ export function BaremeSelector() {
 
           <div className="border-t border-gray-700 py-1.5">
             <button
+              type="button"
               onClick={() => {
                 setOpen(false)
                 setShowBaremeEditor(true)
@@ -97,6 +102,7 @@ export function BaremeSelector() {
               {t('Gérer les barèmes')}
             </button>
             <button
+              type="button"
               onClick={() => {
                 setOpen(false)
                 setShowBaremeEditor(true)

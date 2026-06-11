@@ -1,3 +1,4 @@
+use crate::player::mpv_probe::process_wait::{wait_with_output_timeout, WaitOutcome};
 use base64::engine::general_purpose::STANDARD as BASE64_STD;
 use base64::Engine;
 use std::fs;
@@ -24,7 +25,7 @@ pub(super) fn probe_frame_preview_with_ffmpeg(
     let ffmpeg_bin = super::tools::resolve_tool("ffmpeg.exe");
     let mut command = Command::new(&ffmpeg_bin);
     super::tools::configure_hidden_process(&mut command);
-    let mut child = command
+    let child = command
         .args([
             "-hide_banner",
             "-loglevel",
@@ -59,27 +60,11 @@ pub(super) fn probe_frame_preview_with_ffmpeg(
         .map_err(|e| format!("ffmpeg indisponible ({}): {}", ffmpeg_bin.display(), e))?;
 
     let timeout = Duration::from_millis(3500);
-    let start = Instant::now();
-    loop {
-        match child.try_wait() {
-            Ok(Some(_)) => break,
-            Ok(None) => {
-                if start.elapsed() >= timeout {
-                    let _ = child.kill();
-                    let _ = child.wait();
-                    return Err("ffmpeg timeout (3.5s)".to_string());
-                }
-                std::thread::sleep(Duration::from_millis(20));
-            }
-            Err(e) => {
-                return Err(format!("ffmpeg wait failed: {}", e));
-            }
-        }
-    }
-
-    let output = child
-        .wait_with_output()
-        .map_err(|e| format!("ffmpeg output failed: {}", e))?;
+    let output = match wait_with_output_timeout(child, timeout) {
+        WaitOutcome::Finished(output) => output,
+        WaitOutcome::TimedOut => return Err("ffmpeg timeout (3.5s)".to_string()),
+        WaitOutcome::WaitFailed(e) => return Err(format!("ffmpeg wait failed: {}", e)),
+    };
 
     if !output.status.success() {
         let err = String::from_utf8_lossy(&output.stderr).trim().to_string();
@@ -114,13 +99,15 @@ pub(super) fn probe_frame_preview_with_mpv(path: &str, seconds: f64) -> Result<S
     let _ = preview_player.pause();
 
     let start_load = Instant::now();
+    let mut load_backoff = Duration::from_millis(30);
     while start_load.elapsed() < Duration::from_millis(2200) {
         let loaded_path = super::parsing::normalize_path(&preview_player.get_current_path());
         let duration = preview_player.get_duration();
         if !loaded_path.is_empty() && duration.is_finite() && duration > 0.0 {
             break;
         }
-        std::thread::sleep(Duration::from_millis(30));
+        std::thread::sleep(load_backoff);
+        load_backoff = (load_backoff * 2).min(Duration::from_millis(100));
     }
 
     preview_player
@@ -141,13 +128,15 @@ pub(super) fn probe_frame_preview_with_mpv(path: &str, seconds: f64) -> Result<S
         .map_err(|e| format!("mpv preview screenshot impossible: {}", e))?;
 
     let start_wait = Instant::now();
+    let mut file_backoff = Duration::from_millis(25);
     while start_wait.elapsed() < Duration::from_millis(1200) {
         if let Ok(meta) = fs::metadata(&tmp_path) {
             if meta.len() > 0 {
                 break;
             }
         }
-        std::thread::sleep(Duration::from_millis(25));
+        std::thread::sleep(file_backoff);
+        file_backoff = (file_backoff * 2).min(Duration::from_millis(100));
     }
 
     let bytes = fs::read(&tmp_path).map_err(|e| {

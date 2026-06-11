@@ -21,6 +21,7 @@ export function DetachedCategoryHeader({
 }: DetachedCategoryHeaderProps) {
   return (
     <button
+      type="button"
       onClick={onToggle}
       className="w-full flex items-center justify-between px-3 py-2 text-left transition-colors border-l-[3px] border-b border-white/5 hover:bg-surface-light/85"
       style={{

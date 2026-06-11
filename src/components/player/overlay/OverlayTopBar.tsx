@@ -47,6 +47,7 @@ export function OverlayTopBar({
         </div>
         <HoverTextTooltip text={t('Fermer le lecteur')}>
           <button
+            type="button"
             onClick={onClose}
             aria-label={t('Fermer le lecteur')}
             className="p-1.5 @[700px]/overlay:p-2 rounded-full text-white/80 transition-colors motion-reduce:transition-none

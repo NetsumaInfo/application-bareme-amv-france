@@ -39,6 +39,7 @@ export function ContestCategoriesEditor({ items, onChange }: ContestCategoriesEd
             <input
               type="text"
               defaultValue={item.name}
+              aria-label={t('Nom catégorie')}
               placeholder={t('Nom catégorie')}
               onBlur={(event) => {
                 const nextItems = [...items]

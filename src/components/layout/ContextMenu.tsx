@@ -371,7 +371,12 @@ export default function ContextMenu(props: ContextMenuProps) {
     setShowPipVideo,
     shortcutBindings,
   } = useUIStore()
-  const { nextClip, previousClip, currentProject, updateSettings, clips, currentClipIndex } = useProjectStore()
+  const nextClip = useProjectStore((s) => s.nextClip)
+  const previousClip = useProjectStore((s) => s.previousClip)
+  const currentProject = useProjectStore((s) => s.currentProject)
+  const updateSettings = useProjectStore((s) => s.updateSettings)
+  const clips = useProjectStore((s) => s.clips)
+  const currentClipIndex = useProjectStore((s) => s.currentClipIndex)
   const hasCurrentClipVideo = Boolean(clips[currentClipIndex]?.filePath)
   const hasAnyLinkedVideo = clips.some((clip) => Boolean(clip.filePath))
   const showQuickActions = currentProject?.settings.showQuickActions ?? true

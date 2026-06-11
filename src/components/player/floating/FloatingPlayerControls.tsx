@@ -65,6 +65,7 @@ export function FloatingPlayerControls({
     <div className="flex items-center justify-center gap-1 flex-wrap">
       <HoverTextTooltip text={seekBackLabel}>
         <button
+          type="button"
           onClick={() => onSeekRelative(-5)}
           aria-label={seekBackLabel}
           className="flex items-center justify-center w-6 h-6 rounded-sm hover:bg-gray-700 transition-colors"
@@ -76,6 +77,7 @@ export function FloatingPlayerControls({
 
       <HoverTextTooltip text={togglePauseLabel}>
         <button
+          type="button"
           onClick={onTogglePause}
           aria-label={togglePauseLabel}
           className="flex items-center justify-center w-6 h-6 rounded-sm hover:bg-gray-700 transition-colors"
@@ -91,6 +93,7 @@ export function FloatingPlayerControls({
 
       <HoverTextTooltip text={seekForwardLabel}>
         <button
+          type="button"
           onClick={() => onSeekRelative(5)}
           aria-label={seekForwardLabel}
           className="flex items-center justify-center w-6 h-6 rounded-sm hover:bg-gray-700 transition-colors"
@@ -102,6 +105,7 @@ export function FloatingPlayerControls({
 
       <HoverTextTooltip text={muted ? t('Activer le son') : t('Couper le son')}>
         <button
+          type="button"
           onClick={onToggleMuted}
           aria-label={muted ? t('Activer le son') : t('Couper le son')}
           className="flex items-center justify-center w-6 h-6 rounded-sm hover:bg-gray-700 transition-colors"
@@ -120,6 +124,7 @@ export function FloatingPlayerControls({
 
       <HoverTextTooltip text={fullscreenLabel}>
         <button
+          type="button"
           onClick={onToggleFullscreen}
           aria-label={fullscreenLabel}
           className="flex items-center justify-center w-6 h-6 rounded-sm hover:bg-gray-700 transition-colors"
@@ -135,6 +140,7 @@ export function FloatingPlayerControls({
       {miniaturesEnabled && (
         <HoverTextTooltip text={miniatureLabel}>
           <button
+            type="button"
             onClick={onSetMiniatureFrame}
             aria-label={miniatureLabel}
             className="flex items-center justify-center w-6 h-6 rounded-sm hover:bg-gray-700 transition-colors"

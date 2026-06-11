@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import type { KeyboardEvent as ReactKeyboardEvent, MutableRefObject } from 'react'
 import { withAlpha } from '@/utils/colors'
 import TimecodeTextarea from '@/components/notes/TimecodeTextarea'
@@ -60,6 +61,13 @@ export function NotationCategoriesAccordion({
   getCategoryScore,
 }: NotationCategoriesAccordionProps) {
   const { t } = useI18n()
+  const flatCriteriaIndexById = useMemo(() => {
+    const map = new Map<string, number>()
+    flatCriteria.forEach((item, index) => {
+      map.set(item.id, index)
+    })
+    return map
+  }, [flatCriteria])
   return (
     <div className="flex-1 overflow-y-auto py-1">
       {categories.map(({ category, criteria, color, totalMax }) => {
@@ -87,7 +95,7 @@ export function NotationCategoriesAccordion({
                 }}
               >
                 {criteria.map((criterion) => {
-                  const flatIndex = flatCriteria.findIndex((item) => item.id === criterion.id)
+                  const flatIndex = flatCriteriaIndexById.get(criterion.id) ?? -1
                   const score = note?.scores[criterion.id]
                   const criterionNoteValue = note?.criterionNotes?.[criterion.id] ?? ''
                   const isCriterionNoteExpanded = Boolean(expandedCriterionNotes[criterion.id])

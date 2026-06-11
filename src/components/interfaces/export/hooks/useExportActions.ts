@@ -6,6 +6,7 @@ import { join } from '@tauri-apps/api/path'
 import * as tauri from '@/services/tauri'
 import { useI18n } from '@/i18n'
 import { createXlsxWorkbook, type XlsxSheet } from '@/components/interfaces/export/xlsxWorkbook'
+import { createCsvDocument } from '@/components/interfaces/export/csvWorkbook'
 import { extractTimecodesFromText } from '@/utils/timecodes'
 import { formatPreciseTimecode } from '@/utils/formatters'
 import { addTimecodeHoverWidgets } from '@/components/interfaces/export/pdfTimecodeHover'
@@ -57,6 +58,8 @@ interface UseExportActionsOptions {
   exportPageRefs?: RefObject<Array<HTMLDivElement | null>>
   theme: ExportTheme
   projectName: string
+  /** Optional user-provided base name; falls back to projectName when blank. */
+  fileNameBase?: string
   jsonPayload: Record<string, unknown>
   jsonDefaultFileName: string
   notesPdfPayload: ExportNotesPdfPayload
@@ -415,6 +418,7 @@ export function useExportActions({
   exportPageRefs,
   theme,
   projectName,
+  fileNameBase,
   jsonPayload,
   jsonDefaultFileName,
   notesPdfPayload,
@@ -422,6 +426,7 @@ export function useExportActions({
 }: UseExportActionsOptions) {
   const { t } = useI18n()
   const [exporting, setExporting] = useState(false)
+  const nameBase = fileNameBase?.trim() || projectName
 
   const exportContainer = useCallback(async (type: 'png' | 'pdf', captureOptions?: ExportCaptureOptions) => {
     if (!previewRef.current || exporting) return
@@ -436,7 +441,11 @@ export function useExportActions({
       const effectiveScale = Math.max(1, captureOptions?.scale ?? 2)
       const captureElement = async (element: HTMLDivElement): Promise<HTMLCanvasElement> => {
         await waitForCaptureReady(element)
-        const captureBackgroundColor = captureOptions?.backgroundColor ?? (theme === 'light' ? '#ffffff' : '#0f172a')
+        // `null` means the caller explicitly asked for a transparent capture;
+        // only `undefined` falls back to the theme background.
+        const captureBackgroundColor = captureOptions?.backgroundColor === undefined
+          ? (theme === 'light' ? '#ffffff' : '#0f172a')
+          : captureOptions.backgroundColor
         const clonedForegroundColor = theme === 'light' ? '#0f172a' : '#f8fafc'
 
         // Inject the static-export CSS into the main document before cloning so that
@@ -589,15 +598,16 @@ export function useExportActions({
       }
 
       const getSortedPageTargets = () => (exportPageRefs?.current ?? [])
-        .filter((target): target is HTMLDivElement => Boolean(target && target.isConnected))
-        .filter((target) => target.dataset.exportPage === 'true')
+        .filter((target): target is HTMLDivElement =>
+          Boolean(target && target.isConnected) && target?.dataset.exportPage === 'true',
+        )
         .sort((a, b) => {
           const indexA = Number(a.dataset.exportPageIndex ?? '0')
           const indexB = Number(b.dataset.exportPageIndex ?? '0')
           return indexA - indexB
         })
 
-      const exportStem = captureOptions?.fileNameStem ?? buildExportStem(projectName, 'export')
+      const exportStem = captureOptions?.fileNameStem ?? buildExportStem(nameBase, 'export')
 
       if (type === 'png') {
         const pngMode = captureOptions?.pngMode ?? 'single'
@@ -714,7 +724,7 @@ export function useExportActions({
     } finally {
       setExporting(false)
     }
-  }, [exportPageRefs, exporting, previewRef, projectName, t, theme])
+  }, [exportPageRefs, exporting, previewRef, nameBase, t, theme])
 
   const exportJson = useCallback(async () => {
     try {
@@ -734,7 +744,7 @@ export function useExportActions({
     try {
       const spreadsheetPath = await save({
         filters: [{ name: 'Excel', extensions: ['xlsx'] }],
-        defaultPath: buildExportFileName(projectName, 'resultats', 'xlsx'),
+        defaultPath: buildExportFileName(nameBase, 'resultats', 'xlsx'),
       })
       if (!spreadsheetPath) return
 
@@ -745,7 +755,27 @@ export function useExportActions({
     } finally {
       setExporting(false)
     }
-  }, [exporting, projectName, spreadsheetSheets, t])
+  }, [exporting, nameBase, spreadsheetSheets, t])
+
+  const exportCsv = useCallback(async () => {
+    if (exporting) return
+    setExporting(true)
+
+    try {
+      const csvPath = await save({
+        filters: [{ name: 'CSV', extensions: ['csv'] }],
+        defaultPath: buildExportFileName(nameBase, 'resultats', 'csv'),
+      })
+      if (!csvPath) return
+
+      await writeTextFile(csvPath, createCsvDocument(spreadsheetSheets))
+    } catch (error) {
+      console.error('Export CSV failed:', error)
+      alert(`${t('Erreur export CSV')}: ${error}`)
+    } finally {
+      setExporting(false)
+    }
+  }, [exporting, nameBase, spreadsheetSheets, t])
 
   const exportHtml = useCallback(async () => {
     if (!previewRef.current || exporting) return
@@ -755,7 +785,7 @@ export function useExportActions({
       await waitForCaptureReady(previewRef.current)
       const htmlPath = await save({
         filters: [{ name: 'HTML', extensions: ['html'] }],
-        defaultPath: buildExportFileName(projectName, 'resultats', 'html'),
+        defaultPath: buildExportFileName(nameBase, 'resultats', 'html'),
       })
       if (!htmlPath) return
 
@@ -767,7 +797,7 @@ export function useExportActions({
     } finally {
       setExporting(false)
     }
-  }, [exporting, previewRef, projectName, t, theme])
+  }, [exporting, previewRef, nameBase, projectName, t, theme])
 
   const exportNotesPdf = useCallback(async () => {
     if (exporting) return
@@ -780,7 +810,7 @@ export function useExportActions({
 
       const pdfPath = await save({
         filters: [{ name: 'PDF', extensions: ['pdf'] }],
-        defaultPath: buildExportFileName(projectName, 'notes', 'pdf'),
+        defaultPath: buildExportFileName(nameBase, 'notes', 'pdf'),
       })
       if (!pdfPath) return
 
@@ -1007,13 +1037,14 @@ export function useExportActions({
     } finally {
       setExporting(false)
     }
-  }, [exporting, notesPdfPayload, projectName, t])
+  }, [exporting, notesPdfPayload, nameBase, t])
 
   return {
     exporting,
     exportContainer,
     exportJson,
     exportSpreadsheet,
+    exportCsv,
     exportHtml,
     exportNotesPdf,
   }

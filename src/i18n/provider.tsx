@@ -1,4 +1,4 @@
-import { useMemo, type ReactNode } from 'react'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { useUIStore } from '@/store/useUIStore'
 import {
   type AppLanguage,
@@ -6,7 +6,7 @@ import {
   APP_LANGUAGE_LABELS,
   APP_LANGUAGE_NATIVE_LABELS,
 } from '@/i18n/config'
-import { translateKey } from '@/i18n/messages'
+import { isLocaleLoaded, loadLocale, translateKey } from '@/i18n/messages'
 import { I18nContext, type I18nContextValue } from '@/i18n/context'
 
 const TIME_ONLY_FORMAT_OPTIONS: Intl.DateTimeFormatOptions = {
@@ -65,6 +65,25 @@ function matchesFormatOptions(
 export function I18nProvider({ children }: { children: ReactNode }) {
   const language = useUIStore((state) => state.language)
 
+  // Bumped once a non-fr locale chunk lands so all t() consumers re-render.
+  // Every window mounts its own provider, so this covers bootstrap and any
+  // later language change (driven by useUIStore, which the ui:settings-updated
+  // listener keeps in sync across windows).
+  const [localeVersion, setLocaleVersion] = useState(0)
+
+  useEffect(() => {
+    if (isLocaleLoaded(language)) return
+
+    let cancelled = false
+    void loadLocale(language).then(() => {
+      if (!cancelled) setLocaleVersion((version) => version + 1)
+    })
+
+    return () => {
+      cancelled = true
+    }
+  }, [language])
+
   const value = useMemo<I18nContextValue>(() => {
     const locale = APP_LANGUAGE_INTL_LOCALES[language]
     const presets = DATE_FORMATTER_PRESETS[language]
@@ -86,7 +105,10 @@ export function I18nProvider({ children }: { children: ReactNode }) {
         return date.toLocaleString(locale, options)
       },
     }
-  }, [language])
+    // localeVersion intentionally included: re-create `t` once the locale chunk
+    // has loaded so consumers re-render with the resolved dictionary.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [language, localeVersion])
 
   return (
     <I18nContext.Provider value={value}>

@@ -6,22 +6,21 @@ import { usePlayerStatusPolling } from '@/hooks/usePlayerStatusPolling'
 import { buildScreenshotName } from '@/utils/screenshot'
 
 export function usePlayer() {
-  const {
-    isPlaying,
-    currentTime,
-    duration,
-    volume,
-    muted,
-    playbackSpeed,
-    isLoaded,
-    currentFilePath,
-    subtitleTracks,
-    audioTracks,
-    currentSubtitleId,
-    currentAudioId,
-    isFullscreen,
-  } = usePlayerStore()
-  const { clips, currentClipIndex } = useProjectStore()
+  const isPlaying = usePlayerStore((s) => s.isPlaying)
+  const currentTime = usePlayerStore((s) => s.currentTime)
+  const duration = usePlayerStore((s) => s.duration)
+  const volume = usePlayerStore((s) => s.volume)
+  const muted = usePlayerStore((s) => s.muted)
+  const playbackSpeed = usePlayerStore((s) => s.playbackSpeed)
+  const isLoaded = usePlayerStore((s) => s.isLoaded)
+  const currentFilePath = usePlayerStore((s) => s.currentFilePath)
+  const subtitleTracks = usePlayerStore((s) => s.subtitleTracks)
+  const audioTracks = usePlayerStore((s) => s.audioTracks)
+  const currentSubtitleId = usePlayerStore((s) => s.currentSubtitleId)
+  const currentAudioId = usePlayerStore((s) => s.currentAudioId)
+  const isFullscreen = usePlayerStore((s) => s.isFullscreen)
+  const clips = useProjectStore((s) => s.clips)
+  const currentClipIndex = useProjectStore((s) => s.currentClipIndex)
   const currentClip = clips[currentClipIndex]
   const lastNonZeroVolumeRef = useRef(80)
 

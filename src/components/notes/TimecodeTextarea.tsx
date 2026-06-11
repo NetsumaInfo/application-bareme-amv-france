@@ -112,6 +112,7 @@ export default function TimecodeTextarea({
       <textarea
         ref={setTextareaRef}
         placeholder={placeholder}
+        aria-label={placeholder ?? t('Notes')}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         readOnly={readOnly}
@@ -167,6 +168,7 @@ export default function TimecodeTextarea({
                       })
                     }}
                     onMouseLeave={() => onTimecodeLeave?.()}
+                    aria-label={t('Aller à {timecode}', { timecode: segment.item.raw })}
                     className="pointer-events-auto inline m-0 p-0 bg-transparent border-0 underline underline-offset-2 decoration-dotted decoration-1 align-baseline leading-[1.4] hover:brightness-110 transition-colors"
                     style={{
                       color,

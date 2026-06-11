@@ -4,7 +4,7 @@ use std::time::Duration;
 use tauri::State;
 
 #[tauri::command]
-pub fn player_get_media_info(
+pub async fn player_get_media_info(
     state: State<'_, AppState>,
     path: Option<String>,
 ) -> Result<crate::player::mpv_wrapper::MediaInfo, String> {
@@ -18,19 +18,30 @@ pub fn player_get_media_info(
                 return Ok(cached);
             }
 
-            let (tx, rx) = mpsc::channel();
-            std::thread::spawn({
-                let probe_path = normalized_target.clone();
-                move || {
-                    let _ = tx.send(super::probe::probe_media_info_open_source(&probe_path));
-                }
-            });
+            // (b) probe via channel/timeout, off the event-loop thread.
+            let probe_result = {
+                let probe_target = normalized_target.clone();
+                tauri::async_runtime::spawn_blocking(move || {
+                    let (tx, rx) = mpsc::channel();
+                    std::thread::spawn({
+                        let probe_path = probe_target.clone();
+                        move || {
+                            let _ =
+                                tx.send(super::probe::probe_media_info_open_source(&probe_path));
+                        }
+                    });
+                    rx.recv_timeout(Duration::from_millis(2500))
+                })
+                .await
+                .map_err(|join_error| format!("Media info task failed: {}", join_error))?
+            };
 
-            if let Ok(Ok(info)) = rx.recv_timeout(Duration::from_millis(2500)) {
+            if let Ok(Ok(info)) = probe_result {
                 super::cache::put_media_info_cache(&normalized_target, info.clone());
                 return Ok(info);
             }
 
+            // (c) try_lock the live player; do not hold the lock across an await.
             if let Ok(player) = state.player.try_lock() {
                 if let Some(p) = &*player {
                     let current_path = super::parsing::normalize_path(&p.get_current_path());
@@ -45,6 +56,7 @@ pub fn player_get_media_info(
                 }
             }
 
+            // (d) minimal fallback.
             let fallback = super::probe::build_minimal_media_info(&trimmed);
             super::cache::put_media_info_cache(&normalized_target, fallback.clone());
             return Ok(fallback);

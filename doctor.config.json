@@ -1,0 +1,24 @@
+{
+  "$schema": "https://react.doctor/schema.json",
+  "surfaces": {
+    "score": {
+      "_comment": "Score-only exclusions (rules still run + show in local CLI). Each entry is a reviewed false positive or a deliberate, documented won't-fix — not metric gaming. Code fixes were applied wherever genuinely safe.",
+      "_reasons": {
+        "no-adjust-state-on-prop-change": "3 false positives: post-layout DOM measurement (TimecodeTextarea), IntersectionObserver visibility callback (miniaturePreview), external-store subscribe-sync (useRealtimeAudioLevels). None mirror a React prop.",
+        "socket/low-supply-chain-score": "jspdf 4.1.0 accepted: standard client-side PDF lib, core to export, no drop-in replacement. Kept installed.",
+        "js-tosorted-immutable": "7 false positives: every flagged .sort() runs on a fresh [...] spread copy, never on props/state.",
+        "js-set-map-lookups": "2 false positives: one is String.prototype.includes (substring), the other a one-off lookup on a distinct per-item array.",
+        "js-index-maps": "1 false positive: lookup target (store.availableBaremes) is re-read and mutated mid-loop, so a precomputed Map would go stale.",
+        "rerender-lazy-ref-init": "9 won't-fix: this project uses the React Compiler (react-hooks/preserve-manual-memoization). A custom lazy-ref hook is not recognized as a stable ref and breaks memoization preservation (hard lint errors). useRef(new Map()) is idiomatic; the saved alloc is negligible."
+      },
+      "excludeRules": [
+        "react-doctor/no-adjust-state-on-prop-change",
+        "socket/low-supply-chain-score",
+        "react-doctor/js-tosorted-immutable",
+        "react-doctor/js-set-map-lookups",
+        "react-doctor/js-index-maps",
+        "react-doctor/rerender-lazy-ref-init"
+      ]
+    }
+  }
+}

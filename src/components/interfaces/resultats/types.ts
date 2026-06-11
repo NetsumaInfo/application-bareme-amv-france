@@ -18,6 +18,7 @@ export interface ResultatsRow {
 export interface ResultatsHeaderProps {
   judges: JudgeSource[]
   selectedJudgeKey: string
+  allActive?: boolean
   judgeColors: Record<string, string>
   onSelectJudge: (judgeKey: string) => void
   onJudgeColorChange: (judgeKey: string, color: string) => void

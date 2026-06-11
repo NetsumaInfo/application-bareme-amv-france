@@ -13,7 +13,9 @@ function clamp(value: number, min: number, max: number) {
 
 export default function AudioTrackSelector() {
   const { t } = useI18n()
-  const { audioTracks, currentAudioId, setCurrentAudioId } = usePlayerStore()
+  const audioTracks = usePlayerStore((s) => s.audioTracks)
+  const currentAudioId = usePlayerStore((s) => s.currentAudioId)
+  const setCurrentAudioId = usePlayerStore((s) => s.setCurrentAudioId)
   const [open, setOpen] = useState(false)
   const [menuStyle, setMenuStyle] = useState<{ top: number; left: number; width: number }>({
     top: 0,
@@ -111,6 +113,7 @@ export default function AudioTrackSelector() {
         {audioTracks.map((track) => (
           <button
             key={track.id}
+            type="button"
             onClick={() => handleSelect(track.id)}
             className={`w-full text-left px-3 py-1.5 text-[11px] hover:bg-gray-800 transition-colors ${
               currentAudioId === track.id ? 'text-primary-400 font-medium' : 'text-gray-300'
@@ -129,6 +132,7 @@ export default function AudioTrackSelector() {
       <HoverTextTooltip text={hasTracks ? t('Pistes audio') : t('Audio unique')}>
         <button
           ref={buttonRef}
+          type="button"
           onClick={() => {
             if (!hasTracks) return
             if (!open) updateMenuPosition()

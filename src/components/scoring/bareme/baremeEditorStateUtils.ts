@@ -44,6 +44,21 @@ export function moveCriterionItem(criteria: Criterion[], index: number, directio
   return next
 }
 
+export function swapCriterionItems(criteria: Criterion[], indexA: number, indexB: number) {
+  if (
+    indexA === indexB ||
+    indexA < 0 ||
+    indexB < 0 ||
+    indexA >= criteria.length ||
+    indexB >= criteria.length
+  ) {
+    return criteria
+  }
+  const next = [...criteria]
+  ;[next[indexA], next[indexB]] = [next[indexB], next[indexA]]
+  return next
+}
+
 export function moveCategoryGroup(criteria: Criterion[], category: string, direction: 'up' | 'down') {
   const grouped = new Map<string, Criterion[]>()
   for (const criterion of criteria) {
@@ -54,9 +69,9 @@ export function moveCategoryGroup(criteria: Criterion[], category: string, direc
 
   const visibleOrder = Array.from(
     new Set(
-      criteria
-        .filter((criterion) => criterion.name.trim())
-        .map((criterion) => getCriterionCategoryLabel(criterion)),
+      criteria.flatMap((criterion) =>
+        criterion.name.trim() ? [getCriterionCategoryLabel(criterion)] : [],
+      ),
     ),
   )
   const hiddenOrder = Array.from(grouped.keys()).filter((key) => !visibleOrder.includes(key))
@@ -142,9 +157,10 @@ export function applyGlobalStepValue(criteria: Criterion[], globalStep: number) 
 }
 
 export function validateCriteriaBeforeSave(criteria: Criterion[]) {
-  const normalized = criteria
-    .map((criterion) => normalizeCriterion(criterion))
-    .filter((criterion) => criterion.name.trim())
+  const normalized = criteria.flatMap((criterion) => {
+    const next = normalizeCriterion(criterion)
+    return next.name.trim() ? [next] : []
+  })
 
   if (normalized.length === 0) {
     return { normalized, error: 'Ajoute au moins un critere.' }

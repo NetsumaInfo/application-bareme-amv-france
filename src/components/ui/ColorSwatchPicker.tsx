@@ -186,8 +186,10 @@ function useColorSwatchPickerController({
 
   const setFavorites = useCallback((colors: string[]) => {
     const cleaned = colors
-      .map((entry) => sanitizeColor(entry, ''))
-      .filter((entry) => entry.length > 0)
+      .flatMap((entry) => {
+        const color = sanitizeColor(entry, '')
+        return color.length > 0 ? [color] : []
+      })
       .slice(0, Math.max(1, maxRemembered))
     setFavoriteColors(cleaned)
     writeStoredColorList(FAVORITES_MEMORY_KEY, cleaned)
@@ -618,12 +620,14 @@ function useColorSwatchPickerController({
                     commitHex(draftHex, true)
                   }
                 }}
+                aria-label={t('Code couleur HEX')}
                 className="w-full h-8 px-2 rounded-sm border border-gray-700 bg-surface text-xs text-gray-200 focus:outline-hidden focus:border-primary-500"
                 placeholder={t('#6366f1')}
               />
               <button
                 type="button"
                 onClick={() => commitHex(draftHex, true)}
+                aria-label={t('Appliquer la couleur')}
                 className="h-8 px-2 rounded-sm border border-gray-700 text-[11px] text-gray-200 hover:border-gray-500"
                 style={{ backgroundColor: withAlpha(displayColor, 0.14) }}
               >

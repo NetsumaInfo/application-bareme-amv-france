@@ -219,9 +219,10 @@ export function useExportPosterState({
       const entries = await fontsApi()
       const families = Array.from(
         new Set(
-          entries
-            .map((entry) => (typeof entry.family === 'string' ? entry.family.trim() : ''))
-            .filter((family) => family.length > 0),
+          entries.flatMap((entry) => {
+            const family = typeof entry.family === 'string' ? entry.family.trim() : ''
+            return family.length > 0 ? [family] : []
+          }),
         ),
       ).sort((a, b) => a.localeCompare(b, 'fr'))
 

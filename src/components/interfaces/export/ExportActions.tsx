@@ -1,4 +1,4 @@
-import { Code2, FileImage, FileJson, FileSpreadsheet, FileText } from 'lucide-react'
+import { Code2, FileImage, FileJson, FileSpreadsheet, FileText, Table } from 'lucide-react'
 import type {
   ExportJsonJudgeOption,
   ExportJsonMode,
@@ -26,6 +26,7 @@ interface ExportActionsProps {
   onExportNotesPdf?: () => void
   onExportJson: () => void
   onExportSpreadsheet?: () => void
+  onExportCsv?: () => void
   onExportHtml?: () => void
 }
 
@@ -47,6 +48,7 @@ export function ExportActions({
   onExportNotesPdf,
   onExportJson,
   onExportSpreadsheet,
+  onExportCsv,
   onExportHtml,
 }: ExportActionsProps) {
   const { t } = useI18n()
@@ -78,6 +80,7 @@ export function ExportActions({
                 max={80}
                 value={rowsPerImage}
                 onChange={(event) => onSetRowsPerImage(Number(event.target.value))}
+                aria-label={t('Nombre de participants par image')}
                 className="w-full px-1 py-0.5 rounded-sm border border-gray-700 bg-surface-dark text-[10px] text-white focus:border-primary-500 focus:outline-hidden"
               />
             </div>
@@ -86,6 +89,7 @@ export function ExportActions({
       )}
 
       <button
+        type="button"
         onClick={onExportPng}
         disabled={exporting}
         className="w-full flex items-center justify-center gap-1 px-2 py-1 rounded-sm bg-primary-600 hover:bg-primary-500 text-white text-[11px] font-medium disabled:opacity-60"
@@ -94,6 +98,7 @@ export function ExportActions({
         {t('Export PNG')}
       </button>
       <button
+        type="button"
         onClick={onExportPdf}
         disabled={exporting}
         className="w-full flex items-center justify-center gap-1 px-2 py-1 rounded-sm bg-surface-light border border-gray-700 text-gray-300 hover:text-white text-[11px]"
@@ -103,6 +108,7 @@ export function ExportActions({
       </button>
       {onExportSpreadsheet && (
         <button
+          type="button"
           onClick={onExportSpreadsheet}
           disabled={exporting}
           className="flex items-center justify-center gap-1 px-2 py-1 rounded-sm bg-surface-light border border-gray-700 text-gray-300 hover:text-white text-[11px] disabled:opacity-60"
@@ -111,8 +117,20 @@ export function ExportActions({
           {t('Export Excel')}
         </button>
       )}
+      {onExportCsv && (
+        <button
+          type="button"
+          onClick={onExportCsv}
+          disabled={exporting}
+          className="flex items-center justify-center gap-1 px-2 py-1 rounded-sm bg-surface-light border border-gray-700 text-gray-300 hover:text-white text-[11px] disabled:opacity-60"
+        >
+          <Table size={14} />
+          {t('Export CSV')}
+        </button>
+      )}
       {onExportHtml && (
         <button
+          type="button"
           onClick={onExportHtml}
           disabled={exporting}
           className="flex items-center justify-center gap-1 px-2 py-1 rounded-sm bg-surface-light border border-gray-700 text-gray-300 hover:text-white text-[11px] disabled:opacity-60"
@@ -136,6 +154,7 @@ export function ExportActions({
             ]}
           />
           <button
+            type="button"
             onClick={onExportNotesPdf}
             disabled={exporting}
             className="w-full flex items-center justify-center gap-1 px-2 py-1 rounded-sm bg-surface-light border border-gray-700 text-gray-300 hover:text-white text-[11px] disabled:opacity-60"
@@ -174,6 +193,7 @@ export function ExportActions({
         </div>
       )}
       <button
+        type="button"
         onClick={onExportJson}
         className="w-full flex items-center justify-center gap-1 px-2 py-1 rounded-sm bg-surface-light border border-gray-700 text-gray-300 hover:text-white text-[11px]"
       >

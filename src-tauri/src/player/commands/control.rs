@@ -54,6 +54,53 @@ pub fn player_set_speed(state: State<'_, AppState>, speed: f64) -> Result<(), St
     with_player(&state, "Player not initialized", |p| p.set_speed(speed))
 }
 
+#[derive(serde::Serialize)]
+pub struct LoopState {
+    pub loop_file: bool,
+    pub ab_a: Option<f64>,
+    pub ab_b: Option<f64>,
+}
+
+#[tauri::command]
+pub fn player_set_loop_file(state: State<'_, AppState>, enabled: bool) -> Result<(), String> {
+    with_player(&state, "Player not initialized", |p| p.set_loop_file(enabled))
+}
+
+#[tauri::command]
+pub fn player_ab_loop_mark_a(state: State<'_, AppState>, time: f64) -> Result<(), String> {
+    with_player(&state, "Player not initialized", |p| p.ab_loop_set_a(time))
+}
+
+#[tauri::command]
+pub fn player_ab_loop_mark_b(state: State<'_, AppState>, time: f64) -> Result<(), String> {
+    with_player(&state, "Player not initialized", |p| p.ab_loop_set_b(time))
+}
+
+#[tauri::command]
+pub fn player_ab_loop_clear(state: State<'_, AppState>) -> Result<(), String> {
+    with_player(&state, "Player not initialized", |p| p.ab_loop_clear())
+}
+
+#[tauri::command]
+pub fn player_get_loop_state(state: State<'_, AppState>) -> Result<LoopState, String> {
+    let player = state.player.lock().map_err(|e| e.to_string())?;
+    match &*player {
+        Some(p) => {
+            let (ab_a, ab_b) = p.get_ab_loop();
+            Ok(LoopState {
+                loop_file: p.get_loop_file(),
+                ab_a,
+                ab_b,
+            })
+        }
+        None => Ok(LoopState {
+            loop_file: false,
+            ab_a: None,
+            ab_b: None,
+        }),
+    }
+}
+
 #[tauri::command]
 pub fn player_get_status(state: State<'_, AppState>) -> Result<PlayerStatus, String> {
     let player = state.player.lock().map_err(|e| e.to_string())?;

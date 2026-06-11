@@ -20,6 +20,7 @@ interface AppContextMenuItemProps {
   disabled?: boolean
   active?: boolean
   danger?: boolean
+  dense?: boolean
   onClick?: () => void
 }
 
@@ -124,6 +125,7 @@ export function AppContextMenuItem({
   disabled = false,
   active = false,
   danger = false,
+  dense = false,
   onClick,
 }: AppContextMenuItemProps) {
   const isClickable = !disabled && typeof onClick === 'function'
@@ -145,11 +147,13 @@ export function AppContextMenuItem({
       type="button"
       onClick={onClick}
       disabled={!isClickable}
-      className={`group flex w-full items-center gap-1.5 rounded-md px-1.5 py-1.5 text-left transition-colors ${hoverClassName} ${disabled ? 'cursor-not-allowed' : ''}`}
+      className={`group flex w-full items-center text-left transition-colors ${
+        dense ? 'gap-1 rounded px-1.5 py-1' : 'gap-1.5 rounded-md px-1.5 py-1.5'
+      } ${hoverClassName} ${disabled ? 'cursor-not-allowed' : ''}`}
     >
       {(Icon || IconSecondary) ? (
         <span
-          className={`relative flex h-6 min-w-6 items-center justify-center rounded-md ${
+          className={`relative flex items-center justify-center rounded-md ${dense ? 'h-4 min-w-4' : 'h-6 min-w-6'} ${
             disabled
               ? 'text-slate-500'
               : danger
@@ -159,7 +163,7 @@ export function AppContextMenuItem({
                   : 'text-slate-400 group-hover:text-slate-200'
           }`}
         >
-          {Icon ? <Icon size={13.5} strokeWidth={1.85} /> : null}
+          {Icon ? <Icon size={dense ? 12 : 13.5} strokeWidth={1.85} /> : null}
           {IconSecondary ? (
             <span
               className={`absolute -bottom-0.5 -right-0.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-[rgb(var(--color-surface-dark)/0.96)] ${
@@ -178,7 +182,7 @@ export function AppContextMenuItem({
         </span>
       ) : null}
 
-      <span className={`flex-1 text-[10.5px] font-medium leading-4 ${textClassName}`}>{label}</span>
+      <span className={`flex-1 font-medium ${dense ? 'text-[10px] leading-[13px]' : 'text-[10.5px] leading-4'} ${textClassName}`}>{label}</span>
 
       {shortcut ? (
         <span className={`text-[9px] leading-none ${disabled ? 'text-slate-600' : 'text-slate-500'}`}>{shortcut}</span>

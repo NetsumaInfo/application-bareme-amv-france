@@ -7,7 +7,9 @@ import { formatShortcutAnnotationForAction } from '@/utils/shortcuts'
 import { UI_ICONS } from '@/components/ui/actionIcons'
 
 export default function InterfaceSwitcher() {
-  const { currentTab, switchTab, shortcutBindings } = useUIStore()
+  const currentTab = useUIStore((state) => state.currentTab)
+  const switchTab = useUIStore((state) => state.switchTab)
+  const shortcutBindings = useUIStore((state) => state.shortcutBindings)
   const { t } = useI18n()
   const tabs: { tab: AppTab; label: string; icon: LucideIcon; action: 'tabNotation' | 'tabResultats' | 'tabExport' }[] = [
     { tab: 'notation', label: t('Notation'), icon: UI_ICONS.notation, action: 'tabNotation' },
@@ -26,6 +28,7 @@ export default function InterfaceSwitcher() {
             text={annotation}
           >
             <button
+              type="button"
               onClick={() => switchTab(tab)}
               aria-label={annotation}
               className={`flex h-[22px] items-center gap-0.5 px-1.5 text-[11px] leading-none transition-all first:rounded-l-[5px] last:rounded-r-[5px] ${

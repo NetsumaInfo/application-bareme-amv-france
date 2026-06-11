@@ -22,7 +22,8 @@ export const SIZE_PRESET_VALUES = ['1920x1080', '1080x1920', '1080x1350', '2048x
 
 export interface ExportCaptureOptions {
   scale: number
-  backgroundColor: string
+  /** `null` = transparent capture; a string = solid background. */
+  backgroundColor: string | null
   pngMode: ExportPngMode
   fileNameStem: string
 }

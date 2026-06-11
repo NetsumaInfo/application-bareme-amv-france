@@ -40,9 +40,10 @@ export function readStoredColorList(key: string): string[] {
     if (!raw) return []
     const parsed = JSON.parse(raw)
     if (!Array.isArray(parsed)) return []
-    return parsed
-      .map((entry) => (typeof entry === 'string' ? sanitizeColor(entry, '') : ''))
-      .filter((entry) => entry.length > 0)
+    return parsed.flatMap((entry) => {
+      const color = typeof entry === 'string' ? sanitizeColor(entry, '') : ''
+      return color.length > 0 ? [color] : []
+    })
   } catch {
     return []
   }

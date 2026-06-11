@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { memo, useEffect, useRef } from 'react'
 import type { FocusEvent, MutableRefObject } from 'react'
 import { CheckCircle2, Star } from 'lucide-react'
 import type { Clip } from '@/types/project'
@@ -38,7 +38,7 @@ interface SpreadsheetClipCellProps {
   ) => void
 }
 
-export function SpreadsheetClipCell({
+function SpreadsheetClipCellComponent({
   clip,
   clips,
   isScored,
@@ -191,6 +191,7 @@ export function SpreadsheetClipCell({
             onClick={(event) => event.stopPropagation()}
             onFocus={handleManualFieldFocus}
             onChange={(event) => onManualClipFieldChange(clip.id, 'author', event.target.value)}
+            aria-label={t('Participant')}
             className="w-full px-1.5 py-0.5 rounded-sm border border-gray-700 bg-surface-dark/70 text-[10px] text-primary-300 placeholder:text-gray-500 focus:outline-hidden focus:border-primary-500"
           />
           <input
@@ -200,6 +201,7 @@ export function SpreadsheetClipCell({
             onClick={(event) => event.stopPropagation()}
             onFocus={handleManualFieldFocus}
             onChange={(event) => onManualClipFieldChange(clip.id, 'displayName', event.target.value)}
+            aria-label={t('Nom du clip')}
             className="w-full px-1.5 py-0.5 rounded-sm border border-gray-700 bg-surface-dark/70 text-[10px] text-gray-200 placeholder:text-gray-500 focus:outline-hidden focus:border-primary-500"
           />
           {shouldShowContestCategoryInput ? (
@@ -210,6 +212,7 @@ export function SpreadsheetClipCell({
               onClick={(event) => event.stopPropagation()}
               onFocus={handleManualFieldFocus}
               onChange={(event) => onManualClipFieldChange(clip.id, 'contestCategory', event.target.value)}
+              aria-label={t('Catégorie clip')}
               className="w-full px-1.5 py-0.5 rounded-sm border border-gray-700 bg-surface-dark/70 text-[10px] text-gray-300 placeholder:text-gray-500 focus:outline-hidden focus:border-primary-500"
             />
           ) : null}
@@ -265,3 +268,5 @@ export function SpreadsheetClipCell({
     </td>
   )
 }
+
+export const SpreadsheetClipCell = memo(SpreadsheetClipCellComponent)

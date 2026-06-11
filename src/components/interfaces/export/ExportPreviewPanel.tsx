@@ -30,6 +30,8 @@ interface ExportPreviewPanelProps {
   rowsPerImage: number
   showMiniatures: boolean
   thumbnailDefaultSeconds: number
+  getRowComment?: (clipId: string) => string
+  getRowCommentTitle?: (clipId: string) => string
 }
 
 function chunkRows(rows: ResultatsRow[], chunkSize: number): ResultatsRow[][] {
@@ -65,6 +67,8 @@ interface ResultatsExportSurfaceProps {
   showMiniatures: boolean
   thumbnailDefaultSeconds: number
   staticExport?: boolean
+  getRowComment?: (clipId: string) => string
+  getRowCommentTitle?: (clipId: string) => string
 }
 
 function ResultatsExportSurface({
@@ -80,6 +84,8 @@ function ResultatsExportSurface({
   showMiniatures,
   thumbnailDefaultSeconds,
   staticExport = false,
+  getRowComment,
+  getRowCommentTitle,
 }: ResultatsExportSurfaceProps) {
   const { t } = useI18n()
   const selectedJudge = judges[selectedJudgeIndex] ?? judges[0]
@@ -115,6 +121,8 @@ function ResultatsExportSurface({
           thumbnailDefaultSeconds={thumbnailDefaultSeconds}
           forceMiniatureLoad={staticExport}
           staticExport={staticExport}
+          getRowComment={getRowComment}
+          getRowCommentTitle={getRowCommentTitle}
           readOnly
         />
       ) : null}
@@ -140,6 +148,8 @@ function ResultatsExportSurface({
           thumbnailDefaultSeconds={thumbnailDefaultSeconds}
           forceMiniatureLoad={staticExport}
           staticExport={staticExport}
+          getRowComment={getRowComment}
+          getRowCommentTitle={getRowCommentTitle}
           readOnly
         />
       ) : null}
@@ -159,6 +169,8 @@ function ResultatsExportSurface({
           thumbnailDefaultSeconds={thumbnailDefaultSeconds}
           forceMiniatureLoad={staticExport}
           staticExport={staticExport}
+          getRowComment={getRowComment}
+          getRowCommentTitle={getRowCommentTitle}
         />
       ) : null}
 
@@ -197,6 +209,8 @@ export function ExportPreviewPanel({
   rowsPerImage,
   showMiniatures,
   thumbnailDefaultSeconds,
+  getRowComment,
+  getRowCommentTitle,
 }: ExportPreviewPanelProps) {
   const safeRowsPerImage = clampRowsPerImage(rowsPerImage)
   const pagedRows = useMemo(
@@ -205,21 +219,25 @@ export function ExportPreviewPanel({
   )
 
   return (
-    <div data-screenshot-zone="export-table" className="flex flex-1 min-h-0 flex-col overflow-hidden">
+    <div data-screenshot-zone="export-table" className="flex flex-1 min-h-0 flex-col gap-2 overflow-hidden px-3 pb-3 pt-2">
       <ClipFavoritesPanel clips={favoriteClips} compact />
-      <ResultatsExportSurface
-        mainView={mainView}
-        globalVariant={globalVariant}
-        canSortByScore={canSortByScore}
-        currentBaremeTotalPoints={currentBaremeTotalPoints}
-        categoryGroups={categoryGroups}
-        judges={judges}
-        rows={rows}
-        judgeColors={judgeColors}
-        selectedJudgeIndex={selectedJudgeIndex}
-        showMiniatures={showMiniatures}
-        thumbnailDefaultSeconds={thumbnailDefaultSeconds}
-      />
+      <div className="flex flex-1 min-h-0 overflow-hidden rounded-lg border border-gray-700/40 bg-surface-dark/15 shadow-[0_1px_0_rgb(255_255_255/0.03)_inset]">
+        <ResultatsExportSurface
+          mainView={mainView}
+          globalVariant={globalVariant}
+          canSortByScore={canSortByScore}
+          currentBaremeTotalPoints={currentBaremeTotalPoints}
+          categoryGroups={categoryGroups}
+          judges={judges}
+          rows={rows}
+          judgeColors={judgeColors}
+          selectedJudgeIndex={selectedJudgeIndex}
+          showMiniatures={showMiniatures}
+          thumbnailDefaultSeconds={thumbnailDefaultSeconds}
+          getRowComment={getRowComment}
+          getRowCommentTitle={getRowCommentTitle}
+        />
+      </div>
 
       <div className="fixed left-[-20000px] top-0 z-[-1] min-w-[1400px] pointer-events-none" style={{ zoom: 1 }} aria-hidden="true">
         <div ref={previewRef} data-export-preview="true" className="amv-export-static-target min-h-0 bg-surface p-1">
@@ -236,6 +254,8 @@ export function ExportPreviewPanel({
             selectedJudgeIndex={selectedJudgeIndex}
             showMiniatures={showMiniatures}
             thumbnailDefaultSeconds={thumbnailDefaultSeconds}
+            getRowComment={getRowComment}
+            getRowCommentTitle={getRowCommentTitle}
             staticExport
           />
         </div>
@@ -263,6 +283,8 @@ export function ExportPreviewPanel({
               selectedJudgeIndex={selectedJudgeIndex}
               showMiniatures={showMiniatures}
               thumbnailDefaultSeconds={thumbnailDefaultSeconds}
+              getRowComment={getRowComment}
+              getRowCommentTitle={getRowCommentTitle}
               staticExport
             />
           </div>

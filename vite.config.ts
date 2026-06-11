@@ -24,7 +24,15 @@ export default defineConfig({
         main: path.resolve(__dirname, 'index.html'),
         notes: path.resolve(__dirname, 'notes.html'),
         overlay: path.resolve(__dirname, 'overlay.html'),
+        playerMenu: path.resolve(__dirname, 'player-menu.html'),
         resultatsNotes: path.resolve(__dirname, 'resultats-notes.html'),
+      },
+      output: {
+        manualChunks: {
+          'vendor-react': ['react', 'react-dom', 'react-dom/client'],
+          'vendor-ui': ['motion', 'lucide-react'],
+          'vendor-state': ['zustand', 'zod'],
+        },
       },
     },
   },

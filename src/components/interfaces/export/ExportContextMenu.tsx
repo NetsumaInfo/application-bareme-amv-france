@@ -47,6 +47,7 @@ interface ExportContextMenuProps {
   onClose: () => void
   exportContainer: ExportContainer
   exportSpreadsheet: ExportTask
+  exportCsv: ExportTask
   exportHtml: ExportTask
   exportNotesPdf: ExportTask
   exportJson: ExportTask
@@ -67,6 +68,7 @@ export function ExportContextMenu({
   onClose,
   exportContainer,
   exportSpreadsheet,
+  exportCsv,
   exportHtml,
   exportNotesPdf,
   exportJson,
@@ -95,7 +97,7 @@ export function ExportContextMenu({
         }}
       />
       <AppContextMenuItem
-        label={t('Tableau complet')}
+        label={t('Tableau basique')}
         icon={Table}
         active={layoutMode === 'table'}
         onClick={() => {
@@ -202,6 +204,11 @@ export function ExportContextMenu({
                 label={t('Exporter Excel')}
                 icon={FileSpreadsheet}
                 onClick={() => exportAndClose(() => { exportSpreadsheet().catch(() => {}) })}
+              />
+              <AppContextMenuItem
+                label={t('Exporter CSV')}
+                icon={Table}
+                onClick={() => exportAndClose(() => { exportCsv().catch(() => {}) })}
               />
               <AppContextMenuItem
                 label={t('Exporter HTML/CSS')}

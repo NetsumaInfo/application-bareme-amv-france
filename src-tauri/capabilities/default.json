@@ -6,13 +6,19 @@
     "main",
     "fullscreen-overlay",
     "notes-window",
-    "resultats-notes-window"
+    "resultats-notes-window",
+    "player-menu-window"
   ],
   "permissions": [
     "core:default",
     "core:window:default",
     "core:window:allow-set-title",
     "core:window:allow-set-focus",
+    "core:window:allow-set-size",
+    "core:window:allow-set-position",
+    "core:window:allow-show",
+    "core:window:allow-hide",
+    "core:window:allow-current-monitor",
     "core:event:default",
     "core:event:allow-emit",
     "core:event:allow-listen",

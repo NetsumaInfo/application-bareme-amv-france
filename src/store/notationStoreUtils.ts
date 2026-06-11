@@ -31,7 +31,10 @@ function parseCriterion(raw: unknown, index: number): Criterion | null {
   const description = typeof row.description === 'string' ? row.description : undefined
   const category = typeof row.category === 'string' && row.category.trim() ? row.category.trim() : undefined
   const options = Array.isArray(row.options)
-    ? row.options.map((value) => String(value)).filter(Boolean)
+    ? row.options.flatMap((value) => {
+        const str = String(value)
+        return str ? [str] : []
+      })
     : undefined
 
   return {

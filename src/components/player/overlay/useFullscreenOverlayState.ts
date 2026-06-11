@@ -91,7 +91,7 @@ export function useFullscreenOverlayState() {
     refreshTracks,
     handleSelectSubtitle,
     handleSelectAudio,
-  } = useOverlayTracks({ resetHideTimer })
+  } = useOverlayTracks({ resetHideTimer, isOverlayActive })
 
   const {
     clipInfo,

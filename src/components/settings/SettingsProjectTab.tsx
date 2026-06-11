@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 import { AppSelect } from '@/components/ui/AppSelect'
+import { JudgeNameInput } from '@/components/ui/JudgeNameInput'
 import { SettingsToggle } from '@/components/settings/SettingsToggle'
 import { ContestCategoriesEditor } from '@/components/project/ContestCategoriesEditor'
 import type { ClipNamePattern, MultiPseudoDisplayMode, Project, ProjectSettings } from '@/types/project'
@@ -60,11 +61,11 @@ export function SettingsProjectTab({
         <div className="space-y-3">
           <div>
             <label className="text-xs font-medium text-gray-400 mb-1.5 block">{t('Nom du juge')}</label>
-            <input
+            <JudgeNameInput
               value={currentProject?.judgeName ?? ''}
-              onChange={(e) => onUpdateProject({ judgeName: e.target.value })}
+              onChange={(judgeName) => onUpdateProject({ judgeName })}
               placeholder={t('ex: Netsuma')}
-              className={`w-full px-3 py-2 bg-surface-dark/45 rounded-lg text-sm text-white placeholder-gray-500 ${SUBTLE_BORDER} focus:outline-hidden`}
+              inputClassName={`w-full px-3 py-2 bg-surface-dark/45 rounded-lg text-sm text-white placeholder-gray-500 ${SUBTLE_BORDER} focus:outline-hidden`}
             />
           </div>
           <div>
@@ -72,6 +73,7 @@ export function SettingsProjectTab({
             <input
               value={currentProject?.name ?? ''}
               onChange={(e) => onUpdateProject({ name: e.target.value })}
+              aria-label={t('Nom du concours')}
               placeholder={t('ex: Concours Japan Expo')}
               className={`w-full px-3 py-2 bg-surface-dark/45 rounded-lg text-sm text-white placeholder-gray-500 ${SUBTLE_BORDER} focus:outline-hidden`}
             />
@@ -92,7 +94,7 @@ export function SettingsProjectTab({
               <AppSelect
                 value={settings.autoSaveInterval}
                 onChange={(autoSaveInterval) => onUpdateSettings({ autoSaveInterval })}
-                ariaLabel={t('Sauvegarde automatique')}
+                ariaLabel={t('Intervalle de sauvegarde automatique')}
                 className="w-[5.8rem]"
                 options={[
                   { value: 10, label: '10s' },
@@ -105,6 +107,7 @@ export function SettingsProjectTab({
             <SettingsToggle
               checked={settings?.autoSave ?? true}
               onChange={() => onUpdateSettings({ autoSave: !settings?.autoSave })}
+              ariaLabel={t('Sauvegarde automatique')}
             />
           </div>
         </div>
@@ -168,6 +171,7 @@ export function SettingsProjectTab({
               <SettingsToggle
                 checked={Boolean(settings?.showMiniatures)}
                 onChange={() => onUpdateSettings({ showMiniatures: !(settings?.showMiniatures ?? false) })}
+                ariaLabel={t('Afficher les miniatures des clips')}
               />
             </div>
             <div className={ROW}>
@@ -175,6 +179,7 @@ export function SettingsProjectTab({
               <SettingsToggle
                 checked={showQuickActions}
                 onChange={() => onUpdateSettings({ showQuickActions: !showQuickActions })}
+                ariaLabel={t('Afficher les actions rapides')}
               />
             </div>
             <div className={ROW}>
@@ -185,6 +190,7 @@ export function SettingsProjectTab({
               <SettingsToggle
                 checked={contestCategoriesEnabled}
                 onChange={() => onUpdateSettings({ contestCategoriesEnabled: !contestCategoriesEnabled })}
+                ariaLabel={t('Activer les catégories concours rapides')}
               />
             </div>
           </div>
@@ -240,6 +246,7 @@ export function SettingsProjectTab({
                   if (!Number.isFinite(raw)) return
                   onUpdateSettings({ thumbnailDefaultTimeSec: Math.max(0, Math.min(600, raw)) })
                 }}
+                aria-label={t('Temps par défaut pour la miniature (en secondes)')}
                 className={`w-28 rounded-lg bg-surface-dark/45 px-3 py-2 text-sm text-white placeholder-gray-500 ${SUBTLE_BORDER} focus:outline-hidden`}
               />
               <span className="text-xs text-gray-500">{t('secondes')}</span>

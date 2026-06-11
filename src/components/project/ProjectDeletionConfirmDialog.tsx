@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import { AlertTriangle, Trash2 } from 'lucide-react'
+import { AlertTriangle, ListX, Trash2 } from 'lucide-react'
 import { useI18n } from '@/i18n'
 
 interface ProjectDeletionConfirmDialogProps {
@@ -8,6 +8,7 @@ interface ProjectDeletionConfirmDialogProps {
   isDeleting?: boolean
   onCancel: () => void
   onConfirm: () => void | Promise<void>
+  onRemoveFromList?: () => void | Promise<void>
 }
 
 export function ProjectDeletionConfirmDialog({
@@ -16,6 +17,7 @@ export function ProjectDeletionConfirmDialog({
   isDeleting = false,
   onCancel,
   onConfirm,
+  onRemoveFromList,
 }: ProjectDeletionConfirmDialogProps) {
   const { t } = useI18n()
   const dialogRef = useRef<HTMLDivElement | null>(null)
@@ -124,7 +126,9 @@ export function ProjectDeletionConfirmDialog({
               {t('Supprimer ce projet ?')}
             </h2>
             <p id="project-deletion-dialog-description" className="mt-1 text-[12px] leading-5 text-gray-400">
-              {t('Le projet sera retiré de la liste et supprimé du disque.')}
+              {onRemoveFromList
+                ? t('Supprimez le projet du disque, ou retirez-le seulement de la liste.')
+                : t('Le projet sera retiré de la liste et supprimé du disque.')}
             </p>
           </div>
         </div>
@@ -136,26 +140,41 @@ export function ProjectDeletionConfirmDialog({
           ) : null}
         </div>
 
-        <div className="mt-4 flex items-center justify-end gap-2">
-          <button
-            ref={cancelButtonRef}
-            type="button"
-            onClick={onCancel}
-            disabled={isDeleting}
-            className="rounded-md border border-gray-700 bg-white/4 px-3 py-1.5 text-[11px] font-medium text-gray-300 transition-colors hover:bg-white/[0.07] hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {t('Annuler')}
-          </button>
-          <button
-            type="button"
-            onClick={onConfirm}
-            disabled={isDeleting}
-            aria-busy={isDeleting}
-            className="inline-flex items-center gap-1.5 rounded-md border border-red-500/25 bg-red-500/10 px-3 py-1.5 text-[11px] font-semibold text-red-300 transition-colors hover:bg-red-500/20 hover:text-red-200 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            <Trash2 size={12} />
-            {t('Supprimer')}
-          </button>
+        <div className="mt-4 flex items-center justify-between gap-2">
+          {onRemoveFromList ? (
+            <button
+              type="button"
+              onClick={onRemoveFromList}
+              disabled={isDeleting}
+              className="inline-flex items-center gap-1.5 rounded-md border border-gray-700 bg-white/4 px-3 py-1.5 text-[11px] font-medium text-gray-300 transition-colors hover:bg-white/[0.07] hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              <ListX size={12} />
+              {t('Retirer de la liste')}
+            </button>
+          ) : (
+            <span />
+          )}
+          <div className="flex items-center gap-2">
+            <button
+              ref={cancelButtonRef}
+              type="button"
+              onClick={onCancel}
+              disabled={isDeleting}
+              className="rounded-md border border-gray-700 bg-white/4 px-3 py-1.5 text-[11px] font-medium text-gray-300 transition-colors hover:bg-white/[0.07] hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {t('Annuler')}
+            </button>
+            <button
+              type="button"
+              onClick={onConfirm}
+              disabled={isDeleting}
+              aria-busy={isDeleting}
+              className="inline-flex items-center gap-1.5 rounded-md border border-red-500/25 bg-red-500/10 px-3 py-1.5 text-[11px] font-semibold text-red-300 transition-colors hover:bg-red-500/20 hover:text-red-200 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              <Trash2 size={12} />
+              {t('Supprimer du disque')}
+            </button>
+          </div>
         </div>
       </div>
     </div>

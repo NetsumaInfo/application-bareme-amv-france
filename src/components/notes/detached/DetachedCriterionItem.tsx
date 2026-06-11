@@ -69,6 +69,7 @@ export function DetachedCriterionItem({
             if (element) inputRefs.current.set(criterion.id, element)
           }}
           type="number"
+          aria-label={t('Note : {criterion}', { criterion: criterion.name })}
           min={criterion.min}
           max={criterion.max}
           step={criterion.step || 0.5}
@@ -89,6 +90,7 @@ export function DetachedCriterionItem({
         <button
           type="button"
           onClick={onToggleNote}
+          aria-label={isCriterionNoteExpanded ? t('Refermer la note') : t('Ouvrir la note')}
           className="ml-0.5 px-1 text-[10px] leading-none text-gray-500 transition-colors hover:text-white bg-transparent"
           style={{ background: 'transparent' }}
           title={isCriterionNoteExpanded ? t('Refermer la note') : t('Ouvrir la note')}

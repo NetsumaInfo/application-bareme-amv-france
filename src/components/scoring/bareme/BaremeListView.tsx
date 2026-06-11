@@ -31,6 +31,7 @@ export function BaremeListView({
     <div className="flex flex-col gap-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <button
+          type="button"
           onClick={onCreate}
           className="flex items-center justify-center gap-2 px-3 py-2 rounded-lg border border-dashed border-gray-600 text-gray-400 hover:text-white hover:border-primary-500 transition-colors"
         >
@@ -39,6 +40,7 @@ export function BaremeListView({
         </button>
 
         <button
+          type="button"
           onClick={onImportJson}
           className="flex items-center gap-2 px-3 py-2 rounded-lg bg-surface-light text-gray-300 hover:text-white transition-colors"
         >
@@ -94,6 +96,7 @@ export function BaremeListView({
               </div>
               <div className="flex items-center gap-2">
                 <button
+                  type="button"
                   onClick={() => onEdit(bareme)}
                   className="px-3 py-1 text-xs rounded-sm bg-surface-light text-gray-300 hover:text-white transition-colors"
                 >
@@ -101,6 +104,7 @@ export function BaremeListView({
                 </button>
                 <HoverTextTooltip text={t('Dupliquer')}>
                   <button
+                    type="button"
                     onClick={() => onDuplicate(bareme)}
                     aria-label={t('Dupliquer')}
                     className="p-1 rounded-sm text-gray-400 hover:text-white hover:bg-surface-light transition-colors"
@@ -110,6 +114,7 @@ export function BaremeListView({
                 </HoverTextTooltip>
                 <HoverTextTooltip text={t('Exporter JSON')}>
                   <button
+                    type="button"
                     onClick={() => onExportJson(bareme)}
                     aria-label={t('Exporter JSON')}
                     className="p-1 rounded-sm text-gray-400 hover:text-white hover:bg-surface-light transition-colors"
@@ -120,6 +125,7 @@ export function BaremeListView({
                 {!bareme.isOfficial && (
                   <HoverTextTooltip text={t('Supprimer')}>
                     <button
+                      type="button"
                       onClick={() => onDelete(bareme.id)}
                       aria-label={t('Supprimer')}
                       className="p-1 rounded-sm text-gray-500 hover:text-accent hover:bg-surface-light transition-colors"

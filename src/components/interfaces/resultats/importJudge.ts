@@ -128,9 +128,9 @@ export function normalizeImportedJudge(
         ? (noteRaw.criterion_notes as Record<string, unknown>)
         : {}
     const criterionNotes = Object.fromEntries(
-      Object.entries(criterionNotesRaw)
-        .filter(([key, value]) => key.trim().length > 0 && typeof value === 'string')
-        .map(([key, value]) => [key, value as string]),
+      Object.entries(criterionNotesRaw).flatMap(([key, value]) =>
+        key.trim().length > 0 && typeof value === 'string' ? [[key, value as string]] : [],
+      ),
     )
     const categoryNotesRaw = noteRaw.categoryNotes && typeof noteRaw.categoryNotes === 'object'
       ? (noteRaw.categoryNotes as Record<string, unknown>)
@@ -138,9 +138,9 @@ export function normalizeImportedJudge(
         ? (noteRaw.category_notes as Record<string, unknown>)
         : {}
     const categoryNotes = Object.fromEntries(
-      Object.entries(categoryNotesRaw)
-        .filter(([key, value]) => key.trim().length > 0 && typeof value === 'string')
-        .map(([key, value]) => [key, value as string]),
+      Object.entries(categoryNotesRaw).flatMap(([key, value]) =>
+        key.trim().length > 0 && typeof value === 'string' ? [[key, value as string]] : [],
+      ),
     )
 
     notes[targetClipId] = Number.isFinite(maybeFinal)

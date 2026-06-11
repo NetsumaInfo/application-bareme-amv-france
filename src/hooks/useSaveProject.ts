@@ -4,6 +4,7 @@ import { useNotationStore } from '@/store/useNotationStore'
 import { useUIStore } from '@/store/useUIStore'
 import * as tauri from '@/services/tauri'
 import { rememberRecentProjectPath } from '@/services/recentProjects'
+import { resolveProjectBareme } from '@/store/projectStoreProjectActions'
 
 export function useSaveProject() {
   const save = useCallback(async () => {
@@ -22,10 +23,15 @@ export function useSaveProject() {
     }
 
     const notesData = notationState.getNotesData()
-    const projectData = projectState.getProjectData(notesData, notationState.currentBareme)
+    const activeBareme = resolveProjectBareme(
+      currentProject.baremeId,
+      notationState.currentBareme,
+      notationState.availableBaremes,
+    )
+    const projectData = projectState.getProjectData(notesData, activeBareme)
     if (!projectData) return
 
-    const activeBaremeId = notationState.currentBareme?.id
+    const activeBaremeId = activeBareme?.id
     if (activeBaremeId) {
       projectData.baremeId = activeBaremeId
       projectData.project.baremeId = activeBaremeId
@@ -49,10 +55,15 @@ export function useSaveProject() {
 
     projectState.setFilePath(filePath)
     const notesData = notationState.getNotesData()
-    const projectData = projectState.getProjectData(notesData, notationState.currentBareme)
+    const activeBareme = resolveProjectBareme(
+      currentProject.baremeId,
+      notationState.currentBareme,
+      notationState.availableBaremes,
+    )
+    const projectData = projectState.getProjectData(notesData, activeBareme)
     if (!projectData) return
 
-    const activeBaremeId = notationState.currentBareme?.id
+    const activeBaremeId = activeBareme?.id
     if (activeBaremeId) {
       projectData.baremeId = activeBaremeId
       projectData.project.baremeId = activeBaremeId

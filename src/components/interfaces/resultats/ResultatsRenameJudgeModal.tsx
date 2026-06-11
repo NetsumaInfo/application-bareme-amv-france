@@ -1,6 +1,7 @@
-import { useEffect, useRef } from 'react'
+import { useEffect } from 'react'
 import { X } from 'lucide-react'
 import { HoverTextTooltip } from '@/components/ui/HoverTextTooltip'
+import { JudgeNameInput } from '@/components/ui/JudgeNameInput'
 import { useI18n } from '@/i18n'
 
 interface ResultatsRenameJudgeModalProps {
@@ -21,12 +22,6 @@ export function ResultatsRenameJudgeModal({
   onConfirm,
 }: ResultatsRenameJudgeModalProps) {
   const { t } = useI18n()
-  const inputRef = useRef<HTMLInputElement | null>(null)
-
-  useEffect(() => {
-    inputRef.current?.focus()
-    inputRef.current?.select()
-  }, [])
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -80,19 +75,13 @@ export function ResultatsRenameJudgeModal({
           className="p-4"
         >
           <label className="mb-1.5 block text-xs text-gray-400">{t('Nom du juge')}</label>
-          <input
-            ref={inputRef}
-            type="text"
+          <JudgeNameInput
             value={value}
-            onChange={(event) => onChangeValue(event.target.value)}
-            onKeyDown={(event) => {
-              if (event.key === 'Enter') {
-                event.preventDefault()
-                onConfirm()
-              }
-            }}
-            className="w-full rounded-lg border border-gray-700 bg-surface-dark px-3 py-2 text-sm text-white outline-hidden focus:border-primary-500"
+            onChange={onChangeValue}
+            onEnter={onConfirm}
+            autoFocus
             placeholder={t('Nom du juge')}
+            inputClassName="w-full rounded-lg border border-gray-700 bg-surface-dark px-3 py-2 text-sm text-white outline-hidden focus:border-primary-500"
           />
           {errorMessage && (
             <p className="mt-1.5 text-xs text-accent">{errorMessage}</p>

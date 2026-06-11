@@ -25,6 +25,7 @@ export type XlsxCellStyle =
   | 'totalLabel'
   | 'totalScore'
   | 'summaryHeader'
+  | 'comment'
 
 export interface XlsxCell {
   value?: XlsxCellValue
@@ -81,6 +82,7 @@ const STYLE_INDEX: Record<XlsxCellStyle, number> = {
   totalLabel: 21,
   totalScore: 22,
   summaryHeader: 23,
+  comment: 24,
 }
 
 for (let index = 0; index < 256; index += 1) {
@@ -158,6 +160,7 @@ function createZip(files: ZipFileEntry[]): Uint8Array {
 
   for (const file of files) {
     const nameBytes = textEncoder.encode(file.path)
+    const dataLength = file.data.length
     const checksum = crc32(file.data)
 
     const localHeader = new Uint8Array(30 + nameBytes.length)
@@ -168,8 +171,8 @@ function createZip(files: ZipFileEntry[]): Uint8Array {
     writeUInt16(localHeader, 10, 0)
     writeUInt16(localHeader, 12, 0)
     writeUInt32(localHeader, 14, checksum)
-    writeUInt32(localHeader, 18, file.data.length)
-    writeUInt32(localHeader, 22, file.data.length)
+    writeUInt32(localHeader, 18, dataLength)
+    writeUInt32(localHeader, 22, dataLength)
     writeUInt16(localHeader, 26, nameBytes.length)
     writeUInt16(localHeader, 28, 0)
     localHeader.set(nameBytes, 30)
@@ -185,8 +188,8 @@ function createZip(files: ZipFileEntry[]): Uint8Array {
     writeUInt16(centralHeader, 12, 0)
     writeUInt16(centralHeader, 14, 0)
     writeUInt32(centralHeader, 16, checksum)
-    writeUInt32(centralHeader, 20, file.data.length)
-    writeUInt32(centralHeader, 24, file.data.length)
+    writeUInt32(centralHeader, 20, dataLength)
+    writeUInt32(centralHeader, 24, dataLength)
     writeUInt16(centralHeader, 28, nameBytes.length)
     writeUInt16(centralHeader, 30, 0)
     writeUInt16(centralHeader, 32, 0)
@@ -197,7 +200,7 @@ function createZip(files: ZipFileEntry[]): Uint8Array {
     centralHeader.set(nameBytes, 46)
     centralParts.push(centralHeader)
 
-    offset += localHeader.length + file.data.length
+    offset += localHeader.length + dataLength
   }
 
   const localData = concatBytes(localParts)
@@ -384,7 +387,7 @@ function xfXml({
   fillId: number
   borderId: number
   horizontal?: 'left' | 'center' | 'right'
-  vertical?: 'bottom' | 'center'
+  vertical?: 'top' | 'bottom' | 'center'
   wrapText?: boolean
 }): string {
   const wrap = wrapText ? ' wrapText="1"' : ''
@@ -449,6 +452,7 @@ function createStylesXml(): string {
     xfXml({ fontId: 2, fillId: 11, borderId: 1, horizontal: 'left', wrapText: true }),
     xfXml({ fontId: 2, fillId: 11, borderId: 1 }),
     xfXml({ fontId: 2, fillId: 12, borderId: 1, wrapText: true }),
+    xfXml({ fontId: 0, fillId: 0, borderId: 1, horizontal: 'left', vertical: 'top', wrapText: true }),
   ]
 
   return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>

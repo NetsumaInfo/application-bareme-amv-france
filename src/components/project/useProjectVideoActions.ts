@@ -8,16 +8,16 @@ import type { Clip } from '@/types/project'
 import * as tauri from '@/services/tauri'
 import { useI18n } from '@/i18n'
 
+async function buildImportedClipsFromFolder(folderPath: string): Promise<Clip[]> {
+  const { clips: latestClips, currentProject: latestProject } = useProjectStore.getState()
+  const clipNamePattern = latestProject?.settings.clipNamePattern ?? 'pseudo_clip'
+  const videos = await tauri.scanVideoFolder(folderPath)
+  return videos.map((video, index) => createClipFromVideoMeta(video, latestClips.length + index, clipNamePattern))
+}
+
 export function useProjectVideoActions() {
   const { t } = useI18n()
   const { currentProject, clips, setClips, updateProject } = useProjectStore()
-
-  const buildImportedClipsFromFolder = async (folderPath: string): Promise<Clip[]> => {
-    const { clips: latestClips, currentProject: latestProject } = useProjectStore.getState()
-    const clipNamePattern = latestProject?.settings.clipNamePattern ?? 'pseudo_clip'
-    const videos = await tauri.scanVideoFolder(folderPath)
-    return videos.map((video, index) => createClipFromVideoMeta(video, latestClips.length + index, clipNamePattern))
-  }
 
   const handleImportFolder = async () => {
     if (!currentProject) return

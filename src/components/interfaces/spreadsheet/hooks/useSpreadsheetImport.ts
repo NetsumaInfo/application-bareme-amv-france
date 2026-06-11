@@ -67,9 +67,10 @@ export function useSpreadsheetImport({
   const handleFileDrop = useCallback(async (paths: string[]) => {
     const latestClips = useProjectStore.getState().clips
     const existingPaths = new Set(
-      latestClips
-        .map((clip) => normalizeFilePath(clip.filePath))
-        .filter((path) => Boolean(path)),
+      latestClips.flatMap((clip) => {
+        const path = normalizeFilePath(clip.filePath)
+        return path ? [path] : []
+      }),
     )
     const queuedPaths = new Set<string>()
     const videoPaths = paths.filter((pathValue) => {

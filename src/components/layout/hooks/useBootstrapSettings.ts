@@ -41,6 +41,9 @@ export function useBootstrapSettings({ loadCustomBaremes }: UseBootstrapSettings
         if (typeof settings.showAudioDb === 'boolean') {
           nextState.showAudioDb = settings.showAudioDb
         }
+        if (typeof settings.showTooltips === 'boolean') {
+          nextState.showTooltips = settings.showTooltips
+        }
         if (typeof settings.confirmClipDeletion === 'boolean') {
           nextState.confirmClipDeletion = settings.confirmClipDeletion
         }

@@ -4,13 +4,13 @@ import { useUIStore } from '@/store/useUIStore'
 import * as tauri from '@/services/tauri'
 import { rememberRecentProjectPath } from '@/services/recentProjects'
 import { loadAndApplyProjectFile } from '@/services/projectSession'
+import { resolveProjectBareme } from '@/store/projectStoreProjectActions'
 import { useI18n } from '@/i18n'
 
 export function useProjectFileActions() {
   const { t } = useI18n()
   const {
     currentProject,
-    clips,
     setFilePath,
     markClean,
     getProjectData,
@@ -38,7 +38,11 @@ export function useProjectFileActions() {
   const saveProjectTo = async (filePath: string) => {
     const notationState = useNotationStore.getState()
     const notesData = notationState.getNotesData()
-    const activeBareme = notationState.currentBareme
+    const activeBareme = resolveProjectBareme(
+      currentProject?.baremeId,
+      notationState.currentBareme,
+      notationState.availableBaremes,
+    )
     const projectData = getProjectData(notesData, activeBareme)
     if (!projectData) return
 
@@ -86,25 +90,12 @@ export function useProjectFileActions() {
     }
   }
 
+  // Single unified export: writes the full contest (project, clips, notes,
+  // embedded bareme, imported judges) so it can be re-imported and auto-linked
+  // or auto-created on the other side. The embedded bareme is resolved from the
+  // project's baremeId (not the mutable currentBareme) to avoid exporting the
+  // wrong/official bareme after a drift. Filename: {concours}_{juge}.json
   const handleExport = async () => {
-    if (!currentProject) return
-
-    try {
-      const filePath = await tauri.saveJsonDialog(`${currentProject.name}.json`)
-      if (!filePath) return
-
-      const notationState = useNotationStore.getState()
-      const notesData = notationState.getNotesData()
-      const projectData = getProjectData(notesData, notationState.currentBareme)
-      if (!projectData) return
-      await tauri.exportJsonFile(projectData, filePath)
-    } catch (errorValue) {
-      console.error('Failed to export:', errorValue)
-      alert(t("Erreur lors de l'export: {error}", { error: String(errorValue) }))
-    }
-  }
-
-  const handleExportJudgeNotes = async () => {
     if (!currentProject) return
 
     try {
@@ -115,30 +106,24 @@ export function useProjectFileActions() {
 
       const notationState = useNotationStore.getState()
       const notesData = notationState.getNotesData()
-      const activeBareme = notationState.currentBareme
-      const activeBaremeId = activeBareme?.id ?? currentProject.baremeId
-      await tauri.exportJsonFile(
-        {
-          version: '1.0',
-          type: 'judge-notes',
-          exportedAt: new Date().toISOString(),
-          projectName: currentProject.name,
-          judgeName: currentProject.judgeName,
-          baremeId: activeBaremeId,
-          bareme: activeBareme ?? null,
-          clips: clips.map((clip) => ({
-            id: clip.id,
-            fileName: clip.fileName,
-            displayName: clip.displayName,
-            author: clip.author,
-          })),
-          notes: notesData,
-        },
-        filePath,
+      const activeBareme = resolveProjectBareme(
+        currentProject.baremeId,
+        notationState.currentBareme,
+        notationState.availableBaremes,
       )
+      const projectData = getProjectData(notesData, activeBareme)
+      if (!projectData) return
+
+      const activeBaremeId = activeBareme?.id
+      if (activeBaremeId) {
+        projectData.baremeId = activeBaremeId
+        projectData.project.baremeId = activeBaremeId
+      }
+
+      await tauri.exportJsonFile(projectData, filePath)
     } catch (errorValue) {
-      console.error('Failed to export judge notes:', errorValue)
-      alert(t("Erreur lors de l'export notation: {error}", { error: String(errorValue) }))
+      console.error('Failed to export:', errorValue)
+      alert(t("Erreur lors de l'export: {error}", { error: String(errorValue) }))
     }
   }
 
@@ -149,6 +134,5 @@ export function useProjectFileActions() {
     handleSave,
     handleSaveAs,
     handleExport,
-    handleExportJudgeNotes,
   }
 }

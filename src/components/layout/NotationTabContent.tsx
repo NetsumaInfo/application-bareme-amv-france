@@ -1,7 +1,15 @@
+import { lazy, Suspense } from 'react'
 import { AnimatePresence, LazyMotion, domAnimation, m, useReducedMotion } from 'motion/react'
-import SpreadsheetInterface from '@/components/interfaces/SpreadsheetInterface'
-import NotationInterface from '@/components/interfaces/NotationInterface'
 import { useUIStore } from '@/store/useUIStore'
+
+const SpreadsheetInterface = lazy(() => import('@/components/interfaces/SpreadsheetInterface'))
+const NotationInterface = lazy(() => import('@/components/interfaces/NotationInterface'))
+
+function NotationLoadingFallback() {
+  return (
+    <div className="flex-1 flex items-center justify-center text-xs text-gray-500" />
+  )
+}
 
 function ScoringInterface() {
   const prefersReducedMotion = useReducedMotion()
@@ -32,7 +40,9 @@ export function NotationTabContent() {
     return (
       <div className="flex flex-1 overflow-hidden">
         <div className="flex-1 overflow-hidden">
-          <SpreadsheetInterface />
+          <Suspense fallback={<NotationLoadingFallback />}>
+            <SpreadsheetInterface />
+          </Suspense>
         </div>
       </div>
     )
@@ -40,7 +50,9 @@ export function NotationTabContent() {
 
   return (
     <div className="flex flex-1 overflow-hidden">
-      <ScoringInterface />
+      <Suspense fallback={<NotationLoadingFallback />}>
+        <ScoringInterface />
+      </Suspense>
     </div>
   )
 }

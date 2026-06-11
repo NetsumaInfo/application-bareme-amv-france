@@ -13,7 +13,9 @@ function clamp(value: number, min: number, max: number) {
 
 export default function SubtitleSelector() {
   const { t } = useI18n()
-  const { subtitleTracks, currentSubtitleId, setCurrentSubtitleId } = usePlayerStore()
+  const subtitleTracks = usePlayerStore((s) => s.subtitleTracks)
+  const currentSubtitleId = usePlayerStore((s) => s.currentSubtitleId)
+  const setCurrentSubtitleId = usePlayerStore((s) => s.setCurrentSubtitleId)
   const [open, setOpen] = useState(false)
   const [menuStyle, setMenuStyle] = useState<{ top: number; left: number; width: number }>({
     top: 0,
@@ -109,6 +111,7 @@ export default function SubtitleSelector() {
         style={{ top: menuStyle.top, left: menuStyle.left, width: menuStyle.width }}
       >
         <button
+          type="button"
           onClick={() => handleSelect(null)}
           className={`w-full text-left px-3 py-1.5 text-[11px] hover:bg-gray-800 transition-colors ${
             currentSubtitleId === null ? 'text-primary-400 font-medium' : 'text-gray-300'
@@ -119,6 +122,7 @@ export default function SubtitleSelector() {
         {subtitleTracks.map((track) => (
           <button
             key={track.id}
+            type="button"
             onClick={() => handleSelect(track.id)}
             className={`w-full text-left px-3 py-1.5 text-[11px] hover:bg-gray-800 transition-colors ${
               currentSubtitleId === track.id ? 'text-primary-400 font-medium' : 'text-gray-300'
@@ -138,6 +142,7 @@ export default function SubtitleSelector() {
       <HoverTextTooltip text={hasTracks ? t('Sous-titres') : t('Pas de sous-titres')}>
         <button
           ref={buttonRef}
+          type="button"
           onClick={() => {
             if (!hasTracks) return
             if (!open) updateMenuPosition()

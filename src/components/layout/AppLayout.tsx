@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
+import { useShallow } from 'zustand/react/shallow'
 import { getCurrentWindow } from '@tauri-apps/api/window'
 import { AppMainContent } from '@/components/layout/AppMainContent'
 import { AppFloatingLayers } from '@/components/layout/AppFloatingLayers'
@@ -26,33 +27,64 @@ import { applyLanguageToDocument } from '@/i18n/config'
 import * as tauri from '@/services/tauri'
 
 export default function AppLayout() {
-  const { currentProject, clips, currentClipIndex } = useProjectStore()
+  const currentProject = useProjectStore((state) => state.currentProject)
+  const clips = useProjectStore((state) => state.clips)
+  const currentClipIndex = useProjectStore((state) => state.currentClipIndex)
   const currentBareme = useNotationStore((state) => state.currentBareme)
   const notes = useNotationStore((state) => state.notes)
   const loadCustomBaremes = useNotationStore((state) => state.loadCustomBaremes)
   const {
     currentTab,
-    switchTab,
     currentInterface,
     showPipVideo,
-    setShowPipVideo,
     showProjectModal,
     showBaremeEditor,
     zoomLevel,
     zoomMode,
     hideFinalScore,
+    shortcutBindings,
+    isNotesDetached,
+    appTheme,
+    primaryColorPreset,
+    language,
+  } = useUIStore(
+    useShallow((state) => ({
+      currentTab: state.currentTab,
+      currentInterface: state.currentInterface,
+      showPipVideo: state.showPipVideo,
+      showProjectModal: state.showProjectModal,
+      showBaremeEditor: state.showBaremeEditor,
+      zoomLevel: state.zoomLevel,
+      zoomMode: state.zoomMode,
+      hideFinalScore: state.hideFinalScore,
+      shortcutBindings: state.shortcutBindings,
+      isNotesDetached: state.isNotesDetached,
+      appTheme: state.appTheme,
+      primaryColorPreset: state.primaryColorPreset,
+      language: state.language,
+    })),
+  )
+  const {
+    switchTab,
+    setShowPipVideo,
     zoomIn,
     zoomOut,
     resetZoom,
     setShowProjectModal,
-    shortcutBindings,
-    isNotesDetached,
     setNotesDetached,
     setShowBaremeEditor,
-    appTheme,
-    primaryColorPreset,
-    language,
-  } = useUIStore()
+  } = useUIStore(
+    useShallow((state) => ({
+      switchTab: state.switchTab,
+      setShowPipVideo: state.setShowPipVideo,
+      zoomIn: state.zoomIn,
+      zoomOut: state.zoomOut,
+      resetZoom: state.resetZoom,
+      setShowProjectModal: state.setShowProjectModal,
+      setNotesDetached: state.setNotesDetached,
+      setShowBaremeEditor: state.setShowBaremeEditor,
+    })),
+  )
   const { togglePause, seekRelative, toggleFullscreen, exitFullscreen, pause, frameStep, frameBackStep } = usePlayer()
   const isPlayerLoaded = usePlayerStore((state) => state.isLoaded)
   const isFullscreen = usePlayerStore((state) => state.isFullscreen)

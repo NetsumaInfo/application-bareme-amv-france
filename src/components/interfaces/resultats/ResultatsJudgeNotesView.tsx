@@ -115,6 +115,7 @@ function ClipMenu({
         className="overflow-y-auto p-1"
         style={{ maxHeight: `${menuStyle.maxHeight}px` }}
         role="listbox"
+        tabIndex={-1}
         aria-activedescendant={`judge-notes-clip-option-${selectedClip.id}`}
       >
         {clipOptions.map(({ clip, label }) => {
@@ -329,7 +330,9 @@ function ResultatsJudgeCategorySection({
                         className="border-b border-r border-gray-800/60 px-2 py-1.5"
                         style={{ backgroundColor: withAlpha(color, 0.04) }}
                       >
-                      <InlineNote clipId={selectedClip.id} text={criterionNote} color={color} handlers={handlers} />
+                      <div className="max-h-[200px] overflow-y-auto overflow-x-hidden pr-1">
+                        <InlineNote clipId={selectedClip.id} text={criterionNote} color={color} handlers={handlers} />
+                      </div>
                     </td>
                   )
                 })}
@@ -349,7 +352,9 @@ function ResultatsJudgeCategorySection({
                     className="border-b border-r border-gray-800/60 px-2 py-1.5"
                     style={{ backgroundColor: withAlpha(color, 0.04) }}
                   >
-                    <InlineNote clipId={selectedClip.id} text={categoryNote} color={color} handlers={handlers} />
+                    <div className="max-h-[200px] overflow-y-auto overflow-x-hidden pr-1">
+                      <InlineNote clipId={selectedClip.id} text={categoryNote} color={color} handlers={handlers} />
+                    </div>
                   </td>
                 )
               })}
@@ -391,7 +396,9 @@ function GlobalNotesSection({
               style={{ boxShadow: `inset 2px 0 0 0 ${withAlpha(color, 0.9)}` }}
             >
               <div className="mb-1 text-[10px] font-medium" style={{ color }}>{judge.judgeName}</div>
-              <InlineNote clipId={selectedClip.id} text={text} color={color} handlers={handlers} />
+              <div className="max-h-[280px] overflow-y-auto overflow-x-hidden pr-1">
+                <InlineNote clipId={selectedClip.id} text={text} color={color} handlers={handlers} />
+              </div>
             </div>
           )
         })}
@@ -452,7 +459,7 @@ function FavoritesSection({
               <div className="mb-1 text-[10px] font-medium" style={{ color }}>
                 {favorite.judgeName}
               </div>
-              <div className="text-[11px] text-gray-200">
+              <div className="max-h-[200px] overflow-y-auto overflow-x-hidden pr-1 text-[11px] text-gray-200">
                 {favorite.comment || t('Favori')}
               </div>
             </div>

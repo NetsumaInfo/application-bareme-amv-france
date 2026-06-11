@@ -13,7 +13,7 @@ import { UI_SETTINGS_UPDATED_EVENT, type UiSettingsUpdatePayload } from '@/utils
 
 type SyncedUiState = Pick<
   ReturnType<typeof useUIStore.getState>,
-  'appTheme' | 'primaryColorPreset' | 'language' | 'showAudioDb' | 'confirmClipDeletion' | 'shortcutBindings'
+  'appTheme' | 'primaryColorPreset' | 'language' | 'showAudioDb' | 'showTooltips' | 'confirmClipDeletion' | 'shortcutBindings'
 >
 
 function extractUiSettingsPatch(input: unknown): Partial<SyncedUiState> {
@@ -26,6 +26,10 @@ function extractUiSettingsPatch(input: unknown): Partial<SyncedUiState> {
 
   if (typeof settings.showAudioDb === 'boolean') {
     nextState.showAudioDb = settings.showAudioDb
+  }
+
+  if (typeof settings.showTooltips === 'boolean') {
+    nextState.showTooltips = settings.showTooltips
   }
 
   if (typeof settings.confirmClipDeletion === 'boolean') {

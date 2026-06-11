@@ -276,6 +276,7 @@ export function AppSelect<T extends AppSelectValue>({
         className={`inline-flex w-full items-center justify-between gap-2 rounded-lg bg-surface-dark/70 text-left text-gray-200 ring-1 ring-inset ring-primary-400/10 transition-colors hover:bg-surface-light/70 focus:outline-hidden focus:ring-2 focus:ring-primary-500/30 disabled:cursor-not-allowed disabled:opacity-50 ${
           size === 'md' ? 'h-8 px-2.5 text-xs' : 'h-7 px-2 text-xs'
         } ${triggerClassName}`.trim()}
+        role="combobox"
         aria-label={ariaLabel ?? textLabel}
         aria-haspopup="listbox"
         aria-controls={open ? listboxId : undefined}

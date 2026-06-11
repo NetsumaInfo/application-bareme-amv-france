@@ -41,6 +41,30 @@ export function mergeProjectSettings(current: Project, settings: Partial<Project
   }
 }
 
+/**
+ * Resolve the bareme that should be persisted/exported for a project.
+ *
+ * `currentBareme` (notation store) is mutable and can drift away from the
+ * project's actual selection (e.g. a baremes-folder reload falling back to the
+ * official bareme). The project's `baremeId` is the reliable anchor, so prefer
+ * the matching bareme from `availableBaremes` whenever `currentBareme` does not
+ * match it. This prevents exporting/saving the wrong (often official) bareme.
+ */
+export function resolveProjectBareme(
+  baremeId: string | undefined,
+  currentBareme: Bareme | null | undefined,
+  availableBaremes: Bareme[],
+): Bareme | null {
+  if (currentBareme && (!baremeId || currentBareme.id === baremeId)) {
+    return currentBareme
+  }
+  if (baremeId) {
+    const match = availableBaremes.find((item) => item.id === baremeId)
+    if (match) return match
+  }
+  return currentBareme ?? null
+}
+
 export function buildProjectDataPayload(
   currentProject: Project,
   clips: Clip[],

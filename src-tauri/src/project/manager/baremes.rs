@@ -40,8 +40,7 @@ pub fn default_baremes_folder() -> Result<String, String> {
 pub fn save_bareme_file(data: serde_json::Value, bareme_id: String) -> Result<(), String> {
     let path = bareme_file_path(&data, &bareme_id)?;
     json_io::write_pretty_json(&path, &data, "save bareme")?;
-    cleanup_same_id_bareme_files(Some(&path), &bareme_id)?;
-    cleanup_duplicate_bareme_files(Some(&path), Some(&data))
+    cleanup_bareme_files(Some(&path), Some(&data), &bareme_id)
 }
 
 pub fn delete_bareme_file(bareme_id: String) -> Result<(), String> {
@@ -49,7 +48,7 @@ pub fn delete_bareme_file(bareme_id: String) -> Result<(), String> {
     if legacy_path.exists() {
         fs::remove_file(legacy_path).map_err(|e| format!("Failed to delete bareme: {}", e))?;
     }
-    cleanup_same_id_bareme_files(None, &bareme_id)
+    cleanup_bareme_files(None, None, &bareme_id)
 }
 
 pub fn load_baremes_files() -> Result<Vec<serde_json::Value>, String> {
@@ -99,14 +98,18 @@ pub fn load_baremes_files() -> Result<Vec<serde_json::Value>, String> {
     Ok(baremes)
 }
 
-fn cleanup_duplicate_bareme_files(
+/// Single-pass cleanup of stale bareme files. Scans the folder once, parses each
+/// candidate once, and deletes any file (other than `kept_path`) that either
+/// shares `bareme_id` or matches the dedup fingerprint of `kept_value`. Replaces
+/// the previous two-scan approach (same-id + duplicate passes) that re-read every
+/// file twice on each save.
+fn cleanup_bareme_files(
     kept_path: Option<&Path>,
     kept_value: Option<&serde_json::Value>,
+    bareme_id: &str,
 ) -> Result<(), String> {
     let folder = paths::baremes_folder()?;
-    let Some(reference) = kept_value.and_then(bareme_dedup_key) else {
-        return Ok(());
-    };
+    let reference = kept_value.and_then(bareme_dedup_key);
 
     let entries =
         fs::read_dir(folder).map_err(|e| format!("Failed to read baremes folder: {}", e))?;
@@ -128,44 +131,22 @@ fn cleanup_duplicate_bareme_files(
             Err(_) => continue,
         };
 
-        if bareme_dedup_key(&parsed).as_deref() == Some(reference.as_str()) {
+        let id_matches = parsed
+            .get("id")
+            .and_then(|value| value.as_str())
+            .map(|value| value.trim())
+            .filter(|value| !value.is_empty())
+            == Some(bareme_id);
+        let dup_matches = reference
+            .as_deref()
+            .is_some_and(|reference| bareme_dedup_key(&parsed).as_deref() == Some(reference));
+
+        if id_matches || dup_matches {
             let _ = fs::remove_file(path);
         }
     }
 
     Ok(())
-}
-
-fn cleanup_same_id_bareme_files(kept_path: Option<&Path>, bareme_id: &str) -> Result<(), String> {
-    let folder = paths::baremes_folder()?;
-    let entries =
-        fs::read_dir(folder).map_err(|e| format!("Failed to read baremes folder: {}", e))?;
-
-    for entry in entries.flatten() {
-        let path = entry.path();
-        if path.extension().and_then(|e| e.to_str()) != Some("json") {
-            continue;
-        }
-        if kept_path.is_some_and(|candidate| candidate == path.as_path()) {
-            continue;
-        }
-
-        if read_bareme_id(&path).as_deref() == Some(bareme_id) {
-            let _ = fs::remove_file(path);
-        }
-    }
-
-    Ok(())
-}
-
-fn read_bareme_id(path: &Path) -> Option<String> {
-    let content = fs::read_to_string(path).ok()?;
-    let parsed = serde_json::from_str::<serde_json::Value>(&content).ok()?;
-    parsed
-        .get("id")
-        .and_then(|value| value.as_str())
-        .map(|value| value.trim().to_string())
-        .filter(|value| !value.is_empty())
 }
 
 fn bareme_dedup_key(value: &serde_json::Value) -> Option<String> {

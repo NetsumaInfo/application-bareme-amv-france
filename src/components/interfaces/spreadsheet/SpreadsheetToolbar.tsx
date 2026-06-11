@@ -8,6 +8,10 @@ import { UI_ICONS } from '@/components/ui/actionIcons'
 import { ALL_CONTEST_CATEGORY_KEY } from '@/utils/contestCategory'
 import { withAlpha } from '@/utils/colors'
 
+function isFileDragEvent(event: DragEvent<HTMLButtonElement>) {
+  return Array.from(event.dataTransfer?.types ?? []).includes('Files')
+}
+
 interface ToolbarIconButtonProps {
   ariaLabel: string
   title: string
@@ -160,9 +164,6 @@ export function SpreadsheetToolbar({
     ? (showPipVideo ? t('Masquer la vidéo PiP') : t('Ouvrir la vidéo'))
     : t('Vidéo PiP indisponible (pas de média)')
   const showContestCategoryBar = contestCategoriesEnabled && contestCategoryViewTabs.length > 1
-  const isFileDragEvent = (event: DragEvent<HTMLButtonElement>) => (
-    Array.from(event.dataTransfer?.types ?? []).includes('Files')
-  )
 
   return (
     <div className="relative flex shrink-0 items-center border-b border-gray-700/50 py-px">

@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { FilePlus, FolderOpen, Folder, Trash2 } from 'lucide-react'
 import { useUIStore } from '@/store/useUIStore'
 import * as tauri from '@/services/tauri'
-import { forgetRecentProjectPath, listRecentProjectPaths, rememberRecentProjectPath, setRecentProjectPaths } from '@/services/recentProjects'
+import { forgetRecentProjectPath, hideProjectPath, listHiddenProjectPaths, listRecentProjectPaths, rememberRecentProjectPath, setRecentProjectPaths } from '@/services/recentProjects'
 import { loadAndApplyProjectFile } from '@/services/projectSession'
 import { HoverTextTooltip } from '@/components/ui/HoverTextTooltip'
 import { ProjectDeletionConfirmDialog } from '@/components/project/ProjectDeletionConfirmDialog'
@@ -71,15 +71,16 @@ export function WelcomeScreen() {
         const folder = await tauri.getDefaultProjectsFolder()
 
         const list = await tauri.listProjectsInFolder(folder)
+        const hiddenPaths = new Set(await listHiddenProjectPaths())
         const byPath = new Map<string, ProjectListItem>(
-          list.map((project) => {
-            const mapped = mapSummaryToProjectListItem(project)
-            return [mapped.filePath, mapped] as const
-          }),
+          list
+            .map((project) => mapSummaryToProjectListItem(project))
+            .filter((mapped) => !hiddenPaths.has(mapped.filePath))
+            .map((mapped) => [mapped.filePath, mapped] as const),
         )
 
         const recentPaths = await listRecentProjectPaths()
-        const missingPaths = recentPaths.filter((path) => !byPath.has(path))
+        const missingPaths = recentPaths.filter((path) => !byPath.has(path) && !hiddenPaths.has(path))
 
         const loadedRecent = await Promise.all(
           missingPaths.map(async (path) => {
@@ -180,6 +181,27 @@ export function WelcomeScreen() {
     }
   }, [isDeletingProject, projectToDelete, t])
 
+  const handleRemoveProjectFromList = useCallback(async () => {
+    if (!projectToDelete || isDeletingProject) return
+
+    const filePath = projectToDelete.filePath
+    setIsDeletingProject(true)
+
+    try {
+      await hideProjectPath(filePath)
+      setScreenState((current) => ({
+        ...current,
+        projects: current.projects.filter((project) => project.filePath !== filePath),
+      }))
+      setProjectToDelete(null)
+    } catch (error) {
+      console.error('Failed to remove project from list:', error)
+      alert(t('Impossible de retirer ce projet de la liste: {error}', { error: String(error) }))
+    } finally {
+      setIsDeletingProject(false)
+    }
+  }, [isDeletingProject, projectToDelete, t])
+
   return (
     <div className="relative flex-1 flex items-center justify-center" data-context-scope="welcome">
       <div className="w-full max-w-md px-6">
@@ -189,6 +211,7 @@ export function WelcomeScreen() {
 
         <div className="flex gap-3 mb-8">
           <button
+            type="button"
             onClick={() => setShowProjectModal(true)}
             className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg bg-primary-600 hover:bg-primary-500 text-white text-sm font-medium transition-colors"
           >
@@ -196,6 +219,7 @@ export function WelcomeScreen() {
             {t('Nouveau projet')}
           </button>
           <button
+            type="button"
             onClick={handleOpenProject}
             className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg bg-surface hover:bg-surface-light text-gray-300 hover:text-white text-sm font-medium transition-colors border border-gray-700"
           >
@@ -285,6 +309,7 @@ export function WelcomeScreen() {
           isDeleting={isDeletingProject}
           onCancel={handleCancelProjectDeletion}
           onConfirm={handleConfirmProjectDeletion}
+          onRemoveFromList={handleRemoveProjectFromList}
         />
       ) : null}
     </div>

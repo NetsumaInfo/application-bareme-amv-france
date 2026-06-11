@@ -4,9 +4,10 @@ import type { TrackItem } from '@/services/tauri'
 
 interface UseOverlayTracksParams {
   resetHideTimer: () => void
+  isOverlayActive: boolean
 }
 
-export function useOverlayTracks({ resetHideTimer }: UseOverlayTracksParams) {
+export function useOverlayTracks({ resetHideTimer, isOverlayActive }: UseOverlayTracksParams) {
   const [subtitleTracks, setSubtitleTracks] = useState<TrackItem[]>([])
   const [audioTracks, setAudioTracks] = useState<TrackItem[]>([])
   const [currentSubtitleId, setCurrentSubtitleId] = useState<number | null>(null)
@@ -38,10 +39,14 @@ export function useOverlayTracks({ resetHideTimer }: UseOverlayTracksParams) {
   }, [])
 
   useEffect(() => {
+    // Only poll track list while overlay is visible. Hidden/precreated overlay
+    // keeps no background timer. Real-time player sync is a separate hook and
+    // is unaffected by this gate.
+    if (!isOverlayActive) return
     refreshTracks()
     const interval = setInterval(refreshTracks, 1200)
     return () => clearInterval(interval)
-  }, [refreshTracks])
+  }, [refreshTracks, isOverlayActive])
 
   useEffect(() => {
     if (!subMenuOpen && !audioMenuOpen) return

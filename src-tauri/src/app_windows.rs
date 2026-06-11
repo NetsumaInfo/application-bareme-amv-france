@@ -196,6 +196,36 @@ pub fn precreate_aux_windows(app: &tauri::App) {
             }
         }
     }
+
+    if app.get_webview_window("player-menu-window").is_none() {
+        match WebviewWindowBuilder::new(
+            app,
+            "player-menu-window",
+            WebviewUrl::App("player-menu.html".into()),
+        )
+        .transparent(true)
+        .decorations(false)
+        .shadow(false)
+        .always_on_top(true)
+        .visible(false)
+        .focused(false)
+        .skip_taskbar(true)
+        .resizable(false)
+        .inner_size(180.0, 360.0)
+        .title("AMV Notation Menu")
+        .initialization_script(
+            "window.__AMV_PLAYER_MENU_WINDOW__ = true; window.__AMV_FULLSCREEN_OVERLAY__ = false; window.__AMV_NOTES_WINDOW__ = false;",
+        )
+        .build()
+        {
+            Ok(menu) => {
+                let _ = menu.hide();
+            }
+            Err(e) => {
+                eprintln!("[AMV] Failed to precreate player menu window: {}", e);
+            }
+        }
+    }
 }
 
 pub fn handle_window_event(window: &tauri::Window, event: &tauri::WindowEvent) {
@@ -214,6 +244,9 @@ pub fn handle_window_event(window: &tauri::Window, event: &tauri::WindowEvent) {
                     app_handle.get_webview_window("resultats-notes-window")
                 {
                     let _ = resultats_notes.close();
+                }
+                if let Some(menu) = app_handle.get_webview_window("player-menu-window") {
+                    let _ = menu.close();
                 }
             } else if label == "notes-window" {
                 let _ = app_handle.emit("notes:close", ());

@@ -47,7 +47,7 @@ export function useSpreadsheetFrameTools({
   const [clipFps, setClipFps] = useState<number | null>(null)
   const [framePreview, setFramePreview] = useState<FramePreviewState>(EMPTY_PREVIEW)
 
-  const framePreviewCacheRef = useRef<Map<string, string>>(new Map())
+  const framePreviewCacheRef = useRef(new Map<string, string>())
   const hoverRequestRef = useRef(0)
 
   const insertTextAtCursor = useCallback((textarea: HTMLTextAreaElement, insertion: string) => {

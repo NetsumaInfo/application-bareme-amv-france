@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, type MutableRefObject } from 'react'
+import { useCallback, useEffect, useMemo, useRef, type MutableRefObject } from 'react'
 import { emit } from '@tauri-apps/api/event'
 import { usePlayerStore } from '@/store/usePlayerStore'
 import { buildNoteTimecodeMarkers, type NoteTimecodeMarker } from '@/utils/timecodes'
@@ -114,26 +114,37 @@ export function useFloatingPlayerBridge({
     }
   }, [videoAreaRef])
 
+  const rafId = useRef<number | null>(null)
+
   useEffect(() => {
     const element = videoAreaRef.current
     if (!element) return
 
-    const observer = new ResizeObserver(() => updateGeometry())
+    const scheduleUpdate = () => {
+      if (rafId.current !== null) return
+      rafId.current = requestAnimationFrame(() => {
+        rafId.current = null
+        updateGeometry()
+      })
+    }
+
+    const observer = new ResizeObserver(() => scheduleUpdate())
     observer.observe(element)
-    window.addEventListener('resize', updateGeometry)
+    window.addEventListener('resize', scheduleUpdate)
     updateGeometry()
 
     return () => {
       observer.disconnect()
-      window.removeEventListener('resize', updateGeometry)
+      window.removeEventListener('resize', scheduleUpdate)
+      if (rafId.current !== null) {
+        cancelAnimationFrame(rafId.current)
+        rafId.current = null
+      }
     }
   }, [updateGeometry, videoAreaRef])
 
-  useEffect(() => {
-    if (!currentClip) return
-    const timer = setInterval(updateGeometry, 200)
-    return () => clearInterval(timer)
-  }, [currentClip, updateGeometry])
+  // Geometry is fully covered by ResizeObserver + window resize + position effect;
+  // no periodic fallback timer needed.
 
   useEffect(() => {
     if (!currentClip?.filePath) {
@@ -143,6 +154,7 @@ export function useFloatingPlayerBridge({
       return
     }
 
+    let geometryTimer: ReturnType<typeof setTimeout> | undefined
     const store = usePlayerStore.getState()
     if (store.isLoaded && store.currentFilePath === currentClip.filePath) {
       tauri.playerShow().catch(() => {})
@@ -157,9 +169,13 @@ export function useFloatingPlayerBridge({
           tauri.playerShow().catch(() => {})
           tauri.playerPlay().catch(() => {})
           loadTracks().catch(() => {})
-          setTimeout(updateGeometry, 50)
+          geometryTimer = setTimeout(updateGeometry, 50)
         })
         .catch(console.error)
+    }
+
+    return () => {
+      if (geometryTimer) clearTimeout(geometryTimer)
     }
   }, [currentClip?.filePath, loadTracks, updateGeometry])
 

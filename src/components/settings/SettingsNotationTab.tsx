@@ -43,6 +43,7 @@ export function SettingsNotationTab({
         <div className="flex items-start justify-between gap-3 mb-3">
           <p className={SECTION_LABEL + ' mb-0'}>{t('Barème')}</p>
           <button
+            type="button"
             onClick={onOpenBaremeEditor}
             className="text-[10px] text-primary-400 hover:text-primary-300 transition-colors shrink-0"
           >
@@ -80,12 +81,13 @@ export function SettingsNotationTab({
               onChange={() =>
                 onUpdateSettings({ hideFinalScoreUntilEnd: !(settings?.hideFinalScoreUntilEnd ?? false) })
               }
+              ariaLabel={t('Masquer les totaux jusqu\'à tout noter')}
             />
           </div>
 
           <div className={ROW}>
             <span className="min-w-0 pr-2 text-sm text-gray-300">{t('Masquer les scores')}</span>
-            <SettingsToggle checked={hideFinalScore} onChange={onToggleFinalScore} />
+            <SettingsToggle checked={hideFinalScore} onChange={onToggleFinalScore} ariaLabel={t('Masquer les scores')} />
           </div>
 
           <div className={ROW}>
@@ -93,12 +95,13 @@ export function SettingsNotationTab({
             <SettingsToggle
               checked={Boolean(settings?.hideTotals)}
               onChange={() => onUpdateSettings({ hideTotals: !(settings?.hideTotals ?? false) })}
+              ariaLabel={t('Masquer les totaux')}
             />
           </div>
 
           <div className={ROW}>
             <span className="min-w-0 pr-2 text-sm text-gray-300">{t('Masquer les moyennes')}</span>
-            <SettingsToggle checked={hideAverages} onChange={onToggleAverages} />
+            <SettingsToggle checked={hideAverages} onChange={onToggleAverages} ariaLabel={t('Masquer les moyennes')} />
           </div>
         </div>
       </div>
@@ -109,7 +112,7 @@ export function SettingsNotationTab({
         <div className="space-y-2">
           <div className={ROW}>
             <span className="min-w-0 pr-2 text-sm text-gray-300">{t('Masquer les commentaires')}</span>
-            <SettingsToggle checked={hideTextNotes} onChange={onToggleTextNotes} />
+            <SettingsToggle checked={hideTextNotes} onChange={onToggleTextNotes} ariaLabel={t('Masquer les commentaires')} />
           </div>
         </div>
       </div>

@@ -13,15 +13,15 @@ type BaremeEditorMode = 'list' | 'edit'
 
 export function useBaremeEditorState() {
   const { t } = useI18n()
-  const {
-    showBaremeEditor,
-    setShowBaremeEditor,
-    requestedBaremeEditorId,
-    setRequestedBaremeEditorId,
-    baremesFolderPath,
-    setBaremesFolderPath,
-  } = useUIStore()
-  const { addBareme, availableBaremes, removeBareme } = useNotationStore()
+  const showBaremeEditor = useUIStore((s) => s.showBaremeEditor)
+  const setShowBaremeEditor = useUIStore((s) => s.setShowBaremeEditor)
+  const requestedBaremeEditorId = useUIStore((s) => s.requestedBaremeEditorId)
+  const setRequestedBaremeEditorId = useUIStore((s) => s.setRequestedBaremeEditorId)
+  const baremesFolderPath = useUIStore((s) => s.baremesFolderPath)
+  const setBaremesFolderPath = useUIStore((s) => s.setBaremesFolderPath)
+  const addBareme = useNotationStore((s) => s.addBareme)
+  const availableBaremes = useNotationStore((s) => s.availableBaremes)
+  const removeBareme = useNotationStore((s) => s.removeBareme)
 
   const [mode, setMode] = useState<BaremeEditorMode>('list')
   const {
@@ -45,6 +45,7 @@ export function useBaremeEditorState() {
     setHideTotalsUntilAllScored,
     moveCategory,
     moveCriterion,
+    swapCriteria,
     removeCriterion,
     updateCriterion,
     updateCategoryForCriterion,
@@ -162,6 +163,7 @@ export function useBaremeEditorState() {
     setHideTotalsUntilAllScored,
     moveCategory,
     moveCriterion,
+    swapCriteria,
     removeCriterion,
     updateCriterion,
     updateCategoryForCriterion,

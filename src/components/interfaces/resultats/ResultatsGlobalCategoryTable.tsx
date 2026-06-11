@@ -21,6 +21,10 @@ interface ResultatsGlobalCategoryTableProps {
   thumbnailDefaultSeconds: number
   forceMiniatureLoad?: boolean
   staticExport?: boolean
+  /** When provided, renders a trailing "Commentaires" column (export only). */
+  getRowComment?: (clipId: string) => string
+  /** When provided, attaches the comment as a hover tooltip on the participant cell (HTML export). */
+  getRowCommentTitle?: (clipId: string) => string
 }
 
 function formatAverage(values: number[]): string {
@@ -43,6 +47,8 @@ export function ResultatsGlobalCategoryTable({
   thumbnailDefaultSeconds,
   forceMiniatureLoad = false,
   staticExport = false,
+  getRowComment,
+  getRowCommentTitle,
 }: ResultatsGlobalCategoryTableProps) {
   const { t } = useI18n()
   const judgeBandMinWidth = Math.max(184, (judges.length + 1) * 68)
@@ -84,6 +90,14 @@ export function ResultatsGlobalCategoryTable({
               {t('Total final')}
               <div className="text-gray-500 font-normal">/{currentBaremeTotalPoints}</div>
             </th>
+            {getRowComment && (
+              <th
+                rowSpan={2}
+                className="border-b border-r border-gray-700/60 bg-surface px-2 py-1 text-left align-middle text-[10px] font-semibold text-gray-500 min-w-[160px]"
+              >
+                {t('Commentaires')}
+              </th>
+            )}
           </tr>
           <tr>
             {categoryGroups.map((group) => (
@@ -124,6 +138,7 @@ export function ResultatsGlobalCategoryTable({
         <tbody>
           {rows.map((row, index) => {
             const isSelected = selectedClipId === row.clip.id
+            const commentTitle = getRowCommentTitle?.(row.clip.id)?.trim() || undefined
             return (
               <tr
                 key={row.clip.id}
@@ -140,7 +155,8 @@ export function ResultatsGlobalCategoryTable({
                   {index + 1}
                 </td>
                 <td
-                  className={` border-r border-gray-800/60 bg-surface px-2 py-1 ${RESULTATS_PARTICIPANT_COLUMN_WIDTH_CLASS}`}
+                  title={commentTitle}
+                  className={` border-r border-gray-800/60 bg-surface px-2 py-1 ${commentTitle ? 'cursor-help' : ''} ${RESULTATS_PARTICIPANT_COLUMN_WIDTH_CLASS}`}
                   onDoubleClick={(event) => {
                     event.stopPropagation()
                     onOpenClipInNotation(row.clip.id)
@@ -152,7 +168,10 @@ export function ResultatsGlobalCategoryTable({
                   }}
                 >
                   <div className={`flex flex-col min-w-0 ${staticExport ? 'leading-snug' : 'leading-tight'}`}>
-                    <span className={`${staticExport ? 'whitespace-normal wrap-break-word' : 'truncate'} text-[11px] font-semibold text-primary-300`}>{getClipPrimaryLabel(row.clip)}</span>
+                    <span className={`flex items-center gap-1 ${staticExport ? 'whitespace-normal wrap-break-word' : 'truncate'} text-[11px] font-semibold text-primary-300`}>
+                      {getClipPrimaryLabel(row.clip)}
+                      {commentTitle ? <span className="shrink-0 text-[9px] text-primary-400/80" aria-hidden="true">💬</span> : null}
+                    </span>
                     {getClipSecondaryLabel(row.clip) && (
                       <span className={`${staticExport ? 'whitespace-normal wrap-break-word' : 'truncate'} text-[8px] text-gray-500`}>{getClipSecondaryLabel(row.clip)}</span>
                     )}
@@ -211,6 +230,12 @@ export function ResultatsGlobalCategoryTable({
                 <td className="amv-number-ui border-r border-gray-700/60 px-2 py-1 text-center font-bold text-white">
                   {row.averageTotal.toFixed(1)}
                 </td>
+
+                {getRowComment && (
+                  <td className="border-r border-gray-800/60 px-2 py-1 align-top text-[10px] leading-snug text-gray-300 whitespace-pre-line wrap-break-word min-w-[160px] max-w-[340px]">
+                    {getRowComment(row.clip.id)}
+                  </td>
+                )}
               </tr>
             )
           })}

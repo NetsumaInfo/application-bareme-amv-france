@@ -41,6 +41,7 @@ export function NotationClipHeader({
       <div className="flex items-center justify-between border-b border-gray-700/80 bg-surface px-3 py-1.5 shrink-0">
         <HoverTextTooltip text={prevClipLabel}>
           <button
+            type="button"
             onClick={() => onNavigate('prev')}
             disabled={currentClipIndex === 0}
             aria-label={prevClipLabel}
@@ -56,6 +57,7 @@ export function NotationClipHeader({
           <div className="flex items-center justify-center gap-1.5 min-w-0 text-[10px] leading-none">
             <HoverTextTooltip text={hasVideo ? t('Ouvrir la vidéo') : t('Vidéo indisponible')}>
               <button
+                type="button"
                 onClick={(event) => {
                   event.stopPropagation()
                   if (!hasVideo) return
@@ -92,6 +94,7 @@ export function NotationClipHeader({
         <div className="flex items-center gap-1">
           <HoverTextTooltip text={nextClipLabel}>
             <button
+              type="button"
               onClick={() => onNavigate('next')}
               disabled={currentClipIndex >= totalClips - 1}
               aria-label={nextClipLabel}

@@ -69,6 +69,7 @@ export default function MediaInfoPanel({ clipName, filePath, onClose }: MediaInf
           <div className="flex items-center gap-1">
             <HoverTextTooltip text={t('Copier les infos')}>
               <button
+                type="button"
                 onClick={copyToClipboard}
                 aria-label={t('Copier les infos')}
                 className="p-1 rounded-sm hover:bg-surface-light text-gray-400 hover:text-white transition-colors shrink-0"
@@ -77,6 +78,7 @@ export default function MediaInfoPanel({ clipName, filePath, onClose }: MediaInf
               </button>
             </HoverTextTooltip>
             <button
+              type="button"
               onClick={onClose}
               className="p-1 rounded-sm hover:bg-surface-light text-gray-400 hover:text-white transition-colors shrink-0"
             >

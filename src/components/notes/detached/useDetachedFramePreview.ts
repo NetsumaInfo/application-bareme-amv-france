@@ -29,7 +29,7 @@ const INITIAL_PREVIEW_STATE: FramePreviewState = {
 }
 
 export function useDetachedFramePreview(clipFilePath?: string) {
-  const framePreviewCacheRef = useRef<Map<string, string>>(new Map())
+  const framePreviewCacheRef = useRef(new Map<string, string>())
   const hoverRequestRef = useRef(0)
   const [framePreview, setFramePreview] = useState<FramePreviewState>(INITIAL_PREVIEW_STATE)
 

@@ -291,7 +291,8 @@ function PosterCanvasScene({
           )
         })}
 
-      {blocks.filter((block) => block.visible).map((block) => {
+      {blocks.flatMap((block) => {
+        if (!block.visible) return []
         const active = activeBlockId === block.id
         const editing = editingBlockId === block.id
         return (
@@ -396,6 +397,12 @@ function getFileNameFromPath(pathValue: string): string {
 
 function isImagePath(pathValue: string): boolean {
   return /\.(png|jpe?g|webp|gif|bmp|svg)$/i.test(pathValue)
+}
+
+function getDroppedImageFiles(event: ReactDragEvent<HTMLDivElement>) {
+  return Array.from(event.dataTransfer.files).filter((file) => (
+    file.type.startsWith('image/') || isImagePath(file.name)
+  ))
 }
 
 function ImageSliderRow({
@@ -606,12 +613,6 @@ function useExportPosterPreviewPanelController({
       yPct: clamp(((event.clientY - rect.top) / rect.height) * 100, 0, 100),
     }
   }
-
-  const getDroppedImageFiles = (event: ReactDragEvent<HTMLDivElement>) => (
-    Array.from(event.dataTransfer.files).filter((file) => (
-      file.type.startsWith('image/') || isImagePath(file.name)
-    ))
-  )
 
   const hasDraggedImagePayload = (event: ReactDragEvent<HTMLDivElement>) => {
     const files = getDroppedImageFiles(event)
