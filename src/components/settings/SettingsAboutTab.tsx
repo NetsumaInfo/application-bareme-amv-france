@@ -198,7 +198,7 @@ export function SettingsAboutTab() {
           <img
             src={appIconUrl}
             alt={t('AMV Notation')}
-            className="h-14 w-14 shrink-0 rounded-2xl object-cover ring-1 ring-inset ring-white/10"
+            className="h-14 w-14 shrink-0 rounded-2xl bg-white/5 object-contain p-1 ring-1 ring-inset ring-primary-400/15"
           />
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">

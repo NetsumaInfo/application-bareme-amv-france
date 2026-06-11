@@ -86,7 +86,8 @@ export function HoverTextTooltip({
   force = false,
   anchor = true,
 }: HoverTextTooltipProps) {
-  const tooltipsEnabled = useUIStore((s) => s.showTooltips)
+  // Le réglage global d'affichage des infobulles a été retiré : elles sont toujours actives.
+  const tooltipsEnabled = true
   const safeText = text.trim()
   const wrapperRef = useRef<HTMLSpanElement | null>(null)
   const tooltipRef = useRef<HTMLDivElement | null>(null)
