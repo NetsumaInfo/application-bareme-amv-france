@@ -1,7 +1,7 @@
 {
   "name": "amv-notation",
   "private": true,
-  "version": "0.9.1",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -9,7 +9,8 @@
     "lint": "eslint .",
     "i18n:sync": "node scripts/sync-i18n.mjs",
     "preview": "vite preview",
-    "tauri": "tauri"
+    "tauri": "tauri",
+    "doctor": "npx react-doctor@latest"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
