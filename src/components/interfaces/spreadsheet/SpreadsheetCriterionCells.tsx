@@ -45,7 +45,7 @@ function SpreadsheetCriterionCellsComponent({
         const value = score?.value ?? ''
 
         return (
-          <td key={criterion.id} className="amv-col-hover px-0.5 py-0.5 border-r border-gray-800 text-center">
+          <td key={criterion.id} className="px-0.5 py-0.5 border-r border-gray-800 text-center">
             <input
               ref={(element) => {
                 if (element) cellRefs.current.set(`${clipIdx}-${critIdx}`, element)

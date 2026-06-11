@@ -842,26 +842,28 @@ textarea,
   z-index: 1;
 }
 
-/* Full-row highlight on cell hover (pure CSS, no re-render).
-   A single wide pseudo-element on the hovered cell paints the whole row. */
-.amv-col-hover {
+/* Full-row highlight on hover (pure CSS, no re-render).
+   Pseudo-element lives on the row so it spans exactly the row width
+   (no overflow -> no phantom horizontal scrollbar). */
+.amv-row-hover {
   position: relative;
 }
 
-.amv-col-hover::before {
+.amv-row-hover::after {
   content: "";
   position: absolute;
-  left: -9999px;
-  right: -9999px;
+  left: 0;
+  right: 0;
   top: 3px;
   bottom: 3px;
   background: rgb(59 130 246 / 0.05);
   pointer-events: none;
   opacity: 0;
   transition: opacity 0.12s ease;
+  z-index: 0;
 }
 
-.amv-col-hover:hover::before {
+.amv-row-hover:hover::after {
   opacity: 1;
 }
 

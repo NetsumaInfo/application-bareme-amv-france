@@ -87,7 +87,7 @@ function SpreadsheetTableRowComponent({
       ref={(element) => {
         if (element) rowRefs.current.set(clipIdx, element)
       }}
-      className={`transition-colors cursor-pointer ${rowClassName} hover:bg-primary-600/8`}
+      className={`amv-row-hover transition-colors cursor-pointer ${rowClassName}`}
       onClick={() => {
         const originalIndex = clips.findIndex((item) => item.id === clip.id)
         if (originalIndex !== -1) onSetCurrentClip(originalIndex)
