@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import type { MutableRefObject } from 'react'
+import type { MutableRefObject, ReactNode } from 'react'
 import { ResultatsGlobalCategoryTable } from '@/components/interfaces/resultats/ResultatsGlobalCategoryTable'
 import { ResultatsGlobalDetailedTable } from '@/components/interfaces/resultats/ResultatsGlobalDetailedTable'
 import { ResultatsJudgeTable } from '@/components/interfaces/resultats/ResultatsJudgeTable'
@@ -32,6 +32,8 @@ interface ExportPreviewPanelProps {
   thumbnailDefaultSeconds: number
   getRowComment?: (clipId: string) => string
   getRowCommentTitle?: (clipId: string) => string
+  /** Rendered under the on-screen table preview only (e.g. comments shown as text). */
+  commentsPreviewNode?: ReactNode
 }
 
 function chunkRows(rows: ResultatsRow[], chunkSize: number): ResultatsRow[][] {
@@ -211,6 +213,7 @@ export function ExportPreviewPanel({
   thumbnailDefaultSeconds,
   getRowComment,
   getRowCommentTitle,
+  commentsPreviewNode,
 }: ExportPreviewPanelProps) {
   const safeRowsPerImage = clampRowsPerImage(rowsPerImage)
   const pagedRows = useMemo(
@@ -238,6 +241,8 @@ export function ExportPreviewPanel({
           getRowCommentTitle={getRowCommentTitle}
         />
       </div>
+
+      {commentsPreviewNode}
 
       <div className="fixed left-[-20000px] top-0 z-[-1] min-w-[1400px] pointer-events-none" style={{ zoom: 1 }} aria-hidden="true">
         <div ref={previewRef} data-export-preview="true" className="amv-export-static-target min-h-0 bg-surface p-1">

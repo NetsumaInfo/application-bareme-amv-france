@@ -32,6 +32,7 @@ import {
   ExportJsonPreview,
   ExportNotesPreview,
   ExportSpreadsheetPreview,
+  NotesCommentCardList,
 } from '@/components/interfaces/export/ExportTypePreviews'
 import type {
   ResultatsGlobalVariant,
@@ -595,8 +596,10 @@ function useExportInterfaceController() {
       backgroundColor: pngTransparent ? null : theme === 'light' ? '#ffffff' : '#0f172a',
       pngMode: pngExportMode,
       fileNameStem: `${sanitizeExportFilePart(effectiveFileBase)}_resultats`,
+      // PDF only: append the comments as real-text Notes pages (with timecode overlay).
+      appendNotesPages: layoutMode === 'table' && includeComments,
     }
-  }, [effectiveFileBase, effectivePosterBackgroundColor, layoutMode, pngExportMode, pngScale, pngTransparent, theme])
+  }, [effectiveFileBase, effectivePosterBackgroundColor, includeComments, layoutMode, pngExportMode, pngScale, pngTransparent, theme])
 
   const exportSnapshot = useMemo(() => ({
     exportedAt: new Date().toISOString(),
@@ -1194,8 +1197,17 @@ function useExportInterfaceController() {
               rowsPerImage={rowsPerImage}
               showMiniatures={Boolean(currentProject?.settings.showMiniatures)}
               thumbnailDefaultSeconds={currentProject?.settings.thumbnailDefaultTimeSec ?? 10}
-              getRowComment={includeComments && selectedExportType === 'pdf' ? getRowComment : undefined}
               getRowCommentTitle={includeComments && selectedExportType === 'html' ? getRowComment : undefined}
+              commentsPreviewNode={
+                includeComments && selectedExportType === 'pdf' ? (
+                  <div className="shrink-0 max-h-[42%] overflow-auto rounded-lg border border-gray-700/40 bg-surface-dark/15 px-3 py-2.5">
+                    <div className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-gray-500">
+                      {t('Commentaires')}
+                    </div>
+                    <NotesCommentCardList entries={notesPdfPayload.entries} />
+                  </div>
+                ) : undefined
+              }
             />
           )
         ) : <MissingBaremeMessage />
