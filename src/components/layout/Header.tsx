@@ -197,15 +197,9 @@ export default function Header({
             type="button"
             onClick={onOpenSettings}
             aria-label={hasUpdateAvailable ? t('Paramètres (mise à jour disponible)') : t('Paramètres')}
-            className={`app-header-trigger app-header-trigger-icon relative ${hasUpdateAvailable ? 'ring-1 ring-inset ring-emerald-400/40' : ''}`}
+            className="app-header-trigger app-header-trigger-icon"
           >
             <SlidersHorizontal size={12} className="shrink-0" />
-            {hasUpdateAvailable ? (
-              <span
-                className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_0_2px_rgba(0,0,0,0.6)]"
-                aria-hidden
-              />
-            ) : null}
           </button>
         </HoverTextTooltip>
         <WindowControls className="-mr-3 ml-1 self-stretch" />

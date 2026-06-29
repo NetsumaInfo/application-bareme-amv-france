@@ -17,6 +17,7 @@ import {
   Youtube,
   Globe,
   Link2,
+  Sparkles,
 } from 'lucide-react'
 import { useI18n } from '@/i18n'
 import { HoverTextTooltip } from '@/components/ui/HoverTextTooltip'
@@ -69,6 +70,57 @@ function DiscordIcon() {
   )
 }
 
+function ReleaseNotes({ notes }: { notes: string }) {
+  const lines = notes.split(/\r?\n/)
+  const blocks: ReactNode[] = []
+  let bullets: string[] = []
+
+  const flushBullets = () => {
+    if (bullets.length === 0) return
+    const items = bullets
+    bullets = []
+    blocks.push(
+      <ul key={`ul-${blocks.length}`} className="ml-1 space-y-1">
+        {items.map((item, index) => (
+          <li key={index} className="flex gap-1.5">
+            <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-primary-400/70" aria-hidden />
+            <span>{item}</span>
+          </li>
+        ))}
+      </ul>,
+    )
+  }
+
+  lines.forEach((raw) => {
+    const line = raw.trim()
+    if (!line) {
+      flushBullets()
+      return
+    }
+    const bullet = /^[-*]\s+(.*)$/.exec(line)
+    if (bullet) {
+      bullets.push(bullet[1].replace(/\*\*/g, ''))
+      return
+    }
+    flushBullets()
+    const heading = /^#{1,6}\s+(.*)$/.exec(line)
+    if (heading) {
+      blocks.push(
+        <p key={`h-${blocks.length}`} className="font-semibold text-gray-200">
+          {heading[1].replace(/\*\*/g, '')}
+        </p>,
+      )
+      return
+    }
+    blocks.push(
+      <p key={`p-${blocks.length}`}>{line.replace(/\*\*/g, '')}</p>,
+    )
+  })
+  flushBullets()
+
+  return <div className="space-y-1.5">{blocks}</div>
+}
+
 export function SettingsAboutTab() {
   const { t, formatDate } = useI18n()
   const status = useAppUpdateStore((state) => state.status)
@@ -77,6 +129,7 @@ export function SettingsAboutTab() {
   const releaseUrl = useAppUpdateStore((state) => state.releaseUrl)
   const releaseName = useAppUpdateStore((state) => state.releaseName)
   const publishedAt = useAppUpdateStore((state) => state.publishedAt)
+  const releaseNotes = useAppUpdateStore((state) => state.releaseNotes)
   const errorMessage = useAppUpdateStore((state) => state.errorMessage)
   const lastCheckedAt = useAppUpdateStore((state) => state.lastCheckedAt)
   const checkForUpdates = useAppUpdateStore((state) => state.checkForUpdates)
@@ -317,6 +370,20 @@ export function SettingsAboutTab() {
             <p>{t('État : en attente de vérification.')}</p>
           ) : null}
         </div>
+
+        {releaseNotes && (hasUpdateAvailable || isUpToDate) ? (
+          <div className="mt-3 rounded-lg border border-primary-400/10 bg-black/20 px-3 py-2.5">
+            <p className="mb-2 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-widest text-gray-500">
+              <Sparkles className="h-3 w-3" />
+              {hasUpdateAvailable
+                ? t('Nouveautés de la version {version}', { version: latestVersion ?? '?' })
+                : t('Nouveautés de cette version')}
+            </p>
+            <div className="text-xs leading-relaxed text-gray-300">
+              <ReleaseNotes notes={releaseNotes} />
+            </div>
+          </div>
+        ) : null}
 
         <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-gray-400">
           {lastCheckedAt ? (

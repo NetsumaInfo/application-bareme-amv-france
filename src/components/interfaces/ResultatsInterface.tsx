@@ -692,8 +692,10 @@ function useResultatsInterfaceController() {
           showMiniatures={showMiniatures}
           thumbnailDefaultSeconds={thumbnailDefaultSeconds}
           sortCriterion={sortMode === 'criterion' ? sortCriterion : null}
+          sortCategory={sortMode === 'category' ? sortCategory : null}
           sortDirection={sortDirection}
           onSortByCriterion={canSortByScore ? handleSortByCriterion : undefined}
+          onSortByCategory={canSortByScore ? handleSortByCategory : undefined}
         />
       )}
 

@@ -12,6 +12,7 @@ interface AppUpdateStore {
   releaseUrl: string | null
   releaseName: string | null
   publishedAt: string | null
+  releaseNotes: string | null
   errorMessage: string | null
   lastCheckedAt: number | null
   checkForUpdates: (force?: boolean) => Promise<void>
@@ -24,6 +25,7 @@ export const useAppUpdateStore = create<AppUpdateStore>((set, get) => ({
   releaseUrl: null,
   releaseName: null,
   publishedAt: null,
+  releaseNotes: null,
   errorMessage: null,
   lastCheckedAt: null,
 
@@ -53,6 +55,7 @@ export const useAppUpdateStore = create<AppUpdateStore>((set, get) => ({
         releaseUrl: result.releaseUrl,
         releaseName: result.releaseName,
         publishedAt: result.publishedAt,
+        releaseNotes: result.releaseNotes,
         errorMessage: null,
         lastCheckedAt: Date.now(),
       })

@@ -39,10 +39,14 @@ interface ResultatsGlobalDetailedTableProps {
   staticExport?: boolean
   /** Criterion currently used for sorting (highlights its header). */
   sortCriterion?: string | null
+  /** Category currently used for sorting (highlights its header band). */
+  sortCategory?: string | null
   /** Direction of the active sort (drives the arrow icon). */
   sortDirection?: 'asc' | 'desc'
   /** When provided, criterion headers become clickable to sort by that criterion. */
   onSortByCriterion?: (criterionId: string) => void
+  /** When provided, category header bands become clickable to sort by that category total. */
+  onSortByCategory?: (category: string) => void
   /** When provided, renders a trailing "Commentaires" column (export only). */
   getRowComment?: (clipId: string) => string
   /** When provided, attaches the comment as a hover tooltip on the participant cell (HTML export). */
@@ -282,8 +286,10 @@ export function ResultatsGlobalDetailedTable({
   forceMiniatureLoad = false,
   staticExport = false,
   sortCriterion = null,
+  sortCategory = null,
   sortDirection = 'desc',
   onSortByCriterion,
+  onSortByCategory,
   getRowComment,
   getRowCommentTitle,
 }: ResultatsGlobalDetailedTableProps) {
@@ -379,21 +385,32 @@ export function ResultatsGlobalDetailedTable({
             >
               {t('Participant')}
             </th>
-            {categoryGroups.map((group) => (
-              <th
-                key={group.category}
-                colSpan={group.criteria.length * judges.length}
-                className="border-b border-r px-2 py-1 text-center text-[10px] font-semibold"
-                style={{
-                  color: group.color,
-                  backgroundColor: withAlpha(group.color, 0.18),
-                  borderColor: withAlpha(group.color, 0.3),
-                }}
-              >
-                {group.category}
-                <span className="ml-1 text-gray-500 font-normal">/{group.totalMax}</span>
-              </th>
-            ))}
+            {categoryGroups.map((group) => {
+              const isCategorySortActive = sortCategory === group.category
+              const categorySortable = Boolean(onSortByCategory)
+              return (
+                <th
+                  key={group.category}
+                  colSpan={group.criteria.length * judges.length}
+                  onClick={categorySortable ? () => onSortByCategory?.(group.category) : undefined}
+                  title={categorySortable ? t('Trier par {category}', { category: group.category }) : undefined}
+                  className={`border-b border-r px-2 py-1 text-center text-[10px] font-semibold ${
+                    categorySortable ? 'cursor-pointer select-none transition-[filter] hover:brightness-125' : ''
+                  }`}
+                  style={{
+                    color: group.color,
+                    backgroundColor: withAlpha(group.color, isCategorySortActive ? 0.3 : 0.18),
+                    borderColor: withAlpha(group.color, 0.3),
+                  }}
+                >
+                  {group.category}
+                  <span className="ml-1 text-gray-500 font-normal">/{group.totalMax}</span>
+                  {isCategorySortActive ? (
+                    <span className="ml-1">{sortDirection === 'asc' ? '▲' : '▼'}</span>
+                  ) : null}
+                </th>
+              )
+            })}
             {canSortByScore && (
               <th
                 colSpan={judges.length + 1}

@@ -8,6 +8,7 @@ interface GithubLatestReleaseResponse {
   html_url?: unknown
   name?: unknown
   published_at?: unknown
+  body?: unknown
 }
 
 export interface GithubReleaseUpdateCheckResult {
@@ -17,6 +18,7 @@ export interface GithubReleaseUpdateCheckResult {
   releaseUrl: string
   releaseName: string | null
   publishedAt: string | null
+  releaseNotes: string | null
 }
 
 function normalizeVersion(raw: string): string {
@@ -85,6 +87,9 @@ export async function checkGithubReleaseUpdate(): Promise<GithubReleaseUpdateChe
       : null,
     publishedAt: typeof latestRelease.published_at === 'string' && latestRelease.published_at.trim()
       ? latestRelease.published_at
+      : null,
+    releaseNotes: typeof latestRelease.body === 'string' && latestRelease.body.trim()
+      ? latestRelease.body.trim()
       : null,
   }
 }
