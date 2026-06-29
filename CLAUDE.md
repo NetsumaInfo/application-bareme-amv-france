@@ -86,18 +86,23 @@ npm run tauri build
 In-app auto-update uses `tauri-plugin-updater`, which **refuses any unsigned binary**. Every release MUST be signed or the in-app "Mettre à jour" button cannot install.
 
 - Private key `.tauri/amv-updater.key` (gitignored — NEVER commit, NEVER lose; loss permanently breaks updates). Public key in `src-tauri/tauri.conf.json` → `plugins.updater.pubkey`. No password (empty).
-- Endpoint: GitHub `releases/latest/download/latest.json`. `bundle.createUpdaterArtifacts: true` emits `.sig` + `latest.json`.
+- Endpoint: GitHub `releases/latest/download/latest.json`. `bundle.createUpdaterArtifacts: true` emits only the per-bundle `.sig` files (`*-setup.exe.sig`, `*.msi.sig`) — it does **NOT** generate `latest.json`. The manifest is authored by hand (or by `tauri-action` in CI).
+- Updater target on Windows = the **NSIS** `*-setup.exe`. `latest.json` `signature` = full contents of `*-setup.exe.sig`; `url` = the release download URL of that exact asset.
+- GitHub mangles spaces in asset filenames → upload with **no-space names** (e.g. `AMV-Notation_X.Y.Z_x64-setup.exe`) and reference those exact names in `latest.json`.
 
 Release steps:
-1. Bump the SAME version in `package.json`, `src-tauri/Cargo.toml`, `src-tauri/tauri.conf.json`.
+1. Bump the SAME version in `package.json`, `src-tauri/Cargo.toml`, `src-tauri/tauri.conf.json` (+ lockfiles).
 2. Build with signing env set (PowerShell):
    ```powershell
    $env:TAURI_SIGNING_PRIVATE_KEY = Get-Content -Raw .\.tauri\amv-updater.key
    $env:TAURI_SIGNING_PRIVATE_KEY_PASSWORD = ""
    npm run tauri build
    ```
-3. Create GitHub release `vX.Y.Z`; upload installer(s) + their `.sig` + `latest.json` from `src-tauri/target/release/bundle/`.
-4. Startup check shows the blue **Mettre à jour** header logo when a newer signed version exists; click saves the project, installs, relaunches.
+   Bundles land in `src-tauri/target/release/bundle/{nsis,msi}/`; `.sig` files sit next to them.
+3. Hand-write `latest.json`: `{version, notes, pub_date, platforms."windows-x86_64".{signature,url}}` — `signature` = contents of the NSIS `.sig`, `url` = the planned release download URL.
+4. Create the GitHub release `vX.Y.Z` on `main` (must be the **latest, non-prerelease** so `releases/latest/...` resolves); upload the NSIS setup, its `.sig`, the MSI, and `latest.json`.
+5. Verify `curl -sL https://github.com/NetsumaInfo/application-bareme-amv-france/releases/latest/download/latest.json` returns the new version and the asset URL is HTTP 200.
+6. Startup check shows the blue **Mettre à jour** header logo when a newer signed version exists; click saves the project, installs, relaunches.
 
 ## Stack Summary
 

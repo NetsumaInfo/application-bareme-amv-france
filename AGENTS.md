@@ -111,10 +111,12 @@ In-app auto-update uses `tauri-plugin-updater`. The plugin **refuses any binary 
 
 - **Keypair**: private `.tauri/amv-updater.key` (gitignored — NEVER commit, NEVER lose it; losing it breaks updates for all installed users), public key in `src-tauri/tauri.conf.json` → `plugins.updater.pubkey`. Key has no password (empty).
 - **Endpoint**: `plugins.updater.endpoints[0]` = `https://github.com/NetsumaInfo/application-bareme-amv-france/releases/latest/download/latest.json`.
-- `bundle.createUpdaterArtifacts: true` makes `npm run tauri build` emit the `.sig` files + `latest.json`.
+- `bundle.createUpdaterArtifacts: true` makes `npm run tauri build` emit only the per-bundle `.sig` files (`*-setup.exe.sig`, `*.msi.sig`). It does **NOT** generate `latest.json` — that manifest is written by hand (or by `tauri-action` in CI).
+- Updater target on Windows = the **NSIS** `*-setup.exe`. In `latest.json`, `platforms."windows-x86_64".signature` = full contents of the NSIS `.sig`; `url` = the release download URL of that exact asset.
+- GitHub mangles spaces in asset filenames → upload assets with **no-space names** (e.g. `AMV-Notation_X.Y.Z_x64-setup.exe`) and reference those exact names in `latest.json`.
 
 Release steps:
-1. Bump version to the SAME value in `package.json`, `src-tauri/Cargo.toml`, `src-tauri/tauri.conf.json`.
+1. Bump version to the SAME value in `package.json`, `src-tauri/Cargo.toml`, `src-tauri/tauri.conf.json` (and the lockfiles).
 2. Build **with the signing env vars set** (PowerShell):
    ```powershell
    $env:TAURI_SIGNING_PRIVATE_KEY = Get-Content -Raw .\.tauri\amv-updater.key
@@ -122,8 +124,11 @@ Release steps:
    npm run tauri build
    ```
    (bash: `export TAURI_SIGNING_PRIVATE_KEY="$(cat .tauri/amv-updater.key)"; export TAURI_SIGNING_PRIVATE_KEY_PASSWORD=""`)
-3. Create a GitHub release tagged `vX.Y.Z`, upload the installer(s), their matching `.sig`, and `latest.json` from `src-tauri/target/release/bundle/`.
-4. The running app checks the endpoint on startup; the blue **Mettre à jour** logo in the header appears when a newer signed version is published. Clicking it saves the project, downloads+installs, and relaunches.
+   Bundles land in `src-tauri/target/release/bundle/{nsis,msi}/` with their `.sig` siblings.
+3. Hand-write `latest.json` (`version`, `notes`, `pub_date`, `platforms."windows-x86_64".{signature,url}`); `signature` = NSIS `.sig` contents, `url` = the planned release download URL.
+4. Create the GitHub release tagged `vX.Y.Z` on `main` — must be the **latest, non-prerelease** release so `releases/latest/...` resolves. Upload the NSIS setup (no-space name), its `.sig`, the MSI, and `latest.json`.
+5. Verify: `curl -sL .../releases/latest/download/latest.json` returns the new version and the asset URL is HTTP 200.
+6. The running app checks the endpoint on startup; the blue **Mettre à jour** logo in the header appears when a newer signed version is published. Clicking it saves the project, downloads+installs, and relaunches.
 
 ## Stack Summary
 
