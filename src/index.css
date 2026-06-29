@@ -867,6 +867,21 @@ textarea,
   opacity: 1;
 }
 
+/* Selected-row outline (minimal but clearly visible).
+   Same pseudo-element trick: spans exact row width, no scrollbar. */
+.amv-row-selected::after {
+  opacity: 1;
+  background: rgb(var(--color-primary-500) / 0.12);
+  box-shadow:
+    inset 0 0 0 2px rgb(var(--color-primary-500)),
+    0 0 10px rgb(var(--color-primary-500) / 0.35);
+  border-radius: 4px;
+}
+
+.amv-row-selected:hover::after {
+  background: rgb(var(--color-primary-500) / 0.16);
+}
+
 .amv-soft-number::-webkit-outer-spin-button,
 .amv-soft-number::-webkit-inner-spin-button {
   -webkit-appearance: none;

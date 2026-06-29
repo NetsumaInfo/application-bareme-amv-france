@@ -1,4 +1,4 @@
-import { Download, Home, SlidersHorizontal, Upload } from 'lucide-react'
+import { Download, DownloadCloud, Home, Loader2, SlidersHorizontal, Upload } from 'lucide-react'
 import { useProjectStore } from '@/store/useProjectStore'
 import { useNotationStore } from '@/store/useNotationStore'
 import { useUIStore } from '@/store/useUIStore'
@@ -12,6 +12,7 @@ import { useI18n } from '@/i18n'
 import { LanguageSwitcher } from '@/components/layout/LanguageSwitcher'
 import { useJudgeImport } from '@/components/project/useJudgeImport'
 import { useAppUpdateStore } from '@/store/useAppUpdateStore'
+import { useUpdateInstaller } from '@/hooks/useUpdateInstaller'
 import { useWindowDrag } from '@/hooks/useWindowDrag'
 import { WindowControls } from '@/components/window/WindowControls'
 
@@ -30,6 +31,8 @@ export default function Header({
   const { handleExport } = useProjectMenuActions()
   const { importing, handleImportJudgeJson } = useJudgeImport()
   const updateStatus = useAppUpdateStore((state) => state.status)
+  const latestVersion = useAppUpdateStore((state) => state.latestVersion)
+  const { phase: updatePhase, progressPct, busy: updateBusy, applyUpdate } = useUpdateInstaller()
   const { t } = useI18n()
   const onPointerDown = useWindowDrag()
   const projectName = currentProject?.name?.trim() || 'AMV Notation'
@@ -47,6 +50,28 @@ export default function Header({
   const settingsTooltip = hasUpdateAvailable
     ? t('Mise à jour disponible (ouvrez les paramètres)')
     : t('Paramètres')
+
+  const updateButtonLabel = (() => {
+    switch (updatePhase) {
+      case 'saving':
+        return t('Sauvegarde...')
+      case 'checking':
+        return t('Vérification...')
+      case 'downloading':
+        return progressPct != null
+          ? t('Téléchargement... {pct}%', { pct: String(progressPct) })
+          : t('Téléchargement...')
+      case 'installing':
+        return t('Installation...')
+      default:
+        return t('Mettre à jour')
+    }
+  })()
+  const updateButtonTooltip = updateBusy
+    ? updateButtonLabel
+    : latestVersion
+      ? t('Installer la mise à jour {version}', { version: latestVersion })
+      : t('Installer la mise à jour')
 
   const handleCloseProject = () => {
     if (isDirty) {
@@ -147,6 +172,26 @@ export default function Header({
         <LanguageSwitcher compact />
         {showProjectActions && <BaremeSelector />}
         {currentProject && <ProjectManager />}
+        {hasUpdateAvailable && (
+          <HoverTextTooltip text={updateButtonTooltip}>
+            <button
+              type="button"
+              onClick={() => {
+                applyUpdate().catch(() => {})
+              }}
+              disabled={updateBusy}
+              aria-label={updateButtonTooltip}
+              className="app-header-trigger gap-1 border border-blue-400/40 bg-blue-500/15 text-blue-200 transition-colors hover:bg-blue-500/25 hover:text-blue-100 disabled:cursor-not-allowed disabled:opacity-70"
+            >
+              {updateBusy ? (
+                <Loader2 size={11} className="shrink-0 animate-spin" />
+              ) : (
+                <DownloadCloud size={11} className="shrink-0" />
+              )}
+              <span className="leading-none">{updateButtonLabel}</span>
+            </button>
+          </HoverTextTooltip>
+        )}
         <HoverTextTooltip text={settingsTooltip}>
           <button
             type="button"

@@ -11,8 +11,9 @@ import type { Bareme } from '@/types/bareme'
 import type { Clip, ImportedJudgeData } from '@/types/project'
 import type { Note } from '@/types/notation'
 import type { ResultatsRow } from '@/components/interfaces/resultats/types'
+import { getClipPrimaryLabel } from '@/utils/formatters'
 
-type SortMode = 'folder' | 'score'
+type SortMode = 'folder' | 'score' | 'name'
 
 function normalizeFavoriteFlag(value: unknown): boolean {
   return (
@@ -87,6 +88,18 @@ export function useResultatsComputedData({
         const scoreA = getClipAverageTotal(a.id)
         const scoreB = getClipAverageTotal(b.id)
         if (scoreB !== scoreA) return scoreB - scoreA
+        return (originalIndex.get(a.id) ?? 0) - (originalIndex.get(b.id) ?? 0)
+      })
+      return base
+    }
+
+    if (effectiveSortMode === 'name') {
+      base.sort((a, b) => {
+        const cmp = getClipPrimaryLabel(a).localeCompare(getClipPrimaryLabel(b), undefined, {
+          sensitivity: 'base',
+          numeric: true,
+        })
+        if (cmp !== 0) return cmp
         return (originalIndex.get(a.id) ?? 0) - (originalIndex.get(b.id) ?? 0)
       })
       return base

@@ -95,7 +95,7 @@ function TopList({
               onDoubleClick={() => onOpenClipInNotation(row.clip.id)}
               className={`w-full px-2.5 py-1.5 text-left text-[11px] transition-colors ${
                 isSelected
-                  ? 'bg-white/6'
+                  ? 'bg-primary-500/12 ring-1 ring-inset ring-primary-500 [box-shadow:0_0_10px_rgb(var(--color-primary-500)/0.35)]'
                   : 'hover:bg-white/5'
               }`}
             >

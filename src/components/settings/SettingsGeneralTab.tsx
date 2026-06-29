@@ -2,8 +2,13 @@ import { useState, type ReactNode } from 'react'
 import { LanguageSwitcher } from '@/components/layout/LanguageSwitcher'
 import { getInterfaceOptions } from '@/components/settings/settingsPanelConfig'
 import { SettingsToggle } from '@/components/settings/SettingsToggle'
+import { ColorSwatchPicker } from '@/components/ui/ColorSwatchPicker'
 import { AppRangeSlider } from '@/components/ui/AppRangeSlider'
 import { HoverTextTooltip } from '@/components/ui/HoverTextTooltip'
+import {
+  OVERLAY_AUTOHIDE_MAX_MS,
+  OVERLAY_AUTOHIDE_MIN_MS,
+} from '@/components/player/overlay/overlayConstants'
 import type { InterfaceMode } from '@/types/notation'
 import {
   APP_THEME_OPTIONS,
@@ -29,8 +34,14 @@ interface SettingsGeneralTabProps {
   appTheme: AppThemePreset
   primaryColorPreset: PrimaryColorPreset
   showAudioDb: boolean
+  overlayAutoHideMs: number
   showTooltips: boolean
   confirmClipDeletion: boolean
+  enableScoreColorCoding: boolean
+  scoreColorApplyBase: boolean
+  scoreColorApplyTotals: boolean
+  scoreColorHighHex: string
+  scoreColorLowHex: string
   projectsFolderPath: string
   baremesFolderPath: string
   onSwitchInterface: (mode: InterfaceMode) => void
@@ -39,8 +50,14 @@ interface SettingsGeneralTabProps {
   onSetAppTheme: (theme: AppThemePreset) => void
   onSetPrimaryColorPreset: (preset: PrimaryColorPreset) => void
   onToggleAudioDb: () => void
+  onSetOverlayAutoHideMs: (ms: number) => void
   onToggleShowTooltips: () => void
   onToggleConfirmClipDeletion: () => void
+  onToggleScoreColorCoding: () => void
+  onToggleScoreColorBase: () => void
+  onToggleScoreColorTotals: () => void
+  onSetScoreColorHigh: (hex: string) => void
+  onSetScoreColorLow: (hex: string) => void
   onChangeProjectsFolder: () => Promise<void>
   onChangeBaremesFolder: () => Promise<void>
 }
@@ -398,11 +415,14 @@ function InterfaceBehaviorSection({
 function PlayerSection({
   showAudioDb,
   onToggleAudioDb,
+  overlayAutoHideMs,
+  onSetOverlayAutoHideMs,
   t,
 }: Pick<
   SettingsGeneralTabProps,
-  'showAudioDb' | 'onToggleAudioDb'
+  'showAudioDb' | 'onToggleAudioDb' | 'overlayAutoHideMs' | 'onSetOverlayAutoHideMs'
 > & { t: TranslateFn }) {
+  const autoHideSeconds = Math.round(overlayAutoHideMs / 100) / 10
   return (
     <Card>
       <p className={SECTION_LABEL}>{t('Lecteur vidéo')}</p>
@@ -412,6 +432,153 @@ function PlayerSection({
             {t('Afficher VU-mètre audio L/R (dB)')}
           </span>
           <SettingsToggle checked={showAudioDb} onChange={onToggleAudioDb} ariaLabel={t('Afficher VU-mètre audio L/R (dB)')} />
+        </div>
+        <div className={STACKED_ROW}>
+          <div className="mb-2 flex items-center justify-between gap-3">
+            <div className="min-w-0 pr-2">
+              <span className="block text-sm text-gray-300">
+                {t('Délai avant masquage des contrôles')}
+              </span>
+              <span className="block text-[10px] text-gray-500">
+                {t('Temps d’inactivité de la souris avant de masquer les contrôles en plein écran')}
+              </span>
+            </div>
+            <span className="shrink-0 font-mono text-xs text-gray-500">{autoHideSeconds}s</span>
+          </div>
+          <AppRangeSlider
+            min={OVERLAY_AUTOHIDE_MIN_MS}
+            max={OVERLAY_AUTOHIDE_MAX_MS}
+            step={500}
+            value={overlayAutoHideMs}
+            onChange={onSetOverlayAutoHideMs}
+            ariaLabel={t('Délai avant masquage des contrôles')}
+          />
+          <div className="mt-2 grid grid-cols-4 gap-1.5">
+            {[2000, 3000, 5000, 8000].map((preset) => (
+              <button
+                type="button"
+                key={preset}
+                onClick={() => onSetOverlayAutoHideMs(preset)}
+                className={`rounded-md px-2 py-1.5 text-[10px] font-medium transition-colors ${
+                  overlayAutoHideMs === preset
+                    ? 'bg-primary-600 text-white'
+                    : 'bg-surface-light/45 text-gray-400 hover:bg-surface-light hover:text-white'
+                }`}
+              >
+                {preset / 1000}s
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+    </Card>
+  )
+}
+
+// ── Coloration des notes ─────────────────────────────────────────────────────
+
+function ColorRow({
+  label,
+  value,
+  memoryKey,
+  onChange,
+}: {
+  label: string
+  value: string
+  memoryKey: string
+  onChange: (hex: string) => void
+}) {
+  return (
+    <div className={`flex items-center justify-between gap-2 rounded-lg bg-surface-dark/45 px-3 py-2.5 ${SUBTLE_BORDER}`}>
+      <span className="min-w-0 truncate text-xs font-medium text-gray-400">{label}</span>
+      <ColorSwatchPicker
+        value={value}
+        onChange={onChange}
+        title={label}
+        triggerSize="sm"
+        memoryKey={memoryKey}
+      />
+    </div>
+  )
+}
+
+function ScoreColorSection({
+  enableScoreColorCoding,
+  scoreColorApplyBase,
+  scoreColorApplyTotals,
+  scoreColorHighHex,
+  scoreColorLowHex,
+  onToggleScoreColorCoding,
+  onToggleScoreColorBase,
+  onToggleScoreColorTotals,
+  onSetScoreColorHigh,
+  onSetScoreColorLow,
+  t,
+}: Pick<
+  SettingsGeneralTabProps,
+  | 'enableScoreColorCoding'
+  | 'scoreColorApplyBase'
+  | 'scoreColorApplyTotals'
+  | 'scoreColorHighHex'
+  | 'scoreColorLowHex'
+  | 'onToggleScoreColorCoding'
+  | 'onToggleScoreColorBase'
+  | 'onToggleScoreColorTotals'
+  | 'onSetScoreColorHigh'
+  | 'onSetScoreColorLow'
+> & { t: TranslateFn }) {
+  return (
+    <Card>
+      <p className={SECTION_LABEL}>{t('Coloration des notes')}</p>
+      <div className="space-y-2">
+        <div className={ROW}>
+          <div className="min-w-0 pr-2">
+            <span className="block text-sm text-gray-300">{t('Colorer les notes extrêmes')}</span>
+            <span className="block text-[10px] text-gray-500">
+              {t('Surligne la meilleure et la moins bonne note de chaque colonne')}
+            </span>
+          </div>
+          <SettingsToggle
+            checked={enableScoreColorCoding}
+            onChange={onToggleScoreColorCoding}
+            ariaLabel={t('Colorer les notes extrêmes')}
+          />
+        </div>
+        <div
+          className={`space-y-2 transition-opacity ${
+            enableScoreColorCoding ? '' : 'pointer-events-none opacity-40'
+          }`}
+        >
+          <div className={ROW}>
+            <span className="min-w-0 pr-2 text-sm text-gray-300">{t('Appliquer aux notes de base')}</span>
+            <SettingsToggle
+              checked={scoreColorApplyBase}
+              onChange={onToggleScoreColorBase}
+              ariaLabel={t('Appliquer aux notes de base')}
+            />
+          </div>
+          <div className={ROW}>
+            <span className="min-w-0 pr-2 text-sm text-gray-300">{t('Appliquer aux totaux')}</span>
+            <SettingsToggle
+              checked={scoreColorApplyTotals}
+              onChange={onToggleScoreColorTotals}
+              ariaLabel={t('Appliquer aux totaux')}
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <ColorRow
+              label={t('Meilleure note')}
+              value={scoreColorHighHex}
+              memoryKey="score-color-high"
+              onChange={onSetScoreColorHigh}
+            />
+            <ColorRow
+              label={t('Note la plus basse')}
+              value={scoreColorLowHex}
+              memoryKey="score-color-low"
+              onChange={onSetScoreColorLow}
+            />
+          </div>
         </div>
       </div>
     </Card>
@@ -525,8 +692,14 @@ export function SettingsGeneralTab({
   appTheme,
   primaryColorPreset,
   showAudioDb,
+  overlayAutoHideMs,
   showTooltips,
   confirmClipDeletion,
+  enableScoreColorCoding,
+  scoreColorApplyBase,
+  scoreColorApplyTotals,
+  scoreColorHighHex,
+  scoreColorLowHex,
   projectsFolderPath,
   baremesFolderPath,
   onSwitchInterface,
@@ -535,8 +708,14 @@ export function SettingsGeneralTab({
   onSetAppTheme,
   onSetPrimaryColorPreset,
   onToggleAudioDb,
+  onSetOverlayAutoHideMs,
   onToggleShowTooltips,
   onToggleConfirmClipDeletion,
+  onToggleScoreColorCoding,
+  onToggleScoreColorBase,
+  onToggleScoreColorTotals,
+  onSetScoreColorHigh,
+  onSetScoreColorLow,
   onChangeProjectsFolder,
   onChangeBaremesFolder,
 }: SettingsGeneralTabProps) {
@@ -602,9 +781,24 @@ export function SettingsGeneralTab({
         onToggleConfirmClipDeletion={onToggleConfirmClipDeletion}
         t={t}
       />
+      <ScoreColorSection
+        enableScoreColorCoding={enableScoreColorCoding}
+        scoreColorApplyBase={scoreColorApplyBase}
+        scoreColorApplyTotals={scoreColorApplyTotals}
+        scoreColorHighHex={scoreColorHighHex}
+        scoreColorLowHex={scoreColorLowHex}
+        onToggleScoreColorCoding={onToggleScoreColorCoding}
+        onToggleScoreColorBase={onToggleScoreColorBase}
+        onToggleScoreColorTotals={onToggleScoreColorTotals}
+        onSetScoreColorHigh={onSetScoreColorHigh}
+        onSetScoreColorLow={onSetScoreColorLow}
+        t={t}
+      />
       <PlayerSection
         showAudioDb={showAudioDb}
         onToggleAudioDb={onToggleAudioDb}
+        overlayAutoHideMs={overlayAutoHideMs}
+        onSetOverlayAutoHideMs={onSetOverlayAutoHideMs}
         t={t}
       />
       <FoldersSection

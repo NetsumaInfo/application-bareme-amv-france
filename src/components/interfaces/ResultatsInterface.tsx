@@ -38,7 +38,7 @@ import {
 import { useI18n } from '@/i18n'
 import type { ImportedJudgeNote } from '@/types/project'
 
-type SortMode = 'folder' | 'score'
+type SortMode = 'folder' | 'score' | 'name'
 type RenameJudgeDialog = {
   judgeKey: string
   title: string
@@ -103,7 +103,7 @@ function useResultatsInterfaceController() {
   const hasAnyLinkedVideo = clips.some((clip) => Boolean(clip.filePath))
   const thumbnailDefaultSeconds = currentProject?.settings.thumbnailDefaultTimeSec ?? 10
 
-  const sortMode: SortMode = 'score'
+  const [sortMode, setSortMode] = useState<SortMode>('score')
   const {
     categoryGroups,
     judges,
@@ -562,6 +562,9 @@ function useResultatsInterfaceController() {
           onMainViewChange={setMainView}
           globalVariant={globalVariant}
           onGlobalVariantChange={setGlobalVariant}
+          sortMode={sortMode}
+          onSortModeChange={setSortMode}
+          canSortByScore={canSortByScore}
           notesPanelHidden={hideResultNotes}
           onToggleNotesPanel={() => setHideResultNotes((current) => !current)}
           favoritesPanelVisible={showFavoritesPanel}

@@ -26,12 +26,13 @@ export function useFullscreenOverlayState() {
     volume: liveVolume,
     setCurrentTime,
   } = useOverlayPlayerStatus()
+  const overlayAutoHideMs = useUIStore((state) => state.overlayAutoHideMs)
   const {
     controlsVisible,
     resetHideTimer,
     pinControls,
     unpinControls,
-  } = useOverlayControlVisibility({ autoHideControls: isOverlayActive })
+  } = useOverlayControlVisibility({ autoHideControls: isOverlayActive, autoHideMs: overlayAutoHideMs })
 
   const [markerTooltip, setMarkerTooltip] = useState<{ left: number; text: string } | null>(null)
   const showAudioDb = useUIStore((state) => state.showAudioDb)

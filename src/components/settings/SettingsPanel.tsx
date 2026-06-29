@@ -40,10 +40,22 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
     toggleTextNotes,
     showAudioDb,
     toggleAudioDb,
+    overlayAutoHideMs,
+    setOverlayAutoHideMs,
     showTooltips,
     toggleShowTooltips,
     confirmClipDeletion,
     toggleConfirmClipDeletion,
+    enableScoreColorCoding,
+    toggleScoreColorCoding,
+    scoreColorApplyBase,
+    toggleScoreColorBase,
+    scoreColorApplyTotals,
+    toggleScoreColorTotals,
+    scoreColorHighHex,
+    setScoreColorHigh,
+    scoreColorLowHex,
+    setScoreColorLow,
     setShowBaremeEditor,
     currentInterface,
     switchInterface,
@@ -198,8 +210,14 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                   appTheme={appTheme}
                   primaryColorPreset={primaryColorPreset}
                   showAudioDb={showAudioDb}
+                  overlayAutoHideMs={overlayAutoHideMs}
                   showTooltips={showTooltips}
                   confirmClipDeletion={confirmClipDeletion}
+                  enableScoreColorCoding={enableScoreColorCoding}
+                  scoreColorApplyBase={scoreColorApplyBase}
+                  scoreColorApplyTotals={scoreColorApplyTotals}
+                  scoreColorHighHex={scoreColorHighHex}
+                  scoreColorLowHex={scoreColorLowHex}
                   projectsFolderPath={projectsFolderPath ?? ''}
                   baremesFolderPath={baremesFolderPath ?? ''}
                   onSwitchInterface={switchInterface}
@@ -208,8 +226,14 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                   onSetAppTheme={setAppTheme}
                   onSetPrimaryColorPreset={setPrimaryColorPreset}
                   onToggleAudioDb={toggleAudioDb}
+                  onSetOverlayAutoHideMs={setOverlayAutoHideMs}
                   onToggleShowTooltips={toggleShowTooltips}
                   onToggleConfirmClipDeletion={toggleConfirmClipDeletion}
+                  onToggleScoreColorCoding={toggleScoreColorCoding}
+                  onToggleScoreColorBase={toggleScoreColorBase}
+                  onToggleScoreColorTotals={toggleScoreColorTotals}
+                  onSetScoreColorHigh={setScoreColorHigh}
+                  onSetScoreColorLow={setScoreColorLow}
                   onChangeProjectsFolder={handleChangeProjectsFolder}
                   onChangeBaremesFolder={handleChangeBaremesFolder}
                 />

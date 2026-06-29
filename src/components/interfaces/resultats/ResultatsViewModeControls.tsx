@@ -7,11 +7,16 @@ import type {
 import { HoverTextTooltip } from '@/components/ui/HoverTextTooltip'
 import { useI18n } from '@/i18n'
 
+type ResultatsSortMode = 'folder' | 'score' | 'name'
+
 interface ResultatsViewModeControlsProps {
   mainView: ResultatsMainView
   onMainViewChange: (view: ResultatsMainView) => void
   globalVariant: ResultatsGlobalVariant
   onGlobalVariantChange: (variant: ResultatsGlobalVariant) => void
+  sortMode?: ResultatsSortMode
+  onSortModeChange?: (mode: ResultatsSortMode) => void
+  canSortByScore?: boolean
   notesPanelHidden: boolean
   onToggleNotesPanel: () => void
   favoritesPanelVisible?: boolean
@@ -55,6 +60,9 @@ export function ResultatsViewModeControls({
   onMainViewChange,
   globalVariant,
   onGlobalVariantChange,
+  sortMode = 'score',
+  onSortModeChange,
+  canSortByScore = true,
   notesPanelHidden,
   onToggleNotesPanel,
   favoritesPanelVisible = false,
@@ -116,6 +124,28 @@ export function ResultatsViewModeControls({
               ariaLabel={t('Par catégorie')}
             >
               {t('Par catégorie')}
+            </SegmentedButton>
+          </div>
+        )}
+
+        {onSortModeChange && (mainView === 'global' || mainView === 'top') && (
+          <div className="ml-1 flex items-center gap-0.5 border-l border-gray-700/50 pl-2">
+            <span className="mr-0.5 text-[10px] uppercase tracking-wide text-gray-500">
+              {t('Trier')}
+            </span>
+            <SegmentedButton
+              active={sortMode === 'name'}
+              onClick={() => onSortModeChange('name')}
+              ariaLabel={t('Trier par nom')}
+            >
+              {t('Nom')}
+            </SegmentedButton>
+            <SegmentedButton
+              active={sortMode === 'score' && canSortByScore}
+              onClick={() => canSortByScore && onSortModeChange('score')}
+              ariaLabel={t('Trier par note')}
+            >
+              {t('Note')}
             </SegmentedButton>
           </div>
         )}

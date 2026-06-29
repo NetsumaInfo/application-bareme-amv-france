@@ -18,6 +18,7 @@ import { useProjectStore } from '@/store/useProjectStore'
 import { useNotationStore } from '@/store/useNotationStore'
 import { useUIStore } from '@/store/useUIStore'
 import { usePlayerStore } from '@/store/usePlayerStore'
+import { useAppUpdateStore } from '@/store/useAppUpdateStore'
 import { useAutoSave } from '@/hooks/useAutoSave'
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts'
 import { usePlayer } from '@/hooks/usePlayer'
@@ -145,6 +146,16 @@ export default function AppLayout() {
     const timer = window.setTimeout(() => {
       tauri.warmAuxWindows().catch(() => {})
     }, 400)
+
+    return () => {
+      window.clearTimeout(timer)
+    }
+  }, [])
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      useAppUpdateStore.getState().checkForUpdates().catch(() => {})
+    }, 1500)
 
     return () => {
       window.clearTimeout(timer)

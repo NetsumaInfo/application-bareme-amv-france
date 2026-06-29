@@ -23,8 +23,9 @@ interface HoverTextTooltipProps {
 }
 
 function getTooltipPosition(
-  pointerX: number,
-  pointerY: number,
+  anchorX: number,
+  anchorTop: number,
+  anchorBottom: number,
   tooltipWidth: number,
   tooltipHeight: number,
   zoomScale: number,
@@ -32,18 +33,21 @@ function getTooltipPosition(
 ): { left: number; top: number; side: 'above' | 'below'; arrowCenterX: number } {
   const margin = 10
   const offsetY = 14
-  const normalizedPointerX = pointerX / zoomScale
-  const normalizedPointerY = pointerY / zoomScale
+  // Bords haut/bas du déclencheur normalisés (en mode pointeur, top === bottom).
+  const normalizedX = anchorX / zoomScale
+  const normalizedTop = anchorTop / zoomScale
+  const normalizedBottom = anchorBottom / zoomScale
 
-  let left = normalizedPointerX - tooltipWidth / 2
-  let top = normalizedPointerY + offsetY
+  let left = normalizedX - tooltipWidth / 2
+  let top = normalizedBottom + offsetY
   let side: 'above' | 'below' = 'below'
 
   if (typeof window !== 'undefined') {
     const viewportW = window.innerWidth
     const viewportH = window.innerHeight
-    const canFitAbove = normalizedPointerY - offsetY - tooltipHeight >= margin
-    const canFitBelow = normalizedPointerY + offsetY + tooltipHeight <= viewportH - margin
+    // Décale depuis le bord pertinent : au-dessus du haut, ou en dessous du bas.
+    const canFitAbove = normalizedTop - offsetY - tooltipHeight >= margin
+    const canFitBelow = normalizedBottom + offsetY + tooltipHeight <= viewportH - margin
 
     if (placement === 'above') {
       side = canFitAbove ? 'above' : 'below'
@@ -54,8 +58,8 @@ function getTooltipPosition(
     }
 
     top = side === 'above'
-      ? normalizedPointerY - tooltipHeight - offsetY
-      : normalizedPointerY + offsetY
+      ? normalizedTop - tooltipHeight - offsetY
+      : normalizedBottom + offsetY
 
     if (left < margin) {
       left = margin
@@ -72,7 +76,7 @@ function getTooltipPosition(
     side = placement === 'above' ? 'above' : 'below'
   }
 
-  const arrowCenterX = Math.min(Math.max(normalizedPointerX - left, 12), tooltipWidth - 12)
+  const arrowCenterX = Math.min(Math.max(normalizedX - left, 12), tooltipWidth - 12)
 
   return { left, top, side, arrowCenterX }
 }
@@ -92,7 +96,7 @@ export function HoverTextTooltip({
   const tooltipRef = useRef<HTMLDivElement | null>(null)
   const arrowRef = useRef<HTMLSpanElement | null>(null)
   const suppressedTitlesRef = useRef<Array<{ element: HTMLElement; title: string }>>([])
-  const pointerRef = useRef({ x: 0, y: 0 })
+  const pointerRef = useRef({ x: 0, top: 0, bottom: 0 })
   const [visible, setVisible] = useState(false)
   const zoomScale = useZoomScale()
 
@@ -120,7 +124,7 @@ export function HoverTextTooltip({
     suppressedTitlesRef.current = []
   }, [])
 
-  const anchorPointFromElement = useCallback((): { x: number; y: number } | null => {
+  const anchorPointFromElement = useCallback((): { x: number; top: number; bottom: number } | null => {
     const node = wrapperRef.current
     if (!node) return null
     // Le wrapper est `display: contents` (sans boîte propre), on mesure donc
@@ -128,22 +132,22 @@ export function HoverTextTooltip({
     const target = (node.firstElementChild as HTMLElement | null) ?? node
     const rect = target.getBoundingClientRect()
     if (rect.width === 0 && rect.height === 0) return null
-    const x = rect.left + rect.width / 2
-    const y = placement === 'below' ? rect.bottom : rect.top
-    return { x, y }
-  }, [placement])
+    // On renvoie les deux bords : le positionneur décale depuis le bon selon
+    // qu'il place la bulle au-dessus (bord haut) ou en dessous (bord bas).
+    return { x: rect.left + rect.width / 2, top: rect.top, bottom: rect.bottom }
+  }, [])
 
   const showTooltip = (event: MouseEvent<HTMLElement>) => {
     suppressNativeTitles(event.currentTarget)
     const anchorPoint = anchor ? anchorPointFromElement() : null
-    pointerRef.current = anchorPoint ?? { x: event.clientX, y: event.clientY }
+    pointerRef.current = anchorPoint ?? { x: event.clientX, top: event.clientY, bottom: event.clientY }
     setVisible(true)
   }
 
   const moveTooltip = (event: MouseEvent<HTMLElement>) => {
     if (!visible || anchor) return
-    pointerRef.current = { x: event.clientX, y: event.clientY }
-    applyTooltipPosition(event.clientX, event.clientY)
+    pointerRef.current = { x: event.clientX, top: event.clientY, bottom: event.clientY }
+    applyTooltipPosition(pointerRef.current)
   }
 
   const hideTooltip = () => {
@@ -151,11 +155,11 @@ export function HoverTextTooltip({
     setVisible(false)
   }
 
-  const applyTooltipPosition = useCallback((pointerX: number, pointerY: number) => {
+  const applyTooltipPosition = useCallback((point: { x: number; top: number; bottom: number }) => {
     const node = tooltipRef.current
     if (!node) return
 
-    const pos = getTooltipPosition(pointerX, pointerY, node.offsetWidth, node.offsetHeight, zoomScale, placement)
+    const pos = getTooltipPosition(point.x, point.top, point.bottom, node.offsetWidth, node.offsetHeight, zoomScale, placement)
     node.style.left = `${pos.left}px`
     node.style.top = `${pos.top}px`
     node.style.visibility = 'visible'
@@ -184,7 +188,7 @@ export function HoverTextTooltip({
 
   useLayoutEffect(() => {
     if (!visible) return
-    applyTooltipPosition(pointerRef.current.x, pointerRef.current.y)
+    applyTooltipPosition(pointerRef.current)
   }, [applyTooltipPosition, safeText, visible])
 
   const onViewportChange = useEffectEvent(() => {
@@ -192,11 +196,11 @@ export function HoverTextTooltip({
       const point = anchorPointFromElement()
       if (point) {
         pointerRef.current = point
-        applyTooltipPosition(point.x, point.y)
+        applyTooltipPosition(point)
         return
       }
     }
-    applyTooltipPosition(pointerRef.current.x, pointerRef.current.y)
+    applyTooltipPosition(pointerRef.current)
   })
 
   useEffect(() => {

@@ -1,4 +1,12 @@
-export const OVERLAY_AUTOHIDE_MS = 3000
+export const OVERLAY_AUTOHIDE_MS = 1000
+export const OVERLAY_AUTOHIDE_MIN_MS = 1000
+export const OVERLAY_AUTOHIDE_MAX_MS = 15000
+
+export function clampOverlayAutoHideMs(ms: number): number {
+  if (!Number.isFinite(ms)) return OVERLAY_AUTOHIDE_MS
+  return Math.min(OVERLAY_AUTOHIDE_MAX_MS, Math.max(OVERLAY_AUTOHIDE_MIN_MS, Math.round(ms)))
+}
+
 const OVERLAY_SCALE_BREAK_PX = 700
 
 export const PLAYBACK_SPEEDS = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 2] as const

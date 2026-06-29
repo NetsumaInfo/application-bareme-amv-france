@@ -70,7 +70,7 @@ flowchart LR
 - `useNotationStore` — 备注、历史、当前 barème、可用 barème；
 - `useUIStore` — 活动标签页、评分布局、主题、强调色、语言、缩放、快捷键、模态框；
 - `useClipDeletionStore` — 片段删除确认流程；
-- `useAppUpdateStore` — 通过 GitHub releases 检查更新（状态、当前/最新版本、release URL）。
+- `useAppUpdateStore` — 通过 GitHub releases 检查更新；内置签名自动更新（tauri-plugin-updater），可在应用内下载并安装。
 
 ## 快速开始
 
@@ -153,7 +153,7 @@ src-tauri/
 - 丰富的导出：PNG、PDF、JSON、HTML/CSS、Discord 预览；
 - 在窗口间持久化并广播的偏好：主题、强调色、语言、快捷键、缩略图、确认项；
 - 分离的播放器上下文菜单（`player-menu` 窗口）；
-- 通过 GitHub releases 检查更新。
+- 内置自动更新：当有新的已签名版本时，标题栏会出现蓝色「更新」标志；点击后会先保存项目，然后下载、安装并重启应用。
 
 ## 开发工作流
 

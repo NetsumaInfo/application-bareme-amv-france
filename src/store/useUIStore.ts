@@ -10,6 +10,12 @@ import {
 } from '@/utils/appTheme'
 import { applyLanguageToDocument, detectSystemLanguage, type AppLanguage } from '@/i18n/config'
 import { emitUiSettingsUpdated } from '@/utils/uiSettingsEvents'
+import {
+  clampOverlayAutoHideMs,
+  OVERLAY_AUTOHIDE_MS,
+} from '@/components/player/overlay/overlayConstants'
+import { DEFAULT_SCORE_COLOR_HIGH, DEFAULT_SCORE_COLOR_LOW } from '@/utils/scoreColor'
+import { sanitizeColor } from '@/utils/colors'
 import * as tauri from '@/services/tauri'
 
 type ZoomMode = 'fixed' | 'navigable'
@@ -33,6 +39,12 @@ interface PersistedUiSettings {
   language?: AppLanguage
   projectsFolderPath?: string | null
   baremesFolderPath?: string | null
+  enableScoreColorCoding?: boolean
+  scoreColorApplyBase?: boolean
+  scoreColorApplyTotals?: boolean
+  scoreColorHighHex?: string
+  scoreColorLowHex?: string
+  overlayAutoHideMs?: number
 }
 
 async function flushPendingSettings() {
@@ -102,6 +114,12 @@ interface UIStore {
   language: AppLanguage
   shortcutBindings: Record<ShortcutAction, string>
   isNotesDetached: boolean
+  enableScoreColorCoding: boolean
+  scoreColorApplyBase: boolean
+  scoreColorApplyTotals: boolean
+  scoreColorHighHex: string
+  scoreColorLowHex: string
+  overlayAutoHideMs: number
 
   switchTab: (tab: AppTab) => void
   switchInterface: (mode: InterfaceMode) => void
@@ -127,6 +145,12 @@ interface UIStore {
   setShortcut: (action: ShortcutAction, shortcut: string) => void
   resetShortcuts: () => void
   setNotesDetached: (detached: boolean) => void
+  toggleScoreColorCoding: () => void
+  toggleScoreColorBase: () => void
+  toggleScoreColorTotals: () => void
+  setScoreColorHigh: (hex: string) => void
+  setScoreColorLow: (hex: string) => void
+  setOverlayAutoHideMs: (ms: number) => void
   zoomIn: () => void
   zoomOut: () => void
   resetZoom: () => void
@@ -156,6 +180,12 @@ export const useUIStore = create<UIStore>((set) => ({
   language: defaultLanguage,
   shortcutBindings: { ...DEFAULT_SHORTCUT_BINDINGS },
   isNotesDetached: false,
+  enableScoreColorCoding: false,
+  scoreColorApplyBase: true,
+  scoreColorApplyTotals: true,
+  scoreColorHighHex: DEFAULT_SCORE_COLOR_HIGH,
+  scoreColorLowHex: DEFAULT_SCORE_COLOR_LOW,
+  overlayAutoHideMs: OVERLAY_AUTOHIDE_MS,
 
   switchTab: (tab) => set({ currentTab: tab }),
   switchInterface: (mode) => set({ currentInterface: normalizeInterfaceMode(mode) }),
@@ -245,6 +275,48 @@ export const useUIStore = create<UIStore>((set) => ({
     set({ shortcutBindings: { ...DEFAULT_SHORTCUT_BINDINGS } })
   },
   setNotesDetached: (detached) => set({ isNotesDetached: detached }),
+  toggleScoreColorCoding: () =>
+    set((state) => {
+      const next = !state.enableScoreColorCoding
+      persistUserSettingsPatch({ enableScoreColorCoding: next }).catch(() => {})
+      emitUiSettingsUpdated({ enableScoreColorCoding: next })
+      return { enableScoreColorCoding: next }
+    }),
+  toggleScoreColorBase: () =>
+    set((state) => {
+      const next = !state.scoreColorApplyBase
+      persistUserSettingsPatch({ scoreColorApplyBase: next }).catch(() => {})
+      emitUiSettingsUpdated({ scoreColorApplyBase: next })
+      return { scoreColorApplyBase: next }
+    }),
+  toggleScoreColorTotals: () =>
+    set((state) => {
+      const next = !state.scoreColorApplyTotals
+      persistUserSettingsPatch({ scoreColorApplyTotals: next }).catch(() => {})
+      emitUiSettingsUpdated({ scoreColorApplyTotals: next })
+      return { scoreColorApplyTotals: next }
+    }),
+  setScoreColorHigh: (hex) =>
+    set(() => {
+      const next = sanitizeColor(hex, DEFAULT_SCORE_COLOR_HIGH)
+      persistUserSettingsPatch({ scoreColorHighHex: next }).catch(() => {})
+      emitUiSettingsUpdated({ scoreColorHighHex: next })
+      return { scoreColorHighHex: next }
+    }),
+  setScoreColorLow: (hex) =>
+    set(() => {
+      const next = sanitizeColor(hex, DEFAULT_SCORE_COLOR_LOW)
+      persistUserSettingsPatch({ scoreColorLowHex: next }).catch(() => {})
+      emitUiSettingsUpdated({ scoreColorLowHex: next })
+      return { scoreColorLowHex: next }
+    }),
+  setOverlayAutoHideMs: (ms) =>
+    set(() => {
+      const next = clampOverlayAutoHideMs(ms)
+      persistUserSettingsPatch({ overlayAutoHideMs: next }).catch(() => {})
+      emitUiSettingsUpdated({ overlayAutoHideMs: next })
+      return { overlayAutoHideMs: next }
+    }),
   zoomIn: () => set((s) => ({ zoomLevel: Math.min(200, s.zoomLevel + 10) })),
   zoomOut: () => set((s) => ({ zoomLevel: Math.max(50, s.zoomLevel - 10) })),
   resetZoom: () => set({ zoomLevel: 100 }),

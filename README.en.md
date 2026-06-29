@@ -70,7 +70,7 @@ Key invariants:
 - `useNotationStore` — notes, history, current barème, available barèmes;
 - `useUIStore` — active tab, notation layout, theme, accent, language, zoom, shortcuts, modals;
 - `useClipDeletionStore` — clip deletion confirmation flow;
-- `useAppUpdateStore` — update checks via GitHub releases (status, current/latest version, release URL).
+- `useAppUpdateStore` — update checks via GitHub releases; built-in signed auto-update (tauri-plugin-updater) downloaded and installed from within the app.
 
 ## Getting started
 
@@ -153,7 +153,7 @@ src-tauri/
 - rich exports: PNG, PDF, JSON, HTML/CSS, Discord previews;
 - preferences persisted and broadcast across windows: theme, accent, language, shortcuts, thumbnails, confirmations;
 - detached player context menu (`player-menu` window);
-- update check via GitHub releases.
+- built-in auto-update: a blue "Update" logo appears in the header when a new signed version is available; clicking it saves the project, then downloads, installs, and relaunches the app.
 
 ## Development workflow
 

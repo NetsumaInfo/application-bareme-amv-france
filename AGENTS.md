@@ -105,6 +105,26 @@ npm run tauri build
 
 **Tauri v2 check note**: the primary target is Windows/MSVC. `cd src-tauri && cargo check` from WSL/Linux can fail before app code if GTK/WebKit/Pango system packages are missing. Prefer `npm run tauri -- build --debug --no-bundle` for the Windows desktop validation path.
 
+## Auto-Update Release Signing (MANDATORY every release)
+
+In-app auto-update uses `tauri-plugin-updater`. The plugin **refuses any binary that is not signed** with the project updater key. Every release build MUST be signed, or the "Mettre à jour" button cannot install.
+
+- **Keypair**: private `.tauri/amv-updater.key` (gitignored — NEVER commit, NEVER lose it; losing it breaks updates for all installed users), public key in `src-tauri/tauri.conf.json` → `plugins.updater.pubkey`. Key has no password (empty).
+- **Endpoint**: `plugins.updater.endpoints[0]` = `https://github.com/NetsumaInfo/application-bareme-amv-france/releases/latest/download/latest.json`.
+- `bundle.createUpdaterArtifacts: true` makes `npm run tauri build` emit the `.sig` files + `latest.json`.
+
+Release steps:
+1. Bump version to the SAME value in `package.json`, `src-tauri/Cargo.toml`, `src-tauri/tauri.conf.json`.
+2. Build **with the signing env vars set** (PowerShell):
+   ```powershell
+   $env:TAURI_SIGNING_PRIVATE_KEY = Get-Content -Raw .\.tauri\amv-updater.key
+   $env:TAURI_SIGNING_PRIVATE_KEY_PASSWORD = ""
+   npm run tauri build
+   ```
+   (bash: `export TAURI_SIGNING_PRIVATE_KEY="$(cat .tauri/amv-updater.key)"; export TAURI_SIGNING_PRIVATE_KEY_PASSWORD=""`)
+3. Create a GitHub release tagged `vX.Y.Z`, upload the installer(s), their matching `.sig`, and `latest.json` from `src-tauri/target/release/bundle/`.
+4. The running app checks the endpoint on startup; the blue **Mettre à jour** logo in the header appears when a newer signed version is published. Clicking it saves the project, downloads+installs, and relaunches.
+
 ## Stack Summary
 
 - **Desktop shell**: Tauri v2

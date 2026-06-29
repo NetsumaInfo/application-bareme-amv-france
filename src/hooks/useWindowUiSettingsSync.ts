@@ -10,10 +10,25 @@ import {
   normalizePrimaryColorPreset,
 } from '@/utils/appTheme'
 import { UI_SETTINGS_UPDATED_EVENT, type UiSettingsUpdatePayload } from '@/utils/uiSettingsEvents'
+import { sanitizeColor } from '@/utils/colors'
+import { DEFAULT_SCORE_COLOR_HIGH, DEFAULT_SCORE_COLOR_LOW } from '@/utils/scoreColor'
+import { clampOverlayAutoHideMs } from '@/components/player/overlay/overlayConstants'
 
 type SyncedUiState = Pick<
   ReturnType<typeof useUIStore.getState>,
-  'appTheme' | 'primaryColorPreset' | 'language' | 'showAudioDb' | 'showTooltips' | 'confirmClipDeletion' | 'shortcutBindings'
+  | 'appTheme'
+  | 'primaryColorPreset'
+  | 'language'
+  | 'showAudioDb'
+  | 'showTooltips'
+  | 'confirmClipDeletion'
+  | 'shortcutBindings'
+  | 'enableScoreColorCoding'
+  | 'scoreColorApplyBase'
+  | 'scoreColorApplyTotals'
+  | 'scoreColorHighHex'
+  | 'scoreColorLowHex'
+  | 'overlayAutoHideMs'
 >
 
 function extractUiSettingsPatch(input: unknown): Partial<SyncedUiState> {
@@ -34,6 +49,30 @@ function extractUiSettingsPatch(input: unknown): Partial<SyncedUiState> {
 
   if (typeof settings.confirmClipDeletion === 'boolean') {
     nextState.confirmClipDeletion = settings.confirmClipDeletion
+  }
+
+  if (typeof settings.enableScoreColorCoding === 'boolean') {
+    nextState.enableScoreColorCoding = settings.enableScoreColorCoding
+  }
+
+  if (typeof settings.scoreColorApplyBase === 'boolean') {
+    nextState.scoreColorApplyBase = settings.scoreColorApplyBase
+  }
+
+  if (typeof settings.scoreColorApplyTotals === 'boolean') {
+    nextState.scoreColorApplyTotals = settings.scoreColorApplyTotals
+  }
+
+  if (typeof settings.scoreColorHighHex === 'string') {
+    nextState.scoreColorHighHex = sanitizeColor(settings.scoreColorHighHex, DEFAULT_SCORE_COLOR_HIGH)
+  }
+
+  if (typeof settings.scoreColorLowHex === 'string') {
+    nextState.scoreColorLowHex = sanitizeColor(settings.scoreColorLowHex, DEFAULT_SCORE_COLOR_LOW)
+  }
+
+  if (typeof settings.overlayAutoHideMs === 'number') {
+    nextState.overlayAutoHideMs = clampOverlayAutoHideMs(settings.overlayAutoHideMs)
   }
 
   const normalizedTheme = normalizeAppThemePreset(settings.appTheme)

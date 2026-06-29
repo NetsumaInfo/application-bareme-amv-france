@@ -1,6 +1,6 @@
 [package]
 name = "amv-notation"
-version = "1.0.0"
+version = "1.0.1"
 description = "AMV Notation - Video judging application"
 authors = ["Netsuma"]
 license = "GPL-3.0-or-later"
@@ -23,6 +23,10 @@ tauri = { version = "2.10.3", features = ["protocol-asset"] }
 tauri-plugin-dialog = "2.7.0"
 tauri-plugin-fs = "2.5.0"
 tauri-plugin-opener = "=2.4.0"
+tauri-plugin-process = "2"
+
+[target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
+tauri-plugin-updater = "2"
 uuid = { version = "1.0", features = ["v4"] }
 chrono = { version = "0.4", features = ["serde"] }
 walkdir = "2.5"

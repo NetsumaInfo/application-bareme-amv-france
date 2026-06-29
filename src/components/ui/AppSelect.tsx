@@ -95,6 +95,13 @@ export function AppSelect<T extends AppSelectValue>({
     width: 160,
     maxHeight: maxMenuHeight,
   })
+  // Hide the menu node until positioned (like HoverTextTooltip): the ref callback
+  // hides it on mount, updateMenuPosition reveals it once placed. Imperative on
+  // purpose so re-renders never reset visibility and we avoid setState-in-effect.
+  const setMenuNode = useCallback((node: HTMLDivElement | null) => {
+    menuRef.current = node
+    if (node) node.style.visibility = 'hidden'
+  }, [])
 
   const selectedIndex = useMemo(
     () => options.findIndex((option) => option.value === value),
@@ -137,6 +144,7 @@ export function AppSelect<T extends AppSelectValue>({
     const top = clamp(rawTop, viewportPadding, maxTop)
 
     setMenuPosition({ left, top, width, maxHeight })
+    if (menuRef.current) menuRef.current.style.visibility = 'visible'
   }, [align, maxMenuHeight, menuWidth, options.length, zoomScale])
 
   const openMenu = useCallback(() => {
@@ -212,7 +220,7 @@ export function AppSelect<T extends AppSelectValue>({
   const menu = open && !disabled && typeof document !== 'undefined'
     ? createPortal(
       <div
-        ref={menuRef}
+        ref={setMenuNode}
         className={`fixed z-2300 overflow-hidden rounded-lg bg-surface p-1.5 shadow-2xl ring-1 ring-inset ring-primary-400/10 ${menuClassName}`.trim()}
         style={{
           left: `${menuPosition.left}px`,

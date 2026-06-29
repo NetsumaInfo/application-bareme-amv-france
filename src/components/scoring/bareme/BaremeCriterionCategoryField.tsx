@@ -61,6 +61,11 @@ export function BaremeCriterionCategoryField({
   const [categoryMenuOpen, setCategoryMenuOpen] = useState(false)
   const [categoryActiveIndex, setCategoryActiveIndex] = useState(-1)
   const [menuPosition, setMenuPosition] = useState({ left: 0, top: 0, width: 240, maxHeight: 224 })
+  // Hide the menu node until positioned; revealed imperatively once placed.
+  const setMenuNode = useCallback((node: HTMLDivElement | null) => {
+    menuRef.current = node
+    if (node) node.style.visibility = 'hidden'
+  }, [])
 
   const categoryQuery = rawCategory.toLocaleLowerCase()
   const categoryMatches = useMemo(() => {
@@ -95,6 +100,7 @@ export function BaremeCriterionCategoryField({
     const top = clamp(rawTop, viewportPadding, Math.max(viewportPadding, viewportHeight - visibleHeight - viewportPadding))
 
     setMenuPosition({ left, top, width, maxHeight })
+    if (menuRef.current) menuRef.current.style.visibility = 'visible'
   }, [categoryMatches.length, zoomScale])
 
   const handleReposition = useEffectEvent(() => updateMenuPosition())
@@ -165,7 +171,7 @@ export function BaremeCriterionCategoryField({
   const suggestionsMenu = showCategoryMenu && typeof document !== 'undefined'
     ? createPortal(
       <div
-        ref={menuRef}
+        ref={setMenuNode}
         className="fixed z-2300 overflow-hidden rounded-lg bg-surface p-1.5 shadow-2xl ring-1 ring-inset ring-primary-400/10"
         style={{
           left: `${menuPosition.left}px`,

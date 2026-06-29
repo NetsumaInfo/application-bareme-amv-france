@@ -12,6 +12,9 @@ src-tauri/target
 *.local
 .env*
 
+# Tauri updater signing keys (KEEP PRIVATE KEY SECRET — never commit)
+.tauri/
+
 # Logs
 logs
 *.log

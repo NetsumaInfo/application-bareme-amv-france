@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Check, ChevronDown } from 'lucide-react'
 import {
@@ -39,6 +39,11 @@ export function LanguageSwitcher({
     width: 240,
     placement: 'down',
   })
+  // Hide the menu node until positioned; revealed imperatively once placed.
+  const setMenuNode = useCallback((node: HTMLDivElement | null) => {
+    menuRef.current = node
+    if (node) node.style.visibility = 'hidden'
+  }, [])
 
   useEffect(() => {
     if (!open) return
@@ -76,6 +81,7 @@ export function LanguageSwitcher({
         width,
         placement: placeUp ? 'up' : 'down',
       })
+      if (menuRef.current) menuRef.current.style.visibility = 'visible'
     }
 
     updatePosition()
@@ -122,7 +128,7 @@ export function LanguageSwitcher({
 
       {open ? createPortal(
         <div
-          ref={menuRef}
+          ref={setMenuNode}
           className="fixed z-2000 rounded-xl bg-surface p-2 shadow-2xl ring-1 ring-inset ring-primary-400/10"
           style={{
             left: `${menuPosition.left}px`,

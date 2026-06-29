@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from 'react'
+import { useState, useRef, useLayoutEffect, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { Subtitles } from 'lucide-react'
 import { usePlayerStore } from '@/store/usePlayerStore'
@@ -17,20 +17,24 @@ export default function SubtitleSelector() {
   const currentSubtitleId = usePlayerStore((s) => s.currentSubtitleId)
   const setCurrentSubtitleId = usePlayerStore((s) => s.setCurrentSubtitleId)
   const [open, setOpen] = useState(false)
-  const [menuStyle, setMenuStyle] = useState<{ top: number; left: number; width: number }>({
-    top: 0,
-    left: 0,
-    width: 220,
-  })
+  const MENU_WIDTH = 220
   const containerRef = useRef<HTMLDivElement | null>(null)
   const buttonRef = useRef<HTMLButtonElement | null>(null)
   const menuRef = useRef<HTMLDivElement | null>(null)
+  // Hide the menu node until positioned; revealed imperatively once placed.
+  const setMenuNode = useCallback((node: HTMLDivElement | null) => {
+    menuRef.current = node
+    if (node) node.style.visibility = 'hidden'
+  }, [])
 
   const zoomScale = useZoomScale()
 
+  // Write the position straight to the node before paint (like HoverTextTooltip),
+  // so the menu is never painted at its default origin.
   const updateMenuPosition = useCallback(() => {
     const button = buttonRef.current
-    if (!button) return
+    const node = menuRef.current
+    if (!button || !node) return
 
     const rect = button.getBoundingClientRect()
     const normalizedRect = {
@@ -40,11 +44,11 @@ export default function SubtitleSelector() {
       bottom: rect.bottom / zoomScale,
       width: rect.width / zoomScale,
     }
-    const width = 220
+    const width = MENU_WIDTH
     const viewportPadding = 8
     const viewportWidth = window.innerWidth
     const viewportHeight = window.innerHeight
-    const menuHeight = menuRef.current?.offsetHeight ?? Math.min(360, Math.max(96, (subtitleTracks.length + 1) * 30 + 8))
+    const menuHeight = node.offsetHeight || Math.min(360, Math.max(96, (subtitleTracks.length + 1) * 30 + 8))
     const spaceBelow = viewportHeight - normalizedRect.bottom - viewportPadding
     const spaceAbove = normalizedRect.top - viewportPadding
     const openUpwards = spaceBelow < menuHeight && spaceAbove > spaceBelow
@@ -59,10 +63,12 @@ export default function SubtitleSelector() {
       viewportHeight - menuHeight - viewportPadding,
     )
 
-    setMenuStyle({ top, left, width })
+    node.style.left = `${left}px`
+    node.style.top = `${top}px`
+    node.style.visibility = 'visible'
   }, [subtitleTracks.length, zoomScale])
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!open) return
     updateMenuPosition()
 
@@ -106,9 +112,9 @@ export default function SubtitleSelector() {
   const menu = open && hasTracks
     ? createPortal(
       <div
-        ref={menuRef}
+        ref={setMenuNode}
         className="fixed min-w-[220px] bg-gray-900 border border-gray-700 rounded-lg shadow-xl py-1 z-120"
-        style={{ top: menuStyle.top, left: menuStyle.left, width: menuStyle.width }}
+        style={{ width: MENU_WIDTH }}
       >
         <button
           type="button"
@@ -145,7 +151,6 @@ export default function SubtitleSelector() {
           type="button"
           onClick={() => {
             if (!hasTracks) return
-            if (!open) updateMenuPosition()
             setOpen(!open)
           }}
           aria-label={hasTracks ? t('Sous-titres') : t('Pas de sous-titres')}

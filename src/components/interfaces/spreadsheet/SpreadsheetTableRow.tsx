@@ -14,6 +14,8 @@ interface SpreadsheetTableRowProps {
   critIdxMap: Map<string, number>
   note: SpreadsheetNoteLike | undefined
   totalScore: number
+  getCriterionCellColor: (criterionId: string, value: number) => string | undefined
+  getTotalCellColor: (value: number) => string | undefined
   isActive: boolean
   hideTotalsSetting: boolean
   hideTotalsUntilAllScored: boolean
@@ -52,6 +54,8 @@ function SpreadsheetTableRowComponent({
   critIdxMap,
   note,
   totalScore,
+  getCriterionCellColor,
+  getTotalCellColor,
   isActive,
   hideTotalsSetting,
   hideTotalsUntilAllScored,
@@ -87,7 +91,7 @@ function SpreadsheetTableRowComponent({
       ref={(element) => {
         if (element) rowRefs.current.set(clipIdx, element)
       }}
-      className={`amv-row-hover transition-colors cursor-pointer ${rowClassName}`}
+      className={`amv-row-hover transition-colors cursor-pointer ${rowClassName}${isActive ? ' amv-row-selected' : ''}`}
       onClick={() => {
         const originalIndex = clips.findIndex((item) => item.id === clip.id)
         if (originalIndex !== -1) onSetCurrentClip(originalIndex)
@@ -104,7 +108,7 @@ function SpreadsheetTableRowComponent({
         <span
           className={
             isActive
-              ? 'inline-flex min-w-[18px] items-center justify-center rounded border border-primary-500 px-1 text-primary-400'
+              ? 'inline-flex min-w-[18px] items-center justify-center px-1 font-extrabold text-primary-400 [text-shadow:0_0_8px_rgb(var(--color-primary-500)/0.6)]'
               : ''
           }
         >
@@ -137,19 +141,28 @@ function SpreadsheetTableRowComponent({
         critIdxMap={critIdxMap}
         note={note}
         cellRefs={cellRefs}
+        getCriterionCellColor={getCriterionCellColor}
         onCellChange={onCellChange}
         onCellKeyDown={onCellKeyDown}
         onSetCurrentClip={onSetCurrentClip}
         onShowCriterionBubble={(params) => onShowSubcategoryBubble(params)}
       />
 
-      {!hideTotalsSetting && (
-        <td className="amv-number-ui px-2 py-1 text-center font-bold text-[11px]">
-          <span className={hideTotalsUntilAllScored ? 'text-gray-600' : totalScore > 0 ? 'text-white' : 'text-gray-600'}>
-            {hideTotalsUntilAllScored ? '-' : totalScore}
-          </span>
-        </td>
-      )}
+      {!hideTotalsSetting && (() => {
+        const totalColor = !hideTotalsUntilAllScored && totalScore > 0
+          ? getTotalCellColor(totalScore)
+          : undefined
+        return (
+          <td className="amv-number-ui px-2 py-1 text-center font-bold text-[11px]">
+            <span
+              className={hideTotalsUntilAllScored ? 'text-gray-600' : totalScore > 0 ? 'text-white' : 'text-gray-600'}
+              style={totalColor ? { color: totalColor } : undefined}
+            >
+              {hideTotalsUntilAllScored ? '-' : totalScore}
+            </span>
+          </td>
+        )
+      })()}
     </tr>
   )
 }

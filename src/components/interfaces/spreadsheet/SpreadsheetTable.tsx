@@ -8,6 +8,8 @@ import { SpreadsheetTableHeader } from './SpreadsheetTableHeader'
 import { SpreadsheetTableRow } from './SpreadsheetTableRow'
 import { SpreadsheetSubcategoryBubble } from './SpreadsheetSubcategoryBubble'
 import { getClipPrimaryLabel, getClipSecondaryLabel } from '@/utils/formatters'
+import { useUIStore } from '@/store/useUIStore'
+import { buildScoreExtreme, colorForExtreme, type ScoreExtreme } from '@/utils/scoreColor'
 import { useI18n } from '@/i18n'
 
 function normalizeComment(value: string | undefined): string | null {
@@ -217,6 +219,54 @@ export function SpreadsheetTable({
     return nextMap
   }, [currentBareme.criteria])
 
+  const enableScoreColorCoding = useUIStore((s) => s.enableScoreColorCoding)
+  const scoreColorApplyBase = useUIStore((s) => s.scoreColorApplyBase)
+  const scoreColorApplyTotals = useUIStore((s) => s.scoreColorApplyTotals)
+  const scoreColorHighHex = useUIStore((s) => s.scoreColorHighHex)
+  const scoreColorLowHex = useUIStore((s) => s.scoreColorLowHex)
+  const colorBase = enableScoreColorCoding && scoreColorApplyBase
+  const colorTotals = enableScoreColorCoding && scoreColorApplyTotals
+
+  // Per-criterion column extremes (highest/lowest scored value across clips).
+  const criterionExtremes = useMemo(() => {
+    const map = new Map<string, ScoreExtreme>()
+    if (!colorBase) return map
+    for (const criterion of currentBareme.criteria) {
+      const values: number[] = []
+      for (const clip of sortedClips) {
+        const score = getNoteForClip(clip.id)?.scores?.[criterion.id]
+        if (!score || !score.isValid) continue
+        const numeric = typeof score.value === 'number' ? score.value : Number(score.value)
+        if (Number.isFinite(numeric)) values.push(numeric)
+      }
+      const extreme = buildScoreExtreme(values)
+      if (extreme) map.set(criterion.id, extreme)
+    }
+    return map
+  }, [colorBase, currentBareme.criteria, sortedClips, getNoteForClip])
+
+  const totalExtreme = useMemo(() => {
+    if (!colorTotals) return null
+    const values: number[] = []
+    for (const clip of sortedClips) {
+      if (!hasAnyScoreInBareme(clip.id)) continue
+      const total = getScoreForClip(clip.id)
+      if (Number.isFinite(total)) values.push(total)
+    }
+    return buildScoreExtreme(values)
+  }, [colorTotals, sortedClips, hasAnyScoreInBareme, getScoreForClip])
+
+  const getCriterionCellColor = useCallback(
+    (criterionId: string, value: number) =>
+      colorForExtreme(value, criterionExtremes.get(criterionId), scoreColorHighHex, scoreColorLowHex),
+    [criterionExtremes, scoreColorHighHex, scoreColorLowHex],
+  )
+
+  const getTotalCellColor = useCallback(
+    (value: number) => colorForExtreme(value, totalExtreme, scoreColorHighHex, scoreColorLowHex),
+    [totalExtreme, scoreColorHighHex, scoreColorLowHex],
+  )
+
   const currentClip = clips[currentClipIndex]
 
   return (
@@ -239,6 +289,8 @@ export function SpreadsheetTable({
               critIdxMap={critIdxMap}
               note={getNoteForClip(clip.id)}
               totalScore={getScoreForClip(clip.id)}
+              getCriterionCellColor={getCriterionCellColor}
+              getTotalCellColor={getTotalCellColor}
               isActive={currentClip?.id === clip.id}
               hideTotalsSetting={hideTotalsSetting}
               hideTotalsUntilAllScored={hideTotalsUntilAllScored}

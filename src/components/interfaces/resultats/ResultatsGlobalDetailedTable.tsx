@@ -1,8 +1,11 @@
-import { memo } from 'react'
+import { memo, useCallback, useMemo } from 'react'
 import { getClipPrimaryLabel, getClipSecondaryLabel } from '@/utils/formatters'
 import { withAlpha } from '@/utils/colors'
+import { buildScoreExtreme, colorForExtreme, type ScoreExtreme } from '@/utils/scoreColor'
+import { useUIStore } from '@/store/useUIStore'
 import {
   getCriterionNumericScore,
+  hasAnyCriterionScore,
   type CategoryGroup,
   type JudgeSource,
   type NoteLike,
@@ -61,6 +64,9 @@ interface ResultatsGlobalDetailedRowProps {
   onSetCriterionDraftCell: (key: string, value: string) => void
   onCommitCriterionDraftCell: (clipId: string, criterionId: string, judgeKey: string) => void
   onClearCriterionDraftCell: (key: string) => void
+  getCriterionColor: (criterionId: string, judgeKey: string, value: number, hasScore: boolean) => string | undefined
+  getJudgeTotalColor: (judgeKey: string, value: number) => string | undefined
+  getAverageTotalColor: (value: number) => string | undefined
   showMiniatures: boolean
   thumbnailDefaultSeconds: number
   readOnly: boolean
@@ -86,6 +92,9 @@ function ResultatsGlobalDetailedRowComponent({
   onSetCriterionDraftCell,
   onCommitCriterionDraftCell,
   onClearCriterionDraftCell,
+  getCriterionColor,
+  getJudgeTotalColor,
+  getAverageTotalColor,
   showMiniatures,
   thumbnailDefaultSeconds,
   readOnly,
@@ -98,13 +107,9 @@ function ResultatsGlobalDetailedRowComponent({
   return (
     <tr
       onClick={() => onSelectClip(row.clip.id)}
-      className={`cursor-pointer transition-colors ${
-        isSelected
-          ? 'bg-white/[0.07]'
-          : index % 2 === 0
-            ? 'bg-white/4'
-            : 'bg-transparent'
-      } hover:bg-white/6`}
+      className={`amv-row-hover cursor-pointer transition-colors ${
+        index % 2 === 0 ? 'bg-white/4' : 'bg-transparent'
+      }${isSelected ? ' amv-row-selected' : ''} hover:bg-white/6`}
     >
       <td className={` border-r border-gray-800/60 bg-surface px-2 py-1 text-center text-[10px] text-gray-500`}>
         {index + 1}
@@ -149,12 +154,22 @@ function ResultatsGlobalDetailedRowComponent({
             const score = getCriterionNumericScore(note, criterion)
             const displayed = criterionDraftCells[key] ?? formatCriterionValue(score)
             const judgeColor = judgeColors[judge.key] ?? '#60a5fa'
+            const highlight = getCriterionColor(
+              criterion.id,
+              judge.key,
+              score,
+              hasAnyCriterionScore(note, [criterion]),
+            )
 
             return (
               <td
                 key={`${row.clip.id}-${criterion.id}-${judge.key}`}
                 className="amv-number-ui border-r border-gray-800/60 px-1 py-1 text-center"
-                style={{ color: judgeColor, backgroundColor: withAlpha(judgeColor, 0.05) }}
+                style={{
+                  color: highlight ?? judgeColor,
+                  backgroundColor: withAlpha(judgeColor, 0.05),
+                  fontWeight: highlight ? 600 : undefined,
+                }}
               >
                 {readOnly ? (
                   <span className="block w-full rounded-xs border border-transparent bg-transparent px-1 py-0.5 text-center">
@@ -198,22 +213,33 @@ function ResultatsGlobalDetailedRowComponent({
         row.judgeTotals.map((score, judgeIdx) => {
           const judge = judges[judgeIdx]
           const color = judgeColors[judge.key] ?? '#60a5fa'
+          const totalColor = getJudgeTotalColor(judge.key, score)
           return (
             <td
               key={`${row.clip.id}-total-${judge.key}`}
               className="amv-number-ui border-r border-gray-800/60 px-2 py-1 text-center"
-              style={{ color, backgroundColor: withAlpha(color, 0.06) }}
+              style={{
+                color: totalColor ?? color,
+                backgroundColor: withAlpha(color, 0.06),
+                fontWeight: totalColor ? 600 : undefined,
+              }}
             >
               {score.toFixed(1)}
             </td>
           )
         })}
 
-      {canSortByScore && (
-        <td className="amv-number-ui border-r border-gray-700/60 px-2 py-1 text-center font-bold text-white">
-          {row.averageTotal.toFixed(1)}
-        </td>
-      )}
+      {canSortByScore && (() => {
+        const avgColor = getAverageTotalColor(row.averageTotal)
+        return (
+          <td
+            className="amv-number-ui border-r border-gray-700/60 px-2 py-1 text-center font-bold text-white"
+            style={avgColor ? { color: avgColor } : undefined}
+          >
+            {row.averageTotal.toFixed(1)}
+          </td>
+        )
+      })()}
 
       {getRowComment && (
         <td className="border-r border-gray-800/60 px-2 py-1 align-top text-[10px] leading-snug text-gray-300 whitespace-pre-line wrap-break-word min-w-[160px] max-w-[340px]">
@@ -251,6 +277,80 @@ export function ResultatsGlobalDetailedTable({
   getRowCommentTitle,
 }: ResultatsGlobalDetailedTableProps) {
   const { t } = useI18n()
+
+  const enableScoreColorCoding = useUIStore((s) => s.enableScoreColorCoding)
+  const scoreColorApplyBase = useUIStore((s) => s.scoreColorApplyBase)
+  const scoreColorApplyTotals = useUIStore((s) => s.scoreColorApplyTotals)
+  const scoreColorHighHex = useUIStore((s) => s.scoreColorHighHex)
+  const scoreColorLowHex = useUIStore((s) => s.scoreColorLowHex)
+  const colorBase = enableScoreColorCoding && scoreColorApplyBase
+  const colorTotals = enableScoreColorCoding && scoreColorApplyTotals
+
+  // Extreme per (criterion + judge) column across clips.
+  const criterionJudgeExtremes = useMemo(() => {
+    const map = new Map<string, ScoreExtreme>()
+    if (!colorBase) return map
+    for (const group of categoryGroups) {
+      for (const criterion of group.criteria) {
+        for (const judge of judges) {
+          const values: number[] = []
+          for (const row of rows) {
+            const note = judge.notes[row.clip.id] as NoteLike | undefined
+            if (!hasAnyCriterionScore(note, [criterion])) continue
+            values.push(getCriterionNumericScore(note, criterion))
+          }
+          const extreme = buildScoreExtreme(values)
+          if (extreme) map.set(`${criterion.id}::${judge.key}`, extreme)
+        }
+      }
+    }
+    return map
+  }, [colorBase, categoryGroups, judges, rows])
+
+  // Extreme per judge total column across clips.
+  const judgeTotalExtremes = useMemo(() => {
+    const map = new Map<string, ScoreExtreme>()
+    if (!colorTotals) return map
+    judges.forEach((judge, judgeIndex) => {
+      const values: number[] = []
+      for (const row of rows) {
+        const value = row.judgeTotals[judgeIndex]
+        if (Number.isFinite(value) && value > 0) values.push(value)
+      }
+      const extreme = buildScoreExtreme(values)
+      if (extreme) map.set(judge.key, extreme)
+    })
+    return map
+  }, [colorTotals, judges, rows])
+
+  const averageTotalExtreme = useMemo(() => {
+    if (!colorTotals) return null
+    const values: number[] = []
+    for (const row of rows) {
+      if (Number.isFinite(row.averageTotal) && row.averageTotal > 0) values.push(row.averageTotal)
+    }
+    return buildScoreExtreme(values)
+  }, [colorTotals, rows])
+
+  const getCriterionColor = useCallback(
+    (criterionId: string, judgeKey: string, value: number, hasScore: boolean) =>
+      hasScore
+        ? colorForExtreme(value, criterionJudgeExtremes.get(`${criterionId}::${judgeKey}`), scoreColorHighHex, scoreColorLowHex)
+        : undefined,
+    [criterionJudgeExtremes, scoreColorHighHex, scoreColorLowHex],
+  )
+
+  const getJudgeTotalColor = useCallback(
+    (judgeKey: string, value: number) =>
+      colorForExtreme(value, judgeTotalExtremes.get(judgeKey), scoreColorHighHex, scoreColorLowHex),
+    [judgeTotalExtremes, scoreColorHighHex, scoreColorLowHex],
+  )
+
+  const getAverageTotalColor = useCallback(
+    (value: number) => colorForExtreme(value, averageTotalExtreme, scoreColorHighHex, scoreColorLowHex),
+    [averageTotalExtreme, scoreColorHighHex, scoreColorLowHex],
+  )
+
   return (
     <div className={`relative isolate min-h-0 flex-1 ${staticExport ? 'overflow-visible' : 'amv-results-scroll'}`}>
       <table className="w-full border-separate border-spacing-0 text-[11px]">
@@ -388,6 +488,9 @@ export function ResultatsGlobalDetailedTable({
               onSetCriterionDraftCell={onSetCriterionDraftCell}
               onCommitCriterionDraftCell={onCommitCriterionDraftCell}
               onClearCriterionDraftCell={onClearCriterionDraftCell}
+              getCriterionColor={getCriterionColor}
+              getJudgeTotalColor={getJudgeTotalColor}
+              getAverageTotalColor={getAverageTotalColor}
               showMiniatures={showMiniatures}
               thumbnailDefaultSeconds={thumbnailDefaultSeconds}
               readOnly={readOnly}

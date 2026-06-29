@@ -70,7 +70,7 @@ Invariantes importantes:
 - `useNotationStore` — notas, historial, baremo actual, baremos disponibles;
 - `useUIStore` — pestaña activa, layout de notación, tema, acento, idioma, zoom, atajos, modales;
 - `useClipDeletionStore` — flujo de confirmación de eliminación de clip;
-- `useAppUpdateStore` — comprobación de actualizaciones vía releases de GitHub (estado, versión actual/última, URL de release).
+- `useAppUpdateStore` — comprobación de actualizaciones vía releases de GitHub; actualización automática integrada y firmada (tauri-plugin-updater) descargada e instalada desde la aplicación.
 
 ## Primeros pasos
 
@@ -153,7 +153,7 @@ src-tauri/
 - exportaciones ricas: PNG, PDF, JSON, HTML/CSS, previsualizaciones de Discord;
 - preferencias persistidas y difundidas entre ventanas: tema, acento, idioma, atajos, miniaturas, confirmaciones;
 - menú contextual del player separado (ventana `player-menu`);
-- comprobación de actualizaciones vía releases de GitHub.
+- actualización automática integrada: aparece un logo azul «Actualizar» en la cabecera cuando hay una nueva versión firmada; al hacer clic se guarda el proyecto, se descarga, se instala y se reinicia la aplicación.
 
 ## Flujo de desarrollo
 

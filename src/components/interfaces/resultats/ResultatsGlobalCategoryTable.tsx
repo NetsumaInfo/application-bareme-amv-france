@@ -1,5 +1,8 @@
+import { useMemo } from 'react'
 import { getClipPrimaryLabel, getClipSecondaryLabel } from '@/utils/formatters'
 import { withAlpha } from '@/utils/colors'
+import { buildScoreExtreme, colorForExtreme, type ScoreExtreme } from '@/utils/scoreColor'
+import { useUIStore } from '@/store/useUIStore'
 import { hasAnyCriterionScore, type CategoryGroup, type JudgeSource, type NoteLike } from '@/utils/results'
 import type { ResultatsRow } from '@/components/interfaces/resultats/types'
 import { RESULTATS_PARTICIPANT_COLUMN_WIDTH_CLASS } from '@/components/interfaces/resultats/layout'
@@ -27,10 +30,21 @@ interface ResultatsGlobalCategoryTableProps {
   getRowCommentTitle?: (clipId: string) => string
 }
 
-function formatAverage(values: number[]): string {
-  if (values.length === 0) return '-'
-  const avg = values.reduce((sum, value) => sum + value, 0) / values.length
-  return avg.toFixed(1)
+// Mean of judges' category scores for one clip, or null when nobody scored it.
+function categoryAverageForRow(
+  row: ResultatsRow,
+  group: CategoryGroup,
+  judges: JudgeSource[],
+): number | null {
+  const values = judges
+    .map((judge, judgeIndex) => {
+      const note = judge.notes[row.clip.id] as NoteLike | undefined
+      if (!hasAnyCriterionScore(note, group.criteria)) return null
+      return row.categoryJudgeScores[group.category]?.[judgeIndex] ?? 0
+    })
+    .filter((value): value is number => value !== null)
+  if (values.length === 0) return null
+  return values.reduce((sum, value) => sum + value, 0) / values.length
 }
 
 export function ResultatsGlobalCategoryTable({
@@ -52,6 +66,39 @@ export function ResultatsGlobalCategoryTable({
 }: ResultatsGlobalCategoryTableProps) {
   const { t } = useI18n()
   const judgeBandMinWidth = Math.max(184, (judges.length + 1) * 68)
+
+  const enableScoreColorCoding = useUIStore((s) => s.enableScoreColorCoding)
+  const scoreColorApplyBase = useUIStore((s) => s.scoreColorApplyBase)
+  const scoreColorApplyTotals = useUIStore((s) => s.scoreColorApplyTotals)
+  const scoreColorHighHex = useUIStore((s) => s.scoreColorHighHex)
+  const scoreColorLowHex = useUIStore((s) => s.scoreColorLowHex)
+  const colorBase = enableScoreColorCoding && scoreColorApplyBase
+  const colorTotals = enableScoreColorCoding && scoreColorApplyTotals
+
+  // Per-category extreme (highest/lowest clip average) for cross-clip coloring.
+  const categoryExtremes = useMemo(() => {
+    const map = new Map<string, ScoreExtreme>()
+    if (!colorBase) return map
+    for (const group of categoryGroups) {
+      const values: number[] = []
+      for (const row of rows) {
+        const avg = categoryAverageForRow(row, group, judges)
+        if (avg !== null) values.push(avg)
+      }
+      const extreme = buildScoreExtreme(values)
+      if (extreme) map.set(group.category, extreme)
+    }
+    return map
+  }, [colorBase, categoryGroups, rows, judges])
+
+  const totalExtreme = useMemo(() => {
+    if (!colorTotals) return null
+    const values: number[] = []
+    for (const row of rows) {
+      if (Number.isFinite(row.averageTotal) && row.averageTotal > 0) values.push(row.averageTotal)
+    }
+    return buildScoreExtreme(values)
+  }, [colorTotals, rows])
 
   return (
     <div className={`relative isolate min-h-0 flex-1 ${staticExport ? 'overflow-visible' : 'amv-results-scroll'}`}>
@@ -143,13 +190,9 @@ export function ResultatsGlobalCategoryTable({
               <tr
                 key={row.clip.id}
                 onClick={() => onSelectClip(row.clip.id)}
-                className={`cursor-pointer transition-colors ${
-                  isSelected
-                    ? 'bg-white/6'
-                    : index % 2 === 0
-                      ? 'bg-surface-dark/16'
-                      : 'bg-transparent'
-                } hover:bg-white/5`}
+                className={`amv-row-hover cursor-pointer transition-colors ${
+                  index % 2 === 0 ? 'bg-surface-dark/16' : 'bg-transparent'
+                }${isSelected ? ' amv-row-selected' : ''} hover:bg-white/5`}
               >
                 <td className={` border-r border-gray-800/60 bg-surface px-2 py-1 text-center text-[10px] text-gray-500`}>
                   {index + 1}
@@ -187,6 +230,16 @@ export function ResultatsGlobalCategoryTable({
                 </td>
 
                 {categoryGroups.map((group) => {
+                  const categoryAvg = categoryAverageForRow(row, group, judges)
+                  const categoryAvgColor =
+                    categoryAvg !== null
+                      ? colorForExtreme(
+                          categoryAvg,
+                          categoryExtremes.get(group.category),
+                          scoreColorHighHex,
+                          scoreColorLowHex,
+                        )
+                      : undefined
                   return (
                     <td
                       key={`${row.clip.id}-${group.category}-judge-values`}
@@ -211,25 +264,33 @@ export function ResultatsGlobalCategoryTable({
                             </div>
                           )
                         })}
-                        <div className="px-2 py-1 text-center text-white/90">
-                          {formatAverage(
-                            judges
-                              .map((judge, judgeIndex) => {
-                                const note = judge.notes[row.clip.id] as NoteLike | undefined
-                                if (!hasAnyCriterionScore(note, group.criteria)) return null
-                                return row.categoryJudgeScores[group.category]?.[judgeIndex] ?? 0
-                              })
-                              .filter((value): value is number => value !== null),
-                          )}
+                        <div
+                          className="px-2 py-1 text-center text-white/90"
+                          style={categoryAvgColor ? { color: categoryAvgColor, fontWeight: 600 } : undefined}
+                        >
+                          {categoryAvg !== null ? categoryAvg.toFixed(1) : '-'}
                         </div>
                       </div>
                     </td>
                   )
                 })}
 
-                <td className="amv-number-ui border-r border-gray-700/60 px-2 py-1 text-center font-bold text-white">
-                  {row.averageTotal.toFixed(1)}
-                </td>
+                {(() => {
+                  const totalColor = colorForExtreme(
+                    row.averageTotal,
+                    totalExtreme,
+                    scoreColorHighHex,
+                    scoreColorLowHex,
+                  )
+                  return (
+                    <td
+                      className="amv-number-ui border-r border-gray-700/60 px-2 py-1 text-center font-bold text-white"
+                      style={totalColor ? { color: totalColor } : undefined}
+                    >
+                      {row.averageTotal.toFixed(1)}
+                    </td>
+                  )
+                })()}
 
                 {getRowComment && (
                   <td className="border-r border-gray-800/60 px-2 py-1 align-top text-[10px] leading-snug text-gray-300 whitespace-pre-line wrap-break-word min-w-[160px] max-w-[340px]">

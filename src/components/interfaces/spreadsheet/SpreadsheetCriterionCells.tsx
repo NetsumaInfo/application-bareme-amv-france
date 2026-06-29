@@ -12,6 +12,7 @@ interface SpreadsheetCriterionCellsProps {
   critIdxMap: Map<string, number>
   note: SpreadsheetNoteLike | undefined
   cellRefs: MutableRefObject<Map<string, HTMLInputElement>>
+  getCriterionCellColor: (criterionId: string, value: number) => string | undefined
   onCellChange: (clipId: string, criterionId: string, value: string) => void
   onCellKeyDown: (event: ReactKeyboardEvent, clipIdx: number, critIdx: number) => void
   onSetCurrentClip: (index: number) => void
@@ -32,6 +33,7 @@ function SpreadsheetCriterionCellsComponent({
   critIdxMap,
   note,
   cellRefs,
+  getCriterionCellColor,
   onCellChange,
   onCellKeyDown,
   onSetCurrentClip,
@@ -43,6 +45,11 @@ function SpreadsheetCriterionCellsComponent({
         const critIdx = critIdxMap.get(criterion.id) ?? 0
         const score = note?.scores[criterion.id]
         const value = score?.value ?? ''
+        const numericValue = typeof value === 'number' ? value : Number(value)
+        const highlightColor =
+          value !== '' && Number.isFinite(numericValue)
+            ? getCriterionCellColor(criterion.id, numericValue)
+            : undefined
 
         return (
           <td key={criterion.id} className="px-0.5 py-0.5 border-r border-gray-800 text-center">
@@ -56,6 +63,7 @@ function SpreadsheetCriterionCellsComponent({
               step={criterion.step || 0.5}
               value={value === '' ? '' : String(value)}
               aria-label={criterion.name}
+              style={highlightColor ? { color: highlightColor, fontWeight: 600 } : undefined}
               onChange={(event) => onCellChange(clip.id, criterion.id, event.target.value)}
               onKeyDown={(event) => onCellKeyDown(event, clipIdx, critIdx)}
               onFocus={() => {

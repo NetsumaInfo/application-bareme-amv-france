@@ -1,13 +1,17 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { getCurrentWindow } from '@tauri-apps/api/window'
-import { OVERLAY_AUTOHIDE_MS } from '@/components/player/overlay/overlayConstants'
+import { clampOverlayAutoHideMs, OVERLAY_AUTOHIDE_MS } from '@/components/player/overlay/overlayConstants'
 import { isPlayerMenuOpen } from '@/components/player/overlay/overlayMenuFocus'
 
 interface UseOverlayControlVisibilityOptions {
   autoHideControls: boolean
+  autoHideMs?: number
 }
 
-export function useOverlayControlVisibility({ autoHideControls }: UseOverlayControlVisibilityOptions) {
+export function useOverlayControlVisibility({
+  autoHideControls,
+  autoHideMs = OVERLAY_AUTOHIDE_MS,
+}: UseOverlayControlVisibilityOptions) {
   const [showControls, setShowControls] = useState(true)
   const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const pinnedRef = useRef(false)
@@ -22,8 +26,8 @@ export function useOverlayControlVisibility({ autoHideControls }: UseOverlayCont
   const scheduleHide = useCallback(() => {
     clearTimer()
     if (!autoHideControls || pinnedRef.current) return
-    hideTimerRef.current = setTimeout(() => setShowControls(false), OVERLAY_AUTOHIDE_MS)
-  }, [autoHideControls])
+    hideTimerRef.current = setTimeout(() => setShowControls(false), clampOverlayAutoHideMs(autoHideMs))
+  }, [autoHideControls, autoHideMs])
 
   const resetHideTimer = useCallback(() => {
     setShowControls(true)

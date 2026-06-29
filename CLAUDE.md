@@ -81,6 +81,24 @@ npm run tauri build
 
 **Tauri v2 check note**: primary target is Windows/MSVC. `cd src-tauri && cargo check` from WSL/Linux can fail before app code if GTK/WebKit/Pango system packages are missing. Prefer `npm run tauri -- build --debug --no-bundle` for desktop validation.
 
+### Auto-Update Release Signing (MANDATORY every release)
+
+In-app auto-update uses `tauri-plugin-updater`, which **refuses any unsigned binary**. Every release MUST be signed or the in-app "Mettre à jour" button cannot install.
+
+- Private key `.tauri/amv-updater.key` (gitignored — NEVER commit, NEVER lose; loss permanently breaks updates). Public key in `src-tauri/tauri.conf.json` → `plugins.updater.pubkey`. No password (empty).
+- Endpoint: GitHub `releases/latest/download/latest.json`. `bundle.createUpdaterArtifacts: true` emits `.sig` + `latest.json`.
+
+Release steps:
+1. Bump the SAME version in `package.json`, `src-tauri/Cargo.toml`, `src-tauri/tauri.conf.json`.
+2. Build with signing env set (PowerShell):
+   ```powershell
+   $env:TAURI_SIGNING_PRIVATE_KEY = Get-Content -Raw .\.tauri\amv-updater.key
+   $env:TAURI_SIGNING_PRIVATE_KEY_PASSWORD = ""
+   npm run tauri build
+   ```
+3. Create GitHub release `vX.Y.Z`; upload installer(s) + their `.sig` + `latest.json` from `src-tauri/target/release/bundle/`.
+4. Startup check shows the blue **Mettre à jour** header logo when a newer signed version exists; click saves the project, installs, relaunches.
+
 ## Stack Summary
 
 - **Desktop shell**: Tauri v2

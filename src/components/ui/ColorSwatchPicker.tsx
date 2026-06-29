@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type Ref } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type Ref } from 'react'
 import { createPortal } from 'react-dom'
 import { ChevronDown } from 'lucide-react'
 import { HoverTextTooltip } from '@/components/ui/HoverTextTooltip'
@@ -163,11 +163,14 @@ function useColorSwatchPickerController({
   const svAreaRef = useRef<HTMLDivElement | null>(null)
   const hueAreaRef = useRef<HTMLDivElement | null>(null)
   const dragStateRef = useRef<'sv' | 'hue' | null>(null)
-  const [pickerStyle, setPickerStyle] = useState<{ top: number; left: number; width: number }>({
-    top: 0,
-    left: 0,
-    width: 280,
-  })
+  const PICKER_WIDTH = 280
+  // Hide the panel until positioned (like HoverTextTooltip): the ref callback
+  // hides it on mount, updatePickerPosition reveals it once placed. Imperative on
+  // purpose so re-renders never reset visibility and we avoid setState-in-effect.
+  const setPickerNode = useCallback((node: HTMLDivElement | null) => {
+    pickerRef.current = node
+    if (node) node.style.visibility = 'hidden'
+  }, [])
 
   const displayColor = useMemo(() => hsvToHex(hsv.h, hsv.s, hsv.v), [hsv])
 
@@ -286,14 +289,17 @@ function useColorSwatchPickerController({
     assignRef(triggerRef, node)
   }, [triggerRef])
 
+  // Like HoverTextTooltip: write the position straight to the DOM node before
+  // paint, so the panel is never painted at its default (0,0) origin.
   const updatePickerPosition = useCallback(() => {
     const trigger = triggerButtonRef.current
-    if (!trigger) return
+    const node = pickerRef.current
+    if (!trigger || !node) return
 
     const rect = trigger.getBoundingClientRect()
-    const width = 280
+    const width = PICKER_WIDTH
     const viewportPadding = 8
-    const measuredHeight = pickerRef.current?.offsetHeight ?? 360
+    const measuredHeight = node.offsetHeight || 360
     // With CSS zoom, rect/clientX values are in zoomed space, window.inner* are not.
     const viewportW = window.innerWidth * zoomScale
     const viewportH = window.innerHeight * zoomScale
@@ -305,7 +311,9 @@ function useColorSwatchPickerController({
     const top = clamp(rawTop, viewportPadding, viewportH - measuredHeight - viewportPadding)
     const left = clamp(rect.left, viewportPadding, viewportW - width - viewportPadding)
 
-    setPickerStyle({ top, left, width })
+    node.style.left = `${left}px`
+    node.style.top = `${top}px`
+    node.style.visibility = 'visible'
   }, [zoomScale])
 
   useEffect(() => {
@@ -322,7 +330,7 @@ function useColorSwatchPickerController({
     return () => document.removeEventListener('mousedown', onOutside)
   }, [closePicker, open])
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!open) return
     updatePickerPosition()
 
@@ -444,9 +452,9 @@ function useColorSwatchPickerController({
 
       {open && !disabled && createPortal(
         <div
-          ref={pickerRef}
+          ref={setPickerNode}
           className="fixed rounded-xl border border-gray-700 bg-surface-dark shadow-2xl z-140 p-2.5"
-          style={{ width: pickerStyle.width, top: pickerStyle.top, left: pickerStyle.left }}
+          style={{ width: PICKER_WIDTH }}
         >
           <div
             ref={svAreaRef}

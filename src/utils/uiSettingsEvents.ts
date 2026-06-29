@@ -15,6 +15,12 @@ export interface UiSettingsUpdatePayload {
   projectsFolderPath?: string
   baremesFolderPath?: string
   shortcutBindings?: Record<ShortcutAction, string>
+  enableScoreColorCoding?: boolean
+  scoreColorApplyBase?: boolean
+  scoreColorApplyTotals?: boolean
+  scoreColorHighHex?: string
+  scoreColorLowHex?: string
+  overlayAutoHideMs?: number
 }
 
 export function emitUiSettingsUpdated(patch: UiSettingsUpdatePayload) {

@@ -66,6 +66,11 @@ export function JudgeNameInput({
   const [open, setOpen] = useState(false)
   const [activeIndex, setActiveIndex] = useState(-1)
   const [menuPosition, setMenuPosition] = useState({ left: 0, top: 0, width: 240, maxHeight: 224 })
+  // Hide the menu node until positioned; revealed imperatively once placed.
+  const setMenuNode = useCallback((node: HTMLDivElement | null) => {
+    menuRef.current = node
+    if (node) node.style.visibility = 'hidden'
+  }, [])
 
   useEffect(() => {
     let cancelled = false
@@ -142,6 +147,7 @@ export function JudgeNameInput({
     const top = clamp(rawTop, viewportPadding, Math.max(viewportPadding, viewportHeight - visibleHeight - viewportPadding))
 
     setMenuPosition({ left, top, width, maxHeight })
+    if (menuRef.current) menuRef.current.style.visibility = 'visible'
   }, [suggestions.length, zoomScale])
 
   const handleReposition = useEffectEvent(() => updateMenuPosition())
@@ -236,7 +242,7 @@ export function JudgeNameInput({
   const suggestionsMenu = showMenu && typeof document !== 'undefined'
     ? createPortal(
       <div
-        ref={menuRef}
+        ref={setMenuNode}
         className="fixed z-2300 overflow-hidden rounded-lg bg-surface p-1.5 shadow-2xl ring-1 ring-inset ring-primary-400/10"
         style={{
           left: `${menuPosition.left}px`,
