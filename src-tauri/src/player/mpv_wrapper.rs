@@ -39,9 +39,19 @@ impl MpvPlayer {
             ("keep-open", "yes"),
             ("idle", "yes"),
             ("osc", "no"),
+            // mpv draws its own white OSD progress bar on every seek/volume
+            // change. The app has its own overlay timeline, so disable mpv's OSD
+            // entirely (bar + text) to stop that bar flashing when seeking.
+            ("osd-bar", "no"),
+            ("osd-level", "0"),
             ("input-default-bindings", "no"),
             ("terminal", "no"),
             ("msg-level", "all=no"),
+            // Feeds the L/R dB meter (AudioDbMeter) via FFmpeg's `astats` audio
+            // filter. REQUIRES the bundled FFmpeg to include the `astats` (and
+            // `aformat`/`aresample`) filters — otherwise this `af` fails to build
+            // and mpv disables audio output entirely (no sound). The stripped
+            // FFmpeg must be rebuilt with `--enable-filter=astats,aformat,aresample,anull`.
             ("af", "@dbmeter:lavfi=[astats=metadata=1:reset=1]"),
         ];
 

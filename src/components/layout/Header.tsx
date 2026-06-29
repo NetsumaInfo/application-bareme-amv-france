@@ -12,6 +12,8 @@ import { useI18n } from '@/i18n'
 import { LanguageSwitcher } from '@/components/layout/LanguageSwitcher'
 import { useJudgeImport } from '@/components/project/useJudgeImport'
 import { useAppUpdateStore } from '@/store/useAppUpdateStore'
+import { useWindowDrag } from '@/hooks/useWindowDrag'
+import { WindowControls } from '@/components/window/WindowControls'
 
 export default function Header({
   onOpenSettings,
@@ -29,6 +31,7 @@ export default function Header({
   const { importing, handleImportJudgeJson } = useJudgeImport()
   const updateStatus = useAppUpdateStore((state) => state.status)
   const { t } = useI18n()
+  const onPointerDown = useWindowDrag()
   const projectName = currentProject?.name?.trim() || 'AMV Notation'
   const judgeName = currentProject?.judgeName?.trim() || ''
   const showProjectActions = Boolean(currentProject) && currentTab !== 'export'
@@ -57,7 +60,10 @@ export default function Header({
   }
 
   return (
-    <header className="relative z-60 grid min-h-[22px] grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-1 bg-surface px-3 py-0">
+    <header
+      onPointerDown={onPointerDown}
+      className="relative z-60 grid min-h-[22px] grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] select-none items-center gap-1 bg-surface px-3 py-0"
+    >
       {currentProject && (
         <div className="pointer-events-none absolute inset-x-0 top-1/2 z-0 flex -translate-y-1/2 justify-center px-3">
           <div className="pointer-events-auto relative">
@@ -157,6 +163,7 @@ export default function Header({
             ) : null}
           </button>
         </HoverTextTooltip>
+        <WindowControls className="-mr-3 ml-1 self-stretch" />
       </div>
     </header>
   )

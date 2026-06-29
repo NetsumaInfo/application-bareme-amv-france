@@ -4,6 +4,7 @@ import { ChevronLeft, ChevronRight, Play } from 'lucide-react'
 import { useUIStore } from '@/store/useUIStore'
 import { DetachedNotesLoading } from '@/components/notes/DetachedNotesLoading'
 import { DetachedNotesHeader } from '@/components/notes/DetachedNotesHeader'
+import { WindowTitleBar } from '@/components/window/WindowTitleBar'
 import { DetachedFramePreview } from '@/components/notes/DetachedFramePreview'
 import { DetachedNotesCategories } from '@/components/notes/detached/DetachedNotesCategories'
 import { DetachedNotesFooter } from '@/components/notes/detached/DetachedNotesFooter'
@@ -224,6 +225,7 @@ export default function DetachedNotesWindow() {
         setContextMenu({ x: event.clientX, y: event.clientY })
       }}
     >
+      <WindowTitleBar />
       <DetachedNotesHeader
         clip={clip}
         clipIndex={clipData.clipIndex}

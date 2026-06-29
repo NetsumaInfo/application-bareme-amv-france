@@ -34,6 +34,40 @@ pub struct MpvEventProperty {
 
 pub type MpvHandle = *mut c_void;
 
+#[cfg(target_os = "windows")]
+#[link(name = "kernel32")]
+extern "system" {
+    fn SetDllDirectoryW(path: *const u16) -> i32;
+}
+
+/// Add `dir` to the process DLL search path so a dynamically-loaded library can
+/// resolve its sibling dependencies from that folder.
+#[cfg(target_os = "windows")]
+fn add_dll_search_dir(dir: &std::path::Path) {
+    use std::os::windows::ffi::OsStrExt;
+    let wide: Vec<u16> = dir
+        .as_os_str()
+        .encode_wide()
+        .chain(std::iter::once(0))
+        .collect();
+    unsafe {
+        SetDllDirectoryW(wide.as_ptr());
+    }
+}
+
+/// Restore the default DLL search path.
+#[cfg(target_os = "windows")]
+fn clear_dll_search_dir() {
+    unsafe {
+        SetDllDirectoryW(ptr::null());
+    }
+}
+
+#[cfg(not(target_os = "windows"))]
+fn add_dll_search_dir(_dir: &std::path::Path) {}
+#[cfg(not(target_os = "windows"))]
+fn clear_dll_search_dir() {}
+
 pub struct MpvLib {
     _lib: Library,
     pub create: unsafe fn() -> MpvHandle,
@@ -102,7 +136,15 @@ impl MpvLib {
                 let full_path = dir.join(name);
                 if full_path.exists() {
                     eprintln!("[mpv] Trying: {}", full_path.display());
-                    match unsafe { Library::new(&full_path) } {
+                    // The stripped libmpv is a *shared* build: it imports avcodec/
+                    // avformat/libplacebo/etc. that ship next to it. `Library::new`
+                    // loads with default flags, so Windows resolves those deps from
+                    // the exe dir — not libmpv's folder. Add that folder to the DLL
+                    // search path so the siblings are found.
+                    add_dll_search_dir(dir);
+                    let result = unsafe { Library::new(&full_path) };
+                    clear_dll_search_dir();
+                    match result {
                         Ok(lib) => {
                             eprintln!("[mpv] Loaded from: {}", full_path.display());
                             return Self::load_from_library(lib);

@@ -1,7 +1,9 @@
+import { useRef, type PointerEvent } from 'react'
 import { X } from 'lucide-react'
 import type { ClipInfo } from '@/components/player/overlay/types'
 import { HoverTextTooltip } from '@/components/ui/HoverTextTooltip'
 import { useI18n } from '@/i18n'
+import { playerGetDetachedRect, playerMoveDetached } from '@/services/tauri'
 import type { OverlayIconScale } from '@/components/player/overlay/overlayConstants'
 
 interface OverlayTopBarProps {
@@ -22,11 +24,63 @@ export function OverlayTopBar({
   onUnpin,
 }: OverlayTopBarProps) {
   const { t } = useI18n()
+  // The borderless player has no native title bar, so this bar IS the drag
+  // handle. A native move loop can't be started from the separate overlay
+  // window, so we move the player window ourselves: anchor on pointer-down,
+  // then push the new absolute position (rAF-throttled) while dragging.
+  const drag = useRef<{ startX: number; startY: number; baseX: number; baseY: number } | null>(null)
+  const pending = useRef<{ x: number; y: number } | null>(null)
+  const rafId = useRef<number | null>(null)
+
+  const flush = () => {
+    rafId.current = null
+    const target = pending.current
+    if (!target) return
+    pending.current = null
+    playerMoveDetached(target.x, target.y).catch(() => {})
+  }
+
+  const handlePointerDown = (event: PointerEvent<HTMLDivElement>) => {
+    if (event.button !== 0) return
+    if ((event.target as HTMLElement).closest('button,a,input,[data-no-drag]')) return
+    const startX = event.screenX
+    const startY = event.screenY
+    void playerGetDetachedRect()
+      .then(([x, y]) => {
+        drag.current = { startX, startY, baseX: x, baseY: y }
+      })
+      .catch(() => {})
+    event.currentTarget.setPointerCapture(event.pointerId)
+  }
+
+  const handlePointerMove = (event: PointerEvent<HTMLDivElement>) => {
+    const anchor = drag.current
+    if (!anchor) return
+    const dpr = window.devicePixelRatio || 1
+    pending.current = {
+      x: Math.round(anchor.baseX + (event.screenX - anchor.startX) * dpr),
+      y: Math.round(anchor.baseY + (event.screenY - anchor.startY) * dpr),
+    }
+    if (rafId.current == null) rafId.current = requestAnimationFrame(flush)
+  }
+
+  const handlePointerUp = (event: PointerEvent<HTMLDivElement>) => {
+    drag.current = null
+    try {
+      event.currentTarget.releasePointerCapture(event.pointerId)
+    } catch {
+      // pointer already released
+    }
+  }
+
   return (
     <div
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={handlePointerUp}
       onMouseEnter={onPin}
       onMouseLeave={onUnpin}
-      className={`absolute top-0 left-0 right-0 px-3 py-2 @[700px]/overlay:px-6 @[700px]/overlay:py-3
+      className={`absolute top-0 left-0 right-0 cursor-move select-none px-3 py-2 @[700px]/overlay:px-6 @[700px]/overlay:py-3
         bg-linear-to-b from-black/45 via-black/15 to-transparent
         transition-opacity duration-300 motion-reduce:transition-none ${
           controlsVisible ? 'opacity-100' : 'opacity-0 pointer-events-none'

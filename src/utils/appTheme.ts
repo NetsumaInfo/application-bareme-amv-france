@@ -1,3 +1,5 @@
+import { setWindowChrome } from '@/services/tauri'
+
 const APP_THEME_PRESETS = ['absolute', 'black', 'midnight', 'graphite', 'studio', 'abyss', 'porcelain', 'pearl', 'ivory', 'sand'] as const
 export type AppThemePreset = typeof APP_THEME_PRESETS[number]
 
@@ -156,10 +158,60 @@ export function normalizePrimaryColorPreset(value: unknown): PrimaryColorPreset 
   return null
 }
 
+const APP_THEME_GROUP: Record<AppThemePreset, 'dark' | 'light'> = Object.fromEntries(
+  APP_THEME_OPTIONS.map((option) => [option.value, option.group]),
+) as Record<AppThemePreset, 'dark' | 'light'>
+
+const PRIMARY_COLOR_HEX: Record<PrimaryColorPreset, string> = Object.fromEntries(
+  PRIMARY_COLOR_OPTIONS.map((option) => [option.value, option.color]),
+) as Record<PrimaryColorPreset, string>
+
+export function getAppThemeGroup(theme: AppThemePreset): 'dark' | 'light' {
+  return APP_THEME_GROUP[theme] ?? 'dark'
+}
+
+export function getPrimaryColorHex(primaryColor: PrimaryColorPreset): string {
+  return PRIMARY_COLOR_HEX[primaryColor] ?? '#3b82f6'
+}
+
+function parseHexColor(hex: string): { r: number; g: number; b: number } {
+  const h = hex.replace('#', '')
+  return {
+    r: parseInt(h.slice(0, 2), 16) || 0,
+    g: parseInt(h.slice(2, 4), 16) || 0,
+    b: parseInt(h.slice(4, 6), 16) || 0,
+  }
+}
+
+/** Blend `from` toward `to` by `weight` (0..1) and return `#RRGGBB`. */
+function mixHexColor(from: string, to: string, weight: number): string {
+  const a = parseHexColor(from)
+  const b = parseHexColor(to)
+  const ch = (x: number, y: number) =>
+    Math.round(x + (y - x) * weight)
+      .toString(16)
+      .padStart(2, '0')
+  return `#${ch(a.r, b.r)}${ch(a.g, b.g)}${ch(a.b, b.b)}`
+}
+
 export function applyAppearanceToDocument(theme: AppThemePreset, primaryColor: PrimaryColorPreset) {
   if (typeof document === 'undefined') return
   document.documentElement.dataset.appTheme = theme
   document.documentElement.dataset.primaryColor = primaryColor
+
+  // Harmonise native window title bars (caption, text, border, square close
+  // button) with the in-app theme. No-op outside Tauri / Windows.
+  const dark = getAppThemeGroup(theme) === 'dark'
+  const background = getAppThemeBackgroundColor(theme)
+  void setWindowChrome({
+    dark,
+    caption: background,
+    text: dark ? '#E5E7EB' : '#1F2937',
+    // Muted border: the raw accent reads as a flashy blue outline on every
+    // window. Blend it ~65% into the window background so it stays a subtle,
+    // harmonious edge instead of a bright contour.
+    border: mixHexColor(getPrimaryColorHex(primaryColor), background, 0.65),
+  })
 }
 
 export function getAppThemeBackgroundColor(theme: AppThemePreset): string {

@@ -7,6 +7,7 @@ import { useWindowUiSettingsSync } from '@/hooks/useWindowUiSettingsSync'
 import type { Clip } from '@/types/project'
 import type { JudgeSource, CategoryGroup } from '@/utils/results'
 import { useI18n } from '@/i18n'
+import { WindowTitleBar } from '@/components/window/WindowTitleBar'
 
 interface DetachedJudgeNotesPayload {
   clips: Clip[]
@@ -56,14 +57,19 @@ export default function DetachedResultatsJudgeNotesWindow() {
 
   if (!payload) {
     return (
-      <div className="flex items-center justify-center h-screen w-full bg-surface-dark text-gray-400 text-sm">
-        {t('Chargement des commentaires des juges...')}
+      <div className="flex h-screen w-full flex-col bg-surface-dark">
+        <WindowTitleBar />
+        <div className="flex flex-1 items-center justify-center text-gray-400 text-sm">
+          {t('Chargement des commentaires des juges...')}
+        </div>
       </div>
     )
   }
 
   return (
-    <div className="flex h-screen w-full flex-col bg-surface-dark p-2">
+    <div className="flex h-screen w-full flex-col bg-surface-dark">
+      <WindowTitleBar />
+      <div className="flex min-h-0 flex-1 flex-col p-2">
       <ResultatsJudgeNotesView
         clips={payload.clips}
         selectedClipId={payload.selectedClipId}
@@ -87,6 +93,7 @@ export default function DetachedResultatsJudgeNotesWindow() {
       />
 
       <DetachedFramePreview framePreview={framePreview} />
+      </div>
     </div>
   )
 }

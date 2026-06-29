@@ -3,6 +3,7 @@ mod player;
 mod project;
 mod state;
 mod video;
+mod window_chrome;
 
 use state::AppState;
 use tauri::Manager;
@@ -26,6 +27,8 @@ pub fn run() {
             app_windows::handle_window_event(window, event);
         })
         .invoke_handler(tauri::generate_handler![
+            // Native window chrome theming
+            window_chrome::set_window_chrome,
             // Player commands
             player::commands::control::player_load,
             player::commands::control::player_play,
@@ -53,6 +56,8 @@ pub fn run() {
             player::commands::window::player_set_fullscreen,
             player::commands::window::player_is_fullscreen,
             player::commands::window::player_is_visible,
+            player::commands::window::player_get_detached_rect,
+            player::commands::window::player_move_detached,
             player::commands::window::player_sync_overlay,
             player::commands::control::player_frame_step,
             player::commands::control::player_frame_back_step,

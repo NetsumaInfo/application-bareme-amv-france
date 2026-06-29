@@ -14,7 +14,7 @@ pub async fn warm_aux_windows(app_handle: tauri::AppHandle) -> Result<(), String
             .inner_size(380.0, 700.0)
             .min_inner_size(320.0, 400.0)
             .resizable(true)
-            .decorations(true)
+            .decorations(false)
             .visible(false)
             .focused(false)
             .initialization_script(
@@ -41,7 +41,7 @@ pub async fn warm_aux_windows(app_handle: tauri::AppHandle) -> Result<(), String
             .inner_size(1100.0, 760.0)
             .min_inner_size(760.0, 480.0)
             .resizable(true)
-            .decorations(true)
+            .decorations(false)
             .visible(false)
             .focused(false)
             .initialization_script(
@@ -91,7 +91,7 @@ pub async fn open_notes_window(app_handle: tauri::AppHandle) -> Result<(), Strin
         .inner_size(380.0, 700.0)
         .min_inner_size(320.0, 400.0)
         .resizable(true)
-        .decorations(true)
+        .decorations(false)
         .visible(true)
         .focused(true)
         .initialization_script(
@@ -141,7 +141,7 @@ pub async fn open_resultats_judge_notes_window(app_handle: tauri::AppHandle) -> 
         .inner_size(1100.0, 760.0)
         .min_inner_size(760.0, 480.0)
         .resizable(true)
-        .decorations(true)
+        .decorations(false)
         .visible(true)
         .focused(true)
         .initialization_script(

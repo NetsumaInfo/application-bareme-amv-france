@@ -95,6 +95,40 @@ pub fn player_is_visible(state: State<'_, AppState>) -> Result<bool, String> {
     Ok(child.as_ref().map(|cw| cw.is_visible()).unwrap_or(false))
 }
 
+/// Current detached player window rect (screen px) as (x, y, w, h).
+/// Used as the drag anchor by the overlay top bar.
+#[tauri::command]
+pub fn player_get_detached_rect(state: State<'_, AppState>) -> Result<(i32, i32, i32, i32), String> {
+    with_child_window(&state, |cw| {
+        cw.get_window_rect()
+            .ok_or_else(|| "no detached window rect".to_string())
+    })
+}
+
+/// Move the borderless detached player to an absolute screen position, keeping
+/// its size, then re-glue the overlay so it follows in lockstep. Driven by the
+/// overlay top-bar JS drag (a native title-bar move loop can't be started from
+/// the separate overlay window/thread).
+#[tauri::command]
+pub fn player_move_detached(
+    state: State<'_, AppState>,
+    app_handle: tauri::AppHandle,
+    x: i32,
+    y: i32,
+) -> Result<(), String> {
+    with_child_window(&state, |cw| {
+        if !cw.is_detached() || cw.is_fullscreen() {
+            return Ok(());
+        }
+        if let Some((_, _, w, h)) = cw.get_window_rect() {
+            cw.set_detached_geometry_absolute(x, y, w, h);
+        }
+        let mut overlay_sync = state.overlay_sync.lock().map_err(|e| e.to_string())?;
+        super::overlay::sync_overlay_with_child(&app_handle, cw, false, &mut overlay_sync);
+        Ok(())
+    })
+}
+
 #[tauri::command]
 pub fn player_sync_overlay(
     state: State<'_, AppState>,

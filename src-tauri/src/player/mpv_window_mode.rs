@@ -96,14 +96,18 @@ impl MpvChildWindow {
                 };
 
                 if self.is_detached() {
+                    // Borderless (no WS_CAPTION): the React overlay draws the
+                    // header/controls, so a native title bar would just be a
+                    // redundant second header. WS_THICKFRAME keeps edge-resize.
                     let detached_style = WS_POPUP
                         | WS_VISIBLE
-                        | WS_CAPTION
                         | WS_THICKFRAME
                         | WS_CLIPCHILDREN
                         | WS_CLIPSIBLINGS;
                     SetWindowLongPtrW(self.hwnd, GWL_STYLE, detached_style as isize);
                     SetWindowLongPtrW(self.hwnd, GWL_EXSTYLE, WS_EX_APPWINDOW as isize);
+                    // Re-apply the themed (muted) window border.
+                    crate::window_chrome::apply_last_to(self.hwnd);
                 }
 
                 SetWindowPos(
@@ -156,10 +160,13 @@ impl MpvChildWindow {
                 *saved = (rect.left, rect.top, cur_w, cur_h);
             }
 
-            // Change style: add caption + thick frame + sysmenu for a real window
+            // Borderless top-level window: the React overlay provides the
+            // header (clip name / close) and controls, so we drop WS_CAPTION to
+            // avoid a second redundant title bar. WS_THICKFRAME keeps the window
+            // resizable from its edges. Moving is driven by the overlay top bar
+            // (see player_begin_drag).
             let new_style = WS_POPUP
                 | WS_VISIBLE
-                | WS_CAPTION
                 | WS_THICKFRAME
                 | WS_CLIPCHILDREN
                 | WS_CLIPSIBLINGS;
@@ -177,6 +184,10 @@ impl MpvChildWindow {
             // Set window title
             let title = to_wide("AMV Notation - Video");
             SetWindowTextW(self.hwnd, title.as_ptr());
+
+            // Harmonise the native caption (bar + square close button) with the
+            // in-app theme.
+            crate::window_chrome::apply_last_to(self.hwnd);
 
             // Apply frame changes and reposition
             let mut flags = SWP_FRAMECHANGED;

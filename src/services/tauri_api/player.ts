@@ -141,6 +141,14 @@ export async function playerSyncOverlay(): Promise<boolean> {
   return await invoke('player_sync_overlay')
 }
 
+export async function playerGetDetachedRect(): Promise<[number, number, number, number]> {
+  return await invoke('player_get_detached_rect')
+}
+
+export async function playerMoveDetached(x: number, y: number): Promise<void> {
+  await invoke('player_move_detached', { x, y })
+}
+
 export async function playerFrameStep(): Promise<void> {
   await invoke('player_frame_step')
 }
