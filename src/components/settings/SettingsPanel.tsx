@@ -40,6 +40,8 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
     toggleTextNotes,
     showAudioDb,
     toggleAudioDb,
+    muteOnStart,
+    toggleMuteOnStart,
     overlayAutoHideMs,
     setOverlayAutoHideMs,
     showTooltips,
@@ -210,6 +212,7 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                   appTheme={appTheme}
                   primaryColorPreset={primaryColorPreset}
                   showAudioDb={showAudioDb}
+                  muteOnStart={muteOnStart}
                   overlayAutoHideMs={overlayAutoHideMs}
                   showTooltips={showTooltips}
                   confirmClipDeletion={confirmClipDeletion}
@@ -226,6 +229,7 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
                   onSetAppTheme={setAppTheme}
                   onSetPrimaryColorPreset={setPrimaryColorPreset}
                   onToggleAudioDb={toggleAudioDb}
+                  onToggleMuteOnStart={toggleMuteOnStart}
                   onSetOverlayAutoHideMs={setOverlayAutoHideMs}
                   onToggleShowTooltips={toggleShowTooltips}
                   onToggleConfirmClipDeletion={toggleConfirmClipDeletion}

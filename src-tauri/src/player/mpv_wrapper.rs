@@ -47,12 +47,12 @@ impl MpvPlayer {
             ("input-default-bindings", "no"),
             ("terminal", "no"),
             ("msg-level", "all=no"),
-            // Feeds the L/R dB meter (AudioDbMeter) via FFmpeg's `astats` audio
-            // filter. REQUIRES the bundled FFmpeg to include the `astats` (and
-            // `aformat`/`aresample`) filters — otherwise this `af` fails to build
-            // and mpv disables audio output entirely (no sound). The stripped
-            // FFmpeg must be rebuilt with `--enable-filter=astats,aformat,aresample,anull`.
-            ("af", "@dbmeter:lavfi=[astats=metadata=1:reset=1]"),
+            // NOTE: the dB-meter `af` (astats) is intentionally NOT set here.
+            // On the stripped FFmpeg build that filter fails to build for some
+            // clips and mpv then disables audio output entirely (no sound).
+            // The filter is now applied lazily via `set_audio_meter()` only when
+            // the user enables the VU-mètre, so audio is never sacrificed by
+            // default. See player_set_audio_meter command.
         ];
 
         for (key, value) in &options {
@@ -214,6 +214,22 @@ impl MpvPlayer {
 
     pub fn set_wid(&self, wid: i64) -> Result<(), String> {
         self.set_property_string("wid", &wid.to_string())
+    }
+
+    /// Enable/disable the L/R dB meter audio filter (FFmpeg `astats`).
+    ///
+    /// Applied lazily instead of at init: on the stripped FFmpeg build this
+    /// filter can fail to build for some clips, which makes mpv drop audio
+    /// output entirely. Keeping it opt-in guarantees sound by default. The
+    /// `af` property is global (persists across loadfiles), so one call is
+    /// enough. An empty value clears the chain.
+    pub fn set_audio_meter(&self, enabled: bool) -> Result<(), String> {
+        let value = if enabled {
+            "@dbmeter:lavfi=[astats=metadata=1:reset=1]"
+        } else {
+            ""
+        };
+        self.set_property_string("af", value)
     }
 }
 

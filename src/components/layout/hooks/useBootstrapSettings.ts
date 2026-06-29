@@ -9,6 +9,9 @@ import {
 } from '@/utils/appTheme'
 import { applyLanguageToDocument, normalizeAppLanguage } from '@/i18n/config'
 import { OFFICIAL_BAREME, type Bareme } from '@/types/bareme'
+import { clampOverlayAutoHideMs } from '@/components/player/overlay/overlayConstants'
+import { sanitizeColor } from '@/utils/colors'
+import { DEFAULT_SCORE_COLOR_HIGH, DEFAULT_SCORE_COLOR_LOW } from '@/utils/scoreColor'
 import type { ShortcutAction } from '@/utils/shortcuts'
 
 type UseBootstrapSettingsParams = {
@@ -41,11 +44,34 @@ export function useBootstrapSettings({ loadCustomBaremes }: UseBootstrapSettings
         if (typeof settings.showAudioDb === 'boolean') {
           nextState.showAudioDb = settings.showAudioDb
         }
+        if (typeof settings.muteOnStart === 'boolean') {
+          nextState.muteOnStart = settings.muteOnStart
+        }
         if (typeof settings.showTooltips === 'boolean') {
           nextState.showTooltips = settings.showTooltips
         }
         if (typeof settings.confirmClipDeletion === 'boolean') {
           nextState.confirmClipDeletion = settings.confirmClipDeletion
+        }
+        // Score-color + overlay prefs are written to disk by their setters but
+        // were never read back here — that is why they reset on relaunch.
+        if (typeof settings.enableScoreColorCoding === 'boolean') {
+          nextState.enableScoreColorCoding = settings.enableScoreColorCoding
+        }
+        if (typeof settings.scoreColorApplyBase === 'boolean') {
+          nextState.scoreColorApplyBase = settings.scoreColorApplyBase
+        }
+        if (typeof settings.scoreColorApplyTotals === 'boolean') {
+          nextState.scoreColorApplyTotals = settings.scoreColorApplyTotals
+        }
+        if (typeof settings.scoreColorHighHex === 'string') {
+          nextState.scoreColorHighHex = sanitizeColor(settings.scoreColorHighHex, DEFAULT_SCORE_COLOR_HIGH)
+        }
+        if (typeof settings.scoreColorLowHex === 'string') {
+          nextState.scoreColorLowHex = sanitizeColor(settings.scoreColorLowHex, DEFAULT_SCORE_COLOR_LOW)
+        }
+        if (typeof settings.overlayAutoHideMs === 'number') {
+          nextState.overlayAutoHideMs = clampOverlayAutoHideMs(settings.overlayAutoHideMs)
         }
         if (typeof settings.projectsFolderPath === 'string' && settings.projectsFolderPath.trim()) {
           nextState.projectsFolderPath = settings.projectsFolderPath.trim()
@@ -94,6 +120,10 @@ export function useBootstrapSettings({ loadCustomBaremes }: UseBootstrapSettings
         )
         applyLanguageToDocument(nextState.language ?? useUIStore.getState().language)
       }
-    }).catch(() => {})
+    }).catch(() => {}).finally(() => {
+      // Signals usePlayer that persisted prefs are loaded so it can apply the
+      // startup mute/volume and audio-meter state once (not before).
+      useUIStore.getState().setSettingsHydrated(true)
+    })
   }, [])
 }

@@ -1,5 +1,6 @@
 import type { KeyboardEvent as ReactKeyboardEvent, MutableRefObject } from 'react'
 import TimecodeTextarea from '@/components/notes/TimecodeTextarea'
+import { HoverTextTooltip } from '@/components/ui/HoverTextTooltip'
 import { withAlpha } from '@/utils/colors'
 import type { Criterion } from '@/types/bareme'
 import type { CriterionScore } from '@/types/notation'
@@ -57,9 +58,11 @@ export function DetachedCriterionItem({
         }}
       >
         <div className="flex-1 min-w-0">
-          <span className="block truncate text-[11px] text-gray-200" title={criterion.name}>
-            {criterion.name}
-          </span>
+          <HoverTextTooltip text={criterion.name}>
+            <span className="block truncate text-[11px] text-gray-200">
+              {criterion.name}
+            </span>
+          </HoverTextTooltip>
           {criterion.description ? (
             <span className="block truncate text-[9px] text-gray-500">{criterion.description}</span>
           ) : null}
@@ -87,16 +90,17 @@ export function DetachedCriterionItem({
           }}
         />
         <span className="w-7 text-right font-mono text-[9px] text-gray-500">/{criterion.max ?? 10}</span>
-        <button
-          type="button"
-          onClick={onToggleNote}
-          aria-label={isCriterionNoteExpanded ? t('Refermer la note') : t('Ouvrir la note')}
-          className="ml-0.5 px-1 text-[10px] leading-none text-gray-500 transition-colors hover:text-white bg-transparent"
-          style={{ background: 'transparent' }}
-          title={isCriterionNoteExpanded ? t('Refermer la note') : t('Ouvrir la note')}
-        >
-          {isCriterionNoteExpanded ? '▲' : '▼'}
-        </button>
+        <HoverTextTooltip text={isCriterionNoteExpanded ? t('Refermer la note') : t('Ouvrir la note')}>
+          <button
+            type="button"
+            onClick={onToggleNote}
+            aria-label={isCriterionNoteExpanded ? t('Refermer la note') : t('Ouvrir la note')}
+            className="ml-0.5 px-1 text-[10px] leading-none text-gray-500 transition-colors hover:text-white bg-transparent"
+            style={{ background: 'transparent' }}
+          >
+            {isCriterionNoteExpanded ? '▲' : '▼'}
+          </button>
+        </HoverTextTooltip>
       </div>
       {isCriterionNoteExpanded ? (
         <TimecodeTextarea
@@ -122,15 +126,16 @@ export function DetachedCriterionItem({
           onTimecodeLeave={onTimecodeLeave}
         />
       ) : criterionNoteValue.trim() ? (
-        <button
-          type="button"
-          onClick={onExpandNote}
-          className="w-full truncate rounded-md px-2.5 py-1 text-left text-[10px] text-gray-400 transition-colors hover:text-gray-200"
-          style={{ backgroundColor: 'rgb(var(--color-surface-dark) / 0.5)' }}
-          title={criterionNoteValue}
-        >
-          {criterionNoteValue.replace(/\s+/g, ' ').slice(0, 96)}
-        </button>
+        <HoverTextTooltip text={criterionNoteValue}>
+          <button
+            type="button"
+            onClick={onExpandNote}
+            className="w-full truncate rounded-md px-2.5 py-1 text-left text-[10px] text-gray-400 transition-colors hover:text-gray-200"
+            style={{ backgroundColor: 'rgb(var(--color-surface-dark) / 0.5)' }}
+          >
+            {criterionNoteValue.replace(/\s+/g, ' ').slice(0, 96)}
+          </button>
+        </HoverTextTooltip>
       ) : null}
     </div>
   )

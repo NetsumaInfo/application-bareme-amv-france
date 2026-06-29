@@ -1,5 +1,6 @@
 import { memo, useCallback, useMemo } from 'react'
 import { getClipPrimaryLabel, getClipSecondaryLabel } from '@/utils/formatters'
+import { HoverTextTooltip } from '@/components/ui/HoverTextTooltip'
 import { withAlpha } from '@/utils/colors'
 import { buildScoreExtreme, colorForExtreme, type ScoreExtreme } from '@/utils/scoreColor'
 import { useUIStore } from '@/store/useUIStore'
@@ -36,6 +37,12 @@ interface ResultatsGlobalDetailedTableProps {
   readOnly?: boolean
   forceMiniatureLoad?: boolean
   staticExport?: boolean
+  /** Criterion currently used for sorting (highlights its header). */
+  sortCriterion?: string | null
+  /** Direction of the active sort (drives the arrow icon). */
+  sortDirection?: 'asc' | 'desc'
+  /** When provided, criterion headers become clickable to sort by that criterion. */
+  onSortByCriterion?: (criterionId: string) => void
   /** When provided, renders a trailing "Commentaires" column (export only). */
   getRowComment?: (clipId: string) => string
   /** When provided, attaches the comment as a hover tooltip on the participant cell (HTML export). */
@@ -115,7 +122,6 @@ function ResultatsGlobalDetailedRowComponent({
         {index + 1}
       </td>
       <td
-        title={commentTitle}
         className={` border-r border-gray-800/60 bg-surface px-2 py-1 ${commentTitle ? 'cursor-help' : ''} ${RESULTATS_PARTICIPANT_COLUMN_WIDTH_CLASS}`}
         onDoubleClick={(event) => {
           event.stopPropagation()
@@ -127,6 +133,7 @@ function ResultatsGlobalDetailedRowComponent({
           onOpenClipContextMenu(row.clip.id, event.clientX, event.clientY)
         }}
       >
+        <HoverTextTooltip text={commentTitle ?? ''}>
         <div className={`flex flex-col min-w-0 ${staticExport ? 'leading-snug' : 'leading-tight'}`}>
           <span className={`flex items-center gap-1 ${staticExport ? 'whitespace-normal wrap-break-word' : 'truncate'} text-[11px] font-semibold text-primary-300`}>
             {getClipPrimaryLabel(row.clip)}
@@ -144,6 +151,7 @@ function ResultatsGlobalDetailedRowComponent({
             />
           ) : null}
         </div>
+        </HoverTextTooltip>
       </td>
 
       {categoryGroups.map((group) =>
@@ -273,6 +281,9 @@ export function ResultatsGlobalDetailedTable({
   readOnly = false,
   forceMiniatureLoad = false,
   staticExport = false,
+  sortCriterion = null,
+  sortDirection = 'desc',
+  onSortByCriterion,
   getRowComment,
   getRowCommentTitle,
 }: ResultatsGlobalDetailedTableProps) {
@@ -404,20 +415,36 @@ export function ResultatsGlobalDetailedTable({
 
           <tr>
             {categoryGroups.map((group) =>
-              group.criteria.map((criterion) => (
-                <th
-                  key={`${group.category}-${criterion.id}-criterion`}
-                  colSpan={judges.length}
-                  className="border-b border-r border-gray-700/60 px-1.5 py-1 text-center text-[9px] font-medium"
-                  style={{
-                    color: withAlpha(group.color, 0.92),
-                    backgroundColor: withAlpha(group.color, 0.08),
-                  }}
-                >
-                  {criterion.name}
-                  <span className="ml-1 text-gray-500 font-normal">/{criterion.max}</span>
-                </th>
-              )),
+              group.criteria.map((criterion) => {
+                const isSortActive = sortCriterion === criterion.id
+                const sortable = Boolean(onSortByCriterion)
+                return (
+                  <th
+                    key={`${group.category}-${criterion.id}-criterion`}
+                    colSpan={judges.length}
+                    onClick={sortable ? () => onSortByCriterion?.(criterion.id) : undefined}
+                    className={`border-b border-r border-gray-700/60 px-1.5 py-1 text-center text-[9px] font-medium ${
+                      sortable ? 'cursor-pointer select-none transition-colors hover:brightness-125' : ''
+                    }`}
+                    style={{
+                      color: withAlpha(group.color, 0.92),
+                      backgroundColor: withAlpha(group.color, isSortActive ? 0.22 : 0.08),
+                    }}
+                  >
+                    <HoverTextTooltip text={sortable ? t('Trier par ce critère') : ''}>
+                      <div>
+                        <span className="inline-flex items-center justify-center gap-1">
+                          {criterion.name}
+                          <span aria-hidden="true" className="inline-block w-2.5 text-center">
+                            {isSortActive ? (sortDirection === 'asc' ? '▲' : '▼') : ''}
+                          </span>
+                        </span>
+                        <span className="ml-1 text-gray-500 font-normal">/{criterion.max}</span>
+                      </div>
+                    </HoverTextTooltip>
+                  </th>
+                )
+              }),
             )}
 
             {canSortByScore &&

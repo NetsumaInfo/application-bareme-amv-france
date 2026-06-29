@@ -1,6 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { Copy, Minus, Square, X } from 'lucide-react'
 import { useI18n } from '@/i18n'
+import { HoverTextTooltip } from '@/components/ui/HoverTextTooltip'
 
 const isTauri = typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window
 
@@ -68,8 +69,10 @@ function HoverlessButton({
   children: ReactNode
 }) {
   return (
-    <button type="button" aria-label={label} title={label} className={className} onClick={onClick}>
-      {children}
-    </button>
+    <HoverTextTooltip text={label}>
+      <button type="button" aria-label={label} className={className} onClick={onClick}>
+        {children}
+      </button>
+    </HoverTextTooltip>
   )
 }

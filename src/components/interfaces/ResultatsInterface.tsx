@@ -38,7 +38,7 @@ import {
 import { useI18n } from '@/i18n'
 import type { ImportedJudgeNote } from '@/types/project'
 
-type SortMode = 'folder' | 'score' | 'name'
+type SortMode = 'folder' | 'score' | 'name' | 'category' | 'criterion'
 type RenameJudgeDialog = {
   judgeKey: string
   title: string
@@ -104,6 +104,9 @@ function useResultatsInterfaceController() {
   const thumbnailDefaultSeconds = currentProject?.settings.thumbnailDefaultTimeSec ?? 10
 
   const [sortMode, setSortMode] = useState<SortMode>('score')
+  const [sortCategory, setSortCategory] = useState<string | null>(null)
+  const [sortCriterion, setSortCriterion] = useState<string | null>(null)
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc')
   const {
     categoryGroups,
     judges,
@@ -116,6 +119,9 @@ function useResultatsInterfaceController() {
     importedJudges,
     clips,
     sortMode,
+    sortCategory,
+    sortCriterion,
+    sortDirection,
     canSortByScore,
   })
 
@@ -243,6 +249,44 @@ function useResultatsInterfaceController() {
       globalVariant: nextGlobalVariant,
     }))
   }, [])
+  // Controls bar (Nom/Note): reset to that mode's natural direction.
+  const handleSetSortMode = useCallback((mode: SortMode) => {
+    setSortMode(mode)
+    setSortCategory(null)
+    setSortCriterion(null)
+    setSortDirection(mode === 'name' ? 'asc' : 'desc')
+  }, [])
+  // Column header click cycle: desc (▼) → asc (▲) → off (back to default score sort).
+  const handleSortByCategory = useCallback((category: string) => {
+    if (sortMode === 'category' && sortCategory === category) {
+      if (sortDirection === 'desc') {
+        setSortDirection('asc')
+      } else {
+        setSortMode('score')
+        setSortCategory(null)
+        setSortDirection('desc')
+      }
+    } else {
+      setSortMode('category')
+      setSortCategory(category)
+      setSortDirection('desc')
+    }
+  }, [sortMode, sortCategory, sortDirection])
+  const handleSortByCriterion = useCallback((criterionId: string) => {
+    if (sortMode === 'criterion' && sortCriterion === criterionId) {
+      if (sortDirection === 'desc') {
+        setSortDirection('asc')
+      } else {
+        setSortMode('score')
+        setSortCriterion(null)
+        setSortDirection('desc')
+      }
+    } else {
+      setSortMode('criterion')
+      setSortCriterion(criterionId)
+      setSortDirection('desc')
+    }
+  }, [sortMode, sortCriterion, sortDirection])
   const setSelectedJudgeKey = useCallback((nextSelectedJudgeKey: string) => {
     setViewState((current) => ({
       ...current,
@@ -563,7 +607,7 @@ function useResultatsInterfaceController() {
           globalVariant={globalVariant}
           onGlobalVariantChange={setGlobalVariant}
           sortMode={sortMode}
-          onSortModeChange={setSortMode}
+          onSortModeChange={handleSetSortMode}
           canSortByScore={canSortByScore}
           notesPanelHidden={hideResultNotes}
           onToggleNotesPanel={() => setHideResultNotes((current) => !current)}
@@ -647,6 +691,9 @@ function useResultatsInterfaceController() {
           onClearCriterionDraftCell={clearCriterionDraftCell}
           showMiniatures={showMiniatures}
           thumbnailDefaultSeconds={thumbnailDefaultSeconds}
+          sortCriterion={sortMode === 'criterion' ? sortCriterion : null}
+          sortDirection={sortDirection}
+          onSortByCriterion={canSortByScore ? handleSortByCriterion : undefined}
         />
       )}
 
@@ -663,6 +710,9 @@ function useResultatsInterfaceController() {
           onOpenClipContextMenu={openClipContextMenu}
           showMiniatures={showMiniatures}
           thumbnailDefaultSeconds={thumbnailDefaultSeconds}
+          sortCategory={sortMode === 'category' ? sortCategory : null}
+          sortDirection={sortDirection}
+          onSortByCategory={canSortByScore ? handleSortByCategory : undefined}
         />
       )}
 

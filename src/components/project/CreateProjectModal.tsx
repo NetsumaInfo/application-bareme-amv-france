@@ -113,7 +113,6 @@ function BaremeField({
               type="button"
               onClick={onOpenBaremeList}
               aria-label={t('Gérer les annotations')}
-              title={t('Gérer les annotations')}
               className="inline-flex h-8 w-8 items-center justify-center rounded-md text-primary-400 transition-colors hover:bg-surface-light hover:text-primary-300"
             >
               <Settings2 size={13} />

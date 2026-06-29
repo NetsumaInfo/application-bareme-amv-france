@@ -728,6 +728,39 @@ body {
   color: rgb(71 85 105);
 }
 
+/* Readability fix: muted gray text utilities were too dim to read on the dark
+   surfaces (author subtitles, "/20" hints, MOYENNES row, etc.). Brighten every
+   gray text shade to the themed primary text color (near-white in dark themes).
+   Plain class selectors sit after Tailwind's utilities in the cascade, so they
+   win by source order; the light-theme rules above use a theme-attribute
+   selector (higher specificity) so they still override these for light themes. */
+.text-gray-300,
+.text-gray-400,
+.text-gray-500,
+.text-gray-600,
+.text-neutral-300,
+.text-neutral-400,
+.text-neutral-500,
+.text-neutral-600,
+.text-zinc-300,
+.text-zinc-400,
+.text-zinc-500,
+.text-zinc-600,
+.text-slate-300,
+.text-slate-400,
+.text-slate-500,
+.text-slate-600 {
+  color: rgb(var(--app-text)) !important;
+}
+
+.hover\:text-gray-300:hover,
+.hover\:text-gray-400:hover,
+.hover\:text-gray-200:hover,
+.hover\:text-neutral-300:hover,
+.hover\:text-slate-300:hover {
+  color: rgb(var(--app-text)) !important;
+}
+
 .appearance-accent-pill {
   color: rgb(226 232 240);
 }

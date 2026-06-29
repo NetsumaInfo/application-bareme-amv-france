@@ -9,7 +9,7 @@ export interface ScoreExtreme {
 }
 
 export const DEFAULT_SCORE_COLOR_HIGH = '#34d399'
-export const DEFAULT_SCORE_COLOR_LOW = '#fb923c'
+export const DEFAULT_SCORE_COLOR_LOW = '#ef4444'
 
 /**
  * Builds the {min,max} extreme of a pool of scored values.

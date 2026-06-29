@@ -1,5 +1,6 @@
 import { ArrowDown, ArrowUp, Plus, X } from 'lucide-react'
 import { ColorSwatchPicker } from '@/components/ui/ColorSwatchPicker'
+import { HoverTextTooltip } from '@/components/ui/HoverTextTooltip'
 import { CATEGORY_COLOR_PRESETS } from '@/utils/colors'
 import type { ContestCategoryEditorItem } from '@/utils/contestCategory'
 import { useI18n } from '@/i18n'
@@ -57,35 +58,38 @@ export function ContestCategoriesEditor({ items, onChange }: ContestCategoriesEd
               }}
               className="min-w-0 flex-1 rounded-md border border-gray-700 bg-surface-dark/60 px-2 py-1 text-xs text-white placeholder-gray-500 focus:outline-hidden focus:border-primary-500"
             />
-            <button
-              type="button"
-              onClick={() => moveItem(index, index - 1)}
-              disabled={index === 0}
-              className="inline-flex h-6 w-6 items-center justify-center rounded-md border border-gray-700 text-gray-400 transition-colors hover:bg-white/5 hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
-              aria-label={t('Monter {category}', { category: item.name || t('Catégorie') })}
-              title={t('Monter {category}', { category: item.name || t('Catégorie') })}
-            >
-              <ArrowUp size={12} />
-            </button>
-            <button
-              type="button"
-              onClick={() => moveItem(index, index + 1)}
-              disabled={index === items.length - 1}
-              className="inline-flex h-6 w-6 items-center justify-center rounded-md border border-gray-700 text-gray-400 transition-colors hover:bg-white/5 hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
-              aria-label={t('Descendre {category}', { category: item.name || t('Catégorie') })}
-              title={t('Descendre {category}', { category: item.name || t('Catégorie') })}
-            >
-              <ArrowDown size={12} />
-            </button>
-            <button
-              type="button"
-              onClick={() => onChange(items.filter((_, rowIndex) => rowIndex !== index))}
-              className="inline-flex h-6 w-6 items-center justify-center rounded-md border border-gray-700 text-gray-400 transition-colors hover:bg-white/5 hover:text-white"
-              aria-label={t('Supprimer catégorie')}
-              title={t('Supprimer catégorie')}
-            >
-              <X size={12} />
-            </button>
+            <HoverTextTooltip text={t('Monter {category}', { category: item.name || t('Catégorie') })}>
+              <button
+                type="button"
+                onClick={() => moveItem(index, index - 1)}
+                disabled={index === 0}
+                className="inline-flex h-6 w-6 items-center justify-center rounded-md border border-gray-700 text-gray-400 transition-colors hover:bg-white/5 hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
+                aria-label={t('Monter {category}', { category: item.name || t('Catégorie') })}
+              >
+                <ArrowUp size={12} />
+              </button>
+            </HoverTextTooltip>
+            <HoverTextTooltip text={t('Descendre {category}', { category: item.name || t('Catégorie') })}>
+              <button
+                type="button"
+                onClick={() => moveItem(index, index + 1)}
+                disabled={index === items.length - 1}
+                className="inline-flex h-6 w-6 items-center justify-center rounded-md border border-gray-700 text-gray-400 transition-colors hover:bg-white/5 hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
+                aria-label={t('Descendre {category}', { category: item.name || t('Catégorie') })}
+              >
+                <ArrowDown size={12} />
+              </button>
+            </HoverTextTooltip>
+            <HoverTextTooltip text={t('Supprimer catégorie')}>
+              <button
+                type="button"
+                onClick={() => onChange(items.filter((_, rowIndex) => rowIndex !== index))}
+                className="inline-flex h-6 w-6 items-center justify-center rounded-md border border-gray-700 text-gray-400 transition-colors hover:bg-white/5 hover:text-white"
+                aria-label={t('Supprimer catégorie')}
+              >
+                <X size={12} />
+              </button>
+            </HoverTextTooltip>
           </div>
         ))}
       </div>

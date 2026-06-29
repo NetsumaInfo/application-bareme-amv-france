@@ -24,6 +24,12 @@ interface ResultatsGlobalCategoryTableProps {
   thumbnailDefaultSeconds: number
   forceMiniatureLoad?: boolean
   staticExport?: boolean
+  /** Category currently used for sorting (highlights its header). */
+  sortCategory?: string | null
+  /** Direction of the active sort (drives the arrow icon). */
+  sortDirection?: 'asc' | 'desc'
+  /** When provided, category headers become clickable to sort by that category. */
+  onSortByCategory?: (category: string) => void
   /** When provided, renders a trailing "Commentaires" column (export only). */
   getRowComment?: (clipId: string) => string
   /** When provided, attaches the comment as a hover tooltip on the participant cell (HTML export). */
@@ -61,6 +67,9 @@ export function ResultatsGlobalCategoryTable({
   thumbnailDefaultSeconds,
   forceMiniatureLoad = false,
   staticExport = false,
+  sortCategory = null,
+  sortDirection = 'desc',
+  onSortByCategory,
   getRowComment,
   getRowCommentTitle,
 }: ResultatsGlobalCategoryTableProps) {
@@ -117,22 +126,38 @@ export function ResultatsGlobalCategoryTable({
             >
               {t('Participant')}
             </th>
-            {categoryGroups.map((group) => (
-              <th
-                key={group.category}
-                colSpan={1}
-                className="min-w-[220px] border-b border-r px-2 py-1 text-center text-[10px] font-semibold"
-                style={{
-                  color: group.color,
-                  backgroundColor: withAlpha(group.color, 0.18),
-                  borderColor: withAlpha(group.color, 0.3),
-                  minWidth: `${judgeBandMinWidth}px`,
-                }}
-              >
-                {group.category}
-                <div className="text-gray-500 font-normal">/{group.totalMax}</div>
-              </th>
-            ))}
+            {categoryGroups.map((group) => {
+              const isSortActive = sortCategory === group.category
+              const sortable = Boolean(onSortByCategory)
+              return (
+                <th
+                  key={group.category}
+                  colSpan={1}
+                  onClick={sortable ? () => onSortByCategory?.(group.category) : undefined}
+                  className={`min-w-[220px] border-b border-r px-2 py-1 text-center text-[10px] font-semibold ${
+                    sortable ? 'cursor-pointer select-none transition-colors hover:brightness-125' : ''
+                  }`}
+                  style={{
+                    color: group.color,
+                    backgroundColor: withAlpha(group.color, isSortActive ? 0.34 : 0.18),
+                    borderColor: withAlpha(group.color, isSortActive ? 0.6 : 0.3),
+                    minWidth: `${judgeBandMinWidth}px`,
+                  }}
+                >
+                  <HoverTextTooltip text={sortable ? t('Trier par cette catégorie') : ''}>
+                    <div>
+                      <span className="inline-flex items-center justify-center gap-1">
+                        {group.category}
+                        <span aria-hidden="true" className="inline-block w-2.5 text-center">
+                          {isSortActive ? (sortDirection === 'asc' ? '▲' : '▼') : ''}
+                        </span>
+                      </span>
+                      <div className="text-gray-500 font-normal">/{group.totalMax}</div>
+                    </div>
+                  </HoverTextTooltip>
+                </th>
+              )
+            })}
             <th className="min-w-[88px] border-b border-r border-gray-700/60 bg-surface px-2 py-1 text-center text-[10px] font-semibold">
               {t('Total final')}
               <div className="text-gray-500 font-normal">/{currentBaremeTotalPoints}</div>
@@ -198,7 +223,6 @@ export function ResultatsGlobalCategoryTable({
                   {index + 1}
                 </td>
                 <td
-                  title={commentTitle}
                   className={` border-r border-gray-800/60 bg-surface px-2 py-1 ${commentTitle ? 'cursor-help' : ''} ${RESULTATS_PARTICIPANT_COLUMN_WIDTH_CLASS}`}
                   onDoubleClick={(event) => {
                     event.stopPropagation()
@@ -210,6 +234,7 @@ export function ResultatsGlobalCategoryTable({
                     onOpenClipContextMenu(row.clip.id, event.clientX, event.clientY)
                   }}
                 >
+                  <HoverTextTooltip text={commentTitle ?? ''}>
                   <div className={`flex flex-col min-w-0 ${staticExport ? 'leading-snug' : 'leading-tight'}`}>
                     <span className={`flex items-center gap-1 ${staticExport ? 'whitespace-normal wrap-break-word' : 'truncate'} text-[11px] font-semibold text-primary-300`}>
                       {getClipPrimaryLabel(row.clip)}
@@ -227,6 +252,7 @@ export function ResultatsGlobalCategoryTable({
                       />
                     ) : null}
                   </div>
+                  </HoverTextTooltip>
                 </td>
 
                 {categoryGroups.map((group) => {

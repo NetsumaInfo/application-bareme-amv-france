@@ -54,6 +54,13 @@ pub fn player_set_speed(state: State<'_, AppState>, speed: f64) -> Result<(), St
     with_player(&state, "Player not initialized", |p| p.set_speed(speed))
 }
 
+#[tauri::command]
+pub fn player_set_audio_meter(state: State<'_, AppState>, enabled: bool) -> Result<(), String> {
+    with_player(&state, "Player not initialized", |p| {
+        p.set_audio_meter(enabled)
+    })
+}
+
 #[derive(serde::Serialize)]
 pub struct LoopState {
     pub loop_file: bool,

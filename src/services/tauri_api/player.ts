@@ -38,6 +38,13 @@ export async function playerSetSpeed(speed: number): Promise<void> {
   await invoke('player_set_speed', { speed })
 }
 
+// Enable/disable the L/R dB-meter audio filter (astats). Opt-in: on stripped
+// FFmpeg builds the filter can kill audio for some clips, so it is only applied
+// when the VU-mètre is enabled.
+export async function playerSetAudioMeter(enabled: boolean): Promise<void> {
+  await invoke('player_set_audio_meter', { enabled })
+}
+
 export async function playerSetLoopFile(enabled: boolean): Promise<void> {
   await invoke('player_set_loop_file', { enabled })
 }

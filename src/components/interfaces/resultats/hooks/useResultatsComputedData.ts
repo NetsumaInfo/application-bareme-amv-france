@@ -3,6 +3,7 @@ import {
   buildCategoryGroups,
   buildJudgeSources,
   getCategoryScore,
+  getCriterionNumericScore,
   getNoteTotal,
   hasAnyCriterionScore,
   type NoteLike,
@@ -13,7 +14,8 @@ import type { Note } from '@/types/notation'
 import type { ResultatsRow } from '@/components/interfaces/resultats/types'
 import { getClipPrimaryLabel } from '@/utils/formatters'
 
-type SortMode = 'folder' | 'score' | 'name'
+type SortMode = 'folder' | 'score' | 'name' | 'category' | 'criterion'
+type SortDirection = 'asc' | 'desc'
 
 function normalizeFavoriteFlag(value: unknown): boolean {
   return (
@@ -35,6 +37,9 @@ type UseResultatsComputedDataParams = {
   importedJudges: ImportedJudgeData[]
   clips: Clip[]
   sortMode: SortMode
+  sortCategory?: string | null
+  sortCriterion?: string | null
+  sortDirection?: SortDirection
   canSortByScore: boolean
 }
 
@@ -45,10 +50,24 @@ export function useResultatsComputedData({
   importedJudges,
   clips,
   sortMode,
+  sortCategory = null,
+  sortCriterion = null,
+  sortDirection = 'desc',
   canSortByScore,
 }: UseResultatsComputedDataParams) {
-  const effectiveSortMode: SortMode =
-    sortMode === 'score' && !canSortByScore ? 'folder' : sortMode
+  // +1 ascending, -1 descending. Applied to score/category/criterion/name sorts.
+  const dirFactor = sortDirection === 'asc' ? 1 : -1
+  const effectiveSortMode: SortMode = (() => {
+    // Category/criterion sorts need a selected target; fall back to score otherwise.
+    let mode: SortMode = sortMode
+    if (mode === 'category' && !sortCategory) mode = 'score'
+    if (mode === 'criterion' && !sortCriterion) mode = 'score'
+    // Score-derived sorts are disabled while totals are hidden.
+    if ((mode === 'score' || mode === 'category' || mode === 'criterion') && !canSortByScore) {
+      mode = 'folder'
+    }
+    return mode
+  })()
 
   const categoryGroups = useMemo(
     () => (currentBareme ? buildCategoryGroups(currentBareme) : []),
@@ -79,15 +98,83 @@ export function useResultatsComputedData({
     [currentBareme, judges],
   )
 
+  // Mean of judges' score for one category (criteria sum) on a clip; 0 when unscored.
+  const getClipCategoryAverage = useCallback(
+    (clipId: string, category: string) => {
+      const group = categoryGroups.find((g) => g.category === category)
+      if (!group) return 0
+      const values = judges
+        .map((judge) => {
+          const note = judge.notes[clipId] as NoteLike | undefined
+          if (!hasAnyCriterionScore(note, group.criteria)) return null
+          return getCategoryScore(note, group.criteria)
+        })
+        .filter((value): value is number => value !== null)
+      return values.length > 0
+        ? values.reduce((sum, v) => sum + v, 0) / values.length
+        : 0
+    },
+    [categoryGroups, judges],
+  )
+
+  // Mean of judges' raw score for one criterion on a clip; 0 when unscored.
+  const getClipCriterionAverage = useCallback(
+    (clipId: string, criterionId: string) => {
+      const criterion = categoryGroups
+        .flatMap((g) => g.criteria)
+        .find((c) => c.id === criterionId)
+      if (!criterion) return 0
+      const values = judges
+        .map((judge) => {
+          const note = judge.notes[clipId] as NoteLike | undefined
+          if (!hasAnyCriterionScore(note, [criterion])) return null
+          return getCriterionNumericScore(note, criterion)
+        })
+        .filter((value): value is number => value !== null)
+      return values.length > 0
+        ? values.reduce((sum, v) => sum + v, 0) / values.length
+        : 0
+    },
+    [categoryGroups, judges],
+  )
+
   const sortedClips = useMemo(() => {
     const base = [...clips]
     const originalIndex = new Map(clips.map((clip, index) => [clip.id, index]))
+
+    if (effectiveSortMode === 'criterion' && sortCriterion && canSortByScore) {
+      base.sort((a, b) => {
+        const scoreA = getClipCriterionAverage(a.id, sortCriterion)
+        const scoreB = getClipCriterionAverage(b.id, sortCriterion)
+        if (scoreA !== scoreB) return dirFactor * (scoreA - scoreB)
+        // Tie-break on overall total, same direction.
+        const totalA = getClipAverageTotal(a.id)
+        const totalB = getClipAverageTotal(b.id)
+        if (totalA !== totalB) return dirFactor * (totalA - totalB)
+        return (originalIndex.get(a.id) ?? 0) - (originalIndex.get(b.id) ?? 0)
+      })
+      return base
+    }
+
+    if (effectiveSortMode === 'category' && sortCategory && canSortByScore) {
+      base.sort((a, b) => {
+        const scoreA = getClipCategoryAverage(a.id, sortCategory)
+        const scoreB = getClipCategoryAverage(b.id, sortCategory)
+        if (scoreA !== scoreB) return dirFactor * (scoreA - scoreB)
+        // Tie-break on overall total, same direction.
+        const totalA = getClipAverageTotal(a.id)
+        const totalB = getClipAverageTotal(b.id)
+        if (totalA !== totalB) return dirFactor * (totalA - totalB)
+        return (originalIndex.get(a.id) ?? 0) - (originalIndex.get(b.id) ?? 0)
+      })
+      return base
+    }
 
     if (effectiveSortMode === 'score' && canSortByScore) {
       base.sort((a, b) => {
         const scoreA = getClipAverageTotal(a.id)
         const scoreB = getClipAverageTotal(b.id)
-        if (scoreB !== scoreA) return scoreB - scoreA
+        if (scoreA !== scoreB) return dirFactor * (scoreA - scoreB)
         return (originalIndex.get(a.id) ?? 0) - (originalIndex.get(b.id) ?? 0)
       })
       return base
@@ -99,7 +186,7 @@ export function useResultatsComputedData({
           sensitivity: 'base',
           numeric: true,
         })
-        if (cmp !== 0) return cmp
+        if (cmp !== 0) return dirFactor * cmp
         return (originalIndex.get(a.id) ?? 0) - (originalIndex.get(b.id) ?? 0)
       })
       return base
@@ -116,7 +203,7 @@ export function useResultatsComputedData({
       return (originalIndex.get(a.id) ?? 0) - (originalIndex.get(b.id) ?? 0)
     })
     return base
-  }, [clips, effectiveSortMode, getClipAverageTotal, canSortByScore])
+  }, [clips, effectiveSortMode, sortCategory, sortCriterion, dirFactor, getClipAverageTotal, getClipCategoryAverage, getClipCriterionAverage, canSortByScore])
 
   const rows = useMemo<ResultatsRow[]>(() => {
     if (!currentBareme) return []

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef } from 'react'
 import { usePlayerStore } from '@/store/usePlayerStore'
 import { useProjectStore } from '@/store/useProjectStore'
+import { useUIStore } from '@/store/useUIStore'
 import * as tauri from '@/services/tauri'
 import { usePlayerStatusPolling } from '@/hooks/usePlayerStatusPolling'
 import { buildScreenshotName } from '@/utils/screenshot'
@@ -23,6 +24,10 @@ export function usePlayer() {
   const currentClipIndex = useProjectStore((s) => s.currentClipIndex)
   const currentClip = clips[currentClipIndex]
   const lastNonZeroVolumeRef = useRef(80)
+  const muteOnStart = useUIStore((s) => s.muteOnStart)
+  const showAudioDb = useUIStore((s) => s.showAudioDb)
+  const settingsHydrated = useUIStore((s) => s.settingsHydrated)
+  const startupAppliedRef = useRef(false)
 
   useEffect(() => {
     if (volume > 0.001) {
@@ -31,9 +36,18 @@ export function usePlayer() {
   }, [volume])
 
   useEffect(() => {
-    // Muted by default - set volume to 0 on init
-    tauri.playerSetVolume(0).catch(() => {})
-  }, [])
+    // Apply startup audio state once persisted prefs are loaded, so the
+    // "muet au démarrage" preference is honored instead of always muting.
+    if (!settingsHydrated || startupAppliedRef.current) return
+    startupAppliedRef.current = true
+    const startVolume = muteOnStart ? 0 : 80
+    tauri.playerSetVolume(startVolume).catch(() => {})
+    const state = usePlayerStore.getState()
+    state.setVolume(startVolume)
+    state.setMuted(startVolume <= 0.001)
+    // Re-apply the (opt-in) dB-meter filter to match the restored preference.
+    tauri.playerSetAudioMeter(showAudioDb).catch(() => {})
+  }, [settingsHydrated, muteOnStart, showAudioDb])
 
   usePlayerStatusPolling((status, fullscreen) => {
     const state = usePlayerStore.getState()

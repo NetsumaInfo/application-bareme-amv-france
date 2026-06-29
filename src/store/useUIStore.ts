@@ -32,6 +32,7 @@ function normalizeInterfaceMode(mode: LegacyInterfaceMode): InterfaceMode {
 interface PersistedUiSettings {
   shortcutBindings?: Record<ShortcutAction, string>
   showAudioDb?: boolean
+  muteOnStart?: boolean
   showTooltips?: boolean
   confirmClipDeletion?: boolean
   appTheme?: AppThemePreset
@@ -99,6 +100,8 @@ interface UIStore {
   hideAverages: boolean
   hideTextNotes: boolean
   showAudioDb: boolean
+  muteOnStart: boolean
+  settingsHydrated: boolean
   showTooltips: boolean
   confirmClipDeletion: boolean
   showProjectModal: boolean
@@ -127,6 +130,8 @@ interface UIStore {
   toggleAverages: () => void
   toggleTextNotes: () => void
   toggleAudioDb: () => void
+  toggleMuteOnStart: () => void
+  setSettingsHydrated: (hydrated: boolean) => void
   toggleShowTooltips: () => void
   toggleConfirmClipDeletion: () => void
   setShowProjectModal: (show: boolean) => void
@@ -165,6 +170,8 @@ export const useUIStore = create<UIStore>((set) => ({
   hideAverages: false,
   hideTextNotes: false,
   showAudioDb: readAudioDbPref(),
+  muteOnStart: true,
+  settingsHydrated: false,
   showTooltips: false,
   confirmClipDeletion: true,
   showProjectModal: false,
@@ -198,8 +205,18 @@ export const useUIStore = create<UIStore>((set) => ({
       persistUserSettingsPatch({ showAudioDb: next }).catch(() => {})
       broadcastAudioDbSetting(next)
       emitUiSettingsUpdated({ showAudioDb: next })
+      // Apply the astats audio filter live. Kept opt-in so audio is never
+      // dropped by default on the stripped FFmpeg build.
+      tauri.playerSetAudioMeter(next).catch(() => {})
       return { showAudioDb: next }
     }),
+  toggleMuteOnStart: () =>
+    set((state) => {
+      const next = !state.muteOnStart
+      persistUserSettingsPatch({ muteOnStart: next }).catch(() => {})
+      return { muteOnStart: next }
+    }),
+  setSettingsHydrated: (hydrated) => set({ settingsHydrated: hydrated }),
   toggleShowTooltips: () =>
     set((state) => {
       const next = !state.showTooltips

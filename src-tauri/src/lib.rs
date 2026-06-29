@@ -45,6 +45,7 @@ pub fn run() {
             player::commands::control::player_seek_relative,
             player::commands::control::player_set_volume,
             player::commands::control::player_set_speed,
+            player::commands::control::player_set_audio_meter,
             player::commands::control::player_set_loop_file,
             player::commands::control::player_ab_loop_mark_a,
             player::commands::control::player_ab_loop_mark_b,

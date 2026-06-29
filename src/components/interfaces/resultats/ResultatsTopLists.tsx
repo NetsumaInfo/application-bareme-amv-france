@@ -2,6 +2,8 @@ import { useMemo } from 'react'
 import { Star } from 'lucide-react'
 import { getClipPrimaryLabel, getClipSecondaryLabel } from '@/utils/formatters'
 import { withAlpha } from '@/utils/colors'
+import { buildScoreExtreme, colorForExtreme } from '@/utils/scoreColor'
+import { useUIStore } from '@/store/useUIStore'
 import type { JudgeSource } from '@/utils/results'
 import type { ResultatsRow } from '@/components/interfaces/resultats/types'
 import { ClipMiniaturePreview } from '@/components/interfaces/spreadsheet/miniaturePreview'
@@ -55,6 +57,9 @@ function TopList({
   staticExport,
   scoreAccessor,
   favoriteMetaAccessor,
+  colorScores,
+  scoreColorHigh,
+  scoreColorLow,
 }: {
   title: string
   entries: ResultatsRow[]
@@ -68,7 +73,20 @@ function TopList({
   staticExport: boolean
   scoreAccessor: (row: ResultatsRow) => number
   favoriteMetaAccessor?: (row: ResultatsRow) => { color: string; tooltip: string } | null
+  colorScores: boolean
+  scoreColorHigh: string
+  scoreColorLow: string
 }) {
+  const scoreExtreme = useMemo(() => {
+    if (!colorScores) return null
+    const values: number[] = []
+    for (const row of entries) {
+      const value = scoreAccessor(row)
+      if (Number.isFinite(value) && value > 0) values.push(value)
+    }
+    return buildScoreExtreme(values)
+  }, [colorScores, entries, scoreAccessor])
+
   return (
     <div className={`min-w-[220px] flex-1 basis-0 border border-gray-700/50 bg-transparent ${staticExport ? 'overflow-visible' : 'overflow-hidden'}`}>
       <div
@@ -86,6 +104,7 @@ function TopList({
           const isSelected = selectedClipId === row.clip.id
           const score = scoreAccessor(row)
           const scoreLabel = Number.isFinite(score) ? score.toFixed(1) : null
+          const scoreColor = colorForExtreme(score, scoreExtreme, scoreColorHigh, scoreColorLow)
           const favoriteMeta = favoriteMetaAccessor?.(row) ?? null
           return (
             <button
@@ -133,7 +152,10 @@ function TopList({
                 </div>
                 <div className="absolute right-0 top-0 flex w-10 flex-col items-center">
                   {scoreLabel ? (
-                    <span className="shrink-0 rounded-md border border-white/10 bg-white/4.5 px-1.5 py-0.5 text-[10px] font-semibold text-gray-200">
+                    <span
+                      className="shrink-0 rounded-md border border-white/10 bg-white/4.5 px-1.5 py-0.5 text-[10px] font-semibold text-gray-200"
+                      style={scoreColor ? { color: scoreColor } : undefined}
+                    >
                       {scoreLabel}
                     </span>
                   ) : (
@@ -163,6 +185,11 @@ export function ResultatsTopLists({
   staticExport = false,
 }: ResultatsTopListsProps) {
   const { t } = useI18n()
+  const enableScoreColorCoding = useUIStore((s) => s.enableScoreColorCoding)
+  const scoreColorApplyTotals = useUIStore((s) => s.scoreColorApplyTotals)
+  const scoreColorHighHex = useUIStore((s) => s.scoreColorHighHex)
+  const scoreColorLowHex = useUIStore((s) => s.scoreColorLowHex)
+  const colorTotals = enableScoreColorCoding && scoreColorApplyTotals
   const finalTop = useMemo(
     () => (canSortByScore ? sortRowsByScore(rows, (row) => row.averageTotal) : rows),
     [canSortByScore, rows],
@@ -194,6 +221,9 @@ export function ResultatsTopLists({
             forceMiniatureLoad={forceMiniatureLoad}
             staticExport={staticExport}
             scoreAccessor={(row) => row.judgeTotals[index] ?? 0}
+            colorScores={colorTotals}
+            scoreColorHigh={scoreColorHighHex}
+            scoreColorLow={scoreColorLowHex}
             favoriteMetaAccessor={(row) => {
               const favorite = row.judgeFavorites[index]
               if (!favorite?.isFavorite) return null
@@ -218,6 +248,9 @@ export function ResultatsTopLists({
           forceMiniatureLoad={forceMiniatureLoad}
           staticExport={staticExport}
           scoreAccessor={(row) => row.averageTotal}
+          colorScores={colorTotals}
+          scoreColorHigh={scoreColorHighHex}
+          scoreColorLow={scoreColorLowHex}
         />
       </div>
     </div>

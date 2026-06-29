@@ -1,3 +1,4 @@
+import { HoverTextTooltip } from '@/components/ui/HoverTextTooltip'
 import { withAlpha } from '@/utils/colors'
 import type { Bareme } from '@/types/bareme'
 import type { CategoryGroup } from './types'
@@ -63,13 +64,16 @@ export function SpreadsheetTableHeader({
             <th
               key={criterion.id}
               className="px-1 py-1 text-center text-[9px] font-medium border-r border-b border-gray-700 min-w-[76px]"
-              title={criterion.description}
               style={{ backgroundColor: withAlpha(group.color, 0.08) }}
             >
-              <div className="truncate" style={{ color: withAlpha(group.color, 0.92) }}>
-                {group.criteria.length === 1 ? '' : criterion.name}
-              </div>
-              <div className="text-gray-500 font-normal">/{criterion.max ?? 10}</div>
+              <HoverTextTooltip text={criterion.description ?? ''}>
+                <div>
+                  <div className="truncate" style={{ color: withAlpha(group.color, 0.92) }}>
+                    {group.criteria.length === 1 ? '' : criterion.name}
+                  </div>
+                  <div className="text-gray-500 font-normal">/{criterion.max ?? 10}</div>
+                </div>
+              </HoverTextTooltip>
             </th>
           )),
         )}

@@ -7,7 +7,7 @@ import type {
 import { HoverTextTooltip } from '@/components/ui/HoverTextTooltip'
 import { useI18n } from '@/i18n'
 
-type ResultatsSortMode = 'folder' | 'score' | 'name'
+type ResultatsSortMode = 'folder' | 'score' | 'name' | 'category' | 'criterion'
 
 interface ResultatsViewModeControlsProps {
   mainView: ResultatsMainView

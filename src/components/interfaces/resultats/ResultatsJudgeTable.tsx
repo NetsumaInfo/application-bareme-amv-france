@@ -1,5 +1,6 @@
 import { memo, useCallback, useMemo } from 'react'
 import { getClipPrimaryLabel, getClipSecondaryLabel } from '@/utils/formatters'
+import { HoverTextTooltip } from '@/components/ui/HoverTextTooltip'
 import { withAlpha } from '@/utils/colors'
 import { buildScoreExtreme, colorForExtreme, type ScoreExtreme } from '@/utils/scoreColor'
 import { useUIStore } from '@/store/useUIStore'
@@ -274,7 +275,6 @@ const ResultatsJudgeTableRow = memo(function ResultatsJudgeTableRow({
         {index + 1}
       </td>
       <td
-        title={commentTitle}
         className={` border-r border-gray-800/60 bg-surface px-2 py-1 ${commentTitle ? 'cursor-help' : ''} ${RESULTATS_PARTICIPANT_COLUMN_WIDTH_CLASS}`}
         onDoubleClick={(event) => {
           event.stopPropagation()
@@ -286,6 +286,7 @@ const ResultatsJudgeTableRow = memo(function ResultatsJudgeTableRow({
           onOpenClipContextMenu(row.clip.id, event.clientX, event.clientY)
         }}
       >
+        <HoverTextTooltip text={commentTitle ?? ''}>
         <div className={`flex flex-col min-w-0 ${staticExport ? 'leading-snug' : 'leading-tight'}`}>
           <span className={`flex items-center gap-1 ${staticExport ? 'whitespace-normal wrap-break-word' : 'truncate'} text-[11px] font-semibold text-primary-300`}>
             {getClipPrimaryLabel(row.clip)}
@@ -303,6 +304,7 @@ const ResultatsJudgeTableRow = memo(function ResultatsJudgeTableRow({
             />
           ) : null}
         </div>
+        </HoverTextTooltip>
       </td>
 
       {categoryGroups.map((group) =>

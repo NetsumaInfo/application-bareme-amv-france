@@ -34,6 +34,7 @@ interface SettingsGeneralTabProps {
   appTheme: AppThemePreset
   primaryColorPreset: PrimaryColorPreset
   showAudioDb: boolean
+  muteOnStart: boolean
   overlayAutoHideMs: number
   showTooltips: boolean
   confirmClipDeletion: boolean
@@ -50,6 +51,7 @@ interface SettingsGeneralTabProps {
   onSetAppTheme: (theme: AppThemePreset) => void
   onSetPrimaryColorPreset: (preset: PrimaryColorPreset) => void
   onToggleAudioDb: () => void
+  onToggleMuteOnStart: () => void
   onSetOverlayAutoHideMs: (ms: number) => void
   onToggleShowTooltips: () => void
   onToggleConfirmClipDeletion: () => void
@@ -415,18 +417,33 @@ function InterfaceBehaviorSection({
 function PlayerSection({
   showAudioDb,
   onToggleAudioDb,
+  muteOnStart,
+  onToggleMuteOnStart,
   overlayAutoHideMs,
   onSetOverlayAutoHideMs,
   t,
 }: Pick<
   SettingsGeneralTabProps,
-  'showAudioDb' | 'onToggleAudioDb' | 'overlayAutoHideMs' | 'onSetOverlayAutoHideMs'
+  'showAudioDb' | 'onToggleAudioDb' | 'muteOnStart' | 'onToggleMuteOnStart' | 'overlayAutoHideMs' | 'onSetOverlayAutoHideMs'
 > & { t: TranslateFn }) {
   const autoHideSeconds = Math.round(overlayAutoHideMs / 100) / 10
   return (
     <Card>
       <p className={SECTION_LABEL}>{t('Lecteur vidéo')}</p>
       <div className="space-y-2">
+        <div className={STACKED_ROW}>
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0 pr-2">
+              <span className="block text-sm text-gray-300">
+                {t('Couper le son au démarrage')}
+              </span>
+              <span className="block text-[10px] text-gray-500">
+                {t('Démarre chaque clip muet. Réglez le volume pour l’activer.')}
+              </span>
+            </div>
+            <SettingsToggle checked={muteOnStart} onChange={onToggleMuteOnStart} ariaLabel={t('Couper le son au démarrage')} />
+          </div>
+        </div>
         <div className={ROW}>
           <span className="min-w-0 pr-2 text-sm text-gray-300">
             {t('Afficher VU-mètre audio L/R (dB)')}
@@ -692,6 +709,7 @@ export function SettingsGeneralTab({
   appTheme,
   primaryColorPreset,
   showAudioDb,
+  muteOnStart,
   overlayAutoHideMs,
   showTooltips,
   confirmClipDeletion,
@@ -708,6 +726,7 @@ export function SettingsGeneralTab({
   onSetAppTheme,
   onSetPrimaryColorPreset,
   onToggleAudioDb,
+  onToggleMuteOnStart,
   onSetOverlayAutoHideMs,
   onToggleShowTooltips,
   onToggleConfirmClipDeletion,
@@ -797,6 +816,8 @@ export function SettingsGeneralTab({
       <PlayerSection
         showAudioDb={showAudioDb}
         onToggleAudioDb={onToggleAudioDb}
+        muteOnStart={muteOnStart}
+        onToggleMuteOnStart={onToggleMuteOnStart}
         overlayAutoHideMs={overlayAutoHideMs}
         onSetOverlayAutoHideMs={onSetOverlayAutoHideMs}
         t={t}

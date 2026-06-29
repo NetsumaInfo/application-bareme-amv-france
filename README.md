@@ -148,6 +148,7 @@ src-tauri/
 - modes de notation `spreadsheet`, `notation` (commentaires) et `dual` (tableur + notes détachées) ;
 - workflow sans vidéo (participants saisis manuellement, rattachement des fichiers plus tard) ;
 - player mpv embarqué : play/pause, seek, pistes audio/sous-titres, fullscreen, fenêtre détachée, AB-loop, screenshot, frame-step ;
+- VU-mètre audio L/R en dB temps réel (filtre FFmpeg `astats`), activable à la demande : appliqué de façon paresseuse uniquement quand l'option est cochée, pour ne jamais sacrifier le son par défaut ;
 - notes détachées et notes de juges détachées via bridges d'events dédiés ;
 - import/export des notations de juges et agrégation multi-juges ;
 - exports riches : PNG, PDF, JSON, HTML/CSS, aperçus Discord ;
@@ -200,6 +201,11 @@ Notes :
 - Après toute modification de texte UI français, lancer `npm run i18n:sync` puis relire les traductions sensibles (vocabulaire barème/jugement, préservation des placeholders `{path}`, `{error}`, ajustement de mise en page JA/ZH).
 - Laisser zéro erreur/warning évitable dans la zone touchée avant de finir.
 - Les fenêtres auxiliaires (overlay, notes, resultats-notes) sont des points d'entrée HTML séparés — ne pas supposer un frontend mono-fenêtre.
+
+## Historique des versions
+
+- **1.0.2** — correctif VU-mètre : le filtre audio `astats` n'est plus posé à l'initialisation de mpv (il pouvait échouer à se construire selon le format audio d'un clip et couper le son / éteindre le mètre sur certaines vidéos). Il est désormais appliqué de façon paresseuse et opt-in via `player_set_audio_meter`, donc le son est garanti par défaut et le VU-mètre fonctionne sur toutes les vidéos une fois activé. Build mpv/FFmpeg embarquant `astats`/`aformat`/`aresample`/`anull`.
+- **1.0.1** — mise à jour automatique signée + logo bleu « Mettre à jour » dans l'en-tête.
 
 ## Licence
 
