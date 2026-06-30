@@ -287,6 +287,17 @@ function useResultatsInterfaceController() {
       setSortDirection('desc')
     }
   }, [sortMode, sortCriterion, sortDirection])
+  // Total header click: activate the global score sort, then toggle desc ▼ → asc ▲.
+  const handleSortByTotal = useCallback(() => {
+    if (sortMode === 'score') {
+      setSortDirection((current) => (current === 'desc' ? 'asc' : 'desc'))
+    } else {
+      setSortMode('score')
+      setSortCategory(null)
+      setSortCriterion(null)
+      setSortDirection('desc')
+    }
+  }, [sortMode])
   const setSelectedJudgeKey = useCallback((nextSelectedJudgeKey: string) => {
     setViewState((current) => ({
       ...current,
@@ -694,8 +705,10 @@ function useResultatsInterfaceController() {
           sortCriterion={sortMode === 'criterion' ? sortCriterion : null}
           sortCategory={sortMode === 'category' ? sortCategory : null}
           sortDirection={sortDirection}
+          sortByScoreActive={sortMode === 'score'}
           onSortByCriterion={canSortByScore ? handleSortByCriterion : undefined}
           onSortByCategory={canSortByScore ? handleSortByCategory : undefined}
+          onSortByTotal={canSortByScore ? handleSortByTotal : undefined}
         />
       )}
 
@@ -714,7 +727,9 @@ function useResultatsInterfaceController() {
           thumbnailDefaultSeconds={thumbnailDefaultSeconds}
           sortCategory={sortMode === 'category' ? sortCategory : null}
           sortDirection={sortDirection}
+          sortByScoreActive={sortMode === 'score'}
           onSortByCategory={canSortByScore ? handleSortByCategory : undefined}
+          onSortByTotal={canSortByScore ? handleSortByTotal : undefined}
         />
       )}
 

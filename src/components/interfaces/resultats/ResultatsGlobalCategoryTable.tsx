@@ -28,8 +28,12 @@ interface ResultatsGlobalCategoryTableProps {
   sortCategory?: string | null
   /** Direction of the active sort (drives the arrow icon). */
   sortDirection?: 'asc' | 'desc'
+  /** Whether the global score sort is currently active (highlights the Total header). */
+  sortByScoreActive?: boolean
   /** When provided, category headers become clickable to sort by that category. */
   onSortByCategory?: (category: string) => void
+  /** When provided, the Total final header becomes clickable to sort by the global score. */
+  onSortByTotal?: () => void
   /** When provided, renders a trailing "Commentaires" column (export only). */
   getRowComment?: (clipId: string) => string
   /** When provided, attaches the comment as a hover tooltip on the participant cell (HTML export). */
@@ -69,7 +73,9 @@ export function ResultatsGlobalCategoryTable({
   staticExport = false,
   sortCategory = null,
   sortDirection = 'desc',
+  sortByScoreActive = false,
   onSortByCategory,
+  onSortByTotal,
   getRowComment,
   getRowCommentTitle,
 }: ResultatsGlobalCategoryTableProps) {
@@ -158,8 +164,15 @@ export function ResultatsGlobalCategoryTable({
                 </th>
               )
             })}
-            <th className="min-w-[88px] border-b border-r border-gray-700/60 bg-surface px-2 py-1 text-center text-[10px] font-semibold">
+            <th
+              onClick={onSortByTotal}
+              title={onSortByTotal ? t('Trier par total') : undefined}
+              className={`min-w-[88px] border-b border-r border-gray-700/60 px-2 py-1 text-center text-[10px] font-semibold ${
+                sortByScoreActive ? 'bg-primary-600/15 text-white' : 'bg-surface'
+              } ${onSortByTotal ? 'cursor-pointer select-none transition-colors hover:bg-surface-light/70' : ''}`}
+            >
               {t('Total final')}
+              {sortByScoreActive ? <span className="ml-1">{sortDirection === 'asc' ? '▲' : '▼'}</span> : null}
               <div className="text-gray-500 font-normal">/{currentBaremeTotalPoints}</div>
             </th>
             {getRowComment && (

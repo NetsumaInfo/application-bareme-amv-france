@@ -204,6 +204,7 @@ Notes :
 
 ## Historique des versions
 
+- **1.0.4** — correctif mise à jour : suppression de l'erreur « Error opening file for writing… amv-notation.exe » (Abandonner/Recommencer/Ignorer) qui survenait pendant l'installation d'une mise à jour. Sur Windows, l'installeur NSIS redémarre déjà l'application (`/R`) ; l'app se contente désormais de se fermer pour libérer le binaire au lieu de relancer une seconde instance qui le verrouillait.
 - **1.0.3** — correctif son : le build FFmpeg embarqué décode désormais **tous les codecs audio et vidéo natifs** (plus de `--disable-everything`, seuls encoders/muxers/devices/réseau restent désactivés). Corrige l'absence de son sur les masters ProRes/MOV en PCM big-endian (`pcm_s16be`) et tout autre codec non inclus dans le build amputé précédent. Décodeurs/demuxers/parsers complets ; encodeurs désactivés (lecture seule, screenshots préservés).
 - **1.0.2** — correctif VU-mètre : le filtre audio `astats` n'est plus posé à l'initialisation de mpv (il pouvait échouer à se construire selon le format audio d'un clip et couper le son / éteindre le mètre sur certaines vidéos). Il est désormais appliqué de façon paresseuse et opt-in via `player_set_audio_meter`, donc le son est garanti par défaut et le VU-mètre fonctionne sur toutes les vidéos une fois activé. Build mpv/FFmpeg embarquant `astats`/`aformat`/`aresample`/`anull`.
 - **1.0.1** — mise à jour automatique signée + logo bleu « Mettre à jour » dans l'en-tête.

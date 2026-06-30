@@ -1,5 +1,7 @@
 import { check, type Update } from '@tauri-apps/plugin-updater'
-import { relaunch } from '@tauri-apps/plugin-process'
+import { relaunch, exit } from '@tauri-apps/plugin-process'
+
+const isWindows = typeof navigator !== 'undefined' && /windows/i.test(navigator.userAgent)
 
 export interface UpdaterDownloadProgress {
   downloaded: number
@@ -45,7 +47,21 @@ export async function downloadAndInstallUpdate(
   })
 }
 
-/** Restart the app so the freshly installed update takes effect. */
+/**
+ * Restart the app so the freshly installed update takes effect.
+ *
+ * Windows: the NSIS updater is launched in passive mode with `/R` (restart),
+ * so the installer replaces the running exe and restarts the app itself.
+ * Calling `relaunch()` here would immediately spawn a SECOND `amv-notation.exe`
+ * that re-locks the binary while the installer is still overwriting it — that is
+ * the "Error opening file for writing … amv-notation.exe" Abort/Retry/Ignore
+ * dialog the user hit. So on Windows we only `exit(0)` to release the file
+ * handle and let NSIS handle the restart. Other platforms still need relaunch.
+ */
 export async function relaunchApp(): Promise<void> {
+  if (isWindows) {
+    await exit(0)
+    return
+  }
   await relaunch()
 }
