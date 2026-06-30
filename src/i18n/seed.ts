@@ -263,5 +263,11 @@ export function registerI18nSeed(t: (key: string) => string) {
     t('Champ suivant (notes)'),
     t('Champ au-dessus (notes)'),
     t('Champ en-dessous (notes)'),
+    // Release-note highlights (rendered via t(variable) in WhatsNewPanel).
+    t('Affichage des totaux au quart de point près (fini les 0,75 affichés en 0,8).'),
+    t('Bouton de mise à jour stabilisé : le header ne se décale plus pendant le téléchargement.'),
+    t('Panneau « Nouveautés » affiché une fois après chaque mise à jour.'),
+    t('VU-mètre audio optionnel avec mémorisation des préférences.'),
+    t('Mise à jour intégrée plus fiable (signature et déverrouillage de l’application).'),
   ]
 }

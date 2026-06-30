@@ -3,6 +3,7 @@ import { Star } from 'lucide-react'
 import { getClipPrimaryLabel, getClipSecondaryLabel } from '@/utils/formatters'
 import { withAlpha } from '@/utils/colors'
 import { buildScoreExtreme, colorForExtreme } from '@/utils/scoreColor'
+import { formatScore } from '@/utils/score'
 import { useUIStore } from '@/store/useUIStore'
 import type { JudgeSource } from '@/utils/results'
 import type { ResultatsRow } from '@/components/interfaces/resultats/types'
@@ -103,7 +104,7 @@ function TopList({
         {entries.map((row, index) => {
           const isSelected = selectedClipId === row.clip.id
           const score = scoreAccessor(row)
-          const scoreLabel = Number.isFinite(score) ? score.toFixed(1) : null
+          const scoreLabel = Number.isFinite(score) ? formatScore(score) : null
           const scoreColor = colorForExtreme(score, scoreExtreme, scoreColorHigh, scoreColorLow)
           const favoriteMeta = favoriteMetaAccessor?.(row) ?? null
           return (

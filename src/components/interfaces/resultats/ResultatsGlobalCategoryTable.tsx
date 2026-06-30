@@ -2,6 +2,7 @@ import { useMemo } from 'react'
 import { getClipPrimaryLabel, getClipSecondaryLabel } from '@/utils/formatters'
 import { withAlpha } from '@/utils/colors'
 import { buildScoreExtreme, colorForExtreme, type ScoreExtreme } from '@/utils/scoreColor'
+import { formatScore } from '@/utils/score'
 import { useUIStore } from '@/store/useUIStore'
 import { hasAnyCriterionScore, type CategoryGroup, type JudgeSource, type NoteLike } from '@/utils/results'
 import type { ResultatsRow } from '@/components/interfaces/resultats/types'
@@ -302,7 +303,7 @@ export function ResultatsGlobalCategoryTable({
                               className="border-r border-gray-800/50 px-1.5 py-1 text-center"
                               style={{ color: judgeColors[judge.key] ?? '#60a5fa' }}
                             >
-                              {hasScore ? value.toFixed(1) : '-'}
+                              {hasScore ? formatScore(value) : '-'}
                             </div>
                           )
                         })}
@@ -310,7 +311,7 @@ export function ResultatsGlobalCategoryTable({
                           className="px-2 py-1 text-center text-white/90"
                           style={categoryAvgColor ? { color: categoryAvgColor, fontWeight: 600 } : undefined}
                         >
-                          {categoryAvg !== null ? categoryAvg.toFixed(1) : '-'}
+                          {categoryAvg !== null ? formatScore(categoryAvg) : '-'}
                         </div>
                       </div>
                     </td>
@@ -329,7 +330,7 @@ export function ResultatsGlobalCategoryTable({
                       className="amv-number-ui border-r border-gray-700/60 px-2 py-1 text-center font-bold text-white"
                       style={totalColor ? { color: totalColor } : undefined}
                     >
-                      {row.averageTotal.toFixed(1)}
+                      {formatScore(row.averageTotal)}
                     </td>
                   )
                 })()}

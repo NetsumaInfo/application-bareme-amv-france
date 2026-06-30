@@ -3,6 +3,7 @@ import { useShallow } from 'zustand/react/shallow'
 import { getCurrentWindow } from '@tauri-apps/api/window'
 import { AppMainContent } from '@/components/layout/AppMainContent'
 import { AppFloatingLayers } from '@/components/layout/AppFloatingLayers'
+import { WhatsNewPanel } from '@/components/layout/WhatsNewPanel'
 import { useAutoDetachNotesWindow } from '@/components/layout/hooks/useAutoDetachNotesWindow'
 import { useOverlayBridge } from '@/components/layout/hooks/useOverlayBridge'
 import { useAppShortcutMaps } from '@/components/layout/hooks/useAppShortcutMaps'
@@ -23,11 +24,13 @@ import { useAutoSave } from '@/hooks/useAutoSave'
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts'
 import { usePlayer } from '@/hooks/usePlayer'
 import { useSaveProject } from '@/hooks/useSaveProject'
+import { useWhatsNew } from '@/hooks/useWhatsNew'
 import { applyAppearanceToDocument } from '@/utils/appTheme'
 import { applyLanguageToDocument } from '@/i18n/config'
 import * as tauri from '@/services/tauri'
 
 export default function AppLayout() {
+  const { release: whatsNewRelease, dismiss: dismissWhatsNew } = useWhatsNew()
   const currentProject = useProjectStore((state) => state.currentProject)
   const clips = useProjectStore((state) => state.clips)
   const currentClipIndex = useProjectStore((state) => state.currentClipIndex)
@@ -287,6 +290,10 @@ export default function AppLayout() {
         setShowPipVideo={setShowPipVideo}
         isDetached={isDetached}
       />
+
+      {whatsNewRelease && (
+        <WhatsNewPanel release={whatsNewRelease} onClose={dismissWhatsNew} />
+      )}
     </div>
   )
 }

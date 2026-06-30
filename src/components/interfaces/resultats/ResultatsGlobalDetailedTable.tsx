@@ -3,6 +3,7 @@ import { getClipPrimaryLabel, getClipSecondaryLabel } from '@/utils/formatters'
 import { HoverTextTooltip } from '@/components/ui/HoverTextTooltip'
 import { withAlpha } from '@/utils/colors'
 import { buildScoreExtreme, colorForExtreme, type ScoreExtreme } from '@/utils/scoreColor'
+import { formatScore } from '@/utils/score'
 import { useUIStore } from '@/store/useUIStore'
 import {
   getCriterionNumericScore,
@@ -57,11 +58,7 @@ interface ResultatsGlobalDetailedTableProps {
   getRowCommentTitle?: (clipId: string) => string
 }
 
-function formatCriterionValue(value: number): string {
-  if (!Number.isFinite(value)) return '0'
-  if (Number.isInteger(value)) return String(value)
-  return value.toFixed(2).replace(/\.?0+$/, '')
-}
+const formatCriterionValue = formatScore
 
 interface ResultatsGlobalDetailedRowProps {
   row: ResultatsRow
@@ -240,7 +237,7 @@ function ResultatsGlobalDetailedRowComponent({
                 fontWeight: totalColor ? 600 : undefined,
               }}
             >
-              {score.toFixed(1)}
+              {formatScore(score)}
             </td>
           )
         })}
@@ -252,7 +249,7 @@ function ResultatsGlobalDetailedRowComponent({
             className="amv-number-ui border-r border-gray-700/60 px-2 py-1 text-center font-bold text-white"
             style={avgColor ? { color: avgColor } : undefined}
           >
-            {row.averageTotal.toFixed(1)}
+            {formatScore(row.averageTotal)}
           </td>
         )
       })()}

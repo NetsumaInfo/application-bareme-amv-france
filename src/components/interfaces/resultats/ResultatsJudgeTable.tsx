@@ -3,6 +3,7 @@ import { getClipPrimaryLabel, getClipSecondaryLabel } from '@/utils/formatters'
 import { HoverTextTooltip } from '@/components/ui/HoverTextTooltip'
 import { withAlpha } from '@/utils/colors'
 import { buildScoreExtreme, colorForExtreme, type ScoreExtreme } from '@/utils/scoreColor'
+import { formatScore } from '@/utils/score'
 import { useUIStore } from '@/store/useUIStore'
 import { getCriterionNumericScore, hasAnyCriterionScore, type CategoryGroup, type JudgeSource, type NoteLike } from '@/utils/results'
 import type { ResultatsRow } from '@/components/interfaces/resultats/types'
@@ -312,9 +313,7 @@ const ResultatsJudgeTableRow = memo(function ResultatsJudgeTableRow({
           const key = getCriterionCellKey(row.clip.id, criterion.id, judge.key)
           const note = judge.notes[row.clip.id] as NoteLike | undefined
           const score = getCriterionNumericScore(note, criterion)
-          const displayed = criterionDraftCells[key] ?? (
-            Number.isInteger(score) ? String(score) : score.toFixed(2).replace(/\.?0+$/, '')
-          )
+          const displayed = criterionDraftCells[key] ?? formatScore(score)
           const highlight = getCriterionColor(criterion.id, score, hasAnyCriterionScore(note, [criterion]))
 
           return (
@@ -368,7 +367,7 @@ const ResultatsJudgeTableRow = memo(function ResultatsJudgeTableRow({
             className="amv-number-ui border-r border-gray-700/60 px-2 py-1 text-center font-semibold text-white"
             style={totalColor ? { color: totalColor } : undefined}
           >
-            {totalValue.toFixed(1)}
+            {formatScore(totalValue)}
           </td>
         )
       })()}

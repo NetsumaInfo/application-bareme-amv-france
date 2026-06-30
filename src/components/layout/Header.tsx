@@ -67,6 +67,16 @@ export default function Header({
         return t('Mettre à jour')
     }
   })()
+  // Reserve the button width for the longest label it can ever show (download
+  // at 100%) so the percentage counting up does not resize the button and shove
+  // the whole header sideways.
+  const widestUpdateLabel = [
+    t('Mettre à jour'),
+    t('Sauvegarde...'),
+    t('Vérification...'),
+    t('Téléchargement... {pct}%', { pct: '100' }),
+    t('Installation...'),
+  ].reduce((longest, candidate) => (candidate.length > longest.length ? candidate : longest), '')
   const updateButtonTooltip = updateBusy
     ? updateButtonLabel
     : latestVersion
@@ -188,7 +198,14 @@ export default function Header({
               ) : (
                 <DownloadCloud size={11} className="shrink-0" />
               )}
-              <span className="leading-none">{updateButtonLabel}</span>
+              <span className="relative inline-grid leading-none tabular-nums">
+                <span aria-hidden className="invisible col-start-1 row-start-1 whitespace-nowrap">
+                  {widestUpdateLabel}
+                </span>
+                <span className="col-start-1 row-start-1 whitespace-nowrap text-center">
+                  {updateButtonLabel}
+                </span>
+              </span>
             </button>
           </HoverTextTooltip>
         )}

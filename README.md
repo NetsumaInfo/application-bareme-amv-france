@@ -154,7 +154,8 @@ src-tauri/
 - exports riches : PNG, PDF, JSON, HTML/CSS, aperçus Discord ;
 - préférences persistées et diffusées entre fenêtres : thème, accent, langue, raccourcis, miniatures, confirmations ;
 - menu contextuel player détaché (fenêtre `player-menu`) ;
-- mise à jour automatique intégrée : un logo bleu « Mettre à jour » apparaît dans l'en-tête quand une nouvelle version signée est disponible ; le clic sauvegarde le projet, télécharge, installe et relance l'application.
+- mise à jour automatique intégrée : un logo bleu « Mettre à jour » apparaît dans l'en-tête quand une nouvelle version signée est disponible ; le clic sauvegarde le projet, télécharge, installe et relance l'application ;
+- panneau « Nouveautés » affiché une seule fois après chaque mise à jour, listant les nouveautés de la version installée.
 
 ## Workflow de développement
 
@@ -204,6 +205,7 @@ Notes :
 
 ## Historique des versions
 
+- **1.0.5** — affichage des totaux au **quart de point près** dans tous les tableaux de résultats (un total en `,75` ne s'affiche plus arrondi en `,8` ; logique de formatage centralisée dans `src/utils/score.ts`). Bouton « Mettre à jour » de l'en-tête **stabilisé** : sa largeur est réservée pour le libellé le plus long, donc l'en-tête ne se décale plus pendant le décompte du téléchargement. Nouveau panneau **« Nouveautés »** affiché une seule fois après chaque mise à jour (dernière version vue mémorisée dans les réglages ; aucune interruption pour une première installation).
 - **1.0.4** — correctif mise à jour : suppression de l'erreur « Error opening file for writing… amv-notation.exe » (Abandonner/Recommencer/Ignorer) qui survenait pendant l'installation d'une mise à jour. Sur Windows, l'installeur NSIS redémarre déjà l'application (`/R`) ; l'app se contente désormais de se fermer pour libérer le binaire au lieu de relancer une seconde instance qui le verrouillait.
 - **1.0.3** — correctif son : le build FFmpeg embarqué décode désormais **tous les codecs audio et vidéo natifs** (plus de `--disable-everything`, seuls encoders/muxers/devices/réseau restent désactivés). Corrige l'absence de son sur les masters ProRes/MOV en PCM big-endian (`pcm_s16be`) et tout autre codec non inclus dans le build amputé précédent. Décodeurs/demuxers/parsers complets ; encodeurs désactivés (lecture seule, screenshots préservés).
 - **1.0.2** — correctif VU-mètre : le filtre audio `astats` n'est plus posé à l'initialisation de mpv (il pouvait échouer à se construire selon le format audio d'un clip et couper le son / éteindre le mètre sur certaines vidéos). Il est désormais appliqué de façon paresseuse et opt-in via `player_set_audio_meter`, donc le son est garanti par défaut et le VU-mètre fonctionne sur toutes les vidéos une fois activé. Build mpv/FFmpeg embarquant `astats`/`aformat`/`aresample`/`anull`.
