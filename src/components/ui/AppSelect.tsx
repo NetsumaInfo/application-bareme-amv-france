@@ -93,6 +93,8 @@ export function AppSelect<T extends AppSelectValue>({
     left: 0,
     top: 0,
     width: 160,
+    minWidth: 0,
+    maxWidth: 0,
     maxHeight: maxMenuHeight,
   })
   // Hide the menu node until positioned (like HoverTextTooltip): the ref callback
@@ -128,8 +130,16 @@ export function AppSelect<T extends AppSelectValue>({
     const viewportWidth = window.innerWidth * zoomScale
     const viewportHeight = window.innerHeight * zoomScale
     const availableWidth = Math.max(96, viewportWidth - viewportPadding * 2)
-    const desiredWidth = menuWidth === 'trigger' ? Math.max(96, rect.width) : menuWidth
-    const width = Math.min(desiredWidth, availableWidth)
+    // 'trigger' mode: menu sizes to its content (width:max-content) but never
+    // narrower than the trigger nor wider than the viewport — so long option
+    // labels show in full instead of being truncated.
+    const autoWidth = menuWidth === 'trigger'
+    const minWidth = autoWidth ? Math.min(Math.max(96, rect.width), availableWidth) : 0
+    const maxWidth = autoWidth ? availableWidth : 0
+    const measuredWidth = autoWidth
+      ? Math.min(Math.max(menuRef.current?.offsetWidth ?? rect.width, minWidth), availableWidth)
+      : 0
+    const width = autoWidth ? measuredWidth : Math.min(menuWidth, availableWidth)
     const measuredHeight = menuRef.current?.offsetHeight ?? Math.min(maxMenuHeight, Math.max(44, options.length * 31 + 8))
     const spaceBelow = viewportHeight - rect.bottom - viewportPadding
     const spaceAbove = rect.top - viewportPadding
@@ -143,7 +153,7 @@ export function AppSelect<T extends AppSelectValue>({
     const maxTop = Math.max(viewportPadding, viewportHeight - visibleHeight - viewportPadding)
     const top = clamp(rawTop, viewportPadding, maxTop)
 
-    setMenuPosition({ left, top, width, maxHeight })
+    setMenuPosition({ left, top, width, minWidth, maxWidth, maxHeight })
     if (menuRef.current) menuRef.current.style.visibility = 'visible'
   }, [align, maxMenuHeight, menuWidth, options.length, zoomScale])
 
@@ -222,11 +232,21 @@ export function AppSelect<T extends AppSelectValue>({
       <div
         ref={setMenuNode}
         className={`fixed z-2300 overflow-hidden rounded-lg bg-surface p-1.5 shadow-2xl ring-1 ring-inset ring-primary-400/10 ${menuClassName}`.trim()}
-        style={{
-          left: `${menuPosition.left}px`,
-          top: `${menuPosition.top}px`,
-          width: `${menuPosition.width}px`,
-        }}
+        style={
+          menuWidth === 'trigger'
+            ? {
+                left: `${menuPosition.left}px`,
+                top: `${menuPosition.top}px`,
+                width: 'max-content',
+                minWidth: `${menuPosition.minWidth}px`,
+                maxWidth: `${menuPosition.maxWidth}px`,
+              }
+            : {
+                left: `${menuPosition.left}px`,
+                top: `${menuPosition.top}px`,
+                width: `${menuPosition.width}px`,
+              }
+        }
       >
         <div
           id={listboxId}
@@ -256,7 +276,7 @@ export function AppSelect<T extends AppSelectValue>({
                 role="option"
                 aria-selected={selected}
               >
-                <span className="min-w-0 truncate">{option.menuLabel ?? option.label}</span>
+                <span className="whitespace-nowrap">{option.menuLabel ?? option.label}</span>
                 {selected ? <Check size={13} className="shrink-0 text-primary-300" /> : null}
               </button>
             )

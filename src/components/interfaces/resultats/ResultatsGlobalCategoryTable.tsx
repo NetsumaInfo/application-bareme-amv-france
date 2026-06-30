@@ -166,14 +166,17 @@ export function ResultatsGlobalCategoryTable({
             })}
             <th
               onClick={onSortByTotal}
-              title={onSortByTotal ? t('Trier par total') : undefined}
               className={`min-w-[88px] border-b border-r border-gray-700/60 px-2 py-1 text-center text-[10px] font-semibold ${
                 sortByScoreActive ? 'bg-primary-600/15 text-white' : 'bg-surface'
               } ${onSortByTotal ? 'cursor-pointer select-none transition-colors hover:bg-surface-light/70' : ''}`}
             >
-              {t('Total final')}
-              {sortByScoreActive ? <span className="ml-1">{sortDirection === 'asc' ? '▲' : '▼'}</span> : null}
-              <div className="text-gray-500 font-normal">/{currentBaremeTotalPoints}</div>
+              <HoverTextTooltip text={onSortByTotal ? t('Trier par total') : ''}>
+                <div>
+                  {t('Total final')}
+                  {sortByScoreActive ? <span className="ml-1">{sortDirection === 'asc' ? '▲' : '▼'}</span> : null}
+                  <div className="text-gray-500 font-normal">/{currentBaremeTotalPoints}</div>
+                </div>
+              </HoverTextTooltip>
             </th>
             {getRowComment && (
               <th

@@ -399,7 +399,6 @@ export function ResultatsGlobalDetailedTable({
                   key={group.category}
                   colSpan={group.criteria.length * judges.length}
                   onClick={categorySortable ? () => onSortByCategory?.(group.category) : undefined}
-                  title={categorySortable ? t('Trier par {category}', { category: group.category }) : undefined}
                   className={`border-b border-r px-2 py-1 text-center text-[10px] font-semibold ${
                     categorySortable ? 'cursor-pointer select-none transition-[filter] hover:brightness-125' : ''
                   }`}
@@ -409,11 +408,15 @@ export function ResultatsGlobalDetailedTable({
                     borderColor: withAlpha(group.color, 0.3),
                   }}
                 >
-                  {group.category}
-                  <span className="ml-1 text-gray-500 font-normal">/{group.totalMax}</span>
-                  {isCategorySortActive ? (
-                    <span className="ml-1">{sortDirection === 'asc' ? '▲' : '▼'}</span>
-                  ) : null}
+                  <HoverTextTooltip text={categorySortable ? t('Trier par {category}', { category: group.category }) : ''}>
+                    <div>
+                      {group.category}
+                      <span className="ml-1 text-gray-500 font-normal">/{group.totalMax}</span>
+                      {isCategorySortActive ? (
+                        <span className="ml-1">{sortDirection === 'asc' ? '▲' : '▼'}</span>
+                      ) : null}
+                    </div>
+                  </HoverTextTooltip>
                 </th>
               )
             })}
@@ -421,14 +424,17 @@ export function ResultatsGlobalDetailedTable({
               <th
                 colSpan={judges.length + 1}
                 onClick={onSortByTotal}
-                title={onSortByTotal ? t('Trier par total') : undefined}
                 className={`min-w-[88px] border-b border-r border-gray-700/60 px-2 py-1 text-center text-[10px] font-semibold ${
                   sortByScoreActive ? 'bg-primary-600/15 text-white' : 'bg-surface'
                 } ${onSortByTotal ? 'cursor-pointer select-none transition-colors hover:bg-surface-light/70' : ''}`}
               >
-                {t('Total')}
-                {sortByScoreActive ? <span className="ml-1">{sortDirection === 'asc' ? '▲' : '▼'}</span> : null}
-                <div className="text-gray-500 font-normal">/{currentBaremeTotalPoints}</div>
+                <HoverTextTooltip text={onSortByTotal ? t('Trier par total') : ''}>
+                  <div>
+                    {t('Total')}
+                    {sortByScoreActive ? <span className="ml-1">{sortDirection === 'asc' ? '▲' : '▼'}</span> : null}
+                    <div className="text-gray-500 font-normal">/{currentBaremeTotalPoints}</div>
+                  </div>
+                </HoverTextTooltip>
               </th>
             )}
             {getRowComment && (
